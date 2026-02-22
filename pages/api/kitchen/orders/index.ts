@@ -8,6 +8,198 @@ const KitchenOrder = require('@/models/KitchenOrder');
 const KitchenOrderItem = require('@/models/KitchenOrderItem');
 const KitchenStaff = require('@/models/KitchenStaff');
 
+// Mock data generator for kitchen orders
+const menuItems = [
+  { name: 'Nasi Goreng Spesial', price: 35000 },
+  { name: 'Nasi Goreng Kampung', price: 28000 },
+  { name: 'Mie Goreng Jawa', price: 30000 },
+  { name: 'Ayam Bakar Madu', price: 45000 },
+  { name: 'Ayam Goreng Kremes', price: 40000 },
+  { name: 'Ayam Geprek', price: 28000 },
+  { name: 'Sate Ayam 10 Tusuk', price: 35000 },
+  { name: 'Ikan Bakar Bumbu Kecap', price: 50000 },
+  { name: 'Rendang Daging', price: 48000 },
+  { name: 'Soto Ayam', price: 25000 },
+  { name: 'Bakso Urat Spesial', price: 30000 },
+  { name: 'Gado-Gado', price: 22000 },
+  { name: 'Es Teh Manis', price: 8000 },
+  { name: 'Es Jeruk', price: 12000 },
+  { name: 'Kopi Susu', price: 18000 },
+];
+
+// Delivery platform configurations
+const deliveryPlatforms = [
+  { 
+    id: 'gofood', 
+    name: 'GoFood', 
+    color: '#00AA13',
+    logo: '🟢',
+    paymentMethods: ['GoPay', 'GoPay Later', 'Cash'],
+    feePercent: 20
+  },
+  { 
+    id: 'grabfood', 
+    name: 'GrabFood', 
+    color: '#00B14F',
+    logo: '🟢',
+    paymentMethods: ['OVO', 'GrabPay', 'Cash', 'LinkAja'],
+    feePercent: 25
+  },
+  { 
+    id: 'shopeefood', 
+    name: 'ShopeeFood', 
+    color: '#EE4D2D',
+    logo: '🟠',
+    paymentMethods: ['ShopeePay', 'SPayLater', 'Cash'],
+    feePercent: 20
+  }
+];
+
+const driverNames = [
+  'Pak Joko', 'Mas Dedi', 'Bang Roni', 'Kang Asep', 'Mas Adi',
+  'Pak Wahyu', 'Mas Bima', 'Bang Heri', 'Kang Ujang', 'Pak Tono'
+];
+
+const customerNames = [
+  'Budi Santoso', 'Siti Rahayu', 'Ahmad Hidayat', 'Dewi Lestari', 'Rizky Pratama',
+  'Nur Aini', 'Eko Prasetyo', 'Sri Wahyuni', 'Agus Setiawan', 'Rina Marlina'
+];
+
+// Generate driver info
+function generateDriverInfo(platform: typeof deliveryPlatforms[0]) {
+  const name = driverNames[Math.floor(Math.random() * driverNames.length)];
+  const plateLetters = ['B', 'D', 'F', 'L', 'N', 'AB', 'AD'];
+  const plate = `${plateLetters[Math.floor(Math.random() * plateLetters.length)]} ${Math.floor(Math.random() * 9000) + 1000} ${['ABC', 'XYZ', 'JKL'][Math.floor(Math.random() * 3)]}`;
+  return {
+    name,
+    phone: `0812${Math.floor(Math.random() * 90000000) + 10000000}`,
+    vehicle: 'Motor',
+    plateNumber: plate,
+    photo: null,
+    rating: (4 + Math.random()).toFixed(1)
+  };
+}
+
+// Generate delivery info
+function generateDeliveryInfo(orderType: string) {
+  if (orderType !== 'delivery') return null;
+  
+  const platform = deliveryPlatforms[Math.floor(Math.random() * deliveryPlatforms.length)];
+  const paymentMethod = platform.paymentMethods[Math.floor(Math.random() * platform.paymentMethods.length)];
+  const isPaid = Math.random() > 0.2; // 80% sudah lunas
+  
+  return {
+    platform: {
+      id: platform.id,
+      name: platform.name,
+      color: platform.color,
+      logo: platform.logo,
+      orderId: `${platform.id.toUpperCase()}-${Date.now()}-${Math.floor(Math.random() * 1000)}`
+    },
+    driver: generateDriverInfo(platform),
+    payment: {
+      method: paymentMethod,
+      status: isPaid ? 'paid' : 'pending',
+      paidAt: isPaid ? new Date(Date.now() - Math.floor(Math.random() * 30) * 60000).toISOString() : null,
+      platformFee: 0, // Will be calculated
+      deliveryFee: Math.floor(Math.random() * 8000) + 8000,
+      promoDiscount: Math.random() > 0.7 ? Math.floor(Math.random() * 15000) + 5000 : 0
+    },
+    customer: {
+      name: customerNames[Math.floor(Math.random() * customerNames.length)],
+      phone: `0813${Math.floor(Math.random() * 90000000) + 10000000}`,
+      address: `Jl. ${['Sudirman', 'Thamrin', 'Gatot Subroto', 'Rasuna Said', 'Kuningan'][Math.floor(Math.random() * 5)]} No. ${Math.floor(Math.random() * 100) + 1}`,
+      notes: Math.random() > 0.6 ? ['Depan minimarket', 'Gang ke-2 sebelah kiri', 'Rumah pagar hijau', 'Lantai 3'][Math.floor(Math.random() * 4)] : null
+    },
+    estimatedArrival: new Date(Date.now() + (Math.floor(Math.random() * 20) + 15) * 60000).toISOString(),
+    distance: `${(Math.random() * 5 + 1).toFixed(1)} km`
+  };
+}
+
+function generateMockKitchenOrders(statusFilter?: string) {
+  const now = Date.now();
+  const statuses = statusFilter && statusFilter !== 'all' 
+    ? [statusFilter] 
+    : ['new', 'pending', 'preparing', 'ready'];
+  
+  const orders: any[] = [];
+  
+  // Generate orders for each status
+  statuses.forEach((status, statusIdx) => {
+    const orderCount = status === 'new' ? 2 : status === 'pending' ? 2 : status === 'preparing' ? 3 : 2;
+    
+    for (let i = 0; i < orderCount; i++) {
+      const orderType = ['dine_in', 'takeaway', 'delivery'][Math.floor(Math.random() * 3)];
+      const tableNumber = orderType === 'dine_in' ? String(Math.floor(Math.random() * 12) + 1) : null;
+      const minutesAgo = status === 'new' ? (i + 1) : status === 'pending' ? (i + 3) : status === 'preparing' ? (i + 6) : (i + 12);
+      
+      const itemCount = Math.floor(Math.random() * 3) + 1;
+      const items = [];
+      const usedItems = new Set<number>();
+      
+      for (let j = 0; j < itemCount; j++) {
+        let itemIdx;
+        do { itemIdx = Math.floor(Math.random() * menuItems.length); } while (usedItems.has(itemIdx));
+        usedItems.add(itemIdx);
+        
+        items.push({
+          id: `item-${statusIdx}-${i}-${j}`,
+          name: menuItems[itemIdx].name,
+          quantity: Math.floor(Math.random() * 2) + 1,
+          notes: Math.random() > 0.7 ? ['Pedas', 'Tidak pedas', 'Ekstra sambal', 'Tanpa bawang'][Math.floor(Math.random() * 4)] : null,
+          modifiers: null,
+          status: status === 'preparing' ? 'cooking' : status === 'ready' ? 'done' : 'pending'
+        });
+      }
+
+      const subtotal = items.reduce((acc, item) => acc + (menuItems.find(m => m.name === item.name)?.price || 30000) * item.quantity, 0);
+      const deliveryInfo = generateDeliveryInfo(orderType);
+      
+      // Calculate platform fee if delivery
+      if (deliveryInfo) {
+        const platformConfig = deliveryPlatforms.find(p => p.id === deliveryInfo.platform.id);
+        deliveryInfo.payment.platformFee = Math.floor(subtotal * (platformConfig?.feePercent || 20) / 100);
+      }
+
+      orders.push({
+        id: `mock-${status}-${i}`,
+        order_number: `ORD-${String(now).slice(-4)}${statusIdx}${i}`,
+        table_number: tableNumber,
+        order_type: orderType,
+        customer_name: orderType === 'dine_in' ? `Meja ${tableNumber}` : deliveryInfo?.customer.name || ['Budi S.', 'Siti R.', 'Ahmad H.', 'Dewi L.', 'Rizky P.'][Math.floor(Math.random() * 5)],
+        status: status,
+        priority: minutesAgo > 10 ? 'high' : 'normal',
+        received_at: new Date(now - minutesAgo * 60000).toISOString(),
+        started_at: ['preparing', 'ready'].includes(status) ? new Date(now - (minutesAgo - 2) * 60000).toISOString() : null,
+        completed_at: status === 'ready' ? new Date(now - 2 * 60000).toISOString() : null,
+        served_at: null,
+        estimated_time: Math.floor(Math.random() * 10) + 10,
+        actual_prep_time: status === 'ready' ? Math.floor(Math.random() * 8) + 8 : null,
+        subtotal: subtotal,
+        total_amount: subtotal + (deliveryInfo?.payment.deliveryFee || 0) - (deliveryInfo?.payment.promoDiscount || 0),
+        notes: Math.random() > 0.8 ? 'Tolong cepat ya' : null,
+        items,
+        // Delivery specific info
+        delivery_info: deliveryInfo,
+        // Payment info for all orders
+        payment: {
+          method: orderType === 'delivery' ? deliveryInfo?.payment.method : 
+                  orderType === 'dine_in' ? ['Cash', 'QRIS', 'Debit Card'][Math.floor(Math.random() * 3)] :
+                  ['Cash', 'QRIS', 'GoPay', 'OVO'][Math.floor(Math.random() * 4)],
+          status: orderType === 'delivery' ? deliveryInfo?.payment.status : 
+                  (Math.random() > 0.1 ? 'paid' : 'pending'),
+          paidAt: null
+        }
+      });
+    }
+  });
+
+  // Sort by received_at descending
+  orders.sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime());
+  
+  return orders;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -74,10 +266,18 @@ export default async function handler(
           }
         }));
 
+        // If no orders from database, return realistic mock data
+        if (ordersWithItems.length === 0) {
+          const mockOrders = generateMockKitchenOrders(status as string);
+          return res.status(200).json({ success: true, data: mockOrders, source: 'mock' });
+        }
+
         return res.status(200).json({ success: true, data: ordersWithItems });
       } catch (queryError: any) {
         console.error('Kitchen orders query error:', queryError);
-        return res.status(200).json({ success: true, data: [] });
+        // Return mock data on error
+        const mockOrders = generateMockKitchenOrders(status as string);
+        return res.status(200).json({ success: true, data: mockOrders, source: 'mock' });
       }
 
     } else if (req.method === 'POST') {

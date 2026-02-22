@@ -87,7 +87,7 @@ async function createModule(req: NextApiRequest, res: NextApiResponse, models: a
     });
   }
 
-  const module = await Module.create({
+  const newModule = await Module.create({
     code,
     name,
     description,
@@ -101,6 +101,6 @@ async function createModule(req: NextApiRequest, res: NextApiResponse, models: a
 
   return res.status(201).json({
     success: true,
-    data: module
+    data: newModule
   });
 }

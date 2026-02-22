@@ -1,24 +1,118 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { 
   FaHistory, FaSearch, FaFilter, FaDownload, 
-  FaEye, FaPrint, FaCalendar, FaShoppingCart
+  FaEye, FaPrint, FaCalendar, FaShoppingCart, FaSpinner,
+  FaChevronLeft, FaChevronRight, FaTimes, FaFileExcel, FaFilePdf
 } from 'react-icons/fa';
+import { exportToExcel, exportToPDF } from '@/utils/exportUtils';
+import { useWebSocket } from '@/hooks/useWebSocket';
+
+interface Transaction {
+  id: string;
+  transactionNumber: string;
+  transactionDate: string;
+  totalAmount: number;
+  paymentMethod: string;
+  status: string;
+  customer: { id: string; name: string; phone: string } | null;
+  cashier: { id: string; name: string };
+  itemCount: number;
+  totalItems: number;
+}
+
+interface Stats {
+  totalTransactions: number;
+  totalSales: number;
+  avgTransaction: number;
+  completedSales: number;
+  voidedCount: number;
+  refundedCount: number;
+}
 
 const HistoryPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('today');
+  const [filters, setFilters] = useState({
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0],
+    status: 'all',
+    paymentMethod: 'all'
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 25,
+    total: 0,
+    totalPages: 0
+  });
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
-  React.useEffect(() => {
+  // WebSocket for real-time updates
+  const handleRealtimeUpdate = useCallback((message: any) => {
+    if (message.event === 'pos:transaction:complete' || message.event === 'pos:transaction:void') {
+      fetchTransactions();
+    }
+  }, []);
+
+  const { isConnected } = useWebSocket({
+    branchId: session?.user?.branchId || 'default',
+    role: 'pos-history',
+    events: ['pos:transaction:complete', 'pos:transaction:void'],
+    onMessage: handleRealtimeUpdate
+  });
+
+  useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/auth/login");
     }
   }, [session, status, router]);
+
+  const fetchTransactions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        status: filters.status,
+        paymentMethod: filters.paymentMethod,
+        search: searchTerm,
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString()
+      });
+
+      const response = await fetch(`/api/pos/transactions/history?${params}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setTransactions(data.data.transactions || []);
+        setStats(data.data.stats);
+        setPagination(prev => ({
+          ...prev,
+          total: data.data.pagination.total,
+          totalPages: data.data.pagination.totalPages
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, searchTerm, pagination.page, pagination.limit]);
+
+  useEffect(() => {
+    if (session) {
+      fetchTransactions();
+    }
+  }, [session, fetchTransactions]);
 
   if (status === "loading") {
     return (
@@ -33,18 +127,52 @@ const HistoryPage: React.FC = () => {
     );
   }
 
-  const transactions = [
-    { id: "TRX-2024-001", date: "2024-01-19", time: "14:30", cashier: "John Doe", customer: "Alice Brown", items: 5, total: 250000, payment: "Cash", status: "Selesai" },
-    { id: "TRX-2024-002", date: "2024-01-19", time: "14:15", cashier: "Jane Smith", customer: "Bob Wilson", items: 3, total: 180000, payment: "Card", status: "Selesai" },
-    { id: "TRX-2024-003", date: "2024-01-19", time: "13:45", cashier: "John Doe", customer: "Charlie Davis", items: 7, total: 320000, payment: "E-Wallet", status: "Selesai" },
-    { id: "TRX-2024-004", date: "2024-01-19", time: "13:30", cashier: "Jane Smith", customer: "Diana Evans", items: 2, total: 150000, payment: "Cash", status: "Selesai" },
-    { id: "TRX-2024-005", date: "2024-01-19", time: "13:00", cashier: "John Doe", customer: "Edward Fox", items: 4, total: 280000, payment: "Card", status: "Selesai" },
-    { id: "TRX-2024-006", date: "2024-01-18", time: "16:45", cashier: "Jane Smith", customer: "Frank Green", items: 6, total: 420000, payment: "E-Wallet", status: "Selesai" },
-    { id: "TRX-2024-007", date: "2024-01-18", time: "16:20", cashier: "John Doe", customer: "Grace Hill", items: 3, total: 190000, payment: "Cash", status: "Selesai" },
-    { id: "TRX-2024-008", date: "2024-01-18", time: "15:50", cashier: "Jane Smith", customer: "Henry Irving", items: 8, total: 560000, payment: "Card", status: "Selesai" },
-    { id: "TRX-2024-009", date: "2024-01-18", time: "15:30", cashier: "John Doe", customer: "Iris Jones", items: 2, total: 120000, payment: "Cash", status: "Selesai" },
-    { id: "TRX-2024-010", date: "2024-01-18", time: "15:00", cashier: "Jane Smith", customer: "Jack King", items: 5, total: 340000, payment: "E-Wallet", status: "Selesai" },
-  ];
+  const handleExportExcel = () => {
+    const data = transactions.map(t => ({
+      'No. Transaksi': t.transactionNumber,
+      'Tanggal': new Date(t.transactionDate).toLocaleString('id-ID'),
+      'Kasir': t.cashier?.name || '-',
+      'Pelanggan': t.customer?.name || 'Walk-in',
+      'Items': t.totalItems,
+      'Total': t.totalAmount,
+      'Pembayaran': t.paymentMethod,
+      'Status': t.status
+    }));
+    exportToExcel(data, 'transaction-history', 'Riwayat Transaksi');
+  };
+
+  const handleExportPDF = () => {
+    const data = transactions.map(t => ({
+      'No. Transaksi': t.transactionNumber,
+      'Tanggal': new Date(t.transactionDate).toLocaleString('id-ID'),
+      'Kasir': t.cashier?.name || '-',
+      'Pelanggan': t.customer?.name || 'Walk-in',
+      'Total': formatCurrency(t.totalAmount),
+      'Status': t.status
+    }));
+    exportToPDF(data, {
+      title: 'Riwayat Transaksi',
+      fileName: 'transaction-history',
+      columns: ['No. Transaksi', 'Tanggal', 'Kasir', 'Pelanggan', 'Total', 'Status']
+    });
+  };
+
+  const viewTransactionDetail = async (id: string) => {
+    try {
+      const response = await fetch(`/api/pos/transactions/${id}`);
+      const data = await response.json();
+      if (data.success) {
+        setSelectedTransaction(data.data);
+        setShowDetailModal(true);
+      }
+    } catch (error) {
+      console.error('Error fetching transaction detail:', error);
+    }
+  };
+
+  const handlePrint = (id: string) => {
+    window.open(`/api/pos/receipts/${id}/print`, '_blank');
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -54,18 +182,26 @@ const HistoryPage: React.FC = () => {
     }).format(amount);
   };
 
-  const filteredTransactions = transactions.filter(trx => {
-    const matchesSearch = searchTerm === '' || 
-      trx.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trx.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trx.cashier.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesDate = dateFilter === 'all' || 
-      (dateFilter === 'today' && trx.date === '2024-01-19') ||
-      (dateFilter === 'yesterday' && trx.date === '2024-01-18');
-    
-    return matchesSearch && matchesDate;
-  });
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      completed: 'bg-green-100 text-green-800',
+      pending: 'bg-yellow-100 text-yellow-800',
+      voided: 'bg-red-100 text-red-800',
+      refunded: 'bg-purple-100 text-purple-800'
+    };
+    return styles[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getPaymentMethodBadge = (method: string) => {
+    const styles: Record<string, string> = {
+      Cash: 'bg-green-50 text-green-700 border-green-200',
+      Card: 'bg-blue-50 text-blue-700 border-blue-200',
+      QRIS: 'bg-purple-50 text-purple-700 border-purple-200',
+      'E-Wallet': 'bg-orange-50 text-orange-700 border-orange-200',
+      Transfer: 'bg-cyan-50 text-cyan-700 border-cyan-200'
+    };
+    return styles[method] || 'bg-gray-50 text-gray-700 border-gray-200';
+  };
 
   return (
     <DashboardLayout>
@@ -91,29 +227,29 @@ const HistoryPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <p className="text-sm text-gray-600 mb-1">Total Transaksi</p>
-            <p className="text-2xl font-bold text-gray-900">{filteredTransactions.length}</p>
-            <span className="text-sm text-gray-600">Ditampilkan</span>
+            <p className="text-2xl font-bold text-gray-900">{stats?.totalTransactions || 0}</p>
+            <span className="text-sm text-gray-600">Periode dipilih</span>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <p className="text-sm text-gray-600 mb-1">Total Penjualan</p>
             <p className="text-2xl font-bold text-gray-900">
-              {formatCurrency(filteredTransactions.reduce((sum, trx) => sum + trx.total, 0))}
+              {formatCurrency(stats?.totalSales || 0)}
             </p>
             <span className="text-sm text-green-600 font-medium">Periode dipilih</span>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <p className="text-sm text-gray-600 mb-1">Rata-rata Transaksi</p>
             <p className="text-2xl font-bold text-gray-900">
-              {formatCurrency(filteredTransactions.reduce((sum, trx) => sum + trx.total, 0) / filteredTransactions.length || 0)}
+              {formatCurrency(stats?.avgTransaction || 0)}
             </p>
             <span className="text-sm text-gray-600">Per transaksi</span>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <p className="text-sm text-gray-600 mb-1">Total Items</p>
+            <p className="text-sm text-gray-600 mb-1">Void/Refund</p>
             <p className="text-2xl font-bold text-gray-900">
-              {filteredTransactions.reduce((sum, trx) => sum + trx.items, 0)}
+              {(stats?.voidedCount || 0) + (stats?.refundedCount || 0)}
             </p>
-            <span className="text-sm text-gray-600">Produk terjual</span>
+            <span className="text-sm text-gray-600">Transaksi</span>
           </div>
         </div>
 
@@ -133,22 +269,41 @@ const HistoryPage: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-2">
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => setFilters({...filters, startDate: e.target.value})}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+              />
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => setFilters({...filters, endDate: e.target.value})}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
+              />
               <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                value={filters.status}
+                onChange={(e) => setFilters({...filters, status: e.target.value})}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500"
               >
-                <option value="today">Hari Ini</option>
-                <option value="yesterday">Kemarin</option>
-                <option value="all">Semua</option>
+                <option value="all">Semua Status</option>
+                <option value="completed">Selesai</option>
+                <option value="voided">Void</option>
+                <option value="refunded">Refund</option>
               </select>
-              <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                <FaFilter className="text-gray-600" />
-                <span className="text-gray-700">Filter Lanjutan</span>
+              <button 
+                onClick={handleExportExcel}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <FaFileExcel />
+                <span>Excel</span>
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors">
-                <FaDownload />
-                <span>Export</span>
+              <button 
+                onClick={handleExportPDF}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <FaFilePdf />
+                <span>PDF</span>
               </button>
             </div>
           </div>
@@ -190,34 +345,49 @@ const HistoryPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredTransactions.map((transaction) => (
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-12 text-center">
+                      <FaSpinner className="animate-spin h-8 w-8 mx-auto text-pink-600" />
+                      <p className="mt-2 text-gray-500">Memuat data...</p>
+                    </td>
+                  </tr>
+                ) : transactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
+                      Tidak ada transaksi ditemukan
+                    </td>
+                  </tr>
+                ) : transactions.map((transaction) => (
                   <tr key={transaction.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-pink-600">{transaction.id}</span>
+                      <span className="text-sm font-medium text-pink-600">{transaction.transactionNumber}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{transaction.date}</div>
-                      <div className="text-sm text-gray-500">{transaction.time}</div>
+                      <div className="text-sm text-gray-900">{new Date(transaction.transactionDate).toLocaleDateString('id-ID')}</div>
+                      <div className="text-sm text-gray-500">{new Date(transaction.transactionDate).toLocaleTimeString('id-ID')}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{transaction.cashier}</span>
+                      <span className="text-sm text-gray-900">{transaction.cashier?.name || '-'}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{transaction.customer}</span>
+                      <span className="text-sm text-gray-900">{transaction.customer?.name || 'Walk-in'}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{transaction.items} items</span>
+                      <span className="text-sm text-gray-900">{transaction.totalItems} items</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-semibold text-gray-900">
-                        {formatCurrency(transaction.total)}
+                        {formatCurrency(transaction.totalAmount)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-900">{transaction.payment}</span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getPaymentMethodBadge(transaction.paymentMethod)}`}>
+                        {transaction.paymentMethod}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(transaction.status)}`}>
                         {transaction.status}
                       </span>
                     </td>

@@ -33,6 +33,22 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  
+  // Performance optimizations
+  compiler: {
+    // Remove console.log in production
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+  
+  // Enable SWC minification for faster builds
+  swcMinify: true,
+  
+  // Experimental features for better performance
+  experimental: {
+    // Optimize package imports
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', 'recharts'],
+  },
+  
   // Transpile Radix UI and other ESM packages
   transpilePackages: [
     '@radix-ui/react-tabs',

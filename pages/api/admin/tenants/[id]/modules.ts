@@ -69,8 +69,8 @@ async function updateTenantModules(req: NextApiRequest, res: NextApiResponse, te
   const results = [];
 
   for (const { moduleId, isEnabled } of modules) {
-    const module = await Module.findByPk(moduleId);
-    if (!module) {
+    const moduleData = await Module.findByPk(moduleId);
+    if (!moduleData) {
       continue;
     }
 

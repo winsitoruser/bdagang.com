@@ -44,7 +44,8 @@ import {
   CreditCard,
   Calculator,
   ArrowRightLeft,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Plug
 } from 'lucide-react';
 
 interface HQLayoutProps {
@@ -154,6 +155,7 @@ const navigation: NavItem[] = [
     icon: Settings,
     children: [
       { name: 'Global Settings', href: '/hq/settings', icon: Globe },
+      { name: 'Integrasi Pihak Ketiga', href: '/hq/settings/integrations', icon: Plug },
       { name: 'Pajak & Biaya', href: '/hq/settings/taxes', icon: FileText },
       { name: 'Notifikasi', href: '/hq/settings/notifications', icon: Bell },
     ]

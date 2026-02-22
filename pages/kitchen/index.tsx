@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -6,12 +6,23 @@ import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { 
   ChefHat, Clock, CheckCircle, AlertCircle, 
   TrendingUp, Users, Package, BarChart3,
   ArrowRight, Flame, UtensilsCrossed, ClipboardList,
-  Activity
+  Activity, RefreshCw, Wifi, WifiOff, ExternalLink
 } from 'lucide-react';
+import { useWebSocket } from '@/hooks/useWebSocket';
+
+interface KitchenActivity {
+  id: string;
+  type: string;
+  action: string;
+  details: string;
+  timeAgo: string;
+  status: 'success' | 'processing' | 'warning' | 'info' | 'error';
+}
 
 const KitchenManagementPage: React.FC = () => {
   const router = useRouter();
@@ -24,7 +35,27 @@ const KitchenManagementPage: React.FC = () => {
     totalRevenue: 0,
     uniqueCustomers: 0
   });
+  const [activities, setActivities] = useState<KitchenActivity[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+
+  // WebSocket for real-time updates
+  const handleRealtimeUpdate = useCallback((message: any) => {
+    if (message.event === 'kitchen:activity:new' || 
+        message.event === 'kitchen:order:new' || 
+        message.event === 'kitchen:order:update' ||
+        message.event === 'kitchen:order:complete') {
+      fetchActivities();
+      fetchDashboardStats();
+    }
+  }, []);
+
+  const { isConnected } = useWebSocket({
+    branchId: session?.user?.branchId || 'default',
+    role: 'kitchen',
+    events: ['kitchen:activity:new', 'kitchen:order:new', 'kitchen:order:update', 'kitchen:order:complete'],
+    onMessage: handleRealtimeUpdate
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -35,11 +66,31 @@ const KitchenManagementPage: React.FC = () => {
   useEffect(() => {
     if (status === 'authenticated') {
       fetchDashboardStats();
+      fetchActivities();
       // Refresh every 30 seconds
-      const interval = setInterval(fetchDashboardStats, 30000);
+      const interval = setInterval(() => {
+        fetchDashboardStats();
+        fetchActivities();
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [status]);
+
+  const fetchActivities = async () => {
+    setActivitiesLoading(true);
+    try {
+      const response = await fetch('/api/kitchen/activities?limit=10');
+      const result = await response.json();
+      
+      if (result.success) {
+        setActivities(result.data.activities || []);
+      }
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+    } finally {
+      setActivitiesLoading(false);
+    }
+  };
 
   const fetchDashboardStats = async () => {
     try {
@@ -287,40 +338,100 @@ const KitchenManagementPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Activity - GridView Card */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Aktivitas Terbaru</CardTitle>
-              <Button variant="outline" size="sm">
-                Lihat Semua
-              </Button>
+              <div className="flex items-center space-x-3">
+                <CardTitle>Aktivitas Terbaru</CardTitle>
+                {isConnected ? (
+                  <Badge className="bg-green-100 text-green-700 border-green-200">
+                    <Wifi className="w-3 h-3 mr-1" /> Live
+                  </Badge>
+                ) : (
+                  <Badge className="bg-gray-100 text-gray-700 border-gray-200">
+                    <WifiOff className="w-3 h-3 mr-1" /> Offline
+                  </Badge>
+                )}
+              </div>
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm" onClick={fetchActivities}>
+                  <RefreshCw className={`w-4 h-4 mr-1 ${activitiesLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                <Link href="/kitchen/orders">
+                  <Button variant="outline" size="sm">
+                    <ExternalLink className="w-4 h-4 mr-1" />
+                    Lihat Semua
+                  </Button>
+                </Link>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {[
-                { action: 'Pesanan #1234 selesai dimasak', time: '2 menit lalu', status: 'success' },
-                { action: 'Pesanan #1235 sedang diproses', time: '5 menit lalu', status: 'processing' },
-                { action: 'Stok Ayam mencapai batas minimum', time: '15 menit lalu', status: 'warning' },
-                { action: 'Pesanan #1236 diterima dari meja 5', time: '20 menit lalu', status: 'info' }
-              ].map((activity, index) => (
-                <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-2 h-2 rounded-full ${
-                      activity.status === 'success' ? 'bg-green-500' :
-                      activity.status === 'processing' ? 'bg-blue-500' :
-                      activity.status === 'warning' ? 'bg-amber-500' :
-                      'bg-sky-500'
-                    }`}></div>
-                    <div>
-                      <p className="font-medium text-gray-900">{activity.action}</p>
-                      <p className="text-sm text-gray-500">{activity.time}</p>
+            {activitiesLoading && activities.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="w-6 h-6 animate-spin text-sky-600" />
+              </div>
+            ) : activities.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Activity className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p>Belum ada aktivitas</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {activities.slice(0, 8).map((activity, index) => (
+                  <div 
+                    key={activity.id || index} 
+                    className={`flex items-center justify-between p-4 border rounded-lg hover:shadow-md transition-all cursor-pointer ${
+                      activity.status === 'success' ? 'border-l-4 border-l-green-500 bg-green-50/30' :
+                      activity.status === 'processing' ? 'border-l-4 border-l-blue-500 bg-blue-50/30' :
+                      activity.status === 'warning' ? 'border-l-4 border-l-amber-500 bg-amber-50/30' :
+                      activity.status === 'error' ? 'border-l-4 border-l-red-500 bg-red-50/30' :
+                      'border-l-4 border-l-sky-500 bg-sky-50/30'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                        activity.status === 'success' ? 'bg-green-100' :
+                        activity.status === 'processing' ? 'bg-blue-100' :
+                        activity.status === 'warning' ? 'bg-amber-100' :
+                        activity.status === 'error' ? 'bg-red-100' :
+                        'bg-sky-100'
+                      }`}>
+                        {activity.status === 'success' ? <CheckCircle className="w-5 h-5 text-green-600" /> :
+                         activity.status === 'processing' ? <Clock className="w-5 h-5 text-blue-600 animate-pulse" /> :
+                         activity.status === 'warning' ? <AlertCircle className="w-5 h-5 text-amber-600" /> :
+                         activity.status === 'error' ? <AlertCircle className="w-5 h-5 text-red-600" /> :
+                         <Activity className="w-5 h-5 text-sky-600" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{activity.action}</p>
+                        <div className="flex items-center space-x-2">
+                          <p className="text-sm text-gray-500">{activity.timeAgo}</p>
+                          {activity.details && (
+                            <span className="text-xs text-gray-400">• {activity.details}</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
+                    <Badge className={`text-xs ${
+                      activity.status === 'success' ? 'bg-green-100 text-green-700' :
+                      activity.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                      activity.status === 'warning' ? 'bg-amber-100 text-amber-700' :
+                      activity.status === 'error' ? 'bg-red-100 text-red-700' :
+                      'bg-sky-100 text-sky-700'
+                    }`}>
+                      {activity.status === 'success' ? 'Selesai' :
+                       activity.status === 'processing' ? 'Proses' :
+                       activity.status === 'warning' ? 'Peringatan' :
+                       activity.status === 'error' ? 'Error' :
+                       'Info'}
+                    </Badge>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

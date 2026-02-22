@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import HQLayout from '../../components/hq/HQLayout';
 import { StatsCard, StatusBadge } from '../../components/hq/ui';
 import Modal from '../../components/hq/ui/Modal';
@@ -37,7 +37,32 @@ import {
   X,
   ExternalLink,
   Settings,
-  MoreVertical
+  MoreVertical,
+  Briefcase,
+  CreditCard,
+  Receipt,
+  Truck,
+  LayoutGrid,
+  LineChart as LineChartIcon,
+  Globe,
+  Layers,
+  Coffee,
+  Utensils,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Info,
+  Percent,
+  Hash,
+  Timer,
+  Play,
+  Pause,
+  RotateCcw,
+  Maximize2,
+  Minimize2,
+  Sun,
+  Moon,
+  Sparkles
 } from 'lucide-react';
 import {
   BarChart,
@@ -54,7 +79,15 @@ import {
   Cell,
   AreaChart,
   Area,
-  Legend
+  Legend,
+  ComposedChart,
+  RadialBarChart,
+  RadialBar,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis
 } from 'recharts';
 
 interface BranchData {
@@ -324,6 +357,94 @@ interface RegionData {
   branches: number;
 }
 
+interface TopProduct {
+  id: string;
+  name: string;
+  category: string;
+  sold: number;
+  revenue: number;
+  growth: number;
+}
+
+interface RecentTransaction {
+  id: string;
+  branchName: string;
+  amount: number;
+  items: number;
+  paymentMethod: string;
+  timestamp: string;
+}
+
+interface EmployeeStats {
+  total: number;
+  present: number;
+  absent: number;
+  late: number;
+  onLeave: number;
+}
+
+interface FinancialMetrics {
+  revenue: number;
+  expenses: number;
+  profit: number;
+  profitMargin: number;
+  pendingPayables: number;
+  pendingReceivables: number;
+}
+
+interface TargetProgress {
+  label: string;
+  current: number;
+  target: number;
+  unit: string;
+}
+
+const mockTopProducts: TopProduct[] = [
+  { id: '1', name: 'Nasi Goreng Spesial', category: 'Makanan', sold: 1250, revenue: 31250000, growth: 15.2 },
+  { id: '2', name: 'Es Teh Manis', category: 'Minuman', sold: 2100, revenue: 10500000, growth: 8.5 },
+  { id: '3', name: 'Ayam Bakar', category: 'Makanan', sold: 890, revenue: 26700000, growth: 12.3 },
+  { id: '4', name: 'Mie Goreng', category: 'Makanan', sold: 780, revenue: 19500000, growth: -2.1 },
+  { id: '5', name: 'Kopi Susu', category: 'Minuman', sold: 1450, revenue: 21750000, growth: 22.4 }
+];
+
+const mockRecentTransactions: RecentTransaction[] = [
+  { id: 'TRX001', branchName: 'Cabang Pusat Jakarta', amount: 485000, items: 5, paymentMethod: 'QRIS', timestamp: new Date(Date.now() - 120000).toISOString() },
+  { id: 'TRX002', branchName: 'Cabang Bandung', amount: 235000, items: 3, paymentMethod: 'Tunai', timestamp: new Date(Date.now() - 300000).toISOString() },
+  { id: 'TRX003', branchName: 'Cabang Surabaya', amount: 892000, items: 8, paymentMethod: 'Debit', timestamp: new Date(Date.now() - 480000).toISOString() },
+  { id: 'TRX004', branchName: 'Kiosk Mall TA', amount: 156000, items: 2, paymentMethod: 'E-Wallet', timestamp: new Date(Date.now() - 720000).toISOString() },
+  { id: 'TRX005', branchName: 'Cabang Medan', amount: 445000, items: 4, paymentMethod: 'Kredit', timestamp: new Date(Date.now() - 900000).toISOString() }
+];
+
+const mockEmployeeStats: EmployeeStats = {
+  total: 127,
+  present: 112,
+  absent: 5,
+  late: 7,
+  onLeave: 3
+};
+
+const mockFinancialMetrics: FinancialMetrics = {
+  revenue: 4120000000,
+  expenses: 2884000000,
+  profit: 1236000000,
+  profitMargin: 30,
+  pendingPayables: 320000000,
+  pendingReceivables: 450000000
+};
+
+const mockTargets: TargetProgress[] = [
+  { label: 'Penjualan Bulanan', current: 4.12, target: 5, unit: 'M' },
+  { label: 'Transaksi Harian', current: 523, target: 600, unit: '' },
+  { label: 'Pelanggan Baru', current: 1250, target: 1500, unit: '' },
+  { label: 'Rating Kepuasan', current: 4.6, target: 4.8, unit: '/5' }
+];
+
+const hourlyData = Array.from({ length: 24 }, (_, i) => ({
+  hour: `${i.toString().padStart(2, '0')}:00`,
+  sales: Math.floor(Math.random() * 15000000) + 2000000,
+  transactions: Math.floor(Math.random() * 50) + 10
+}));
+
 export default function HQDashboard() {
   const [mounted, setMounted] = useState(false);
   const [branches, setBranches] = useState<BranchData[]>([]);
@@ -335,12 +456,30 @@ export default function HQDashboard() {
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
+  // New comprehensive dashboard state
+  const [topProducts, setTopProducts] = useState<TopProduct[]>(mockTopProducts);
+  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>(mockRecentTransactions);
+  const [employeeStats, setEmployeeStats] = useState<EmployeeStats>(mockEmployeeStats);
+  const [financialMetrics, setFinancialMetrics] = useState<FinancialMetrics>(mockFinancialMetrics);
+  const [targets, setTargets] = useState<TargetProgress[]>(mockTargets);
+  const [activeTab, setActiveTab] = useState<'overview' | 'sales' | 'branches' | 'analytics'>('overview');
+  const [isLiveMode, setIsLiveMode] = useState(true);
+  const [chartView, setChartView] = useState<'daily' | 'hourly' | 'weekly'>('daily');
+  
   // Interactive state
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [selectedBranchData, setSelectedBranchData] = useState<BranchData | null>(null);
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
+
+  // Current time for live display
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -529,495 +668,677 @@ export default function HQDashboard() {
   };
 
   return (
-    <HQLayout title="HQ Dashboard" subtitle="Monitor aktivitas bisnis seluruh cabang">
+    <HQLayout title="HQ Dashboard" subtitle="Pusat Kontrol Bisnis">
       <div className="space-y-6">
-        {/* Quick Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Clock className="w-4 h-4" />
-            <span>Update terakhir: {lastUpdated ? lastUpdated.toLocaleTimeString('id-ID') : '-'}</span>
-          </div>
-          <button
-            onClick={fetchDashboardData}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+        {/* Executive Header */}
+        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-2xl p-6 text-white shadow-xl">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">Selamat {currentTime.getHours() < 12 ? 'Pagi' : currentTime.getHours() < 18 ? 'Siang' : 'Malam'}!</h1>
+                  <p className="text-white/80 text-sm">
+                    {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${isLiveMode ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
+                  <span className="text-sm">{isLiveMode ? 'Live Mode' : 'Static Mode'}</span>
+                </div>
+                <div className="text-sm text-white/80">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  {currentTime.toLocaleTimeString('id-ID')}
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => setIsLiveMode(!isLiveMode)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  isLiveMode ? 'bg-green-500/20 text-green-100 border border-green-400/30' : 'bg-white/10 text-white/80 border border-white/20'
+                }`}
+              >
+                {isLiveMode ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                {isLiveMode ? 'Live' : 'Paused'}
+              </button>
               <select
                 value={selectedPeriod}
                 onChange={(e) => setSelectedPeriod(e.target.value as any)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-sm focus:ring-2 focus:ring-white/30 backdrop-blur-sm"
               >
-                <option value="today">Hari Ini</option>
-                <option value="week">Minggu Ini</option>
-                <option value="month">Bulan Ini</option>
-                <option value="year">Tahun Ini</option>
+                <option value="today" className="text-gray-900">Hari Ini</option>
+                <option value="week" className="text-gray-900">Minggu Ini</option>
+                <option value="month" className="text-gray-900">Bulan Ini</option>
+                <option value="year" className="text-gray-900">Tahun Ini</option>
               </select>
-              <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+              <button
+                onClick={fetchDashboardData}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-sm hover:bg-white/20 transition-all disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              <button className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 rounded-xl text-sm font-medium hover:bg-white/90 transition-all">
                 <Download className="w-4 h-4" />
                 Export
               </button>
-        </div>
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          {/* Total Sales Today */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-100 rounded-xl">
-                <DollarSign className="w-6 h-6 text-green-600" />
-              </div>
-              <div className={`flex items-center gap-1 text-sm ${parseFloat(salesGrowth) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {parseFloat(salesGrowth) >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                {Math.abs(parseFloat(salesGrowth))}%
-              </div>
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Total Penjualan Hari Ini</h3>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalSalesToday)}</p>
-            <p className="text-xs text-gray-500 mt-2">Kemarin: {formatCurrency(totalSalesYesterday)}</p>
-          </div>
-
-          {/* Total Transactions */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <ShoppingCart className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="flex items-center gap-1 text-sm text-blue-600">
-                <Activity className="w-4 h-4" />
-                Live
-              </div>
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Total Transaksi</h3>
-            <p className="text-2xl font-bold text-gray-900">{totalTransactions.toLocaleString('id-ID')}</p>
-            <p className="text-xs text-gray-500 mt-2">Rata-rata: {formatCurrency(totalSalesToday / (totalTransactions || 1))}/trx</p>
-          </div>
-
-          {/* Total Stock Value */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-100 rounded-xl">
-                <Package className="w-6 h-6 text-purple-600" />
-              </div>
-              {totalLowStockItems > 0 && (
-                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
-                  {totalLowStockItems} low stock
-                </span>
-              )}
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Nilai Total Stok</h3>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalStockValue)}</p>
-            <p className="text-xs text-gray-500 mt-2">Di {branches.length} lokasi</p>
-          </div>
-
-          {/* Branch Status */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-orange-100 rounded-xl">
-                <Store className="w-6 h-6 text-orange-600" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="flex items-center gap-1 text-xs">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  {branches.filter(b => b.status === 'online').length}
-                </span>
-                <span className="flex items-center gap-1 text-xs">
-                  <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-                  {branches.filter(b => b.status === 'warning').length}
-                </span>
-                <span className="flex items-center gap-1 text-xs">
-                  <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                  {branches.filter(b => b.status === 'offline').length}
-                </span>
-              </div>
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Status Cabang</h3>
-            <p className="text-2xl font-bold text-gray-900">{branches.filter(b => b.isActive).length}/{branches.length}</p>
-            <p className="text-xs text-gray-500 mt-2">Cabang aktif dari total</p>
-          </div>
-        </div>
-
-        {/* Second Row - Performance & Employees */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          {/* Average Performance */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-indigo-100 rounded-xl">
-                <Target className="w-6 h-6 text-indigo-600" />
-              </div>
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Performa Rata-rata</h3>
-            <p className="text-2xl font-bold text-gray-900">{avgPerformance}%</p>
-            <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-              <div 
-                className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${avgPerformance}%` }}
-              ></div>
             </div>
           </div>
-
-          {/* Top Performing Branch */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-yellow-100 rounded-xl">
-                <Award className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Cabang Terbaik</h3>
-            <p className="text-lg font-bold text-gray-900">
-              {activeBranches.sort((a, b) => b.performanceScore - a.performanceScore)[0]?.name || '-'}
-            </p>
-            <p className="text-xs text-gray-500 mt-2">
-              Skor: {activeBranches.sort((a, b) => b.performanceScore - a.performanceScore)[0]?.performanceScore || 0}%
-            </p>
-          </div>
-
-          {/* Total Employees */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-teal-100 rounded-xl">
-                <Users className="w-6 h-6 text-teal-600" />
-              </div>
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Total Karyawan</h3>
-            <p className="text-2xl font-bold text-gray-900">{totalEmployees}</p>
-            <p className="text-xs text-gray-500 mt-2">{totalActiveEmployees} aktif hari ini</p>
-          </div>
-
-          {/* Month Sales */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-cyan-100 rounded-xl">
-                <Wallet className="w-6 h-6 text-cyan-600" />
-              </div>
-            </div>
-            <h3 className="text-sm font-medium text-gray-500 mb-1">Penjualan Bulan Ini</h3>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalSalesMonth)}</p>
-            <p className="text-xs text-gray-500 mt-2">Target: Rp 5M</p>
-          </div>
-        </div>
-
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Sales by Branch Chart */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Penjualan per Cabang</h3>
-                <p className="text-sm text-gray-500">Perbandingan penjualan hari ini (dalam juta)</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-gray-400" />
-              </div>
-            </div>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={branchSalesData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis type="number" tickFormatter={(v) => `${v}Jt`} />
-                  <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} />
-                  <Tooltip 
-                    formatter={(value: number) => [`Rp ${value.toFixed(1)} Juta`, 'Penjualan']}
-                    contentStyle={{ borderRadius: '8px', border: '1px solid #E5E7EB' }}
-                  />
-                  <Bar dataKey="sales" fill="#3B82F6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Branch Type Distribution */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Distribusi Tipe</h3>
-                <p className="text-sm text-gray-500">Komposisi tipe lokasi</p>
-              </div>
-              <PieChart className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsPieChart>
-                  <Pie
-                    data={branchTypeData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {branchTypeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </RechartsPieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* Sales Trend & Region Performance */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Weekly Sales Trend */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Tren Penjualan Mingguan</h3>
-                <p className="text-sm text-gray-500">Total penjualan 7 hari terakhir (dalam juta)</p>
-              </div>
-            </div>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartSalesTrend}>
-                  <defs>
-                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="day" />
-                  <YAxis tickFormatter={(v) => `${v}Jt`} />
-                  <Tooltip formatter={(value: number) => [`Rp ${value} Juta`, 'Penjualan']} />
-                  <Area 
-                    type="monotone" 
-                    dataKey="sales" 
-                    stroke="#3B82F6" 
-                    fillOpacity={1} 
-                    fill="url(#colorSales)" 
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Region Performance */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Performa per Wilayah</h3>
-                <p className="text-sm text-gray-500">Penjualan hari ini berdasarkan wilayah</p>
-              </div>
-              <MapPin className="w-5 h-5 text-gray-400" />
-            </div>
-            <div className="space-y-4">
-              {chartRegionData.map((region, index) => (
-                <div key={region.region} className="flex items-center gap-4">
-                  <div className="w-32 text-sm font-medium text-gray-700 truncate">{region.region}</div>
-                  <div className="flex-1">
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="h-3 rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${(region.sales / (chartRegionData[0]?.sales || 1)) * 100}%`,
-                          backgroundColor: COLORS[index % COLORS.length]
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                  <div className="w-20 text-right text-sm font-semibold text-gray-900">
-                    Rp {region.sales}Jt
-                  </div>
-                  <div className="w-16 text-right text-xs text-gray-500">
-                    {region.branches} cabang
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Branch List & Alerts */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Branch List */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
+          
+          {/* Quick Stats in Header */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Daftar Cabang</h3>
-                  <p className="text-sm text-gray-500">Status dan performa real-time</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={selectedBranch}
-                    onChange={(e) => setSelectedBranch(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">Semua Tipe</option>
-                    <option value="main">Pusat</option>
-                    <option value="branch">Cabang</option>
-                    <option value="warehouse">Gudang</option>
-                    <option value="kiosk">Kiosk</option>
-                  </select>
-                </div>
+                <span className="text-white/70 text-sm">Total Penjualan</span>
+                <DollarSign className="w-4 h-4 text-white/50" />
+              </div>
+              <p className="text-2xl font-bold mt-1">{formatCurrency(totalSalesToday)}</p>
+              <div className={`flex items-center gap-1 text-xs mt-1 ${parseFloat(salesGrowth) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
+                {parseFloat(salesGrowth) >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                {Math.abs(parseFloat(salesGrowth))}% dari kemarin
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cabang</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Penjualan</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Transaksi</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Performa</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {branches
-                    .filter(b => selectedBranch === 'all' || b.type === selectedBranch)
-                    .map((branch) => (
-                    <tr key={branch.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-2 h-2 rounded-full ${getStatusColor(branch.status)}`}></div>
-                          <div>
-                            <div className="font-medium text-gray-900">{branch.name}</div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getTypeBadgeColor(branch.type)}`}>
-                                {getTypeLabel(branch.type)}
-                              </span>
-                              <span className="text-xs text-gray-500">{branch.city}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            branch.status === 'online' ? 'bg-green-100 text-green-800' :
-                            branch.status === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {branch.status === 'online' ? 'Online' : branch.status === 'warning' ? 'Warning' : 'Offline'}
-                          </span>
-                          <span className="text-xs text-gray-500 mt-1">
-                            Sync: {new Date(branch.lastSync).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="font-semibold text-gray-900">{formatCurrency(branch.todaySales)}</div>
-                        <div className={`flex items-center justify-end gap-1 text-xs mt-1 ${
-                          branch.todaySales >= branch.yesterdaySales ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {branch.todaySales >= branch.yesterdaySales ? 
-                            <ArrowUpRight className="w-3 h-3" /> : 
-                            <ArrowDownRight className="w-3 h-3" />
-                          }
-                          {branch.yesterdaySales > 0 ? 
-                            Math.abs(((branch.todaySales - branch.yesterdaySales) / branch.yesterdaySales * 100)).toFixed(1) : 0
-                          }%
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="font-semibold text-gray-900">{branch.transactionCount}</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {branch.lowStockItems > 0 && (
-                            <span className="text-red-600">{branch.lowStockItems} low stock</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col items-center">
-                          <div className="relative w-12 h-12">
-                            <svg className="w-12 h-12 transform -rotate-90">
-                              <circle
-                                cx="24"
-                                cy="24"
-                                r="20"
-                                fill="none"
-                                stroke="#E5E7EB"
-                                strokeWidth="4"
-                              />
-                              <circle
-                                cx="24"
-                                cy="24"
-                                r="20"
-                                fill="none"
-                                stroke={branch.performanceScore >= 80 ? '#10B981' : branch.performanceScore >= 60 ? '#F59E0B' : '#EF4444'}
-                                strokeWidth="4"
-                                strokeDasharray={`${branch.performanceScore * 1.256} 126`}
-                                strokeLinecap="round"
-                              />
-                            </svg>
-                            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">
-                              {branch.performanceScore}%
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <button className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-50 rounded-lg transition-colors">
-                          <ChevronRight className="w-5 h-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <div className="flex items-center justify-between">
+                <span className="text-white/70 text-sm">Transaksi</span>
+                <Receipt className="w-4 h-4 text-white/50" />
+              </div>
+              <p className="text-2xl font-bold mt-1">{totalTransactions.toLocaleString('id-ID')}</p>
+              <p className="text-xs text-white/70 mt-1">Avg: {formatCurrency(totalSalesToday / (totalTransactions || 1))}</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <div className="flex items-center justify-between">
+                <span className="text-white/70 text-sm">Cabang Aktif</span>
+                <Store className="w-4 h-4 text-white/50" />
+              </div>
+              <p className="text-2xl font-bold mt-1">{branches.filter(b => b.status === 'online').length}/{branches.length}</p>
+              <div className="flex items-center gap-2 text-xs mt-1">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-400 rounded-full"></span>{branches.filter(b => b.status === 'online').length}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-yellow-400 rounded-full"></span>{branches.filter(b => b.status === 'warning').length}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-400 rounded-full"></span>{branches.filter(b => b.status === 'offline').length}</span>
+              </div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <div className="flex items-center justify-between">
+                <span className="text-white/70 text-sm">Performa</span>
+                <Target className="w-4 h-4 text-white/50" />
+              </div>
+              <p className="text-2xl font-bold mt-1">{avgPerformance}%</p>
+              <div className="w-full bg-white/20 rounded-full h-1.5 mt-2">
+                <div className="bg-white h-1.5 rounded-full" style={{ width: `${avgPerformance}%` }}></div>
+              </div>
             </div>
           </div>
+        </div>
 
-          {/* Alerts Panel */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Alerts</h3>
-                  <p className="text-sm text-gray-500">{alerts.length} notifikasi aktif</p>
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-fit">
+          {[
+            { id: 'overview', label: 'Overview', icon: LayoutGrid },
+            { id: 'sales', label: 'Penjualan', icon: LineChartIcon },
+            { id: 'branches', label: 'Cabang', icon: Building2 },
+            { id: 'analytics', label: 'Analytics', icon: BarChart3 }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === tab.id 
+                  ? 'bg-white text-gray-900 shadow-sm' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          {/* Left Column - Main Charts & Data */}
+          <div className="xl:col-span-3 space-y-6">
+            {/* Financial Overview Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="p-2.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl">
+                    <Wallet className="w-5 h-5 text-white" />
+                  </div>
+                  <span className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
+                    parseFloat(salesGrowth) >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
+                  }`}>
+                    {parseFloat(salesGrowth) >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                    {Math.abs(parseFloat(salesGrowth))}%
+                  </span>
                 </div>
-                <button className="relative p-2 hover:bg-gray-100 rounded-lg">
-                  <Bell className="w-5 h-5 text-gray-500" />
-                  {alerts.filter(a => a.severity === 'critical').length > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-                      {alerts.filter(a => a.severity === 'critical').length}
+                <div className="mt-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue Hari Ini</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalSalesToday)}</p>
+                  <p className="text-xs text-gray-400 mt-1">vs {formatCurrency(totalSalesYesterday)} kemarin</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="p-2.5 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl">
+                    <CreditCard className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-blue-50 text-blue-600">
+                    <Activity className="w-3 h-3" />
+                    Live
+                  </span>
+                </div>
+                <div className="mt-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Transaksi</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{totalTransactions.toLocaleString('id-ID')}</p>
+                  <p className="text-xs text-gray-400 mt-1">Avg {formatCurrency(totalSalesToday / (totalTransactions || 1))}/trx</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="p-2.5 bg-gradient-to-br from-violet-400 to-violet-600 rounded-xl">
+                    <Package className="w-5 h-5 text-white" />
+                  </div>
+                  {totalLowStockItems > 0 && (
+                    <span className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-red-50 text-red-600">
+                      <AlertCircle className="w-3 h-3" />
+                      {totalLowStockItems}
                     </span>
                   )}
-                </button>
+                </div>
+                <div className="mt-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Nilai Stok</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalStockValue)}</p>
+                  <p className="text-xs text-gray-400 mt-1">Di {branches.length} lokasi</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div className="p-2.5 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl">
+                    <Target className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-amber-50 text-amber-600">
+                    Bulan Ini
+                  </span>
+                </div>
+                <div className="mt-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Bulan</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalSalesMonth)}</p>
+                  <div className="mt-2">
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-500">Target Rp 5M</span>
+                      <span className="font-medium text-amber-600">{Math.round((totalSalesMonth / 5000000000) * 100)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div className="bg-gradient-to-r from-amber-400 to-amber-600 h-1.5 rounded-full" style={{ width: `${Math.min((totalSalesMonth / 5000000000) * 100, 100)}%` }}></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
-              {alerts.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>Tidak ada alert</p>
+
+            {/* Sales Chart with View Toggle */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Tren Penjualan</h3>
+                  <p className="text-sm text-gray-500">Analisis penjualan real-time</p>
                 </div>
-              ) : (
-                alerts.map((alert) => (
-                  <div
-                    key={alert.id}
-                    className={`p-4 rounded-lg border ${getSeverityColor(alert.severity)}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5">{getAlertIcon(alert.type)}</div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
+                    {['daily', 'hourly', 'weekly'].map(view => (
+                      <button
+                        key={view}
+                        onClick={() => setChartView(view as any)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                          chartView === view ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        {view === 'daily' ? 'Harian' : view === 'hourly' ? 'Per Jam' : 'Mingguan'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={chartView === 'hourly' ? hourlyData.slice(6, 23) : chartSalesTrend}>
+                    <defs>
+                      <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#6366F1" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
+                    <XAxis 
+                      dataKey={chartView === 'hourly' ? 'hour' : 'day'} 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: '#6B7280' }}
+                    />
+                    <YAxis 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 12, fill: '#6B7280' }}
+                      tickFormatter={(v) => chartView === 'hourly' ? `${(v/1000000).toFixed(0)}Jt` : `${v}Jt`}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        borderRadius: '12px', 
+                        border: 'none',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                        padding: '12px'
+                      }}
+                      formatter={(value: number) => [
+                        chartView === 'hourly' ? `Rp ${(value/1000000).toFixed(1)} Juta` : `Rp ${value} Juta`, 
+                        'Penjualan'
+                      ]}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="sales" 
+                      stroke="#6366F1" 
+                      strokeWidth={2.5}
+                      fill="url(#salesGradient)"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="transactions" 
+                      stroke="#10B981" 
+                      strokeWidth={2}
+                      dot={false}
+                      hide={chartView === 'hourly'}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                  <span className="text-sm text-gray-600">Penjualan</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                  <span className="text-sm text-gray-600">Transaksi</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Two Column Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Top Products */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="p-5 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Produk Terlaris</h3>
+                      <p className="text-sm text-gray-500">Berdasarkan jumlah terjual</p>
+                    </div>
+                    <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+                      Lihat Semua
+                    </button>
+                  </div>
+                </div>
+                <div className="p-5 space-y-4">
+                  {topProducts.map((product, index) => (
+                    <div key={product.id} className="flex items-center gap-4">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
+                        index === 0 ? 'bg-amber-100 text-amber-700' :
+                        index === 1 ? 'bg-gray-100 text-gray-700' :
+                        index === 2 ? 'bg-orange-100 text-orange-700' :
+                        'bg-gray-50 text-gray-500'
+                      }`}>
+                        {index + 1}
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{alert.branchName}</p>
-                        <p className="text-sm mt-1">{alert.message}</p>
-                        <p className="text-xs mt-2 opacity-75">
-                          {new Date(alert.timestamp).toLocaleString('id-ID', {
-                            day: '2-digit',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                        <p className="font-medium text-gray-900 truncate">{product.name}</p>
+                        <p className="text-xs text-gray-500">{product.category}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-gray-900">{product.sold.toLocaleString()}</p>
+                        <p className={`text-xs flex items-center justify-end gap-0.5 ${product.growth >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {product.growth >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                          {Math.abs(product.growth)}%
                         </p>
                       </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Transactions */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+                <div className="p-5 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Transaksi Terbaru</h3>
+                      <p className="text-sm text-gray-500">Real-time dari semua cabang</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                      Live
+                    </div>
                   </div>
-                ))
+                </div>
+                <div className="p-5 space-y-3">
+                  {recentTransactions.map((trx) => (
+                    <div key={trx.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                        <Receipt className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900 text-sm">{trx.id}</p>
+                          <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full">{trx.paymentMethod}</span>
+                        </div>
+                        <p className="text-xs text-gray-500 truncate">{trx.branchName} • {trx.items} item</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-gray-900">{formatCurrency(trx.amount)}</p>
+                        <p className="text-xs text-gray-400">
+                          {Math.round((Date.now() - new Date(trx.timestamp).getTime()) / 60000)} menit lalu
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Branch Performance Grid */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              <div className="p-5 border-b border-gray-100">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Performa Cabang</h3>
+                    <p className="text-sm text-gray-500">Monitoring real-time semua lokasi</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedBranch}
+                      onChange={(e) => setSelectedBranch(e.target.value)}
+                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                      <option value="all">Semua Tipe</option>
+                      <option value="main">Pusat</option>
+                      <option value="branch">Cabang</option>
+                      <option value="warehouse">Gudang</option>
+                      <option value="kiosk">Kiosk</option>
+                    </select>
+                    <button 
+                      onClick={() => window.location.href = '/hq/branches'}
+                      className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Kelola Cabang
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Cabang</th>
+                      <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Penjualan</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Transaksi</th>
+                      <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Performa</th>
+                      <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {branches
+                      .filter(b => selectedBranch === 'all' || b.type === selectedBranch)
+                      .slice(0, 6)
+                      .map((branch) => (
+                      <tr key={branch.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                              branch.type === 'main' ? 'bg-purple-100' :
+                              branch.type === 'warehouse' ? 'bg-orange-100' :
+                              branch.type === 'kiosk' ? 'bg-green-100' :
+                              'bg-blue-100'
+                            }`}>
+                              {branch.type === 'warehouse' ? <Truck className="w-5 h-5 text-orange-600" /> :
+                               branch.type === 'kiosk' ? <Coffee className="w-5 h-5 text-green-600" /> :
+                               <Store className="w-5 h-5 text-blue-600" />}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{branch.name}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getTypeBadgeColor(branch.type)}`}>
+                                  {getTypeLabel(branch.type)}
+                                </span>
+                                <span className="text-xs text-gray-500">{branch.city}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          <div className="flex flex-col items-center">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                              branch.status === 'online' ? 'bg-emerald-50 text-emerald-700' :
+                              branch.status === 'warning' ? 'bg-amber-50 text-amber-700' :
+                              'bg-red-50 text-red-700'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                branch.status === 'online' ? 'bg-emerald-500' :
+                                branch.status === 'warning' ? 'bg-amber-500' :
+                                'bg-red-500'
+                              }`}></span>
+                              {branch.status === 'online' ? 'Online' : branch.status === 'warning' ? 'Warning' : 'Offline'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <p className="font-semibold text-gray-900">{formatCurrency(branch.todaySales)}</p>
+                          <p className={`text-xs flex items-center justify-end gap-0.5 mt-0.5 ${
+                            branch.todaySales >= branch.yesterdaySales ? 'text-emerald-600' : 'text-red-600'
+                          }`}>
+                            {branch.todaySales >= branch.yesterdaySales ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                            {branch.yesterdaySales > 0 ? Math.abs(((branch.todaySales - branch.yesterdaySales) / branch.yesterdaySales * 100)).toFixed(1) : 0}%
+                          </p>
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <p className="font-semibold text-gray-900">{branch.transactionCount}</p>
+                          {branch.lowStockItems > 0 && (
+                            <p className="text-xs text-red-600 mt-0.5">{branch.lowStockItems} low stock</p>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex justify-center">
+                            <div className="relative w-12 h-12">
+                              <svg className="w-12 h-12 transform -rotate-90">
+                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E5E7EB" strokeWidth="4" />
+                                <circle
+                                  cx="24" cy="24" r="20" fill="none"
+                                  stroke={branch.performanceScore >= 80 ? '#10B981' : branch.performanceScore >= 60 ? '#F59E0B' : '#EF4444'}
+                                  strokeWidth="4"
+                                  strokeDasharray={`${branch.performanceScore * 1.256} 126`}
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">{branch.performanceScore}%</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          <button 
+                            onClick={() => window.location.href = `/hq/branches/${branch.id}`}
+                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Sidebar */}
+          <div className="space-y-6">
+            {/* Target Progress */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-900">Target & Pencapaian</h3>
+                <Target className="w-5 h-5 text-gray-400" />
+              </div>
+              <div className="space-y-4">
+                {targets.map((target, index) => (
+                  <div key={index}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-gray-600">{target.label}</span>
+                      <span className="font-medium text-gray-900">
+                        {target.current}{target.unit} / {target.target}{target.unit}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-500 ${
+                          (target.current / target.target) >= 0.9 ? 'bg-emerald-500' :
+                          (target.current / target.target) >= 0.7 ? 'bg-amber-500' :
+                          'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.min((target.current / target.target) * 100, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Employee Overview */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-900">Kehadiran Karyawan</h3>
+                <Users className="w-5 h-5 text-gray-400" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-emerald-50 rounded-xl text-center">
+                  <p className="text-2xl font-bold text-emerald-600">{employeeStats.present}</p>
+                  <p className="text-xs text-emerald-700">Hadir</p>
+                </div>
+                <div className="p-3 bg-red-50 rounded-xl text-center">
+                  <p className="text-2xl font-bold text-red-600">{employeeStats.absent}</p>
+                  <p className="text-xs text-red-700">Absen</p>
+                </div>
+                <div className="p-3 bg-amber-50 rounded-xl text-center">
+                  <p className="text-2xl font-bold text-amber-600">{employeeStats.late}</p>
+                  <p className="text-xs text-amber-700">Terlambat</p>
+                </div>
+                <div className="p-3 bg-blue-50 rounded-xl text-center">
+                  <p className="text-2xl font-bold text-blue-600">{employeeStats.onLeave}</p>
+                  <p className="text-xs text-blue-700">Cuti</p>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Total Karyawan</span>
+                  <span className="font-semibold text-gray-900">{employeeStats.total}</span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-2 mt-2">
+                  <div 
+                    className="bg-emerald-500 h-2 rounded-full"
+                    style={{ width: `${(employeeStats.present / employeeStats.total) * 100}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {Math.round((employeeStats.present / employeeStats.total) * 100)}% tingkat kehadiran
+                </p>
+              </div>
+            </div>
+
+            {/* Alerts Panel */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              <div className="p-5 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Notifikasi</h3>
+                    <p className="text-xs text-gray-500">{alerts.length} alert aktif</p>
+                  </div>
+                  {alerts.filter(a => a.severity === 'critical').length > 0 && (
+                    <span className="flex items-center justify-center w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full">
+                      {alerts.filter(a => a.severity === 'critical').length}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
+                {alerts.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <CheckCircle className="w-12 h-12 mx-auto mb-3 text-emerald-200" />
+                    <p className="text-sm">Tidak ada alert</p>
+                  </div>
+                ) : (
+                  alerts.map((alert) => (
+                    <div
+                      key={alert.id}
+                      onClick={() => handleViewAlert(alert)}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all hover:shadow-sm ${getSeverityColor(alert.severity)}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5">{getAlertIcon(alert.type)}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{alert.branchName}</p>
+                          <p className="text-xs mt-0.5 line-clamp-2">{alert.message}</p>
+                          <p className="text-xs mt-1.5 opacity-60">
+                            {new Date(alert.timestamp).toLocaleString('id-ID', {
+                              day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              {alerts.length > 0 && (
+                <div className="p-4 border-t border-gray-100">
+                  <button className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+                    Lihat Semua Alert
+                  </button>
+                </div>
               )}
             </div>
-            <div className="p-4 border-t border-gray-200">
-              <button className="w-full py-2 text-sm text-blue-600 hover:text-blue-800 font-medium">
-                Lihat Semua Alert
-              </button>
+
+            {/* Quick Actions */}
+            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-5 text-white">
+              <h3 className="font-semibold mb-4">Aksi Cepat</h3>
+              <div className="space-y-2">
+                <button 
+                  onClick={() => window.location.href = '/hq/branches/new'}
+                  className="w-full flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-left"
+                >
+                  <Building2 className="w-5 h-5" />
+                  <span className="text-sm font-medium">Tambah Cabang Baru</span>
+                </button>
+                <button 
+                  onClick={() => window.location.href = '/hq/reports/sales'}
+                  className="w-full flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-left"
+                >
+                  <BarChart3 className="w-5 h-5" />
+                  <span className="text-sm font-medium">Lihat Laporan</span>
+                </button>
+                <button 
+                  onClick={() => window.location.href = '/hq/requisitions'}
+                  className="w-full flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-left"
+                >
+                  <Truck className="w-5 h-5" />
+                  <span className="text-sm font-medium">Kelola Requisition</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

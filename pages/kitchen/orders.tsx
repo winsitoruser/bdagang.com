@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { 
-  Search, Filter, Clock, CheckCircle, AlertCircle,
-  ChefHat, Calendar, Download, Eye, MoreVertical
+  Search, Filter, Clock, CheckCircle, AlertCircle, X,
+  ChefHat, Calendar, Download, Eye, MoreVertical, Bike,
+  Phone, MapPin, CreditCard, User, Truck, DollarSign
 } from 'lucide-react';
 import {
   Select,
@@ -19,6 +20,39 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+interface DeliveryInfo {
+  platform: {
+    id: string;
+    name: string;
+    color: string;
+    logo: string;
+    orderId: string;
+  };
+  driver: {
+    name: string;
+    phone: string;
+    vehicle: string;
+    plateNumber: string;
+    rating: string;
+  };
+  payment: {
+    method: string;
+    status: 'paid' | 'pending';
+    paidAt: string | null;
+    platformFee: number;
+    deliveryFee: number;
+    promoDiscount: number;
+  };
+  customer: {
+    name: string;
+    phone: string;
+    address: string;
+    notes: string | null;
+  };
+  estimatedArrival: string;
+  distance: string;
+}
+
 interface Order {
   id: string;
   orderNumber: string;
@@ -27,12 +61,40 @@ interface Order {
   customerName?: string;
   items: number;
   status: 'new' | 'preparing' | 'ready' | 'served' | 'cancelled';
-  priority: 'normal' | 'urgent';
+  priority: 'normal' | 'urgent' | 'high';
   receivedAt: Date;
   completedAt?: Date;
   prepTime?: number;
   totalAmount: number;
+  subtotal?: number;
+  delivery_info?: DeliveryInfo;
+  payment?: {
+    method: string;
+    status: 'paid' | 'pending';
+    paidAt: string | null;
+  };
 }
+
+// Platform badge colors
+const platformColors: Record<string, { bg: string; text: string }> = {
+  gofood: { bg: 'bg-green-100', text: 'text-green-700' },
+  grabfood: { bg: 'bg-green-100', text: 'text-green-700' },
+  shopeefood: { bg: 'bg-orange-100', text: 'text-orange-700' }
+};
+
+// Payment method icons
+const paymentIcons: Record<string, string> = {
+  'GoPay': '💚',
+  'GoPay Later': '💳',
+  'OVO': '💜',
+  'GrabPay': '💚',
+  'ShopeePay': '🧡',
+  'SPayLater': '💳',
+  'Cash': '💵',
+  'QRIS': '📱',
+  'Debit Card': '💳',
+  'LinkAja': '🔴'
+};
 
 const KitchenOrdersPage: React.FC = () => {
   const router = useRouter();
@@ -41,6 +103,7 @@ const KitchenOrdersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -74,12 +137,19 @@ const KitchenOrdersPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [statusFilter, typeFilter, searchQuery]);
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         order.tableNumber?.includes(searchQuery) ||
-                         order.customerName?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredOrders = orders.filter((order: any) => {
+    // Handle both camelCase and snake_case from API
+    const orderNumber = order.orderNumber || order.order_number || '';
+    const tableNumber = order.tableNumber || order.table_number || '';
+    const customerName = order.customerName || order.customer_name || '';
+    const orderType = order.orderType || order.order_type || '';
+    
+    const matchesSearch = !searchQuery || 
+                         orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         tableNumber.includes(searchQuery) ||
+                         customerName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    const matchesType = typeFilter === 'all' || order.orderType === typeFilter;
+    const matchesType = typeFilter === 'all' || orderType === typeFilter;
     return matchesSearch && matchesStatus && matchesType;
   });
 
@@ -114,8 +184,11 @@ const KitchenOrdersPage: React.FC = () => {
     return labels[type as keyof typeof labels];
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (date: Date | string | undefined | null) => {
+    if (!date) return '-';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
   };
 
   const formatCurrency = (amount: number) => {
@@ -278,70 +351,342 @@ const KitchenOrdersPage: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200">
+                  <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">No. Order</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Lokasi/Pelanggan</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Tipe</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Pelanggan</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Tipe/Platform</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Items</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Waktu</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Pembayaran</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Total</th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.map((order) => (
-                    <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="py-4 px-4">
-                        <div className="flex items-center">
-                          {order.priority === 'urgent' && (
-                            <AlertCircle className="w-4 h-4 text-red-500 mr-2" />
-                          )}
-                          <span className="font-medium text-gray-900">{order.orderNumber}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-gray-900">
-                          {order.tableNumber ? `Meja ${order.tableNumber}` : order.customerName}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-sm text-gray-600">{getOrderTypeLabel(order.orderType)}</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="text-gray-900">{order.items} item</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        {getStatusBadge(order.status)}
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm">
-                          <div className="text-gray-900">{formatTime(order.receivedAt)}</div>
-                          {order.prepTime && (
-                            <div className="text-gray-500">{order.prepTime} menit</div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="font-medium text-gray-900">{formatCurrency(order.totalAmount)}</span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex space-x-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredOrders.map((order: any) => {
+                    // Handle both camelCase and snake_case from API
+                    const orderNumber = order.orderNumber || order.order_number || '-';
+                    const tableNumber = order.tableNumber || order.table_number;
+                    const customerName = order.customerName || order.customer_name || '-';
+                    const orderType = order.orderType || order.order_type || '';
+                    const receivedAt = order.receivedAt || order.received_at;
+                    const totalAmount = order.totalAmount || order.total_amount || 0;
+                    const itemCount = Array.isArray(order.items) ? order.items.length : (order.items || 0);
+                    const deliveryInfo = order.delivery_info;
+                    const payment = order.payment;
+                    
+                    return (
+                      <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => setSelectedOrder(order)}>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center">
+                            {order.priority === 'urgent' || order.priority === 'high' ? (
+                              <AlertCircle className="w-4 h-4 text-red-500 mr-2" />
+                            ) : null}
+                            <div>
+                              <span className="font-medium text-gray-900">{orderNumber}</span>
+                              {deliveryInfo && (
+                                <div className="text-xs text-gray-500">{deliveryInfo.platform.orderId}</div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div>
+                            <span className="text-gray-900 font-medium">
+                              {tableNumber ? `Meja ${tableNumber}` : deliveryInfo?.customer?.name || customerName}
+                            </span>
+                            {deliveryInfo?.customer?.phone && (
+                              <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <Phone className="w-3 h-3" />
+                                {deliveryInfo.customer.phone}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="space-y-1">
+                            {deliveryInfo ? (
+                              <Badge className={`${platformColors[deliveryInfo.platform.id]?.bg || 'bg-gray-100'} ${platformColors[deliveryInfo.platform.id]?.text || 'text-gray-700'} border-0`}>
+                                <Bike className="w-3 h-3 mr-1" />
+                                {deliveryInfo.platform.name}
+                              </Badge>
+                            ) : (
+                              <span className="text-sm text-gray-600">{getOrderTypeLabel(orderType) || orderType}</span>
+                            )}
+                            {deliveryInfo && (
+                              <div className="text-xs text-gray-500">{deliveryInfo.distance}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="text-gray-900">{itemCount} item</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          {getStatusBadge(order.status)}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm">{paymentIcons[payment?.method] || '💳'}</span>
+                              <span className="text-sm font-medium">{payment?.method || '-'}</span>
+                            </div>
+                            <Badge className={payment?.status === 'paid' ? 'bg-green-100 text-green-700 border-0' : 'bg-amber-100 text-amber-700 border-0'}>
+                              {payment?.status === 'paid' ? '✓ Lunas' : '⏳ Belum Bayar'}
+                            </Badge>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="font-medium text-gray-900">{formatCurrency(totalAmount)}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex space-x-2">
+                            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
+
+        {/* Order Detail Modal */}
+        {selectedOrder && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelectedOrder(null)}>
+            <div className="bg-white rounded-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+              {(() => {
+                const order = selectedOrder;
+                const orderNumber = order.orderNumber || order.order_number || '-';
+                const orderType = order.orderType || order.order_type || '';
+                const deliveryInfo = order.delivery_info;
+                const payment = order.payment;
+                const totalAmount = order.totalAmount || order.total_amount || 0;
+                const subtotal = order.subtotal || totalAmount;
+                const items = order.items || [];
+
+                return (
+                  <>
+                    {/* Header */}
+                    <div className={`p-5 rounded-t-2xl text-white ${deliveryInfo ? (
+                      deliveryInfo.platform.id === 'gofood' ? 'bg-green-600' :
+                      deliveryInfo.platform.id === 'grabfood' ? 'bg-green-700' :
+                      'bg-orange-500'
+                    ) : 'bg-sky-600'}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                            {deliveryInfo ? <Bike className="w-8 h-8" /> : <ChefHat className="w-8 h-8" />}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl font-bold">{orderNumber}</span>
+                              {getStatusBadge(order.status)}
+                            </div>
+                            {deliveryInfo && (
+                              <p className="text-sm opacity-80">{deliveryInfo.platform.name} • {deliveryInfo.platform.orderId}</p>
+                            )}
+                          </div>
+                        </div>
+                        <button onClick={() => setSelectedOrder(null)} className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30">
+                          <X className="w-6 h-6" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-5 space-y-5">
+                      {/* Delivery Info */}
+                      {deliveryInfo && (
+                        <>
+                          {/* Platform & Driver Info */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-gray-50 rounded-xl p-4">
+                              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <Bike className="w-4 h-4" /> Info Driver
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Nama:</span>
+                                  <span className="font-medium">{deliveryInfo.driver.name}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Telepon:</span>
+                                  <span className="font-medium">{deliveryInfo.driver.phone}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Kendaraan:</span>
+                                  <span className="font-medium">{deliveryInfo.driver.vehicle}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Plat Nomor:</span>
+                                  <span className="font-medium">{deliveryInfo.driver.plateNumber}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Rating:</span>
+                                  <span className="font-medium">⭐ {deliveryInfo.driver.rating}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="bg-gray-50 rounded-xl p-4">
+                              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                <MapPin className="w-4 h-4" /> Info Pengiriman
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Jarak:</span>
+                                  <span className="font-medium">{deliveryInfo.distance}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-500">Est. Tiba:</span>
+                                  <span className="font-medium">{formatTime(deliveryInfo.estimatedArrival)}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Alamat:</span>
+                                  <p className="font-medium mt-1">{deliveryInfo.customer.address}</p>
+                                </div>
+                                {deliveryInfo.customer.notes && (
+                                  <div>
+                                    <span className="text-gray-500">Catatan:</span>
+                                    <p className="font-medium mt-1 text-orange-600">📝 {deliveryInfo.customer.notes}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Customer Info */}
+                          <div className="bg-blue-50 rounded-xl p-4">
+                            <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                              <User className="w-4 h-4" /> Info Pelanggan
+                            </h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-gray-400" />
+                                <span className="font-medium">{deliveryInfo.customer.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Phone className="w-4 h-4 text-gray-400" />
+                                <span className="font-medium">{deliveryInfo.customer.phone}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Payment Info */}
+                      <div className={`rounded-xl p-4 ${payment?.status === 'paid' ? 'bg-green-50' : 'bg-amber-50'}`}>
+                        <h4 className={`font-semibold mb-3 flex items-center gap-2 ${payment?.status === 'paid' ? 'text-green-900' : 'text-amber-900'}`}>
+                          <CreditCard className="w-4 h-4" /> Status Pembayaran
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Metode:</span>
+                              <span className="font-bold flex items-center gap-1">
+                                {paymentIcons[payment?.method] || '💳'} {payment?.method || '-'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Status:</span>
+                              <Badge className={payment?.status === 'paid' ? 'bg-green-500 text-white' : 'bg-amber-500 text-white'}>
+                                {payment?.status === 'paid' ? '✓ LUNAS' : '⏳ BELUM BAYAR'}
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="space-y-2 text-sm">
+                            {deliveryInfo && (
+                              <>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Platform Fee:</span>
+                                  <span className="font-medium">{formatCurrency(deliveryInfo.payment.platformFee)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Ongkir:</span>
+                                  <span className="font-medium">{formatCurrency(deliveryInfo.payment.deliveryFee)}</span>
+                                </div>
+                                {deliveryInfo.payment.promoDiscount > 0 && (
+                                  <div className="flex justify-between text-green-600">
+                                    <span>Diskon:</span>
+                                    <span className="font-medium">-{formatCurrency(deliveryInfo.payment.promoDiscount)}</span>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Order Items */}
+                      <div>
+                        <h4 className="font-semibold text-gray-900 mb-3">Detail Pesanan ({Array.isArray(items) ? items.length : 0} item)</h4>
+                        <div className="space-y-2">
+                          {Array.isArray(items) && items.map((item: any, idx: number) => (
+                            <div key={idx} className="flex justify-between items-start p-3 bg-gray-50 rounded-lg">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-orange-600">{item.quantity}x</span>
+                                  <span className="font-medium">{item.name}</span>
+                                </div>
+                                {item.notes && <p className="text-xs text-gray-500 mt-1">📝 {item.notes}</p>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Totals */}
+                      <div className="border-t pt-4 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500">Subtotal</span>
+                          <span>{formatCurrency(subtotal)}</span>
+                        </div>
+                        {deliveryInfo && (
+                          <>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500">Ongkir</span>
+                              <span>{formatCurrency(deliveryInfo.payment.deliveryFee)}</span>
+                            </div>
+                            {deliveryInfo.payment.promoDiscount > 0 && (
+                              <div className="flex justify-between text-sm text-green-600">
+                                <span>Diskon</span>
+                                <span>-{formatCurrency(deliveryInfo.payment.promoDiscount)}</span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                          <span>Total</span>
+                          <span className="text-orange-600">{formatCurrency(totalAmount)}</span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-3 pt-4">
+                        <Button variant="outline" className="flex-1" onClick={() => setSelectedOrder(null)}>
+                          Tutup
+                        </Button>
+                        {order.status === 'new' && (
+                          <Button className="flex-1 bg-blue-500 hover:bg-blue-600">
+                            <ChefHat className="w-4 h-4 mr-2" /> Mulai Masak
+                          </Button>
+                        )}
+                        {order.status === 'preparing' && (
+                          <Button className="flex-1 bg-green-500 hover:bg-green-600">
+                            <CheckCircle className="w-4 h-4 mr-2" /> Siap Diambil
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

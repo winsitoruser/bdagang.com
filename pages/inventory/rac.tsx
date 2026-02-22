@@ -84,6 +84,8 @@ const RACManagementPage: React.FC = () => {
       const params: any = {
         page: 1,
         limit: 50,
+        source: 'rac',
+        includeStats: 'true',
       };
       
       if (filterStatus !== 'all') {
@@ -98,7 +100,8 @@ const RACManagementPage: React.FC = () => {
         params.search = searchQuery;
       }
 
-      const response = await axios.get('/api/inventory/rac', { params });
+      // Use unified API for integrated data
+      const response = await axios.get('/api/requisitions/unified', { params });
       
       if (response.data.success) {
         let data = response.data.data || [];
@@ -124,9 +127,12 @@ const RACManagementPage: React.FC = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get('/api/inventory/rac/stats');
+      // Use unified stats API
+      const response = await axios.get('/api/requisitions/stats', {
+        params: { source: 'rac' }
+      });
       if (response.data.success) {
-        setStats(response.data.data);
+        setStats(response.data.rac || response.data.data);
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -150,15 +156,17 @@ const RACManagementPage: React.FC = () => {
     
     setActionLoading(true);
     try {
+      // Use unified API for approval - syncs with HQ automatically
       const response = await axios.put(
-        `/api/inventory/rac/${selectedRequest.id}/approve`,
+        `/api/requisitions/unified?id=${selectedRequest.id}`,
         {
-          approval_notes: approvalNotes
+          action: 'approve',
+          approvalNotes: approvalNotes
         }
       );
 
       if (response.data.success) {
-        toast.success('Request berhasil disetujui!');
+        toast.success('Request berhasil disetujui & disinkronkan ke HQ!');
         setShowApproveModal(false);
         setShowDetailModal(false);
         setApprovalNotes('');
@@ -180,15 +188,17 @@ const RACManagementPage: React.FC = () => {
     
     setActionLoading(true);
     try {
+      // Use unified API for rejection - syncs with HQ automatically
       const response = await axios.put(
-        `/api/inventory/rac/${selectedRequest.id}/reject`,
+        `/api/requisitions/unified?id=${selectedRequest.id}`,
         {
-          rejection_reason: rejectionReason
+          action: 'reject',
+          rejectionReason: rejectionReason
         }
       );
 
       if (response.data.success) {
-        toast.success('Request ditolak');
+        toast.success('Request ditolak & disinkronkan ke HQ');
         setShowRejectModal(false);
         setShowDetailModal(false);
         setRejectionReason('');

@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { 
   ChefHat, UtensilsCrossed, Clock, Users, DollarSign,
   TrendingUp, AlertCircle, CheckCircle, Flame, Package,
-  Calendar, MapPin, Bell, ArrowRight, RefreshCw, Eye
+  Calendar, MapPin, Bell, ArrowRight, RefreshCw, Eye, ShoppingBag, Bike
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import toast from 'react-hot-toast';
+import OnlineOrderPanel from "@/components/orders/OnlineOrderPanel";
 
 const FnBDashboard: NextPage = () => {
   const router = useRouter();
@@ -532,6 +533,32 @@ const FnBDashboard: NextPage = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Online Orders & Queue Management */}
+        <Card className="border-2 border-orange-200 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                  <Bike className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Pesanan Online & Antrian</CardTitle>
+                  <CardDescription>GoFood, GrabFood, ShopeeFood & Walk-in</CardDescription>
+                </div>
+              </div>
+              <Link href="/orders/queue">
+                <Button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700">
+                  <ShoppingBag className="w-4 h-4 mr-2" />
+                  Kelola Antrian
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <OnlineOrderPanel />
+          </CardContent>
+        </Card>
 
         {/* Reservations Today */}
         <Card className="border-2 border-indigo-200 shadow-lg">

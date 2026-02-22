@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +77,58 @@ const KitchenDisplaySystem: React.FC = () => {
   const [fullscreen, setFullscreen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // WebSocket connection for real-time updates
+  const handleWebSocketMessage = useCallback((message: any) => {
+    console.log('[Kitchen] WebSocket message:', message);
+    
+    switch (message.event) {
+      case 'kitchen:order:new':
+        // Add new order to the list
+        setOrders(prev => [message.data, ...prev]);
+        // Play sound notification
+        if (soundEnabled) {
+          playNotificationSound();
+        }
+        break;
+        
+      case 'kitchen:order:update':
+        // Update existing order
+        setOrders(prev => prev.map(order => 
+          order.id === message.data.id ? { ...order, ...message.data } : order
+        ));
+        break;
+        
+      case 'kitchen:order:complete':
+        // Move order to history
+        setOrders(prev => prev.filter(order => order.id !== message.data.id));
+        break;
+        
+      case 'kitchen:order:cancel':
+        // Remove cancelled order
+        setOrders(prev => prev.filter(order => order.id !== message.data.id));
+        break;
+    }
+  }, [soundEnabled]);
+
+  const { isConnected, lastMessage } = useWebSocket({
+    branchId: session?.user?.branchId || 'default',
+    role: 'kitchen',
+    events: ['kitchen:order:new', 'kitchen:order:update', 'kitchen:order:complete', 'kitchen:order:cancel'],
+    onMessage: handleWebSocketMessage,
+    onConnect: () => console.log('[Kitchen] WebSocket connected'),
+    onDisconnect: () => console.log('[Kitchen] WebSocket disconnected')
+  });
+
+  // Play notification sound
+  const playNotificationSound = () => {
+    try {
+      const audio = new Audio('/sounds/notification.mp3');
+      audio.play().catch(() => console.log('Audio play blocked'));
+    } catch (error) {
+      console.log('Audio not supported');
+    }
+  };
 
   useEffect(() => {
     if (status === "unauthenticated") {

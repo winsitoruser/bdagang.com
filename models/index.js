@@ -92,6 +92,11 @@ db.PartnerOutlet = require('./PartnerOutlet');
 db.PartnerUser = require('./PartnerUser');
 db.ActivationRequest = require('./ActivationRequest');
 
+// Third-party Integration Models
+db.IntegrationProvider = require('./IntegrationProvider');
+db.IntegrationConfig = require('./IntegrationConfig');
+db.IntegrationRequest = require('./IntegrationRequest');
+
 // Load associations if they exist
 // Associations are defined in the models themselves or in separate files
 console.log('Loading model associations...');

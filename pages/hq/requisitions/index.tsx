@@ -211,13 +211,32 @@ export default function InternalRequisitions() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.append('includeStats', 'true');
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (priorityFilter !== 'all') params.append('priority', priorityFilter);
 
-      const response = await fetch(`/api/hq/requisitions?${params}`);
+      // Use unified API for integrated data with branch RAC
+      const response = await fetch(`/api/requisitions/unified?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setRequisitions(data.requisitions || mockRequisitions);
+        // Map unified data to HQ requisition format
+        const mappedReqs = (data.data || []).map((req: any) => ({
+          id: req.id,
+          irNumber: req.irNumber || req.requestNumber,
+          requestingBranch: req.requestingBranch,
+          fulfillingBranch: req.fulfillingBranch,
+          requestType: req.requestType,
+          priority: req.priority,
+          status: req.status,
+          requestedDeliveryDate: req.requestedDeliveryDate || req.requiredDate,
+          totalItems: req.totalItems,
+          totalQuantity: req.totalQuantity,
+          estimatedValue: req.estimatedValue,
+          requester: req.requestedBy,
+          createdAt: req.createdAt,
+          items: req.items || []
+        }));
+        setRequisitions(mappedReqs.length > 0 ? mappedReqs : mockRequisitions);
       } else {
         setRequisitions(mockRequisitions);
       }
@@ -259,15 +278,42 @@ export default function InternalRequisitions() {
   };
 
   const handleApprove = async (requisitionId: string) => {
-    // API call to approve requisition
-    console.log('Approving requisition:', requisitionId);
-    fetchRequisitions();
+    try {
+      // Use unified API for approval - syncs with branch RAC automatically
+      const response = await fetch(`/api/requisitions/unified?id=${requisitionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve' })
+      });
+      
+      if (response.ok) {
+        alert('Requisition disetujui & disinkronkan ke cabang!');
+        fetchRequisitions();
+      }
+    } catch (error) {
+      console.error('Error approving requisition:', error);
+    }
   };
 
   const handleReject = async (requisitionId: string) => {
-    // API call to reject requisition
-    console.log('Rejecting requisition:', requisitionId);
-    fetchRequisitions();
+    const reason = prompt('Masukkan alasan penolakan:');
+    if (!reason) return;
+    
+    try {
+      // Use unified API for rejection - syncs with branch RAC automatically
+      const response = await fetch(`/api/requisitions/unified?id=${requisitionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject', rejectionReason: reason })
+      });
+      
+      if (response.ok) {
+        alert('Requisition ditolak & disinkronkan ke cabang!');
+        fetchRequisitions();
+      }
+    } catch (error) {
+      console.error('Error rejecting requisition:', error);
+    }
   };
 
   const getStatusIcon = (status: string) => {
