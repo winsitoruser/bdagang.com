@@ -157,7 +157,7 @@ async function getAnalyticsOverview(
     LEFT JOIN pos_transaction_items pti ON pt.id = pti.transaction_id
     LEFT JOIN products p ON pti.product_id = p.id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${currentDateFilter}
     ${branchFilter}
   `, {
@@ -180,7 +180,7 @@ async function getAnalyticsOverview(
     LEFT JOIN pos_transaction_items pti ON pt.id = pti.transaction_id
     LEFT JOIN products p ON pti.product_id = p.id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${compareDateFilter}
     ${branchFilter}
   `, {
@@ -217,7 +217,7 @@ async function getAnalyticsOverview(
     JOIN pos_transaction_items pti ON p.id = pti.product_id
     JOIN pos_transactions pt ON pti.transaction_id = pt.id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${currentDateFilter}
     ${branchFilter}
     GROUP BY c.id, c.name
@@ -239,7 +239,7 @@ async function getAnalyticsOverview(
       COUNT(DISTINCT pt.customer_id) as unique_customers
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed' ${currentDateFilter}
+      AND pt.status = 'closed' ${currentDateFilter}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
     ${branchFilter}
@@ -278,7 +278,7 @@ async function getAnalyticsOverview(
           COUNT(pt.id) as transaction_count
         FROM pos_transactions pt
         WHERE pt.tenant_id = :tenantId
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
         AND pt.customer_id IS NOT NULL
         ${currentDateFilter}
         GROUP BY pt.customer_id
@@ -376,7 +376,7 @@ async function getPerformanceAnalytics(
       
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed' ${currentDateFilter}
+      AND pt.status = 'closed' ${currentDateFilter}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
     ${branchFilter}
@@ -413,7 +413,7 @@ async function getPerformanceAnalytics(
     LEFT JOIN categories c ON p.category_id = c.id
     LEFT JOIN pos_transaction_items pti ON p.id = pti.product_id
     LEFT JOIN pos_transactions pt ON pti.transaction_id = pt.id
-      AND pt.status = 'completed' ${currentDateFilter}
+      AND pt.status = 'closed' ${currentDateFilter}
     WHERE p.tenant_id = :tenantId
     AND p.is_active = true
     ${branchFilter.replace('b.', 'pt.')}
@@ -437,7 +437,7 @@ async function getPerformanceAnalytics(
       COUNT(DISTINCT pt.branch_id) as active_branches
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     AND DATE(pt.transaction_date) >= CURRENT_DATE - INTERVAL '7 days'
     GROUP BY EXTRACT(HOUR FROM pt.transaction_date)
     ORDER BY hour
@@ -457,7 +457,7 @@ async function getPerformanceAnalytics(
       COUNT(DISTINCT pt.customer_id) as unique_customers
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     AND DATE(pt.transaction_date) >= CURRENT_DATE - INTERVAL '4 weeks'
     GROUP BY EXTRACT(DOW FROM pt.transaction_date), TO_CHAR(pt.transaction_date, 'Day')
     ORDER BY day_of_week
@@ -526,7 +526,7 @@ async function getEfficiencyAnalytics(
     FROM branches b
     LEFT JOIN employees e ON b.id = e.branch_id AND e.is_active = true
     LEFT JOIN employee_attendances ea ON e.id = ea.employee_id AND DATE(ea.check_in_at) = CURRENT_DATE
-    LEFT JOIN pos_transactions pt ON b.id = pt.branch_id AND pt.status = 'completed' AND DATE(pt.transaction_date) = CURRENT_DATE
+    LEFT JOIN pos_transactions pt ON b.id = pt.branch_id AND pt.status = 'closed' AND DATE(pt.transaction_date) = CURRENT_DATE
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
     ${branchFilter}
@@ -561,7 +561,7 @@ async function getEfficiencyAnalytics(
     FROM branches b
     LEFT JOIN products p ON b.id = p.branch_id AND p.is_active = true
     LEFT JOIN pos_transaction_items pti ON p.id = pti.product_id
-    LEFT JOIN pos_transactions pt ON pti.transaction_id = pt.id AND pt.status = 'completed' AND DATE(pt.transaction_date) = CURRENT_DATE
+    LEFT JOIN pos_transactions pt ON pti.transaction_id = pt.id AND pt.status = 'closed' AND DATE(pt.transaction_date) = CURRENT_DATE
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
     ${branchFilter}
@@ -593,7 +593,7 @@ async function getEfficiencyAnalytics(
          SELECT COUNT(DISTINCT pt.customer_id) as concurrent_customers
          FROM pos_transactions pt
          WHERE pt.branch_id = b.id
-         AND pt.status = 'completed'
+         AND pt.status = 'closed'
          AND DATE(pt.transaction_date) = CURRENT_DATE
          GROUP BY EXTRACT(HOUR FROM pt.transaction_date)
        ) peak) as peak_capacity_utilization
@@ -601,7 +601,7 @@ async function getEfficiencyAnalytics(
     FROM branches b
     LEFT JOIN products p ON b.id = p.branch_id AND p.is_active = true
     LEFT JOIN tables t ON b.id = t.branch_id AND t.is_active = true
-    LEFT JOIN pos_transactions pt ON b.id = pt.branch_id AND pt.status = 'completed' AND DATE(pt.transaction_date) = CURRENT_DATE
+    LEFT JOIN pos_transactions pt ON b.id = pt.branch_id AND pt.status = 'closed' AND DATE(pt.transaction_date) = CURRENT_DATE
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
     ${branchFilter}
@@ -641,7 +641,7 @@ async function getEfficiencyAnalytics(
       
     FROM branches b
     LEFT JOIN wastage_records wr ON b.id = wr.branch_id AND DATE(wr.waste_date) = CURRENT_DATE
-    LEFT JOIN pos_transactions pt ON b.id = pt.branch_id AND pt.status = 'completed' AND DATE(pt.transaction_date) = CURRENT_DATE
+    LEFT JOIN pos_transactions pt ON b.id = pt.branch_id AND pt.status = 'closed' AND DATE(pt.transaction_date) = CURRENT_DATE
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
     ${branchFilter}
@@ -701,7 +701,7 @@ async function getPredictiveAnalytics(
         EXTRACT(DAY FROM pt.transaction_date) as day_of_month
       FROM pos_transactions pt
       WHERE pt.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND DATE(pt.transaction_date) >= CURRENT_DATE - INTERVAL '30 days'
       GROUP BY DATE(pt.transaction_date)
     ),
@@ -743,7 +743,7 @@ async function getPredictiveAnalytics(
        FROM pos_transaction_items pti
        JOIN pos_transactions pt ON pti.transaction_id = pt.id
        WHERE pti.product_id = p.id
-       AND pt.status = 'completed'
+       AND pt.status = 'closed'
        AND DATE(pt.transaction_date) >= CURRENT_DATE - INTERVAL '7 days') as weekly_demand,
        
       -- Recommendation
@@ -798,7 +798,7 @@ async function getPredictiveAnalytics(
            SELECT COUNT(pt.id) as transaction_count
            FROM pos_transactions pt
            WHERE pt.branch_id = b.id
-           AND pt.status = 'completed'
+           AND pt.status = 'closed'
            AND EXTRACT(HOUR FROM pt.transaction_date) = EXTRACT(HOUR FROM CURRENT_TIME)
            AND DATE(pt.transaction_date) >= CURRENT_DATE - INTERVAL '4 weeks'
            GROUP BY DATE(pt.transaction_date)
@@ -812,7 +812,7 @@ async function getPredictiveAnalytics(
                SELECT COUNT(pt.id) as transaction_count
                FROM pos_transactions pt
                WHERE pt.branch_id = b.id
-               AND pt.status = 'completed'
+               AND pt.status = 'closed'
                AND EXTRACT(HOUR FROM pt.transaction_date) = EXTRACT(HOUR FROM CURRENT_TIME)
                AND DATE(pt.transaction_date) >= CURRENT_DATE - INTERVAL '4 weeks'
                GROUP BY DATE(pt.transaction_date)
@@ -823,7 +823,7 @@ async function getPredictiveAnalytics(
                SELECT COUNT(pt.id) as transaction_count
                FROM pos_transactions pt
                WHERE pt.branch_id = b.id
-               AND pt.status = 'completed'
+               AND pt.status = 'closed'
                AND EXTRACT(HOUR FROM pt.transaction_date) = EXTRACT(HOUR FROM CURRENT_TIME)
                AND DATE(pt.transaction_date) >= CURRENT_DATE - INTERVAL '4 weeks'
                GROUP BY DATE(pt.transaction_date)
@@ -857,7 +857,7 @@ async function getPredictiveAnalytics(
         EXTRACT(DAYS FROM CURRENT_DATE - MAX(pt.transaction_date)) as days_since_last_visit
       FROM pos_transactions pt
       WHERE pt.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND pt.customer_id IS NOT NULL
       AND DATE(pt.transaction_date) >= CURRENT_DATE - INTERVAL '90 days'
       GROUP BY pt.customer_id

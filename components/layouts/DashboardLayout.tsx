@@ -1,30 +1,26 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useBusinessType } from '@/contexts/BusinessTypeContext';
 import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Users, 
-  Settings, 
   LogOut,
   Store,
-  BarChart3,
   Menu,
   X,
-  Wallet,
-  Ticket,
-  Award,
   ChevronLeft,
-  ChevronRight,
-  CalendarDays,
-  Utensils,
-  Calendar,
-  DollarSign,
-  ChefHat
+  ChevronRight
 } from 'lucide-react';
+import {
+  branchSidebarConfig,
+  filterSidebarConfig,
+  findActiveMenuItem,
+  getParentMenuItem,
+  MenuItem,
+  MenuGroup,
+  UserRole,
+  ModuleCode
+} from '@/config/sidebar.config';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -33,9 +29,27 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { data: session } = useSession();
   const router = useRouter();
-  const { hasModule, isLoading: configLoading } = useBusinessType();
+  const { hasModule, isLoading: configLoading, modules } = useBusinessType();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+
+  // Get user role from session
+  const userRole = (session?.user as any)?.role as UserRole | undefined;
+
+  // Convert enabled modules to ModuleCode array
+  const enabledModuleCodes = useMemo(() => {
+    if (configLoading || !modules) return [];
+    return modules.map((m) => m.code) as ModuleCode[];
+  }, [modules, configLoading]);
+
+  // Filter sidebar config based on role and modules
+  const filteredConfig = useMemo(() => {
+    return filterSidebarConfig(
+      branchSidebarConfig, 
+      userRole, 
+      enabledModuleCodes.length > 0 ? enabledModuleCodes : undefined
+    );
+  }, [userRole, enabledModuleCodes]);
 
   // Auto-collapse sidebar for cashier page, otherwise load from localStorage
   React.useEffect(() => {
@@ -43,7 +57,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     if (isCashierPage) {
       setSidebarCollapsed(true);
     } else {
-      const saved = localStorage.getItem('sidebarCollapsed');
+      const saved = localStorage.getItem('branch-sidebar-collapsed');
       if (saved !== null) {
         setSidebarCollapsed(saved === 'true');
       }
@@ -54,59 +68,76 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const toggleSidebarCollapse = () => {
     const newState = !sidebarCollapsed;
     setSidebarCollapsed(newState);
-    localStorage.setItem('sidebarCollapsed', String(newState));
+    localStorage.setItem('branch-sidebar-collapsed', String(newState));
   };
-
-  // Define grouped menu structure
-  const menuGroups = [
-    {
-      title: 'OUTLET',
-      items: [
-        { code: 'dashboard', icon: LayoutDashboard, label: 'Dasbor', href: '/dashboard' },
-        { code: 'pos', icon: ShoppingCart, label: 'Kasir', href: '/pos' },
-        { code: 'inventory', icon: Package, label: 'Inventori', href: '/inventory' },
-        { code: 'customers', icon: Users, label: 'Pelanggan', href: '/customers' },
-        { code: 'employees', icon: CalendarDays, label: 'Jadwal & Shift', href: '/employees/schedules' },
-        { code: 'loyalty', icon: Award, label: 'Program Loyalitas', href: '/loyalty-program' },
-      ]
-    },
-    {
-      title: 'OPERASIONAL',
-      items: [
-        { code: 'tables', icon: Utensils, label: 'Manajemen Meja', href: '/tables' },
-        { code: 'reservations', icon: Calendar, label: 'Reservasi', href: '/reservations' },
-        { code: 'kitchen', icon: ChefHat, label: 'Management Kitchen', href: '/kitchen' },
-        { code: 'promo', icon: Ticket, label: 'Promo & Voucher', href: '/promo-voucher' },
-      ]
-    },
-    {
-      title: 'BACKOFFICE',
-      items: [
-        { code: 'finance', icon: Wallet, label: 'Keuangan', href: '/finance' },
-        { code: 'reports', icon: BarChart3, label: 'Laporan', href: '/reports' },
-        { code: 'settings', icon: Settings, label: 'Pengaturan', href: '/settings' },
-      ]
-    }
-  ];
-
-  // Filter menu groups based on enabled modules
-  // IMPORTANT: Show ALL menus for owner role (full access)
-  const userRole = session?.user?.role;
-  const isOwnerOrSuperAdmin = userRole === 'owner' || userRole === 'super_admin';
-  
-  const filteredMenuGroups = menuGroups.map(group => ({
-    ...group,
-    items: configLoading
-      ? group.items // Show all during loading
-      : isOwnerOrSuperAdmin
-        ? group.items // Owner and super_admin see ALL menus
-        : group.items.filter(item => hasModule(item.code)) // Others filtered by modules
-  })).filter(group => group.items.length > 0); // Remove empty groups
 
   const handleLogout = async () => {
     await signOut({ redirect: false });
     router.push('/auth/login');
   };
+
+  const isActive = (href?: string) => {
+    if (!href) return false;
+    return router.pathname === href || router.pathname.startsWith(href + '/');
+  };
+
+  const renderMenuItem = (item: MenuItem) => {
+    const Icon = item.icon;
+    const active = isActive(item.href);
+    
+    return (
+      <Link
+        key={item.id}
+        href={item.href || '#'}
+        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all group relative ${
+          active
+            ? 'bg-sky-50 text-sky-600 font-medium'
+            : 'text-gray-700 hover:bg-gray-50'
+        } ${
+          sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''
+        }`}
+        title={sidebarCollapsed ? item.name : ''}
+      >
+        <Icon className={`w-5 h-5 flex-shrink-0 ${
+          sidebarCollapsed ? 'lg:mx-auto' : ''
+        }`} />
+        <span className={`transition-all ${
+          sidebarCollapsed ? 'lg:hidden' : ''
+        }`}>{item.name}</span>
+        
+        {/* Tooltip for collapsed state */}
+        {sidebarCollapsed && (
+          <div className="hidden lg:block absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+            {item.name}
+            <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+          </div>
+        )}
+      </Link>
+    );
+  };
+
+  const renderMenuGroup = (group: MenuGroup, groupIndex: number) => (
+    <div key={group.id}>
+      {/* Section Header */}
+      {!sidebarCollapsed && (
+        <div className="px-4 mb-2">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            {group.title}
+          </h3>
+        </div>
+      )}
+      
+      {/* Divider for collapsed state */}
+      {sidebarCollapsed && groupIndex > 0 && (
+        <div className="my-2 border-t border-gray-200"></div>
+      )}
+      
+      {/* Menu Items */}
+      <div className="space-y-1">
+        {group.items.map(item => renderMenuItem(item))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -142,60 +173,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto">
-          {filteredMenuGroups.map((group, groupIndex) => (
-            <div key={groupIndex}>
-              {/* Section Header */}
-              {!sidebarCollapsed && (
-                <div className="px-4 mb-2">
-                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    {group.title}
-                  </h3>
-                </div>
-              )}
-              
-              {/* Divider for collapsed state */}
-              {sidebarCollapsed && groupIndex > 0 && (
-                <div className="my-2 border-t border-gray-200"></div>
-              )}
-              
-              {/* Menu Items */}
-              <div className="space-y-1">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = router.pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all group relative ${
-                        isActive
-                          ? 'bg-sky-50 text-sky-600 font-medium'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      } ${
-                        sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''
-                      }`}
-                      title={sidebarCollapsed ? item.label : ''}
-                    >
-                      <Icon className={`w-5 h-5 flex-shrink-0 ${
-                        sidebarCollapsed ? 'lg:mx-auto' : ''
-                      }`} />
-                      <span className={`transition-all ${
-                        sidebarCollapsed ? 'lg:hidden' : ''
-                      }`}>{item.label}</span>
-                      
-                      {/* Tooltip for collapsed state */}
-                      {sidebarCollapsed && (
-                        <div className="hidden lg:block absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-                          {item.label}
-                          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
-                        </div>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+          {filteredConfig.groups.map((group, groupIndex) => renderMenuGroup(group, groupIndex))}
         </nav>
 
         {/* User Info & Logout */}
@@ -272,7 +250,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </button>
             <div className="flex-1 lg:flex-none">
               <h1 className="text-xl font-semibold text-gray-900">
-                {filteredMenuGroups.flatMap(g => g.items).find(item => item.href === router.pathname)?.label || 'Dashboard'}
+                {findActiveMenuItem(filteredConfig.groups, router.pathname)?.name || 'Dashboard'}
               </h1>
             </div>
           </div>

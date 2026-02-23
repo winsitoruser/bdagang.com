@@ -161,7 +161,7 @@ async function exportRevenue(
       LEFT JOIN branches b ON pt.branch_id = b.id
       WHERE pt.tenant_id = :tenantId
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${branchId ? 'AND pt.branch_id = :branchId' : ''}
       GROUP BY DATE(pt.transaction_date), b.name, pt.order_type
       ORDER BY DATE(pt.transaction_date) DESC
@@ -267,7 +267,7 @@ async function exportBranchPerformance(
         COALESCE(AVG(pt.total_amount), 0) as "Avg Transaction"
       FROM branches b
       LEFT JOIN pos_transactions pt ON pt.branch_id = b.id 
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
         AND TO_CHAR(pt.transaction_date, 'YYYY-MM') = :period
       WHERE b.tenant_id = :tenantId
       AND b.is_active = true

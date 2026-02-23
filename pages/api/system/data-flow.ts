@@ -83,7 +83,7 @@ async function testPOSToFinance(sequelize: any): Promise<DataFlowTest> {
         COALESCE(SUM(total_amount), 0) as total_revenue,
         COUNT(*) as transaction_count
       FROM pos_transactions
-      WHERE status = 'completed'
+      WHERE status = 'closed'
       AND transaction_date >= CURRENT_DATE - INTERVAL '30 days'
     `, { type: QueryTypes.SELECT });
 

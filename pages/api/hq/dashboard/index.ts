@@ -155,7 +155,7 @@ async function getHQOverview(tenantId: string, dateFilter: string, branchFilter:
       
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id 
-      AND pt.status = 'completed' ${dateFilter}
+      AND pt.status = 'closed' ${dateFilter}
     LEFT JOIN employees e ON b.id = e.branch_id
     LEFT JOIN employee_attendances ea ON e.id = ea.employee_id 
       AND DATE(ea.check_in_at) = CURRENT_DATE
@@ -181,11 +181,11 @@ async function getHQOverview(tenantId: string, dateFilter: string, branchFilter:
       COALESCE(SUM(pt.total), 0) as total_sales,
       COALESCE(SUM(pt.total), 0) * 100.0 / NULLIF(
         (SELECT SUM(total) FROM pos_transactions pt2 
-         WHERE pt2.tenant_id = :tenantId AND pt2.status = 'completed' ${dateFilter}), 0
+         WHERE pt2.tenant_id = :tenantId AND pt2.status = 'closed' ${dateFilter}), 0
       ) as revenue_percentage
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed' ${dateFilter}
+      AND pt.status = 'closed' ${dateFilter}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
     ${branchFilter}
@@ -257,7 +257,7 @@ async function getHQOverview(tenantId: string, dateFilter: string, branchFilter:
       'green' as status
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed' AND DATE(pt.transaction_date) = CURRENT_DATE
+      AND pt.status = 'closed' AND DATE(pt.transaction_date) = CURRENT_DATE
     WHERE b.tenant_id = :tenantId
     ${branchFilter}
     
@@ -418,7 +418,7 @@ async function getBranchesStatus(tenantId: string, dateFilter: string, branchFil
       
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed' AND DATE(pt.transaction_date) = CURRENT_DATE
+      AND pt.status = 'closed' AND DATE(pt.transaction_date) = CURRENT_DATE
     LEFT JOIN products p ON b.id = p.branch_id AND p.is_active = true
     LEFT JOIN employees e ON b.id = e.branch_id
     LEFT JOIN employee_attendances ea ON e.id = ea.employee_id 
@@ -480,7 +480,7 @@ async function getDepartmentsStatus(tenantId: string, dateFilter: string, branch
       ) FILTER (WHERE pt.id IS NOT NULL) as hourly_breakdown
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed' AND DATE(pt.transaction_date) = CURRENT_DATE
+      AND pt.status = 'closed' AND DATE(pt.transaction_date) = CURRENT_DATE
     WHERE b.tenant_id = :tenantId
     ${branchFilter}
   `, {
@@ -671,7 +671,7 @@ async function getHQAlerts(tenantId: string, branchFilter: string, branchParams:
       CURRENT_TIMESTAMP as created_at
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed' AND DATE(pt.transaction_date) = CURRENT_DATE
+      AND pt.status = 'closed' AND DATE(pt.transaction_date) = CURRENT_DATE
     WHERE b.is_active = true
     AND pt.id IS NULL
     AND b.tenant_id = :tenantId
@@ -723,7 +723,7 @@ async function getHQAlerts(tenantId: string, branchFilter: string, branchParams:
       
       (SELECT 'medium' as level FROM branches b
        LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-         AND pt.status = 'completed' AND DATE(pt.transaction_date) = CURRENT_DATE
+         AND pt.status = 'closed' AND DATE(pt.transaction_date) = CURRENT_DATE
        WHERE b.is_active = true AND pt.id IS NULL
        AND b.tenant_id = :tenantId ${branchFilter})
     ) alerts
@@ -779,7 +779,7 @@ async function getHQTrends(tenantId: string, timeRange: string, branchFilter: st
       COUNT(DISTINCT pt.customer_id) as unique_customers
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     AND pt.transaction_date >= CURRENT_DATE - INTERVAL '30 days'
     ${branchFilter}
     GROUP BY period
@@ -804,7 +804,7 @@ async function getHQTrends(tenantId: string, timeRange: string, branchFilter: st
       ) FILTER (WHERE pt.id IS NOT NULL) as trend_data
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND pt.transaction_date >= CURRENT_DATE - INTERVAL '30 days'
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true

@@ -121,7 +121,7 @@ async function exportSales(
       JOIN branches b ON pt.branch_id = b.id
       WHERE pt.tenant_id = :tenantId
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${branchFilter}
       GROUP BY b.id, b.name, DATE(pt.transaction_date)
       ORDER BY DATE(pt.transaction_date) DESC, b.name
@@ -265,7 +265,7 @@ async function exportPerformance(
       FROM branches b
       LEFT JOIN pos_transactions pt ON pt.branch_id = b.id 
         AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
       WHERE b.tenant_id = :tenantId
       GROUP BY b.id, b.code, b.name
       ORDER BY SUM(pt.total_amount) DESC NULLS LAST

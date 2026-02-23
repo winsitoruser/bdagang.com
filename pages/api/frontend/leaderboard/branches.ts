@@ -136,7 +136,7 @@ async function getLeaderboard(tenantId: string, dateFilter: string, metric: stri
           ROW_NUMBER() OVER (ORDER BY COALESCE(SUM(pt.total), 0) DESC) as rank
         FROM branches b
         LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-          AND pt.status = 'completed'
+          AND pt.status = 'closed'
           ${dateFilter}
         WHERE b.tenant_id = :tenantId
         AND b.is_active = true
@@ -161,7 +161,7 @@ async function getLeaderboard(tenantId: string, dateFilter: string, metric: stri
           ROW_NUMBER() OVER (ORDER BY COUNT(pt.id) DESC) as rank
         FROM branches b
         LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-          AND pt.status = 'completed'
+          AND pt.status = 'closed'
           ${dateFilter}
         WHERE b.tenant_id = :tenantId
         AND b.is_active = true
@@ -186,7 +186,7 @@ async function getLeaderboard(tenantId: string, dateFilter: string, metric: stri
           ROW_NUMBER() OVER (ORDER BY COUNT(DISTINCT pt.customer_id) DESC) as rank
         FROM branches b
         LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-          AND pt.status = 'completed'
+          AND pt.status = 'closed'
           ${dateFilter}
         WHERE b.tenant_id = :tenantId
         AND b.is_active = true
@@ -212,7 +212,7 @@ async function getLeaderboard(tenantId: string, dateFilter: string, metric: stri
           ROW_NUMBER() OVER (ORDER BY COALESCE(AVG(pt.total), 0) DESC) as rank
         FROM branches b
         LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-          AND pt.status = 'completed'
+          AND pt.status = 'closed'
           ${dateFilter}
         WHERE b.tenant_id = :tenantId
         AND b.is_active = true
@@ -276,7 +276,7 @@ async function getComparison(tenantId: string, dateFilter: string, metric: strin
       ) FILTER (WHERE pt.id IS NOT NULL) as hourly_breakdown
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${dateFilter}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
@@ -298,7 +298,7 @@ async function getComparison(tenantId: string, dateFilter: string, metric: strin
       COUNT(DISTINCT pt.branch_id) as active_branches
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter}
   `, {
     replacements: { tenantId },
@@ -352,7 +352,7 @@ async function getTrends(tenantId: string, dateFilter: string, dateGrouping: str
       ${valueField} as value
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${dateFilter}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
@@ -386,7 +386,7 @@ async function getTrends(tenantId: string, dateFilter: string, dateGrouping: str
       b.code
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${dateFilter}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true

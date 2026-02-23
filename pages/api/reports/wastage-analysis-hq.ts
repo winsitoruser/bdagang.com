@@ -130,7 +130,7 @@ export default async function handler(
           COALESCE(
             (SUM(w.quantity * w.cost_per_unit) / NULLIF(
               (SELECT COALESCE(SUM(pt.total), 0) FROM pos_transactions pt 
-               WHERE pt.branch_id = b.id AND pt.status = 'completed' ${dateFilter.replace('w.', 'pt.')}), 0)
+               WHERE pt.branch_id = b.id AND pt.status = 'closed' ${dateFilter.replace('w.', 'pt.')}), 0)
             ) * 100, 0
           ) as waste_percentage_of_sales,
           ROUND(

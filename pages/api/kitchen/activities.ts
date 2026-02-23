@@ -71,10 +71,9 @@ async function getActivities(
         ko.started_at,
         ko.completed_at,
         u.name as staff_name,
-        ts.table_number
+        ko.table_number
       FROM kitchen_orders ko
-      LEFT JOIN users u ON ko.assigned_to = u.id
-      LEFT JOIN table_sessions ts ON ko.table_session_id = ts.id
+      LEFT JOIN users u ON ko.assigned_chef_id = u.id
       WHERE ko.tenant_id = :tenantId
       ${branchId ? 'AND ko.branch_id = :branchId' : ''}
       ORDER BY ko.updated_at DESC
@@ -91,7 +90,7 @@ async function getActivities(
       let type: KitchenActivity['type'] = 'order_received';
 
       switch (order.status) {
-        case 'pending':
+        case 'new':
           action = `Pesanan ${order.order_number} diterima`;
           if (order.table_number) action += ` dari meja ${order.table_number}`;
           status = 'info';

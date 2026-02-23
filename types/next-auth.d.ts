@@ -23,6 +23,10 @@ declare module "next-auth" {
     branchCode?: string
     tenantName?: string
     assignedBranchId?: string
+    kybStatus?: string
+    dataScope?: string
+    businessCode?: string
+    businessStructure?: string
   }
 
   /**
@@ -52,5 +56,9 @@ declare module "next-auth/jwt" {
     tenantName?: string
     assignedBranchId?: string
     tenantId?: string
+    kybStatus?: string
+    dataScope?: string
+    businessCode?: string
+    businessStructure?: string
   }
 }

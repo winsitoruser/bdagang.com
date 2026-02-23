@@ -124,7 +124,7 @@ async function getRealTimeSales(tenantId: string, branchFilter: string, branchPa
     FROM pos_transactions pt
     JOIN branches b ON pt.branch_id = b.id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     AND DATE(pt.transaction_date) = CURRENT_DATE
     AND EXTRACT(HOUR FROM pt.transaction_date) = EXTRACT(HOUR FROM CURRENT_TIME)
     ${branchFilter}
@@ -142,7 +142,7 @@ async function getRealTimeSales(tenantId: string, branchFilter: string, branchPa
       
       -- Compare with yesterday
       (SELECT COALESCE(SUM(total), 0) FROM pos_transactions 
-       WHERE tenant_id = :tenantId AND status = 'completed' 
+       WHERE tenant_id = :tenantId AND status = 'closed' 
        AND DATE(transaction_date) = CURRENT_DATE - INTERVAL '1 day') as yesterday_revenue,
        
       -- Hourly breakdown for today
@@ -155,7 +155,7 @@ async function getRealTimeSales(tenantId: string, branchFilter: string, branchPa
       ) FILTER (WHERE pt.id IS NOT NULL) as hourly_breakdown
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     AND DATE(pt.transaction_date) = CURRENT_DATE
     ${branchFilter}
   `, {
@@ -175,7 +175,7 @@ async function getRealTimeSales(tenantId: string, branchFilter: string, branchPa
     JOIN pos_transactions pt ON pti.transaction_id = pt.id
     JOIN products p ON pti.product_id = p.id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     AND DATE(pt.transaction_date) = CURRENT_DATE
     ${branchFilter.replace('b.', 'pt.')}
     GROUP BY p.id, p.name, p.sku
@@ -199,7 +199,7 @@ async function getRealTimeSales(tenantId: string, branchFilter: string, branchPa
     JOIN pos_transactions pt ON u.id = pt.cashier_id
     JOIN branches b ON pt.branch_id = b.id
     WHERE u.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     AND DATE(pt.transaction_date) = CURRENT_DATE
     AND pt.transaction_date >= CURRENT_TIME - INTERVAL '2 hours'
     ${branchFilter.replace('b.', 'pt.')}

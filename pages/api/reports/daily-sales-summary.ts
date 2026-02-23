@@ -140,7 +140,7 @@ export default async function handler(
         LEFT JOIN categories c ON p.category_id = c.id
         WHERE DATE(pt.transaction_date) = :date
         AND pt.branch_id = :branchId
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
         GROUP BY p.id, p.name, p.sku, c.name
         ORDER BY total_revenue DESC
         LIMIT 10
@@ -174,7 +174,7 @@ export default async function handler(
         JOIN categories c ON p.category_id = c.id
         WHERE DATE(pt.transaction_date) = :date
         AND pt.branch_id = :branchId
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
         GROUP BY c.id, c.name
         ORDER BY total_revenue DESC
       `, {
@@ -343,7 +343,7 @@ export default async function handler(
           LEFT JOIN users u ON pt.cashier_id = u.id
           WHERE DATE(pt.transaction_date) = :date
           AND pt.branch_id = :branchId
-          AND pt.status = 'completed'
+          AND pt.status = 'closed'
           ORDER BY pt.transaction_date DESC
           LIMIT 100
         `, {

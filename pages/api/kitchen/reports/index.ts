@@ -71,7 +71,7 @@ async function getSalesReport(
     JOIN products p ON koi.product_id = p.id
     LEFT JOIN categories c ON p.category_id = c.id
     WHERE ko.tenant_id = :tenantId
-      AND ko.status = 'completed'
+      AND ko.status = 'served'
       AND ko.created_at BETWEEN :startDate AND :endDate
     GROUP BY p.id, p.name, p.category_id, c.name
     ORDER BY total_revenue DESC
@@ -90,7 +90,7 @@ async function getSalesReport(
       AVG(ko.total_amount) as avg_order_value
     FROM kitchen_orders ko
     WHERE ko.tenant_id = :tenantId
-      AND ko.status = 'completed'
+      AND ko.status = 'served'
       AND ko.created_at BETWEEN :startDate AND :endDate
     GROUP BY DATE(ko.created_at)
     ORDER BY date ASC
@@ -115,7 +115,7 @@ async function getSalesReport(
     JOIN products p ON koi.product_id = p.id
     LEFT JOIN categories c ON p.category_id = c.id
     WHERE ko.tenant_id = :tenantId
-      AND ko.status = 'completed'
+      AND ko.status = 'served'
       AND ko.created_at BETWEEN :startDate AND :endDate
     GROUP BY c.id, c.name
     ORDER BY total_revenue DESC
@@ -133,7 +133,7 @@ async function getSalesReport(
       COUNT(DISTINCT ko.customer_id) as unique_customers
     FROM kitchen_orders ko
     WHERE ko.tenant_id = :tenantId
-      AND ko.status = 'completed'
+      AND ko.status = 'served'
       AND ko.created_at BETWEEN :startDate AND :endDate
   `, {
     replacements: { tenantId, startDate, endDate },
@@ -170,7 +170,7 @@ async function getPerformanceReport(
       ks.name,
       ks.role,
       COUNT(ko.id) as total_orders,
-      COUNT(CASE WHEN ko.status = 'completed' THEN 1 END) as completed_orders,
+      COUNT(CASE WHEN ko.status = 'served' THEN 1 END) as completed_orders,
       COUNT(CASE WHEN ko.status = 'cancelled' THEN 1 END) as cancelled_orders,
       AVG(
         CASE 
@@ -180,7 +180,7 @@ async function getPerformanceReport(
         END
       ) as avg_preparation_time,
       ROUND(
-        (COUNT(CASE WHEN ko.status = 'completed' THEN 1 END) * 100.0 / COUNT(ko.id)), 
+        (COUNT(CASE WHEN ko.status = 'served' THEN 1 END) * 100.0 / COUNT(ko.id)), 
         2
       ) as completion_rate
     FROM kitchen_staff ks
@@ -203,7 +203,7 @@ async function getPerformanceReport(
       AVG(ko.total_amount) as avg_order_value
     FROM kitchen_orders ko
     WHERE ko.tenant_id = :tenantId
-      AND ko.status = 'completed'
+      AND ko.status = 'served'
       AND ko.created_at BETWEEN :startDate AND :endDate
     GROUP BY EXTRACT(HOUR FROM ko.created_at)
     ORDER BY hour ASC

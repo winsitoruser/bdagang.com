@@ -5,9 +5,11 @@ import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import AuditHistory from '@/components/settings/AuditHistory';
 import { 
   FaStore, FaSave, FaMapMarkerAlt, FaPhone, FaEnvelope,
-  FaGlobe, FaClock, FaImage, FaBuilding, FaIdCard, FaArrowLeft
+  FaGlobe, FaClock, FaImage, FaBuilding, FaIdCard, FaArrowLeft,
+  FaReceipt, FaPrint, FaFont, FaAlignLeft, FaAlignCenter, FaAlignRight
 } from 'react-icons/fa';
 
 const StoreSettingsPage: React.FC = () => {
@@ -30,6 +32,26 @@ const StoreSettingsPage: React.FC = () => {
     taxId: '',
     logoUrl: '',
     description: ''
+  });
+
+  const [receiptSettings, setReceiptSettings] = useState({
+    showLogo: true,
+    showAddress: true,
+    showPhone: true,
+    showEmail: true,
+    showCashier: true,
+    showTimestamp: true,
+    showVAT: true,
+    showThankyouMessage: true,
+    showFooter: true,
+    thankyouMessage: 'Terima kasih telah berbelanja di toko kami!',
+    footerText: 'Barang yang sudah dibeli tidak dapat dikembalikan',
+    fontSize: 12,
+    headerAlignment: 'center',
+    itemsAlignment: 'left',
+    footerAlignment: 'center',
+    paperWidth: 80,
+    logoUrl: ''
   });
 
   const [operatingHours, setOperatingHours] = useState([
@@ -58,14 +80,23 @@ const StoreSettingsPage: React.FC = () => {
   const fetchStoreSettings = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/settings/store');
-      const data = await response.json();
+      // Fetch store settings
+      const storeResponse = await fetch('/api/settings/store');
+      const storeResponseData = await storeResponse.json();
 
-      if (data.success && data.data) {
-        setStoreData(data.data.store || storeData);
-        if (data.data.operatingHours) {
-          setOperatingHours(data.data.operatingHours);
+      if (storeResponseData.success && storeResponseData.data) {
+        setStoreData(storeResponseData.data.store || storeData);
+        if (storeResponseData.data.operatingHours) {
+          setOperatingHours(storeResponseData.data.operatingHours);
         }
+      }
+
+      // Fetch receipt design settings
+      const receiptResponse = await fetch('/api/settings/store/receipt-design');
+      const receiptResponseData = await receiptResponse.json();
+
+      if (receiptResponseData.success && receiptResponseData.data) {
+        setReceiptSettings(receiptResponseData.data);
       }
     } catch (error) {
       console.error('Error fetching store settings:', error);
@@ -100,7 +131,8 @@ const StoreSettingsPage: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch('/api/settings/store', {
+      // Save store settings
+      const storeResponse = await fetch('/api/settings/store', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -109,15 +141,30 @@ const StoreSettingsPage: React.FC = () => {
         })
       });
 
-      const data = await response.json();
+      const storeResponseData = await storeResponse.json();
 
-      if (data.success) {
-        alert('Pengaturan toko berhasil disimpan!');
-      } else {
-        alert('Gagal menyimpan pengaturan: ' + data.error);
+      if (!storeResponseData.success) {
+        alert('Gagal menyimpan pengaturan toko: ' + storeResponseData.error);
+        return;
       }
+
+      // Save receipt design settings
+      const receiptResponse = await fetch('/api/settings/store/receipt-design', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(receiptSettings)
+      });
+
+      const receiptResponseData = await receiptResponse.json();
+
+      if (!receiptResponseData.success) {
+        alert('Gagal menyimpan desain struk: ' + receiptResponseData.error);
+        return;
+      }
+
+      alert('Pengaturan toko dan desain struk berhasil disimpan!');
     } catch (error) {
-      console.error('Error saving store settings:', error);
+      console.error('Error saving settings:', error);
       alert('Terjadi kesalahan saat menyimpan pengaturan');
     } finally {
       setSaving(false);
@@ -189,6 +236,17 @@ const StoreSettingsPage: React.FC = () => {
               >
                 <FaClock className="inline mr-2" />
                 Jam Operasional
+              </button>
+              <button
+                onClick={() => setActiveTab('receipt')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'receipt'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <FaReceipt className="inline mr-2" />
+                Desain Struk
               </button>
               <button
                 onClick={() => router.push('/settings/store/branches')}
@@ -427,6 +485,254 @@ const StoreSettingsPage: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+
+            {activeTab === 'receipt' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <FaReceipt className="mr-2 text-blue-600" />
+                      Desain Struk
+                    </CardTitle>
+                    <CardDescription>
+                      Kustomisasi tampilan struk pembelian
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Settings Panel */}
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-gray-900">Pengaturan Umum</h4>
+                        
+                        <div className="space-y-3">
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={receiptSettings.showLogo}
+                              onChange={(e) => setReceiptSettings(prev => ({ ...prev, showLogo: e.target.checked }))}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <span className="text-sm">Tampilkan Logo</span>
+                          </label>
+                          
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={receiptSettings.showAddress}
+                              onChange={(e) => setReceiptSettings(prev => ({ ...prev, showAddress: e.target.checked }))}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <span className="text-sm">Tampilkan Alamat</span>
+                          </label>
+                          
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={receiptSettings.showPhone}
+                              onChange={(e) => setReceiptSettings(prev => ({ ...prev, showPhone: e.target.checked }))}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <span className="text-sm">Tampilkan Telepon</span>
+                          </label>
+                          
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={receiptSettings.showEmail}
+                              onChange={(e) => setReceiptSettings(prev => ({ ...prev, showEmail: e.target.checked }))}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <span className="text-sm">Tampilkan Email</span>
+                          </label>
+                          
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={receiptSettings.showCashier}
+                              onChange={(e) => setReceiptSettings(prev => ({ ...prev, showCashier: e.target.checked }))}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <span className="text-sm">Tampilkan Kasir</span>
+                          </label>
+                          
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={receiptSettings.showTimestamp}
+                              onChange={(e) => setReceiptSettings(prev => ({ ...prev, showTimestamp: e.target.checked }))}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <span className="text-sm">Tampilkan Waktu</span>
+                          </label>
+                          
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={receiptSettings.showVAT}
+                              onChange={(e) => setReceiptSettings(prev => ({ ...prev, showVAT: e.target.checked }))}
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <span className="text-sm">Tampilkan PPN</span>
+                          </label>
+                        </div>
+
+                        <div className="pt-4 border-t">
+                          <h4 className="font-medium text-gray-900 mb-3">Alignment</h4>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="text-sm text-gray-600">Header Alignment</label>
+                              <div className="flex gap-2 mt-1">
+                                <Button
+                                  variant={receiptSettings.headerAlignment === 'left' ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setReceiptSettings(prev => ({ ...prev, headerAlignment: 'left' }))}
+                                >
+                                  <FaAlignLeft />
+                                </Button>
+                                <Button
+                                  variant={receiptSettings.headerAlignment === 'center' ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setReceiptSettings(prev => ({ ...prev, headerAlignment: 'center' }))}
+                                >
+                                  <FaAlignCenter />
+                                </Button>
+                                <Button
+                                  variant={receiptSettings.headerAlignment === 'right' ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setReceiptSettings(prev => ({ ...prev, headerAlignment: 'right' }))}
+                                >
+                                  <FaAlignRight />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t">
+                          <h4 className="font-medium text-gray-900 mb-3">Ukuran Kertas</h4>
+                          <select
+                            value={receiptSettings.paperWidth}
+                            onChange={(e) => setReceiptSettings(prev => ({ ...prev, paperWidth: parseInt(e.target.value) }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          >
+                            <option value={58}>58mm (Mini)</option>
+                            <option value={80}>80mm (Standard)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Preview Panel */}
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-3">Preview</h4>
+                        <div className="bg-gray-100 p-4 rounded-lg">
+                          <div 
+                            className="bg-white mx-auto shadow-sm"
+                            style={{ 
+                              width: receiptSettings.paperWidth === 58 ? '220px' : '300px',
+                              padding: '16px',
+                              fontSize: '12px',
+                              fontFamily: 'monospace'
+                            }}
+                          >
+                            {/* Logo */}
+                            {receiptSettings.showLogo && (
+                              <div className="text-center mb-2">
+                                <div className="w-12 h-12 bg-gray-300 mx-auto rounded"></div>
+                              </div>
+                            )}
+                            
+                            {/* Store Name */}
+                            <div className={`${receiptSettings.headerAlignment === 'center' ? 'text-center' : receiptSettings.headerAlignment === 'right' ? 'text-right' : 'text-left'} font-bold mb-2`}>
+                              {storeData.name || 'NAMA TOKO'}
+                            </div>
+                            
+                            {/* Store Info */}
+                            {receiptSettings.showAddress && (
+                              <div className={`${receiptSettings.headerAlignment === 'center' ? 'text-center' : receiptSettings.headerAlignment === 'right' ? 'text-right' : 'text-left'} text-xs mb-1`}>
+                                {storeData.address || 'Alamat Toko'}
+                              </div>
+                            )}
+                            {receiptSettings.showPhone && (
+                              <div className={`${receiptSettings.headerAlignment === 'center' ? 'text-center' : receiptSettings.headerAlignment === 'right' ? 'text-right' : 'text-left'} text-xs mb-1`}>
+                                Telp: {storeData.phone || '123-456-789'}
+                              </div>
+                            )}
+                            {receiptSettings.showEmail && (
+                              <div className={`${receiptSettings.headerAlignment === 'center' ? 'text-center' : receiptSettings.headerAlignment === 'right' ? 'text-right' : 'text-left'} text-xs mb-2`}>
+                                {storeData.email || 'email@toko.com'}
+                              </div>
+                            )}
+                            
+                            <div className="border-t border-b border-gray-300 py-1 my-2">
+                              <div className="text-xs">
+                                <div className="flex justify-between">
+                                  <span>No: INV-001</span>
+                                  <span>01/01/2024</span>
+                                </div>
+                                {receiptSettings.showTimestamp && (
+                                  <div className="flex justify-between">
+                                    <span>Waktu:</span>
+                                    <span>12:00</span>
+                                  </div>
+                                )}
+                                {receiptSettings.showCashier && (
+                                  <div className="flex justify-between">
+                                    <span>Kasir:</span>
+                                    <span>Admin</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Sample Items */}
+                            <div className="text-xs space-y-1 mb-2">
+                              <div>Produk A x1 10.000</div>
+                              <div>Produk B x2 20.000</div>
+                            </div>
+                            
+                            <div className="border-t border-gray-300 pt-1">
+                              <div className="text-xs space-y-1">
+                                <div className="flex justify-between">
+                                  <span>Subtotal:</span>
+                                  <span>30.000</span>
+                                </div>
+                                {receiptSettings.showVAT && (
+                                  <div className="flex justify-between">
+                                    <span>PPN 11%:</span>
+                                    <span>3.300</span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between font-bold">
+                                  <span>Total:</span>
+                                  <span>33.300</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Footer */}
+                            {receiptSettings.showThankyouMessage && (
+                              <div className={`${receiptSettings.headerAlignment === 'center' ? 'text-center' : receiptSettings.headerAlignment === 'right' ? 'text-right' : 'text-left'} text-xs mt-2`}>
+                                {receiptSettings.thankyouMessage}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <Button className="w-full">
+                        <FaPrint className="mr-2" />
+                        Test Print
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Audit History - Show on all tabs */}
+            <AuditHistory entityType="Store" />
           </div>
         </div>
 

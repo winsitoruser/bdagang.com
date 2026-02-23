@@ -47,7 +47,7 @@ export default async function handler(
     // 1. Get active kitchen orders count
     const activeOrdersResult = await safeQuery(`
       SELECT COUNT(*) as count FROM kitchen_orders
-      WHERE status IN ('pending', 'preparing') AND DATE(created_at) = CURRENT_DATE
+      WHERE status IN ('new', 'preparing') AND DATE(created_at) = CURRENT_DATE
     `, {}, { count: 0 });
 
     // 2. Get tables count
@@ -68,19 +68,19 @@ export default async function handler(
     // 4. Get average prep time
     const avgPrepTimeResult = await safeQuery(`
       SELECT AVG(actual_prep_time) as avg_time FROM kitchen_orders
-      WHERE status = 'completed' AND actual_prep_time IS NOT NULL AND DATE(created_at) = CURRENT_DATE
+      WHERE status = 'served' AND actual_prep_time IS NOT NULL AND DATE(created_at) = CURRENT_DATE
     `, {}, { avg_time: 0 });
 
     // 5. Get today's sales from POS transactions
     const salesResult = await safeQuery(`
       SELECT COALESCE(SUM(total_amount), 0) as total_sales, COUNT(*) as transaction_count
-      FROM pos_transactions WHERE status = 'completed' AND DATE(transaction_date) = CURRENT_DATE
+      FROM pos_transactions WHERE status = 'closed' AND DATE(transaction_date) = CURRENT_DATE
     `, {}, { total_sales: 0, transaction_count: 0 });
 
     // 6. Get completed orders today
     const completedOrdersResult = await safeQuery(`
       SELECT COUNT(*) as count FROM kitchen_orders
-      WHERE status IN ('completed', 'served') AND DATE(created_at) = CURRENT_DATE
+      WHERE status IN ('ready', 'served') AND DATE(created_at) = CURRENT_DATE
     `, {}, { count: 0 });
 
     // 7. Get total guests today
@@ -91,13 +91,13 @@ export default async function handler(
 
     // 8. Get low stock items count
     const lowStockResult = await safeQuery(`
-      SELECT COUNT(*) as count FROM kitchen_inventory_items WHERE quantity <= minimum_stock
+      SELECT COUNT(*) as count FROM kitchen_inventory_items WHERE current_stock <= min_stock
     `, {}, { count: 0 });
 
     // 9. Get yesterday's sales
     const yesterdaySalesResult = await safeQuery(`
       SELECT COALESCE(SUM(total_amount), 0) as total_sales FROM pos_transactions
-      WHERE status = 'completed' AND DATE(transaction_date) = CURRENT_DATE - INTERVAL '1 day'
+      WHERE status = 'closed' AND DATE(transaction_date) = CURRENT_DATE - INTERVAL '1 day'
     `, {}, { total_sales: 0 });
 
     // Calculate percentage changes

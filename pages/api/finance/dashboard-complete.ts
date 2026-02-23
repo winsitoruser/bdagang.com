@@ -41,7 +41,7 @@ export default async function handler(
     const [posIncomeResult] = await sequelize.query(`
       SELECT COALESCE(SUM(total_amount), 0) as total
       FROM pos_transactions 
-      WHERE status = 'completed'
+      WHERE status = 'closed'
         AND transaction_date >= :startDate 
         AND transaction_date <= :endDate
         AND tenant_id = :tenantId
@@ -260,7 +260,7 @@ export default async function handler(
           CONCAT('Transaction #', transaction_number) as description,
           'pos' as source
          FROM pos_transactions 
-         WHERE status = 'completed' AND tenant_id = :tenantId
+         WHERE status = 'closed' AND tenant_id = :tenantId
          ORDER BY transaction_date DESC LIMIT 5)
       ) combined
       ORDER BY transaction_date DESC

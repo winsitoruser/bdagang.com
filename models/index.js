@@ -92,6 +92,10 @@ db.PartnerOutlet = require('./PartnerOutlet');
 db.PartnerUser = require('./PartnerUser');
 db.ActivationRequest = require('./ActivationRequest');
 
+// KYB (Know Your Business) Models
+db.KybApplication = require('./KybApplication');
+db.KybDocument = require('./KybDocument');
+
 // Third-party Integration Models
 db.IntegrationProvider = require('./IntegrationProvider');
 db.IntegrationConfig = require('./IntegrationConfig');

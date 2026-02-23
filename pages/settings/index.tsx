@@ -2,11 +2,11 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Settings, Store, Users, Shield, Bell, HardDrive, Database,
   CreditCard, MessageSquare, Mail, ChefHat, Package, ChevronRight,
-  Zap, Building2
+  Zap, Building2, Download, Upload
 } from 'lucide-react';
 
 interface SettingItem {
@@ -129,12 +129,68 @@ const settingsGroups = [
 export default function SettingsIndex() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/login');
+    if (status === "unauthenticated") {
+      router.push("/auth/login");
     }
-  }, [status, router]);
+  }, [session, status, router]);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch('/api/settings/export');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `settings-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Gagal export pengaturan');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      const response = await fetch('/api/settings/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert(`Import berhasil! ${result.imported.settings} settings, ${result.imported.printers} printers, ${result.imported.branches} branches diimport`);
+        window.location.reload();
+      } else {
+        alert('Import gagal: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Import failed:', error);
+      alert('Gagal import pengaturan. Pastikan file valid.');
+    } finally {
+      setIsImporting(false);
+      // Reset input
+      event.target.value = '';
+    }
+  };
 
   if (status === 'loading') {
     return (
@@ -235,6 +291,47 @@ export default function SettingsIndex() {
                 <h4 className="font-semibold">Email SMTP</h4>
                 <p className="text-sm text-blue-200">Gmail, Mailgun, SendGrid</p>
               </div>
+            </div>
+          </div>
+
+          {/* Export/Import Settings */}
+          <div className="mt-10 bg-gray-50 rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Backup & Restore Pengaturan</h3>
+                <p className="text-gray-600 mt-1">Export semua pengaturan untuk backup atau import dari file</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={handleExport}
+                className="flex items-center justify-center gap-3 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group"
+              >
+                <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
+                  <Download className="w-6 h-6 text-blue-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">Export Pengaturan</p>
+                  <p className="text-sm text-gray-600">Download file JSON</p>
+                </div>
+              </button>
+
+              <label className="flex items-center justify-center gap-3 p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all group cursor-pointer">
+                <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
+                  <Upload className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-gray-900">Import Pengaturan</p>
+                  <p className="text-sm text-gray-600">Upload file JSON</p>
+                </div>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImport}
+                  className="hidden"
+                />
+              </label>
             </div>
           </div>
         </main>

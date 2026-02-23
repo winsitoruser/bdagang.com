@@ -52,7 +52,7 @@ async function getAnalytics(
         COUNT(*) as total_orders,
         COALESCE(SUM(total_amount), 0) as total_revenue,
         COALESCE(AVG(total_amount), 0) as avg_order_value,
-        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_orders,
+        COUNT(CASE WHEN status = 'served' THEN 1 END) as completed_orders,
         COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_orders,
         COALESCE(AVG(EXTRACT(EPOCH FROM (completed_at - created_at))/60), 0) as avg_prep_time
       FROM kitchen_orders
@@ -131,13 +131,13 @@ async function getAnalytics(
         u.name,
         COUNT(ko.id) as orders,
         COALESCE(AVG(EXTRACT(EPOCH FROM (ko.completed_at - ko.started_at))/60), 0) as avg_time,
-        COUNT(CASE WHEN ko.status = 'completed' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) as completion_rate
+        COUNT(CASE WHEN ko.status = 'served' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0) as completion_rate
       FROM kitchen_orders ko
-      JOIN users u ON ko.assigned_to = u.id
+      JOIN users u ON ko.assigned_chef_id = u.id
       WHERE ko.tenant_id = :tenantId
       ${branchId ? 'AND ko.branch_id = :branchId' : ''}
       AND ko.created_at BETWEEN :startDate AND :endDate
-      AND ko.assigned_to IS NOT NULL
+      AND ko.assigned_chef_id IS NOT NULL
       GROUP BY u.id, u.name
       ORDER BY orders DESC
       LIMIT 10

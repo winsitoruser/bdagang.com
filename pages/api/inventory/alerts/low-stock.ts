@@ -101,7 +101,7 @@ export default async function handler(
         FROM pos_transaction_items pti
         JOIN pos_transactions pt ON pti.transaction_id = pt.id
         WHERE pti.product_id IN (:productIds)
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
         AND pt.transaction_date >= CURRENT_DATE - INTERVAL '7 days'
         GROUP BY pti.product_id
       `, {

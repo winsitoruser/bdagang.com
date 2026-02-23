@@ -7,6 +7,15 @@ const Branch = sequelize.define('Branch', {
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true
   },
+  tenantId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'tenants',
+      key: 'id'
+    },
+    field: 'tenant_id'
+  },
   storeId: {
     type: DataTypes.UUID,
     allowNull: true,
@@ -99,6 +108,12 @@ const Branch = sequelize.define('Branch', {
 });
 
 Branch.associate = function(models) {
+  // Branch belongs to Tenant
+  Branch.belongsTo(models.Tenant, {
+    foreignKey: 'tenantId',
+    as: 'tenant'
+  });
+
   // Branch belongs to Store
   Branch.belongsTo(models.Store, {
     foreignKey: 'storeId',

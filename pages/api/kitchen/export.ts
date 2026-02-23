@@ -66,11 +66,10 @@ async function exportOrders(
         ko.completed_at,
         EXTRACT(EPOCH FROM (ko.completed_at - ko.created_at))/60 as prep_time_mins,
         u.name as assigned_to,
-        ts.table_number,
+        ko.table_number,
         (SELECT COUNT(*) FROM kitchen_order_items WHERE kitchen_order_id = ko.id) as item_count
       FROM kitchen_orders ko
-      LEFT JOIN users u ON ko.assigned_to = u.id
-      LEFT JOIN table_sessions ts ON ko.table_session_id = ts.id
+      LEFT JOIN users u ON ko.assigned_chef_id = u.id
       WHERE ko.tenant_id = :tenantId
       ${branchId ? 'AND ko.branch_id = :branchId' : ''}
       ${startDate ? 'AND ko.created_at >= :startDate' : ''}
@@ -188,7 +187,7 @@ async function exportStaff(
         COUNT(ko.id) as total_orders,
         COALESCE(AVG(EXTRACT(EPOCH FROM (ko.completed_at - ko.started_at))/60), 0) as avg_prep_time
       FROM kitchen_staff ks
-      LEFT JOIN kitchen_orders ko ON ko.assigned_to = ks.user_id AND ko.status = 'completed'
+      LEFT JOIN kitchen_orders ko ON ko.assigned_chef_id = ks.user_id AND ko.status = 'served'
       WHERE ks.tenant_id = :tenantId
       ${branchId ? 'AND ks.branch_id = :branchId' : ''}
       GROUP BY ks.id, ks.name, ks.role, ks.shift, ks.status, ks.performance, ks.join_date

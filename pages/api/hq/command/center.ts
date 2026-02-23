@@ -186,11 +186,11 @@ async function getSystemStatus(tenantId: string) {
       
       -- Today's operations
       (SELECT COUNT(*) FROM pos_transactions 
-       WHERE tenant_id = :tenantId AND status = 'completed' 
+       WHERE tenant_id = :tenantId AND status = 'closed' 
        AND DATE(transaction_date) = CURRENT_DATE) as transactions_today,
        
       (SELECT COALESCE(SUM(total), 0) FROM pos_transactions 
-       WHERE tenant_id = :tenantId AND status = 'completed' 
+       WHERE tenant_id = :tenantId AND status = 'closed' 
        AND DATE(transaction_date) = CURRENT_DATE) as revenue_today,
        
       -- Staff status
@@ -253,7 +253,7 @@ async function getSystemStatus(tenantId: string) {
       CURRENT_TIMESTAMP as detected_at
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed' AND DATE(pt.transaction_date) = CURRENT_DATE
+      AND pt.status = 'closed' AND DATE(pt.transaction_date) = CURRENT_DATE
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
     AND pt.id IS NULL)

@@ -119,7 +119,7 @@ export default async function handler(
               COUNT(DISTINCT pt.customer_id) as unique_customers
             FROM branches b
             LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-              AND pt.status = 'completed'
+              AND pt.status = 'closed'
               ${dateFilter}
             WHERE b.id IN (${branchPlaceholders})
             AND b.tenant_id = :tenantId
@@ -143,7 +143,7 @@ export default async function handler(
               COUNT(DISTINCT pt.id) as order_count
             FROM branches b
             LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-              AND pt.status = 'completed'
+              AND pt.status = 'closed'
               ${dateFilter}
             LEFT JOIN pos_transaction_items pti ON pt.id = pti.transaction_id
             LEFT JOIN products p ON pti.product_id = p.id
@@ -173,7 +173,7 @@ export default async function handler(
               ) as revenue_percentage
             FROM branches b
             LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-              AND pt.status = 'completed'
+              AND pt.status = 'closed'
               ${dateFilter}
             LEFT JOIN pos_transaction_items pti ON pt.id = pti.transaction_id
             LEFT JOIN products p ON pti.product_id = p.id
@@ -201,7 +201,7 @@ export default async function handler(
               ) as transaction_percentage
             FROM branches b
             LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-              AND pt.status = 'completed'
+              AND pt.status = 'closed'
               ${dateFilter}
             WHERE b.id IN (${branchPlaceholders})
             AND b.tenant_id = :tenantId
@@ -222,7 +222,7 @@ export default async function handler(
               AVG(pt.total) as avg_transaction_value
             FROM branches b
             LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-              AND pt.status = 'completed'
+              AND pt.status = 'closed'
               ${dateFilter}
             WHERE b.id IN (${branchPlaceholders})
             AND b.tenant_id = :tenantId

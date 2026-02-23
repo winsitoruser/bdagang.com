@@ -213,7 +213,7 @@ async function generateSummaryReport(
       COUNT(DISTINCT pt.branch_id) as active_branches
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter}
     ${branchFilter}
   `, {
@@ -233,7 +233,7 @@ async function generateSummaryReport(
       COUNT(DISTINCT pt.customer_id) as unique_customers
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${dateFilter.replace('AND', 'AND pt.')}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
@@ -260,7 +260,7 @@ async function generateSummaryReport(
     JOIN products p ON pti.product_id = p.id
     LEFT JOIN categories c ON p.category_id = c.id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter.replace('AND', 'AND pt.')}
     ${branchFilter.replace('AND', 'AND pt.')}
     GROUP BY p.id, p.name, p.sku, c.name
@@ -278,10 +278,10 @@ async function generateSummaryReport(
       COUNT(pt.id) as transaction_count,
       COALESCE(SUM(pt.total), 0) as total_amount,
       ROUND(COUNT(pt.id) * 100.0 / (SELECT COUNT(*) FROM pos_transactions 
-        WHERE tenant_id = :tenantId AND status = 'completed' ${dateFilter} ${branchFilter}), 2) as percentage
+        WHERE tenant_id = :tenantId AND status = 'closed' ${dateFilter} ${branchFilter}), 2) as percentage
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter}
     ${branchFilter}
     GROUP BY pt.payment_method
@@ -318,7 +318,7 @@ async function generateProfitLossReport(
       COALESCE(SUM(pt.tax), 0) as tax_collected
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter}
     ${branchFilter}
   `, {
@@ -335,7 +335,7 @@ async function generateProfitLossReport(
     JOIN products p ON pti.product_id = p.id
     JOIN ingredients i ON p.id = i.product_id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter.replace('AND', 'AND pt.')}
     ${branchFilter.replace('AND', 'AND pt.')}
   `, {
@@ -402,7 +402,7 @@ async function generateCashflowReport(
       COALESCE(SUM(pt.total), 0) as total_inflow
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter}
     ${branchFilter}
     GROUP BY pt.payment_method
@@ -506,7 +506,7 @@ async function generateBranchComparisonReport(
       COALESCE(SUM(pt.tax), 0) as total_tax
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${dateFilter.replace('AND', 'AND pt.')}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true

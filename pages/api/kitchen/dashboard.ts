@@ -39,7 +39,7 @@ export default async function handler(
         LEFT JOIN kitchen_order_items koi ON ko.id = koi.order_id
         LEFT JOIN products p ON koi.product_id = p.id
         WHERE ko.tenant_id = :tenantId
-          AND ko.status IN ('pending', 'preparing')
+          AND ko.status IN ('new', 'preparing')
           AND ko.created_at >= :startDate
           AND ko.created_at < :endDate
         GROUP BY ko.id
@@ -53,10 +53,10 @@ export default async function handler(
       // Get today's stats
       const [todayStats] = await sequelize.query(`
         SELECT 
-          COUNT(CASE WHEN status IN ('pending', 'preparing') THEN 1 END) as active_orders,
-          COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_orders,
+          COUNT(CASE WHEN status IN ('new', 'preparing') THEN 1 END) as active_orders,
+          COUNT(CASE WHEN status = 'served' THEN 1 END) as completed_orders,
           COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_orders,
-          COALESCE(SUM(CASE WHEN status = 'completed' THEN total_amount END), 0) as total_revenue,
+          COALESCE(SUM(CASE WHEN status = 'served' THEN total_amount END), 0) as total_revenue,
           COUNT(DISTINCT customer_id) as unique_customers
         FROM kitchen_orders
         WHERE tenant_id = :tenantId
@@ -97,7 +97,7 @@ export default async function handler(
           COUNT(ko.id) as active_orders_count
         FROM kitchen_staff ks
         LEFT JOIN kitchen_orders ko ON ks.id = ko.assigned_chef_id 
-          AND ko.status IN ('pending', 'preparing')
+          AND ko.status IN ('new', 'preparing')
           AND ko.created_at >= :startDate
           AND ko.created_at < :endDate
         WHERE ks.tenant_id = :tenantId
@@ -126,7 +126,7 @@ export default async function handler(
           COALESCE(SUM(ko.total_amount), 0) as current_order_value
         FROM tables t
         LEFT JOIN kitchen_orders ko ON t.id = ko.table_id 
-          AND ko.status IN ('pending', 'preparing')
+          AND ko.status IN ('new', 'preparing')
           AND ko.created_at >= :startDate
           AND ko.created_at < :endDate
         WHERE t.tenant_id = :tenantId
@@ -145,7 +145,7 @@ export default async function handler(
           COALESCE(SUM(total_amount), 0) as revenue
         FROM kitchen_orders
         WHERE tenant_id = :tenantId
-          AND status = 'completed'
+          AND status = 'served'
           AND created_at >= NOW() - INTERVAL '7 days'
         GROUP BY EXTRACT(HOUR FROM created_at)
         ORDER BY hour
@@ -167,7 +167,7 @@ export default async function handler(
         JOIN kitchen_orders ko ON koi.order_id = ko.id
         JOIN products p ON koi.product_id = p.id
         WHERE ko.tenant_id = :tenantId
-          AND ko.status = 'completed'
+          AND ko.status = 'served'
           AND ko.created_at >= :startDate
           AND ko.created_at < :endDate
         GROUP BY p.id, p.name, p.image_url

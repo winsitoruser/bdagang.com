@@ -246,7 +246,7 @@ async function getAggregatedSummary(
     FROM pos_transactions pt
     JOIN branches b ON pt.branch_id = b.id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter}
     ${branchFilter}
     ${groupByClause}
@@ -267,7 +267,7 @@ async function getAggregatedSummary(
     FROM pos_transactions pt
     JOIN branches b ON pt.branch_id = b.id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter}
     ${branchFilter}
     GROUP BY ${groupBy === 'branch' ? 'b.id, b.name,' : groupBy === 'region' ? 'b.region,' : ''} pt.payment_method
@@ -324,7 +324,7 @@ async function getAggregatedSales(
     FROM pos_transactions pt
     JOIN branches b ON pt.branch_id = b.id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter}
     ${branchFilter}
     ${groupByClause}
@@ -343,7 +343,7 @@ async function getAggregatedSales(
       COALESCE(AVG(pt.total), 0) as avg_transaction
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter}
     ${branchFilter}
     GROUP BY EXTRACT(HOUR FROM pt.transaction_date)
@@ -384,7 +384,7 @@ async function getAggregatedProducts(
       ROUND(
         (SUM(pti.quantity * pti.price) * 100.0 / (
           SELECT COALESCE(SUM(total), 0) FROM pos_transactions 
-          WHERE tenant_id = :tenantId AND status = 'completed' ${dateFilter}
+          WHERE tenant_id = :tenantId AND status = 'closed' ${dateFilter}
         )), 2
       ) as revenue_percentage
     FROM pos_transaction_items pti
@@ -392,7 +392,7 @@ async function getAggregatedProducts(
     JOIN products p ON pti.product_id = p.id
     LEFT JOIN categories c ON p.category_id = c.id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter.replace('pt.', 'pt.')}
     ${branchFilter.replace('pt.', 'pt.')}
     GROUP BY p.id, p.name, p.sku, c.name
@@ -416,7 +416,7 @@ async function getAggregatedProducts(
     JOIN pos_transaction_items pti ON p.id = pti.product_id
     JOIN pos_transactions pt ON pti.transaction_id = pt.id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter.replace('pt.', 'pt.')}
     ${branchFilter.replace('pt.', 'pt.')}
     GROUP BY c.id, c.name
@@ -454,7 +454,7 @@ async function getAggregatedCustomers(
       COALESCE(AVG(pt.total), 0) as avg_transaction_value
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter}
     ${branchFilter}
   `, {
@@ -477,7 +477,7 @@ async function getAggregatedCustomers(
     FROM customers c
     JOIN pos_transactions pt ON c.id = pt.customer_id
     WHERE pt.tenant_id = :tenantId
-    AND pt.status = 'completed'
+    AND pt.status = 'closed'
     ${dateFilter.replace('pt.', 'pt.')}
     ${branchFilter.replace('pt.', 'pt.')}
     GROUP BY c.id, c.name, c.phone, c.email
@@ -557,7 +557,7 @@ async function getAggregatedEmployees(
     JOIN users u ON e.user_id = u.id
     JOIN branches b ON e.branch_id = b.id
     LEFT JOIN pos_transactions pt ON u.id = pt.cashier_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${dateFilter.replace('pt.', 'pt.')}
     WHERE e.tenant_id = :tenantId
     AND e.is_active = true
@@ -599,7 +599,7 @@ async function getAggregatedFinancial(
       ) as profit_margin
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${dateFilter.replace('pt.', 'pt.')}
     LEFT JOIN finance_transactions ft ON b.id = ft.branch_id
       ${dateFilter.replace('pt.', 'ft.')}

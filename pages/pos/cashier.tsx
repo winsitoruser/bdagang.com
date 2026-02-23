@@ -538,15 +538,15 @@ const CashierPage: React.FC = () => {
               <FaTag className="text-indigo-500 w-4 h-4 flex-shrink-0" />
               {categories.map((category) => (
                 <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
+                  key={typeof category === 'string' ? category : category.id}
+                  onClick={() => setSelectedCategory(typeof category === 'string' ? category : category.name)}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
-                    selectedCategory === category
+                    selectedCategory === (typeof category === 'string' ? category : category.name)
                       ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-md'
                       : 'bg-white text-gray-600 hover:bg-indigo-50 border border-gray-200'
                   }`}
                 >
-                  {category}
+                  {typeof category === 'string' ? category : category.name}
                 </button>
               ))}
             </div>

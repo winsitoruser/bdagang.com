@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
+import sequelize from '../../../lib/sequelize';
 
-const Product = require('../../../models/Product');
 const { Op } = require('sequelize');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -28,8 +28,7 @@ async function getProducts(req: NextApiRequest, res: NextApiResponse) {
   const { search = '', category = '' } = req.query;
 
   const whereClause: any = {
-    isActive: true,
-    stock: { [Op.gt]: 0 } // Only show products with stock
+    is_active: true
   };
 
   if (search) {
@@ -41,24 +40,34 @@ async function getProducts(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (category && category !== 'Semua') {
-    whereClause.category = category;
+    whereClause.category_id = parseInt(category);
   }
 
+  const { Product, Stock, Category } = sequelize.models;
+  
   const products = await Product.findAll({
     where: whereClause,
-    attributes: ['id', 'name', 'sku', 'barcode', 'category', 'price', 'stock', 'unit', 'image'],
+    attributes: ['id', 'name', 'sku', 'barcode', 'sell_price', 'unit', 'category_id'],
+    include: [{
+      model: Stock,
+      as: 'stock_data',
+      attributes: ['quantity']
+    }],
     order: [['name', 'ASC']]
   });
 
   // Get unique categories
-  const allProducts = await Product.findAll({
-    where: { isActive: true },
-    attributes: ['category'],
-    group: ['category']
+  const categoriesData = await Category.findAll({
+    where: { is_active: true },
+    attributes: ['id', 'name'],
+    order: [['name', 'ASC']]
   });
 
-  const categories = ['Semua', ...allProducts.map((p: any) => p.category).filter(Boolean)];
+  const categories = ['Semua', ...categoriesData.map((c: any) => ({ id: c.id, name: c.name }))];
 
+  // Create category lookup map
+  const categoryMap = new Map(categoriesData.map((c: any) => [c.id, c.name]));
+  
   return res.status(200).json({
     success: true,
     products: products.map((p: any) => ({
@@ -66,11 +75,11 @@ async function getProducts(req: NextApiRequest, res: NextApiResponse) {
       name: p.name,
       sku: p.sku,
       barcode: p.barcode,
-      category: p.category || 'Umum',
-      price: parseFloat(p.price) || 0,
-      stock: parseInt(p.stock) || 0,
-      unit: p.unit || 'pcs',
-      image: p.image
+      category: categoryMap.get(p.category_id) || 'Umum',
+      categoryId: p.category_id,
+      price: parseFloat(p.sell_price) || 0,
+      stock: p.stock || 0,
+      unit: p.unit || 'pcs'
     })),
     categories
   });

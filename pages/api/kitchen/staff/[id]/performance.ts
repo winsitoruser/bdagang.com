@@ -50,7 +50,7 @@ export default async function handler(
               ELSE NULL 
             END
           ) as avg_preparation_time,
-          COUNT(CASE WHEN ko.status = 'completed' THEN 1 END) as completed_orders,
+          COUNT(CASE WHEN ko.status = 'served' THEN 1 END) as completed_orders,
           COUNT(CASE WHEN ko.status = 'cancelled' THEN 1 END) as cancelled_orders,
           DATE_TRUNC('day', ko.created_at) as date
         FROM kitchen_orders ko
@@ -74,7 +74,7 @@ export default async function handler(
         JOIN kitchen_orders ko ON koi.order_id = ko.id
         JOIN products p ON koi.product_id = p.id
         WHERE ko.assigned_chef_id = :id
-          AND ko.status = 'completed'
+          AND ko.status = 'served'
           AND ko.created_at >= CURRENT_DATE - INTERVAL '30 days'
         GROUP BY p.id, p.name
         ORDER BY times_prepared DESC

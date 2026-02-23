@@ -213,11 +213,11 @@ async function getSalesLeaderboard(
       LAG(COALESCE(SUM(pt.total), 0)) OVER (ORDER BY COALESCE(SUM(pt.total), 0) DESC) - COALESCE(SUM(pt.total), 0) as gap_to_previous,
       ROUND(
         (COALESCE(SUM(pt.total), 0) * 100.0 / (SELECT SUM(total) FROM pos_transactions pt2 
-          WHERE pt2.tenant_id = :tenantId AND pt2.status = 'completed' ${dateFilter})), 2
+          WHERE pt2.tenant_id = :tenantId AND pt2.status = 'closed' ${dateFilter})), 2
       ) as percentage_of_total
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${dateFilter.replace('pt.', 'pt.')}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
@@ -272,7 +272,7 @@ async function getTransactionLeaderboard(
       LAG(COUNT(pt.id)) OVER (ORDER BY COUNT(pt.id) DESC) - COUNT(pt.id) as gap_to_previous
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${dateFilter.replace('pt.', 'pt.')}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
@@ -325,7 +325,7 @@ async function getCustomerLeaderboard(
       RANK() OVER (ORDER BY COUNT(DISTINCT pt.customer_id) DESC) as rank
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${dateFilter.replace('pt.', 'pt.')}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
@@ -378,7 +378,7 @@ async function getAvgTransactionLeaderboard(
       RANK() OVER (ORDER BY COALESCE(AVG(pt.total), 0) DESC) as rank
     FROM branches b
     LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ${dateFilter.replace('pt.', 'pt.')}
     WHERE b.tenant_id = :tenantId
     AND b.is_active = true
@@ -424,7 +424,7 @@ async function getGrowthLeaderboard(
         COALESCE(SUM(pt.total), 0) as current_sales
       FROM branches b
       LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
         ${dateFilter.replace('pt.', 'pt.')}
       WHERE b.tenant_id = :tenantId
       AND b.is_active = true
@@ -437,7 +437,7 @@ async function getGrowthLeaderboard(
         COALESCE(SUM(pt.total), 0) as previous_sales
       FROM branches b
       LEFT JOIN pos_transactions pt ON b.id = pt.branch_id
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
         AND pt.transaction_date >= CURRENT_DATE - INTERVAL '14 days'
         AND pt.transaction_date < CURRENT_DATE - INTERVAL '7 days'
       WHERE b.tenant_id = :tenantId
@@ -536,7 +536,7 @@ async function getComparisonData(
           COALESCE(AVG(pt.total), 0) as avg_transaction
         FROM pos_transactions pt
         WHERE pt.tenant_id = :tenantId
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
         ${previousDateFilter}
       `;
       break;
@@ -548,7 +548,7 @@ async function getComparisonData(
           COALESCE(AVG(pt.total), 0) as avg_transaction
         FROM pos_transactions pt
         WHERE pt.tenant_id = :tenantId
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
         ${previousDateFilter}
       `;
   }

@@ -140,7 +140,7 @@ async function getRealtimeData(
         COUNT(pt.id) as transactions
       FROM branches b
       LEFT JOIN pos_transactions pt ON pt.branch_id = b.id 
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
         AND pt.transaction_date >= :startDate
       WHERE b.tenant_id = :tenantId
       AND b.is_active = true
@@ -165,7 +165,7 @@ async function getRealtimeData(
       LEFT JOIN branches b ON pt.branch_id = b.id
       LEFT JOIN users u ON pt.cashier_id = u.id
       WHERE pt.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       ORDER BY pt.transaction_date DESC
       LIMIT 10
     `, {

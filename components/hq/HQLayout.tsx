@@ -1,52 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import dynamic from 'next/dynamic';
+import { useSession, signOut } from 'next-auth/react';
 import {
-  LayoutDashboard,
   Building2,
-  Package,
-  Users,
-  FileText,
-  Settings,
-  ShoppingCart,
-  TrendingUp,
   Bell,
   Search,
   Menu,
   X,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   LogOut,
   User,
-  Shield,
-  ClipboardList,
-  Truck,
-  BarChart3,
-  History,
-  Globe,
-  DollarSign,
-  Layers,
-  Store,
-  UserCog,
-  FileBarChart,
+  Settings,
   AlertCircle,
   CheckCircle,
-  Clock,
-  UserCheck,
-  Target,
-  CalendarCheck,
-  Award,
-  Wallet,
-  Banknote,
-  PiggyBank,
-  Receipt,
-  CreditCard,
-  Calculator,
-  ArrowRightLeft,
-  FileSpreadsheet,
-  Plug
+  Clock
 } from 'lucide-react';
+import {
+  hqSidebarConfig,
+  filterSidebarConfig,
+  findActiveMenuItem,
+  getParentMenuItem,
+  MenuItem,
+  MenuGroup,
+  UserRole,
+  ModuleCode
+} from '@/config/sidebar.config';
 
 interface HQLayoutProps {
   children: React.ReactNode;
@@ -54,129 +35,46 @@ interface HQLayoutProps {
   subtitle?: string;
 }
 
-interface NavItem {
-  name: string;
-  href?: string;
-  icon: React.ElementType;
-  badge?: number;
-  badgeColor?: string;
-  children?: NavItem[];
-}
-
-const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/hq/dashboard', icon: LayoutDashboard },
-  { 
-    name: 'Cabang', 
-    icon: Building2,
-    children: [
-      { name: 'Daftar Cabang', href: '/hq/branches', icon: Store },
-      { name: 'Performa Cabang', href: '/hq/branches/performance', icon: TrendingUp },
-      { name: 'Pengaturan Cabang', href: '/hq/branches/settings', icon: Settings },
-    ]
-  },
-  { 
-    name: 'Inventory', 
-    icon: Package,
-    children: [
-      { name: 'Dashboard', href: '/hq/inventory', icon: LayoutDashboard },
-      { name: 'Stok Global', href: '/hq/inventory/stock', icon: Package },
-      { name: 'Kategori Produk', href: '/hq/inventory/categories', icon: Layers },
-      { name: 'Harga & Pricing', href: '/hq/inventory/pricing', icon: DollarSign },
-      { name: 'Transfer Stok', href: '/hq/inventory/transfers', icon: ArrowRightLeft },
-      { name: 'Alerts', href: '/hq/inventory/alerts', icon: AlertCircle },
-      { name: 'Stock Opname', href: '/hq/inventory/stocktake', icon: ClipboardList },
-      { name: 'Penerimaan Barang', href: '/hq/inventory/receipts', icon: FileText },
-    ]
-  },
-  { 
-    name: 'Supply Chain', 
-    icon: Truck,
-    children: [
-      { name: 'Internal Requisition', href: '/hq/requisitions', icon: ClipboardList },
-      { name: 'Purchase Order', href: '/hq/purchase-orders', icon: ShoppingCart },
-      { name: 'Supplier', href: '/hq/suppliers', icon: Truck },
-    ]
-  },
-  { 
-    name: 'Produk & Menu', 
-    icon: Package,
-    children: [
-      { name: 'Master Produk', href: '/hq/products', icon: Package },
-    ]
-  },
-  { 
-    name: 'Pengguna', 
-    icon: Users,
-    children: [
-      { name: 'Semua Pengguna', href: '/hq/users', icon: Users },
-      { name: 'Role & Akses', href: '/hq/users/roles', icon: Shield },
-      { name: 'Branch Manager', href: '/hq/users/managers', icon: UserCog },
-    ]
-  },
-  { 
-    name: 'HRIS', 
-    icon: UserCheck,
-    children: [
-      { name: 'Dashboard HRIS', href: '/hq/hris', icon: LayoutDashboard },
-      { name: 'KPI Karyawan', href: '/hq/hris/kpi', icon: Target },
-      { name: 'KPI Settings', href: '/hq/hris/kpi-settings', icon: Settings },
-      { name: 'Kehadiran', href: '/hq/hris/attendance', icon: CalendarCheck },
-      { name: 'Performance Review', href: '/hq/hris/performance', icon: Award },
-    ]
-  },
-  { 
-    name: 'Keuangan', 
-    icon: Wallet,
-    children: [
-      { name: 'Dashboard Keuangan', href: '/hq/finance', icon: LayoutDashboard },
-      { name: 'Analisis Revenue', href: '/hq/finance/revenue', icon: TrendingUp },
-      { name: 'Pengeluaran', href: '/hq/finance/expenses', icon: CreditCard },
-      { name: 'Laba Rugi', href: '/hq/finance/profit-loss', icon: FileSpreadsheet },
-      { name: 'Arus Kas', href: '/hq/finance/cash-flow', icon: ArrowRightLeft },
-      { name: 'Invoice', href: '/hq/finance/invoices', icon: FileText },
-      { name: 'Piutang & Hutang', href: '/hq/finance/accounts', icon: Receipt },
-      { name: 'Anggaran', href: '/hq/finance/budget', icon: PiggyBank },
-      { name: 'Pajak', href: '/hq/finance/tax', icon: Calculator },
-    ]
-  },
-  { 
-    name: 'Laporan', 
-    icon: BarChart3,
-    children: [
-      { name: 'Laporan Penjualan', href: '/hq/reports/sales', icon: TrendingUp },
-      { name: 'Laporan Konsolidasi', href: '/hq/reports/consolidated', icon: FileBarChart },
-      { name: 'Laporan Stok', href: '/hq/reports/inventory', icon: Package },
-      { name: 'Laporan Keuangan', href: '/hq/reports/finance', icon: DollarSign },
-    ]
-  },
-  { name: 'Audit Log', href: '/hq/audit-logs', icon: History },
-  { 
-    name: 'Pengaturan', 
-    icon: Settings,
-    children: [
-      { name: 'Global Settings', href: '/hq/settings', icon: Globe },
-      { name: 'Integrasi Pihak Ketiga', href: '/hq/settings/integrations', icon: Plug },
-      { name: 'Pajak & Biaya', href: '/hq/settings/taxes', icon: FileText },
-      { name: 'Notifikasi', href: '/hq/settings/notifications', icon: Bell },
-    ]
-  },
-];
-
 function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Get user role from session
+  const userRole = (session?.user as any)?.role as UserRole | undefined;
+
+  // Filter sidebar config based on role (modules can be added later)
+  const filteredConfig = useMemo(() => {
+    return filterSidebarConfig(hqSidebarConfig, userRole);
+  }, [userRole]);
+
   useEffect(() => {
     setMounted(true);
-    setExpandedMenus(['Cabang', 'Produk & Menu', 'Supply Chain', 'Keuangan']);
+    
+    // Auto-expand some menus and find active menu's parent
+    const activeItem = findActiveMenuItem(filteredConfig.groups, router.pathname);
+    if (activeItem) {
+      const parent = getParentMenuItem(filteredConfig.groups, activeItem.id);
+      if (parent) {
+        setExpandedMenus(prev => [...new Set([...prev, parent.id])]);
+      }
+    }
+    
+    // Load collapsed state
+    const saved = localStorage.getItem('hq-sidebar-collapsed');
+    if (saved !== null) {
+      setSidebarCollapsed(saved === 'true');
+    }
+    
     fetchNotifications();
-  }, []);
+  }, [router.pathname, filteredConfig.groups]);
 
   const fetchNotifications = () => {
     setNotifications([
@@ -194,39 +92,54 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
     );
   }
 
-  const toggleMenu = (menuName: string) => {
+  const toggleMenu = (menuId: string) => {
     setExpandedMenus(prev => 
-      prev.includes(menuName) 
-        ? prev.filter(m => m !== menuName)
-        : [...prev, menuName]
+      prev.includes(menuId) 
+        ? prev.filter(m => m !== menuId)
+        : [...prev, menuId]
     );
   };
 
-  const isActive = (href: string) => router.pathname === href || router.pathname.startsWith(href + '/');
+  const toggleSidebarCollapse = () => {
+    const newState = !sidebarCollapsed;
+    setSidebarCollapsed(newState);
+    localStorage.setItem('hq-sidebar-collapsed', String(newState));
+  };
 
-  const renderNavItem = (item: NavItem, depth = 0) => {
+  const isActive = (href?: string) => {
+    if (!href) return false;
+    return router.pathname === href || router.pathname.startsWith(href + '/');
+  };
+
+  const handleLogout = async () => {
+    await signOut({ redirect: false });
+    router.push('/auth/login');
+  };
+
+  const renderNavItem = (item: MenuItem, depth = 0) => {
     const hasChildren = item.children && item.children.length > 0;
-    const isExpanded = expandedMenus.includes(item.name);
+    const isExpanded = expandedMenus.includes(item.id);
     const active = item.href ? isActive(item.href) : false;
+    const Icon = item.icon;
 
     if (hasChildren) {
       return (
-        <div key={item.name}>
+        <div key={item.id}>
           <button
-            onClick={() => toggleMenu(item.name)}
+            onClick={() => toggleMenu(item.id)}
             className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 ${
               isExpanded ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <div className="flex items-center gap-3">
-              <item.icon className="w-5 h-5" />
-              {sidebarOpen && <span className="font-medium">{item.name}</span>}
+              <Icon className="w-5 h-5" />
+              {!sidebarCollapsed && <span className="font-medium">{item.name}</span>}
             </div>
-            {sidebarOpen && (
+            {!sidebarCollapsed && (
               <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
             )}
           </button>
-          {sidebarOpen && isExpanded && (
+          {!sidebarCollapsed && isExpanded && (
             <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-3">
               {item.children!.map(child => renderNavItem(child, depth + 1))}
             </div>
@@ -237,77 +150,155 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
 
     return (
       <Link
-        key={item.name}
+        key={item.id}
         href={item.href || '#'}
-        className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 ${
+        className={`group relative flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 ${
           active 
             ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
             : 'text-gray-600 hover:bg-gray-100'
-        }`}
+        } ${sidebarCollapsed ? 'justify-center' : ''}`}
       >
-        <div className="flex items-center gap-3">
-          <item.icon className="w-5 h-5" />
-          {sidebarOpen && <span className="font-medium">{item.name}</span>}
+        <div className={`flex items-center gap-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
+          <Icon className="w-5 h-5" />
+          {!sidebarCollapsed && <span className="font-medium">{item.name}</span>}
         </div>
-        {sidebarOpen && item.badge && (
+        {!sidebarCollapsed && item.badge !== undefined && (
           <span className={`px-2 py-0.5 text-xs font-bold text-white rounded-full ${item.badgeColor || 'bg-blue-500'}`}>
             {item.badge}
           </span>
+        )}
+        {/* Collapsed tooltip */}
+        {sidebarCollapsed && (
+          <div className="hidden lg:block absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+            {item.name}
+            <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+          </div>
         )}
       </Link>
     );
   };
 
+  const renderMenuGroup = (group: MenuGroup) => (
+    <div key={group.id} className="mb-4">
+      {!sidebarCollapsed && (
+        <div className="px-3 mb-2">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            {group.title}
+          </h3>
+        </div>
+      )}
+      <div className="space-y-1">
+        {group.items.map(item => renderNavItem(item))}
+      </div>
+    </div>
+  );
+
+  const LogoIcon = filteredConfig.logo.icon;
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {/* Mobile Overlay */}
+      <div
+        className={`fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden transition-opacity ${
+          sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setSidebarOpen(false)}
+      />
+
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transition-all duration-300 ${
-        sidebarOpen ? 'w-64' : 'w-20'
-      }`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transform transition-all duration-300 ease-in-out ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:translate-x-0 ${
+        sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
+      } w-64`}>
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-          <Link href="/hq/dashboard" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-white" />
+          <Link href={filteredConfig.logo.href} className={`flex items-center gap-3 ${sidebarCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center flex-shrink-0">
+              <LogoIcon className="w-6 h-6 text-white" />
             </div>
-            {sidebarOpen && (
-              <div>
-                <h1 className="font-bold text-gray-900">Bedagang</h1>
-                <p className="text-xs text-gray-500">HQ Platform</p>
+            {!sidebarCollapsed && (
+              <div className="hidden lg:block">
+                <h1 className="font-bold text-gray-900">{filteredConfig.logo.title}</h1>
+                {filteredConfig.logo.subtitle && (
+                  <p className="text-xs text-gray-500">{filteredConfig.logo.subtitle}</p>
+                )}
               </div>
             )}
+            <div className="lg:hidden">
+              <h1 className="font-bold text-gray-900">{filteredConfig.logo.title}</h1>
+              {filteredConfig.logo.subtitle && (
+                <p className="text-xs text-gray-500">{filteredConfig.logo.subtitle}</p>
+              )}
+            </div>
           </Link>
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-500"
           >
-            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100vh-8rem)]">
-          {navigation.map(item => renderNavItem(item))}
+        <nav className="p-4 overflow-y-auto h-[calc(100vh-8rem)]">
+          {filteredConfig.groups.map(group => renderMenuGroup(group))}
         </nav>
 
         {/* User Section */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
-              SA
+          <div className={`flex items-center gap-3 ${sidebarCollapsed ? 'lg:justify-center' : ''}`}>
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+              {session?.user?.name?.charAt(0) || 'U'}
             </div>
-            {sidebarOpen && (
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 truncate">Super Admin</p>
-                <p className="text-xs text-gray-500">super@bedagang.com</p>
+            {!sidebarCollapsed && (
+              <div className="flex-1 min-w-0 hidden lg:block">
+                <p className="font-medium text-gray-900 truncate">{session?.user?.name || 'User'}</p>
+                <p className="text-xs text-gray-500 truncate">{session?.user?.email || ''}</p>
               </div>
             )}
+            <div className="flex-1 min-w-0 lg:hidden">
+              <p className="font-medium text-gray-900 truncate">{session?.user?.name || 'User'}</p>
+              <p className="text-xs text-gray-500 truncate">{session?.user?.email || ''}</p>
+            </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className={`mt-3 flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-all ${
+              sidebarCollapsed ? 'lg:justify-center' : ''
+            }`}
+          >
+            <LogOut className="w-4 h-4 flex-shrink-0" />
+            {!sidebarCollapsed && <span className="hidden lg:inline">Keluar</span>}
+            <span className="lg:hidden">Keluar</span>
+          </button>
         </div>
       </aside>
 
+      {/* Collapse Toggle Button - Desktop Only */}
+      <button
+        onClick={toggleSidebarCollapse}
+        className={`hidden lg:flex fixed top-20 z-50 items-center justify-center w-8 h-8 bg-white border border-gray-200 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 ${
+          sidebarCollapsed ? 'left-16' : 'left-60'
+        }`}
+        title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+      >
+        {sidebarCollapsed ? (
+          <ChevronRight className="w-4 h-4 text-gray-600" />
+        ) : (
+          <ChevronLeft className="w-4 h-4 text-gray-600" />
+        )}
+      </button>
+
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+      <div className={`flex-1 transition-all duration-300 lg:ml-64 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-white rounded-lg shadow-lg"
+        >
+          <Menu className="w-6 h-6 text-gray-600" />
+        </button>
         {/* Top Header */}
         <header className="sticky top-0 z-40 bg-white border-b border-gray-200 h-16">
           <div className="flex items-center justify-between h-full px-6">
@@ -381,7 +372,7 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
                   className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                   <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                    SA
+                    {session?.user?.name?.charAt(0) || 'U'}
                   </div>
                   <ChevronDown className="w-4 h-4 text-gray-600" />
                 </button>
@@ -389,8 +380,13 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
                 {showUserMenu && (
                   <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                     <div className="p-4 border-b border-gray-200">
-                      <p className="font-medium text-gray-900">Super Admin</p>
-                      <p className="text-sm text-gray-500">super@bedagang.com</p>
+                      <p className="font-medium text-gray-900">{session?.user?.name || 'User'}</p>
+                      <p className="text-sm text-gray-500">{session?.user?.email || ''}</p>
+                      {userRole && (
+                        <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+                          {userRole.replace('_', ' ')}
+                        </span>
+                      )}
                     </div>
                     <div className="p-2">
                       <Link href="/hq/profile" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700">
@@ -402,7 +398,10 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
                         <span className="text-sm">Pengaturan</span>
                       </Link>
                       <hr className="my-2" />
-                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600">
+                      <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600"
+                      >
                         <LogOut className="w-4 h-4" />
                         <span className="text-sm">Keluar</span>
                       </button>

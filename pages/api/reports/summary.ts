@@ -40,10 +40,10 @@ export default async function handler(
         COALESCE(SUM(total_amount), 0) as total_sales,
         COUNT(*) as total_orders,
         COUNT(DISTINCT customer_id) as total_customers
-      FROM pos_transactions
-      WHERE tenant_id = :tenantId
-        AND status = 'completed'
-        AND DATE(transaction_date) BETWEEN :start AND :end
+      FROM pos_transactions pt
+      WHERE pt.tenant_id = :tenantId
+        AND pt.status = 'closed'
+        AND DATE(pt.transaction_date) BETWEEN :start AND :end
     `, {
       replacements: { tenantId, start, end },
       type: QueryTypes.SELECT
@@ -55,10 +55,10 @@ export default async function handler(
         COALESCE(SUM(total_amount), 0) as total_sales,
         COUNT(*) as total_orders,
         COUNT(DISTINCT customer_id) as total_customers
-      FROM pos_transactions
-      WHERE tenant_id = :tenantId
-        AND status = 'completed'
-        AND DATE(transaction_date) BETWEEN :prevStart AND :prevEnd
+      FROM pos_transactions pt
+      WHERE pt.tenant_id = :tenantId
+        AND pt.status = 'closed'
+        AND DATE(pt.transaction_date) BETWEEN :prevStart AND :prevEnd
     `, {
       replacements: { tenantId, prevStart, prevEnd },
       type: QueryTypes.SELECT

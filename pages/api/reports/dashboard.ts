@@ -108,7 +108,7 @@ export default async function handler(
       WHERE pt.tenant_id = :tenantId
         AND pt.transaction_date >= :firstDayOfMonth
         AND pt.transaction_date <= :lastDayOfMonth
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
     `, {
       replacements: { 
         tenantId,
@@ -126,7 +126,7 @@ export default async function handler(
       WHERE pt.tenant_id = :tenantId
         AND pt.transaction_date >= :firstDayOfPrevMonth
         AND pt.transaction_date <= :lastDayOfPrevMonth
-        AND pt.status = 'completed'
+        AND pt.status = 'closed'
     `, {
       replacements: { 
         tenantId,

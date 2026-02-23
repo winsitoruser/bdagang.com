@@ -22,10 +22,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
     } else if (req.method === 'POST') {
-      const { name, type, connectionType, ipAddress, port, isDefault, isActive } = req.body;
+      const { name, type, connectionType, ipAddress, port, bluetoothDeviceId, bluetoothDeviceName, isDefault, isActive } = req.body;
 
       if (!name) {
         return res.status(400).json({ error: 'Printer name is required' });
+      }
+
+      // Validate connection type specific fields
+      if (connectionType === 'network' && !ipAddress) {
+        return res.status(400).json({ error: 'IP Address is required for network connection' });
+      }
+      
+      if (connectionType === 'bluetooth' && !bluetoothDeviceId) {
+        return res.status(400).json({ error: 'Bluetooth device is required' });
       }
 
       // If this printer is set as default, unset other defaults
@@ -42,6 +51,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         connectionType: connectionType || 'network',
         ipAddress: ipAddress || null,
         port: port || '9100',
+        settings: connectionType === 'bluetooth' ? {
+          bluetoothDeviceId,
+          bluetoothDeviceName
+        } : null,
         isDefault: isDefault || false,
         isActive: isActive !== false
       });

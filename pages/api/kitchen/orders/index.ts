@@ -221,8 +221,10 @@ export default async function handler(
         const replacements: any = {};
 
         if (status && status !== 'all') {
+          // Map 'pending' to 'new' to match DB enum (new, preparing, ready, served, cancelled)
+          const mappedStatus = status === 'pending' ? 'new' : status;
           whereClause += ' AND ko.status = :status';
-          replacements.status = status;
+          replacements.status = mappedStatus;
         }
 
         if (orderType && orderType !== 'all') {

@@ -1,21 +1,16 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]';
-
-const PosTransaction = require('../../../../models/PosTransaction');
-const PosTransactionItem = require('../../../../models/PosTransactionItem');
-const Product = require('../../../../models/Product');
-const Customer = require('../../../../models/Customer');
-const LoyaltyTier = require('../../../../models/LoyaltyTier');
-const sequelize = require('../../../../models').sequelize;
+import sequelize from '../../../../lib/sequelize';
 
 // Helper function to get tier multiplier
 async function getTierMultiplier(tierName: string): Promise<number> {
   try {
+    const { LoyaltyTier } = sequelize.models;
     const tier = await LoyaltyTier.findOne({
       where: { tierName, isActive: true }
     });
-    return tier ? parseFloat(tier.pointMultiplier) : 1.0;
+    return tier ? parseFloat((tier as any).pointMultiplier) : 1.0;
   } catch (error) {
     console.error('Error getting tier multiplier:', error);
     return 1.0;
@@ -25,7 +20,8 @@ async function getTierMultiplier(tierName: string): Promise<number> {
 // Helper function to sync customer tier after purchase
 async function syncCustomerTierAfterPurchase(customerId: string) {
   try {
-    const customer = await Customer.findByPk(customerId);
+    const { Customer, LoyaltyTier } = sequelize.models;
+    const customer = await Customer.findByPk(customerId) as any;
     if (!customer) return;
 
     const tiers = await LoyaltyTier.findAll({
@@ -36,11 +32,11 @@ async function syncCustomerTierAfterPurchase(customerId: string) {
     if (tiers.length === 0) return;
 
     const totalSpent = parseFloat(customer.totalSpent) || 0;
-    let newTier = tiers[tiers.length - 1];
+    let newTier = tiers[tiers.length - 1] as any;
 
     for (const tier of tiers) {
-      if (totalSpent >= parseFloat(tier.minSpending)) {
-        newTier = tier;
+      if (totalSpent >= parseFloat((tier as any).minSpending)) {
+        newTier = tier as any;
         break;
       }
     }
@@ -68,7 +64,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const transaction = await sequelize.transaction();
+  const t = await sequelize.transaction();
+    const { PosTransaction, PosTransactionItem, Product, Customer } = sequelize.models;
 
   try {
     const {
@@ -84,12 +81,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validation
     if (!cart || cart.length === 0) {
-      await transaction.rollback();
+      await t.rollback();
       return res.status(400).json({ error: 'Cart is empty' });
     }
 
     if (!paymentMethod) {
-      await transaction.rollback();
+      await t.rollback();
       return res.status(400).json({ error: 'Payment method is required' });
     }
 
@@ -99,15 +96,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validate stock and calculate subtotal
     for (const item of cart) {
-      const product = await Product.findByPk(item.id, { transaction });
+      const product = await Product.findByPk(item.id, { transaction: t }) as any;
       
       if (!product) {
-        await transaction.rollback();
+        await t.rollback();
         return res.status(404).json({ error: `Product ${item.name} not found` });
       }
 
       if (product.stock < item.quantity) {
-        await transaction.rollback();
+        await t.rollback();
         return res.status(400).json({ 
           error: `Insufficient stock for ${item.name}. Available: ${product.stock}, Requested: ${item.quantity}` 
         });
@@ -143,7 +140,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const changeAmount = paidAmount - total;
 
     if (paymentMethod === 'cash' && changeAmount < 0) {
-      await transaction.rollback();
+      await t.rollback();
       return res.status(400).json({ error: 'Insufficient payment amount' });
     }
 
@@ -155,7 +152,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           [require('sequelize').Op.gte]: new Date().setHours(0, 0, 0, 0)
         }
       },
-      transaction
+      transaction: t
     });
     const transactionNumber = `TRX${today}${String(count + 1).padStart(4, '0')}`;
 
@@ -176,27 +173,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       changeAmount: paymentMethod === 'cash' ? changeAmount : 0,
       status: 'completed',
       notes: selectedVoucher ? `Voucher: ${selectedVoucher.code}` : null
-    }, { transaction });
+    }, { transaction: t });
 
     // Create transaction items and update stock
     for (const item of items) {
       await PosTransactionItem.create({
         transactionId: posTransaction.id,
         ...item
-      }, { transaction });
+      }, { transaction: t });
 
       // Update product stock
       await Product.decrement('stock', {
         by: item.quantity,
         where: { id: item.productId },
-        transaction
+        transaction: t
       });
     }
 
     // Update member points if applicable
     if (customerType === 'member' && selectedMember) {
       // Calculate points with tier multiplier
-      const customer = await Customer.findByPk(selectedMember.id, { transaction });
+      const customer = await Customer.findByPk(selectedMember.id, { transaction: t }) as any;
+      if (!customer) {
+        await t.rollback();
+        return res.status(404).json({ error: 'Customer not found' });
+      }
       const tierMultiplier = await getTierMultiplier(customer.membershipLevel);
       const basePoints = Math.floor(total / 10000); // 1 point per 10,000
       const pointsEarned = Math.floor(basePoints * tierMultiplier);
@@ -204,11 +205,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await Customer.increment('points', {
         by: pointsEarned,
         where: { id: selectedMember.id },
-        transaction
+        transaction: t
       });
     }
 
-    await transaction.commit();
+    await t.commit();
 
     // After commit, sync customer tier based on new total spending
     if (customerType === 'member' && selectedMember) {
@@ -233,7 +234,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }]
         }
       ]
-    });
+    }) as any;
 
     return res.status(201).json({
       success: true,
@@ -259,7 +260,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
   } catch (error: any) {
-    await transaction.rollback();
+    await t.rollback();
     console.error('Checkout Error:', error);
     return res.status(500).json({ 
       error: error.message || 'Internal server error',

@@ -109,7 +109,7 @@ async function getSalesReport(sequelize: any, tenantId: string, startDate: strin
       COALESCE(SUM(pt.tax_amount), 0) as total_tax
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
       ${branchFilter}
   `, {
@@ -126,7 +126,7 @@ async function getSalesReport(sequelize: any, tenantId: string, startDate: strin
       COUNT(pt.id) as transactions
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
       ${branchFilter}
     GROUP BY period
@@ -148,7 +148,7 @@ async function getSalesReport(sequelize: any, tenantId: string, startDate: strin
     JOIN pos_transactions pt ON pti.transaction_id = pt.id
     JOIN products p ON pti.product_id = p.id
     WHERE pt.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
       ${branchFilter}
     GROUP BY p.id, p.name, p.sku
@@ -167,7 +167,7 @@ async function getSalesReport(sequelize: any, tenantId: string, startDate: strin
       SUM(pt.total_amount) as total
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
       ${branchFilter}
     GROUP BY pt.payment_method
@@ -185,7 +185,7 @@ async function getSalesReport(sequelize: any, tenantId: string, startDate: strin
       SUM(pt.total_amount) as sales
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
       ${branchFilter}
     GROUP BY EXTRACT(HOUR FROM pt.transaction_date)
@@ -324,7 +324,7 @@ async function getCustomersReport(sequelize: any, tenantId: string, startDate: s
     FROM customers c
     LEFT JOIN pos_transactions pt ON c.id = pt.customer_id 
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
     WHERE c.tenant_id = :tenantId
       AND c.is_active = true
   `, {
@@ -344,7 +344,7 @@ async function getCustomersReport(sequelize: any, tenantId: string, startDate: s
     FROM customers c
     JOIN pos_transactions pt ON c.id = pt.customer_id
     WHERE c.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
     GROUP BY c.id, c.name, c.phone
     ORDER BY total_spent DESC
@@ -381,7 +381,7 @@ async function getFinancialReport(sequelize: any, tenantId: string, startDate: s
       COALESCE(SUM(pt.total_amount - pt.discount_amount), 0) as net_revenue
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
       ${branchFilter}
   `, {
@@ -397,7 +397,7 @@ async function getFinancialReport(sequelize: any, tenantId: string, startDate: s
       COUNT(pt.id) as transactions
     FROM pos_transactions pt
     WHERE pt.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
       ${branchFilter}
     GROUP BY DATE(pt.transaction_date)
@@ -435,7 +435,7 @@ async function getStaffReport(sequelize: any, tenantId: string, startDate: strin
     FROM users u
     JOIN pos_transactions pt ON u.id = pt.cashier_id
     WHERE u.tenant_id = :tenantId
-      AND pt.status = 'completed'
+      AND pt.status = 'closed'
       AND DATE(pt.transaction_date) BETWEEN :startDate AND :endDate
       ${branchFilter}
     GROUP BY u.id, u.name

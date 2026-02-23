@@ -119,7 +119,7 @@ async function getRealtimeData(
           SELECT COUNT(*) as active_orders
           FROM kitchen_orders
           WHERE branch_id = :branchId
-          AND status IN ('pending', 'preparing')
+          AND status IN ('new', 'preparing')
         `, {
           replacements: { branchId: branch.id },
           type: QueryTypes.SELECT
