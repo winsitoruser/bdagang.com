@@ -98,13 +98,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       // Add new associations
-      for (const module of modules) {
-        if (module.isAssociated) {
+      for (const mod of modules) {
+        if (mod.isAssociated) {
           await db.BusinessTypeModule.create({
             businessTypeId: id,
-            moduleId: module.moduleId,
-            isDefault: module.isDefault || false,
-            isOptional: module.isOptional || false
+            moduleId: mod.moduleId,
+            isDefault: mod.isDefault || false,
+            isOptional: mod.isOptional || false
           });
         }
       }

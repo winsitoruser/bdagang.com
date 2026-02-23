@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method === 'GET') {
       // Get specific module
-      const module = await db.Module.findByPk(id, {
+      const moduleData = await db.Module.findByPk(id, {
         include: [
           {
             model: db.BusinessType,
@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ]
       });
 
-      if (!module) {
+      if (!moduleData) {
         return res.status(404).json({ success: false, message: 'Module not found' });
       }
 
@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({
         success: true,
         data: {
-          ...module.toJSON(),
+          ...moduleData.toJSON(),
           tenantCount
         }
       });
@@ -61,14 +61,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const { name, description, icon, route, isCore, isActive, businessTypes } = req.body;
 
-      const module = await db.Module.findByPk(id);
+      const moduleToUpdate = await db.Module.findByPk(id);
 
-      if (!module) {
+      if (!moduleToUpdate) {
         return res.status(404).json({ success: false, message: 'Module not found' });
       }
 
       // Update module
-      await module.update({
+      await moduleToUpdate.update({
         name,
         description,
         icon,
@@ -121,14 +121,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(403).json({ success: false, message: 'Only super admin can delete modules' });
       }
 
-      const module = await db.Module.findByPk(id);
+      const moduleToDelete = await db.Module.findByPk(id);
 
-      if (!module) {
+      if (!moduleToDelete) {
         return res.status(404).json({ success: false, message: 'Module not found' });
       }
 
       // Check if module is core
-      if (module.isCore) {
+      if (moduleToDelete.isCore) {
         return res.status(400).json({ success: false, message: 'Cannot delete core module' });
       }
 
@@ -145,7 +145,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Delete module
-      await module.destroy();
+      await moduleToDelete.destroy();
 
       return res.status(200).json({
         success: true,
