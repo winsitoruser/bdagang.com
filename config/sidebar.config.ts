@@ -43,6 +43,8 @@ import {
   ChefHat,
   Ticket,
   CalendarDays,
+  MessageCircle,
+  ShoppingBag,
   type LucideIcon
 } from 'lucide-react';
 
@@ -70,6 +72,8 @@ export type ModuleCode =
   | 'kitchen'
   | 'promo'
   | 'finance'
+  | 'finance_lite'
+  | 'finance_pro'
   | 'reports'
   | 'settings'
   | 'hris'
@@ -79,7 +83,9 @@ export type ModuleCode =
   | 'users'
   | 'audit'
   | 'integrations'
-  | 'fleet';
+  | 'fleet'
+  | 'whatsapp_business'
+  | 'marketplace_integration';
 
 export type LayoutType = 'hq' | 'branch' | 'admin';
 
@@ -253,10 +259,21 @@ export const hqSidebarConfig: SidebarConfig = {
       title: 'Keuangan',
       items: [
         { 
-          id: 'finance',
-          name: 'Keuangan', 
+          id: 'finance-lite',
+          name: 'Keuangan Lite', 
           icon: Wallet,
-          modules: ['finance'],
+          modules: ['finance_lite'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'finance_staff'],
+          children: [
+            { id: 'finlite-transactions', name: 'Daftar Transaksi', href: '/hq/finance/transactions', icon: Receipt },
+            { id: 'finlite-daily', name: 'Ringkasan Harian', href: '/hq/finance/daily', icon: BarChart3 },
+          ]
+        },
+        { 
+          id: 'finance-pro',
+          name: 'Keuangan Pro', 
+          icon: Wallet,
+          modules: ['finance_pro'],
           roles: ['super_admin', 'owner', 'hq_admin', 'finance_staff'],
           children: [
             { id: 'fin-dashboard', name: 'Dashboard Keuangan', href: '/hq/finance', icon: LayoutDashboard },
@@ -299,6 +316,39 @@ export const hqSidebarConfig: SidebarConfig = {
       ]
     },
     {
+      id: 'integrations',
+      title: 'Integrasi',
+      items: [
+        {
+          id: 'whatsapp',
+          name: 'WhatsApp Business',
+          icon: MessageCircle,
+          modules: ['whatsapp_business'],
+          roles: ['super_admin', 'owner', 'hq_admin'],
+          children: [
+            { id: 'wa-dashboard', name: 'Dashboard WA', href: '/hq/whatsapp', icon: LayoutDashboard },
+            { id: 'wa-broadcast', name: 'Broadcast', href: '/hq/whatsapp/broadcast', icon: Bell },
+            { id: 'wa-templates', name: 'Template Pesan', href: '/hq/whatsapp/templates', icon: FileText },
+            { id: 'wa-settings', name: 'Pengaturan WA', href: '/hq/whatsapp/settings', icon: Settings },
+          ]
+        },
+        {
+          id: 'marketplace',
+          name: 'Marketplace',
+          icon: ShoppingBag,
+          modules: ['marketplace_integration'],
+          roles: ['super_admin', 'owner', 'hq_admin'],
+          children: [
+            { id: 'mp-dashboard', name: 'Dashboard Marketplace', href: '/hq/marketplace', icon: LayoutDashboard },
+            { id: 'mp-channels', name: 'Channel Toko', href: '/hq/marketplace/channels', icon: Store },
+            { id: 'mp-products', name: 'Sync Produk', href: '/hq/marketplace/products', icon: Package },
+            { id: 'mp-orders', name: 'Order Marketplace', href: '/hq/marketplace/orders', icon: ShoppingCart },
+            { id: 'mp-settings', name: 'Pengaturan', href: '/hq/marketplace/settings', icon: Settings },
+          ]
+        }
+      ]
+    },
+    {
       id: 'settings',
       title: 'Pengaturan',
       items: [
@@ -308,6 +358,7 @@ export const hqSidebarConfig: SidebarConfig = {
           icon: Settings,
           modules: ['settings'],
           children: [
+            { id: 'set-modules', name: 'Modul Manajemen', href: '/hq/settings/modules', icon: Package },
             { id: 'set-global', name: 'Global Settings', href: '/hq/settings', icon: Globe },
             { id: 'set-integrations', name: 'Integrasi Pihak Ketiga', href: '/hq/settings/integrations', icon: Plug },
             { id: 'set-taxes', name: 'Pajak & Biaya', href: '/hq/settings/taxes', icon: FileText },

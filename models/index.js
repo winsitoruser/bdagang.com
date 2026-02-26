@@ -41,6 +41,7 @@ db.BusinessType = require('./BusinessType')(sequelize);
 db.Module = require('./Module')(sequelize);
 db.BusinessTypeModule = require('./BusinessTypeModule')(sequelize);
 db.TenantModule = require('./TenantModule')(sequelize);
+db.ModuleDependency = require('./ModuleDependency')(sequelize);
 db.ShiftHandover = require('./ShiftHandover');
 db.CustomerLoyalty = require('./CustomerLoyalty');
 db.LoyaltyProgram = require('./LoyaltyProgram');

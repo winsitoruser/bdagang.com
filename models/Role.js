@@ -40,11 +40,11 @@ const Role = sequelize.define('Role', {
 });
 
 // Association with User model
+// Note: users table uses a string 'role' column, not a FK 'roleId' to roles table.
+// The hasMany association is commented out to prevent Sequelize from adding
+// a phantom 'roleId' column to all User queries.
 Role.associate = (models) => {
-  Role.hasMany(models.User, {
-    foreignKey: 'roleId',
-    as: 'users'
-  });
+  // Role.hasMany(models.User, { foreignKey: 'roleId', as: 'users' });
 };
 
 module.exports = Role;
