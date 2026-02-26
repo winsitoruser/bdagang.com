@@ -97,6 +97,14 @@ db.ActivationRequest = require('./ActivationRequest');
 db.KybApplication = require('./KybApplication');
 db.KybDocument = require('./KybDocument');
 
+// Fleet Management Models
+db.FleetVehicle = require('./FleetVehicle');
+db.FleetDriver = require('./FleetDriver');
+db.FleetRoute = require('./FleetRoute');
+db.FleetRouteAssignment = require('./FleetRouteAssignment');
+db.FleetGpsLocation = require('./FleetGpsLocation');
+db.FleetMaintenanceSchedule = require('./FleetMaintenanceSchedule');
+
 // Third-party Integration Models
 db.IntegrationProvider = require('./IntegrationProvider');
 db.IntegrationConfig = require('./IntegrationConfig');

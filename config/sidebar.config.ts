@@ -33,6 +33,10 @@ import {
   ArrowRightLeft,
   FileSpreadsheet,
   Plug,
+  MapPin,
+  Navigation,
+  Wrench,
+  Fuel,
   Utensils,
   Calendar,
   ChefHat,
@@ -73,7 +77,8 @@ export type ModuleCode =
   | 'products'
   | 'users'
   | 'audit'
-  | 'integrations';
+  | 'integrations'
+  | 'fleet';
 
 export type LayoutType = 'hq' | 'branch' | 'admin';
 
@@ -178,6 +183,21 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'sc-requisitions', name: 'Internal Requisition', href: '/hq/requisitions', icon: ClipboardList },
             { id: 'sc-po', name: 'Purchase Order', href: '/hq/purchase-orders', icon: ShoppingCart },
             { id: 'sc-suppliers', name: 'Supplier', href: '/hq/suppliers', icon: Truck },
+          ]
+        },
+        { 
+          id: 'fleet',
+          name: 'Fleet Management', 
+          icon: Truck,
+          modules: ['fleet'],
+          children: [
+            { id: 'fleet-overview', name: 'Fleet Overview', href: '/hq/fleet', icon: Truck },
+            { id: 'fleet-kpi', name: 'KPI Dashboard', href: '/hq/fleet/kpi', icon: BarChart3 },
+            { id: 'fleet-routes', name: 'Route Management', href: '/hq/fleet/routes', icon: MapPin },
+            { id: 'fleet-tracking', name: 'GPS Tracking', href: '/hq/fleet/tracking', icon: Navigation },
+            { id: 'fleet-fuel', name: 'Fuel Management', href: '/hq/fleet/fuel', icon: Fuel },
+            { id: 'fleet-maintenance', name: 'Maintenance', href: '/hq/fleet/maintenance', icon: Wrench },
+            { id: 'fleet-costs', name: 'Cost Reporting', href: '/hq/fleet/costs', icon: TrendingUp },
           ]
         },
         { 
