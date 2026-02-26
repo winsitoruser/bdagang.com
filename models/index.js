@@ -97,6 +97,14 @@ db.ActivationRequest = require('./ActivationRequest');
 db.KybApplication = require('./KybApplication');
 db.KybDocument = require('./KybDocument');
 
+// HRIS Models
+db.EmployeeAttendance = require('./EmployeeAttendance');
+db.EmployeeKPI = require('./EmployeeKPI');
+db.KPITemplate = require('./KPITemplate');
+db.KPIScoring = require('./KPIScoring');
+db.PerformanceReview = require('./PerformanceReview');
+db.LeaveRequest = require('./LeaveRequest');
+
 // Attendance System Models
 db.AttendanceDevice = require('./AttendanceDevice');
 db.AttendanceDeviceLog = require('./AttendanceDeviceLog');

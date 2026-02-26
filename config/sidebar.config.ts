@@ -243,6 +243,7 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'hris-attendance-devices', name: 'Kelola Device', href: '/hq/hris/attendance/devices', icon: Fingerprint },
             { id: 'hris-attendance-settings', name: 'Pengaturan Absensi', href: '/hq/hris/attendance/settings', icon: Settings },
             { id: 'hris-performance', name: 'Performance Review', href: '/hq/hris/performance', icon: Award },
+            { id: 'hris-leave', name: 'Manajemen Cuti', href: '/hq/hris/leave', icon: CalendarDays },
           ]
         }
       ]
