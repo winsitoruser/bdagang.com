@@ -519,9 +519,81 @@ module.exports = {
     await queryInterface.addIndex('leave_requests', ['startDate']);
     await queryInterface.addIndex('leave_requests', ['tenantId']);
     await queryInterface.addIndex('leave_requests', ['approvedBy']);
+
+    // 6. hris_webhook_logs table
+    await queryInterface.createTable('hris_webhook_logs', {
+      id: {
+        type: Sequelize.UUID,
+        defaultValue: Sequelize.UUIDV4,
+        primaryKey: true
+      },
+      eventType: {
+        type: Sequelize.STRING(50),
+        allowNull: false,
+        field: 'eventType'
+      },
+      employeeId: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        field: 'employeeId'
+      },
+      employeeName: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        field: 'employeeName'
+      },
+      branchId: {
+        type: Sequelize.UUID,
+        allowNull: true,
+        field: 'branchId'
+      },
+      branchName: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        field: 'branchName'
+      },
+      data: {
+        type: Sequelize.JSONB,
+        allowNull: true,
+        defaultValue: {}
+      },
+      triggeredBy: {
+        type: Sequelize.STRING,
+        allowNull: true,
+        field: 'triggeredBy'
+      },
+      status: {
+        type: Sequelize.ENUM('triggered', 'processed', 'failed'),
+        allowNull: false,
+        defaultValue: 'triggered'
+      },
+      tenantId: {
+        type: Sequelize.UUID,
+        allowNull: true,
+        field: 'tenantId'
+      },
+      createdAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.fn('NOW')
+      },
+      updatedAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.fn('NOW')
+      }
+    });
+
+    await queryInterface.addIndex('hris_webhook_logs', ['eventType']);
+    await queryInterface.addIndex('hris_webhook_logs', ['employeeId']);
+    await queryInterface.addIndex('hris_webhook_logs', ['branchId']);
+    await queryInterface.addIndex('hris_webhook_logs', ['status']);
+    await queryInterface.addIndex('hris_webhook_logs', ['tenantId']);
+    await queryInterface.addIndex('hris_webhook_logs', ['createdAt']);
   },
 
   async down(queryInterface) {
+    await queryInterface.dropTable('hris_webhook_logs');
     await queryInterface.dropTable('leave_requests');
     await queryInterface.dropTable('performance_reviews');
     await queryInterface.dropTable('kpi_scoring');

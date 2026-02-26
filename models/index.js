@@ -104,6 +104,7 @@ db.KPITemplate = require('./KPITemplate');
 db.KPIScoring = require('./KPIScoring');
 db.PerformanceReview = require('./PerformanceReview');
 db.LeaveRequest = require('./LeaveRequest');
+db.HRISWebhookLog = require('./HRISWebhookLog');
 
 // Attendance System Models
 db.AttendanceDevice = require('./AttendanceDevice');
