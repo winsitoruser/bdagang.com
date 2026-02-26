@@ -124,6 +124,51 @@ db.FleetFuelTransaction = require('./FleetFuelTransaction');
 db.IntegrationProvider = require('./IntegrationProvider');
 db.IntegrationConfig = require('./IntegrationConfig');
 db.IntegrationRequest = require('./IntegrationRequest');
+db.IntegrationLog = require('./IntegrationLog');
+db.IntegrationWebhook = require('./IntegrationWebhook');
+
+// Finance Models
+db.FinanceAccount = require('./FinanceAccount');
+db.FinanceBudget = require('./FinanceBudget');
+db.FinanceInvoice = require('./FinanceInvoice');
+db.FinanceInvoiceItem = require('./FinanceInvoiceItem');
+db.FinanceInvoicePayment = require('./FinanceInvoicePayment');
+db.FinancePayable = require('./FinancePayable');
+db.FinancePayablePayment = require('./FinancePayablePayment');
+db.FinanceReceivable = require('./FinanceReceivable');
+db.FinanceReceivablePayment = require('./FinanceReceivablePayment');
+db.FinanceTransaction = require('./FinanceTransaction');
+db.Invoice = require('./Invoice');
+
+// Kitchen Extended Models
+db.KitchenRecipe = require('./KitchenRecipe');
+db.KitchenRecipeIngredient = require('./KitchenRecipeIngredient');
+db.KitchenSettings = require('./KitchenSettings');
+db.KitchenStaff = require('./KitchenStaff');
+
+// Promo Models
+db.Promo = require('./Promo');
+db.PromoBundle = require('./PromoBundle');
+db.PromoCategory = require('./PromoCategory');
+db.PromoProduct = require('./PromoProduct');
+
+// Supply Chain Models
+db.InternalRequisition = require('./InternalRequisition');
+db.InternalRequisitionItem = require('./InternalRequisitionItem');
+
+// Additional Models
+db.AuditLog = require('./AuditLog');
+db.BillingCycle = require('./BillingCycle');
+db.NotificationSetting = require('./NotificationSetting');
+db.OutletIntegration = require('./OutletIntegration');
+db.PartnerIntegration = require('./PartnerIntegration');
+db.Plan = require('./Plan');
+db.PriceTier = require('./PriceTier');
+db.PrinterConfig = require('./PrinterConfig');
+db.Role = require('./Role');
+db.SystemBackup = require('./SystemBackup');
+db.Unit = require('./Unit');
+db.Voucher = require('./Voucher');
 
 // Load associations if they exist
 // Associations are defined in the models themselves or in separate files
