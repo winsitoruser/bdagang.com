@@ -90,7 +90,7 @@ export default function BusinessTypesManagement() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading business types...</p>
+            <p className="mt-4 text-gray-600">Memuat jenis bisnis...</p>
           </div>
         </div>
       </AdminLayout>
@@ -100,7 +100,7 @@ export default function BusinessTypesManagement() {
   return (
     <>
       <Head>
-        <title>Business Types Management - Admin Panel</title>
+        <title>Jenis Bisnis - Panel Admin</title>
       </Head>
 
       <AdminLayout>
@@ -108,9 +108,9 @@ export default function BusinessTypesManagement() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Business Types Management</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Jenis Bisnis</h1>
               <p className="mt-1 text-sm text-gray-500">
-                Manage business types and their module configurations
+                Kelola jenis bisnis dan modul mereka
               </p>
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function BusinessTypesManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Business Types</p>
+                <p className="text-gray-600">Jumlah Jenis Bisnis</p>
                 <p className="text-2xl font-bold text-gray-900">{businessTypes.length}</p>
               </div>
               <Package className="w-8 h-8 text-blue-600" />
@@ -132,7 +132,7 @@ export default function BusinessTypesManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Tenants</p>
+                <p className="text-gray-600">Total Penyewa</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {businessTypes.reduce((sum, bt) => sum + bt.stats.totalTenants, 0)}
                 </p>
@@ -144,7 +144,7 @@ export default function BusinessTypesManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Active Modules</p>
+                <p className="text-gray-600">Modul Aktif</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {businessTypes.reduce((sum, bt) => sum + bt.stats.totalModulesCount, 0)}
                 </p>
@@ -177,28 +177,28 @@ export default function BusinessTypesManagement() {
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="bg-blue-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-600">Tenants</p>
+                    <p className="text-xs text-gray-600">Penyewa</p>
                     <p className="text-xl font-bold text-blue-600">{businessType.stats.totalTenants}</p>
                   </div>
                   <div className="bg-green-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-600">Modules</p>
+                    <p className="text-xs text-gray-600">Modul</p>
                     <p className="text-xl font-bold text-green-600">{businessType.stats.totalModulesCount}</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Default Modules</span>
+                    <span className="text-gray-600">Modul Default</span>
                     <span className="font-semibold text-gray-900">{businessType.stats.defaultModulesCount}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Optional Modules</span>
+                    <span className="text-gray-600">Modul Opsional</span>
                     <span className="font-semibold text-gray-900">{businessType.stats.optionalModulesCount}</span>
                   </div>
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 mb-2">Default Modules:</p>
+                  <p className="text-xs text-gray-500 mb-2">Modul Default:</p>
                   <div className="flex flex-wrap gap-1">
                     {businessType.businessTypeModules
                       .filter(btm => btm.isDefault)

@@ -84,7 +84,7 @@ export default function ActivationRequests() {
       const response = await fetch(`/api/admin/activations?${params}`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch activation requests');
+        throw new Error('Gagal memuat permintaan aktivasi');
       }
 
       const data = await response.json();
@@ -195,7 +195,7 @@ export default function ActivationRequests() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading activation requests...</p>
+            <p className="mt-4 text-gray-600">Memuat permintaan aktivasi...</p>
           </div>
         </div>
       </AdminLayout>
@@ -205,7 +205,7 @@ export default function ActivationRequests() {
   return (
     <>
       <Head>
-        <title>Activation Requests - Admin Bedagang</title>
+        <title>Permintaan Aktivasi - Admin Bedagang</title>
       </Head>
 
       <AdminLayout>
@@ -213,14 +213,14 @@ export default function ActivationRequests() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Activation Requests</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Permintaan Aktivasi</h1>
               <p className="mt-2 text-sm text-gray-600">
-                Review and approve partner activation requests
+                Tinjau dan setujui permintaan aktivasi mitra
               </p>
             </div>
             <div className="flex items-center space-x-2">
               <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
-                {requests.filter(r => r.status === 'pending').length} Pending
+                {requests.filter(r => r.status === 'pending').length} Menunggu
               </span>
             </div>
           </div>
@@ -243,7 +243,7 @@ export default function ActivationRequests() {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {status.replace('_', ' ')}
+                    {status === 'pending' ? 'Menunggu' : status === 'approved' ? 'Disetujui' : status === 'rejected' ? 'Ditolak' : status === 'under_review' ? 'Sedang Ditinjau' : status}
                   </button>
                 ))}
               </div>
@@ -255,7 +255,7 @@ export default function ActivationRequests() {
             {requests.length === 0 ? (
               <div className="bg-white rounded-lg shadow p-12 text-center">
                 <FileCheck className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No {statusFilter} activation requests</p>
+                <p className="text-gray-600">Tidak ada permintaan aktivasi</p>
               </div>
             ) : (
               requests.map((request) => (
@@ -277,13 +277,13 @@ export default function ActivationRequests() {
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                           <div>
-                            <p className="text-xs text-gray-500 mb-1">Location</p>
+                            <p className="text-xs text-gray-500 mb-1">Lokasi</p>
                             <p className="text-sm font-medium text-gray-900">
                               {request.partner.city}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500 mb-1">Package Requested</p>
+                            <p className="text-xs text-gray-500 mb-1">Paket yang Diminta</p>
                             <div className="flex items-center space-x-2">
                               <Package className="h-4 w-4 text-purple-600" />
                               <span className="text-sm font-medium text-gray-900">
@@ -291,20 +291,20 @@ export default function ActivationRequests() {
                               </span>
                             </div>
                             <p className="text-xs text-gray-500 mt-1">
-                              {formatCurrency(request.package.price_monthly)}/month
+                              {formatCurrency(request.package.price_monthly)}/bulan
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500 mb-1">Package Limits</p>
+                            <p className="text-xs text-gray-500 mb-1">Batas Paket</p>
                             <p className="text-sm text-gray-700">
-                              {request.package.max_outlets} outlets • {request.package.max_users} users
+                              {request.package.max_outlets} outlet • {request.package.max_users} pengguna
                             </p>
                           </div>
                         </div>
 
                         {request.notes && (
                           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                            <p className="text-xs text-gray-500 mb-1">Notes from Partner:</p>
+                            <p className="text-xs text-gray-500 mb-1">Catatan dari Mitra:</p>
                             <p className="text-sm text-gray-700">{request.notes}</p>
                           </div>
                         )}
@@ -313,7 +313,7 @@ export default function ActivationRequests() {
                           <div className="flex items-center space-x-4">
                             {getStatusBadge(request.status)}
                             <span className="text-xs text-gray-500">
-                              Requested {new Date(request.created_at).toLocaleDateString('id-ID', {
+                              Tanggal Permintaan {new Date(request.created_at).toLocaleDateString('id-ID', {
                                 day: 'numeric',
                                 month: 'long',
                                 year: 'numeric'
@@ -331,7 +331,7 @@ export default function ActivationRequests() {
                                 className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                               >
                                 <CheckCircle className="h-4 w-4 mr-2" />
-                                Approve
+                                Setujui
                               </button>
                               <button
                                 onClick={() => {
@@ -341,7 +341,7 @@ export default function ActivationRequests() {
                                 className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                               >
                                 <XCircle className="h-4 w-4 mr-2" />
-                                Reject
+                                Tolak
                               </button>
                             </div>
                           )}

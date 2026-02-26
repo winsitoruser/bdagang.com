@@ -8,8 +8,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const session = await getServerSession(req, res, authOptions);
     
-    if (!session || !['SUPER_ADMIN', 'super_admin'].includes(session.user?.role as string)) {
-      return res.status(403).json({ success: false, error: 'Access denied - Super Admin only' });
+    if (!session || !session.user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    // Check if user has admin access (support various role formats)
+    const userRole = (session.user.role as string)?.toLowerCase();
+    const allowedRoles = ['admin', 'super_admin', 'superadmin'];
+    
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ success: false, error: 'Access denied - Admin access required' });
     }
 
     const { BusinessType, BusinessTypeModule, Module, Tenant } = db;
@@ -44,7 +52,7 @@ async function getBusinessTypes(req: NextApiRequest, res: NextApiResponse, model
         }]
       }
     ],
-    order: [['createdAt', 'ASC']]
+    order: [['created_at', 'ASC']]
   });
 
   // Get statistics for each business type

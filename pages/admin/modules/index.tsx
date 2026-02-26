@@ -110,7 +110,7 @@ export default function ModulesManagement() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading modules...</p>
+            <p className="mt-4 text-gray-600">Memuat modul...</p>
           </div>
         </div>
       </AdminLayout>
@@ -120,7 +120,7 @@ export default function ModulesManagement() {
   return (
     <>
       <Head>
-        <title>Module Management - Admin Panel</title>
+        <title>Manajemen Modul - Panel Admin</title>
       </Head>
 
       <AdminLayout>
@@ -128,9 +128,9 @@ export default function ModulesManagement() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Module Management</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Manajemen Modul</h1>
               <p className="mt-1 text-sm text-gray-500">
-                Manage system modules and their availability
+                Kelola modul sistem dan penugasan
               </p>
             </div>
             <Link
@@ -138,7 +138,7 @@ export default function ModulesManagement() {
               className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
               <Plus className="w-5 h-5 mr-2" />
-              Create Module
+              Buat Modul
             </Link>
           </div>
         </div>
@@ -149,7 +149,7 @@ export default function ModulesManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Modules</p>
+                <p className="text-sm text-gray-600">Total Modul</p>
                 <p className="text-2xl font-bold text-gray-900">{modules.length}</p>
               </div>
               <Package className="w-8 h-8 text-blue-600" />
@@ -159,7 +159,7 @@ export default function ModulesManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Core Modules</p>
+                <p className="text-sm text-gray-600">Modul Inti</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {modules.filter(m => m.isCore).length}
                 </p>
@@ -171,7 +171,7 @@ export default function ModulesManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Optional Modules</p>
+                <p className="text-sm text-gray-600">Modul Opsional</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {modules.filter(m => !m.isCore).length}
                 </p>
@@ -183,7 +183,7 @@ export default function ModulesManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Active Modules</p>
+                <p className="text-sm text-gray-600">Modul Aktif</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {modules.filter(m => m.isActive).length}
                 </p>
@@ -219,7 +219,7 @@ export default function ModulesManagement() {
                 <div className="flex flex-col items-end space-y-1">
                   {module.isCore && (
                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                      Core
+                      Inti
                     </span>
                   )}
                   {module.isActive ? (
@@ -231,11 +231,11 @@ export default function ModulesManagement() {
               </div>
 
               <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                {module.description || 'No description available'}
+                {module.description || 'Tidak ada deskripsi'}
               </p>
 
               <div className="mb-4">
-                <p className="text-xs text-gray-500 mb-2">Business Types:</p>
+                <p className="text-xs text-gray-500 mb-2">Jenis Bisnis:</p>
                 {getBusinessTypesBadges(module.businessTypeModules)}
               </div>
 
@@ -243,14 +243,14 @@ export default function ModulesManagement() {
                 <div className="flex items-center space-x-2">
                   <Users className="w-4 h-4 text-gray-400" />
                   <span className="text-sm text-gray-600">
-                    {module.stats?.enabledTenants || 0} tenants
+                    {module.stats?.enabledTenants || 0} penyewa
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => alert('Edit module feature coming soon')}
+                    onClick={() => alert('Fitur edit modul akan segera hadir')}
                     className="text-blue-600 hover:text-blue-900"
-                    title="Edit"
+                    title="Ubah"
                   >
                     <Edit className="w-5 h-5" />
                   </button>

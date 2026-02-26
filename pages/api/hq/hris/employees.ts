@@ -1,7 +1,28 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { User, Branch } from '../../../../models';
 import { Op } from 'sequelize';
-import { triggerHRISWebhook } from './webhooks';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { getPaginationParams, getPaginationMeta } from '../../../../lib/api/pagination';
+import { validateRequiredFields } from '../../../../lib/api/validation';
+
+let User: any, Branch: any;
+try {
+  const models = require('../../../../models');
+  User = models.User;
+  Branch = models.Branch;
+} catch (e) {
+  console.warn('HRIS models not available:', e);
+  User = null;
+  Branch = null;
+}
+
+let triggerHRISWebhook: any;
+try {
+  const webhooks = require('./webhooks');
+  triggerHRISWebhook = webhooks.triggerHRISWebhook;
+} catch (e) {
+  console.warn('HRIS webhooks not available:', e);
+  triggerHRISWebhook = null;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -10,18 +31,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return await getEmployees(req, res);
       case 'POST':
         return await createEmployee(req, res);
+      case 'PUT':
+        return await updateEmployee(req, res);
+      case 'DELETE':
+        return await deleteEmployee(req, res);
       default:
-        res.setHeader('Allow', ['GET', 'POST']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('HRIS Employees API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
 async function getEmployees(req: NextApiRequest, res: NextApiResponse) {
+  if (!User) {
+    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'User model not available')
+    );
+  }
+
   const { search, department, status, branchId } = req.query;
+  const { limit, offset } = getPaginationParams(req.query);
 
   try {
     const where: any = {};
@@ -41,20 +77,22 @@ async function getEmployees(req: NextApiRequest, res: NextApiResponse) {
       where.isActive = status === 'active';
     }
     
-    if (branchId) {
+    if (branchId && branchId !== 'all') {
       where.branchId = branchId;
     }
 
-    const users = await User.findAll({
+    const { count, rows } = await User.findAndCountAll({
       where,
       attributes: { exclude: ['password'] },
       include: [
         { model: Branch, as: 'branch', attributes: ['id', 'code', 'name', 'city'] }
       ],
-      order: [['name', 'ASC']]
+      order: [['name', 'ASC']],
+      limit,
+      offset
     });
 
-    const employees = users.map((user: any) => ({
+    const employees = rows.map((user: any) => ({
       id: user.id,
       name: user.name,
       email: user.email,
@@ -76,45 +114,39 @@ async function getEmployees(req: NextApiRequest, res: NextApiResponse) {
       manager: user.managerId || null
     }));
 
-    const departmentStats = getDepartmentStats(employees);
-
-    return res.status(200).json({ employees, departmentStats });
+    return res.status(HttpStatus.OK).json(
+      successResponse(employees, getPaginationMeta(count, limit, offset))
+    );
   } catch (error) {
     console.error('Error fetching employees:', error);
-    return res.status(200).json({ 
-      employees: getMockEmployees(),
-      departmentStats: getMockDepartmentStats()
-    });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch employees')
+    );
   }
 }
 
-function getDepartmentStats(employees: any[]) {
-  const departments = ['Operations', 'Sales', 'Warehouse', 'Finance', 'HR'];
-  return departments.map(dept => {
-    const deptEmployees = employees.filter(e => e.department === dept);
-    return {
-      department: dept,
-      totalEmployees: deptEmployees.length,
-      activeEmployees: deptEmployees.filter(e => e.status === 'active').length,
-      avgPerformance: deptEmployees.length > 0 
-        ? Math.round(deptEmployees.reduce((sum, e) => sum + e.performance.score, 0) / deptEmployees.length)
-        : 0,
-      avgAttendance: deptEmployees.length > 0
-        ? Math.round(deptEmployees.reduce((sum, e) => sum + e.performance.attendance, 0) / deptEmployees.length)
-        : 0
-    };
-  });
-}
-
 async function createEmployee(req: NextApiRequest, res: NextApiResponse) {
-  const { name, email, phone, position, department, branchId, branchName } = req.body;
+  if (!User) {
+    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'User model not available')
+    );
+  }
 
-  if (!name || !email) {
-    return res.status(400).json({ error: 'Name and email are required' });
+  const { name, email, phone, position, department, branchId, branchName, tenantId } = req.body;
+
+  const validation = validateRequiredFields(req.body, ['name', 'email', 'tenantId']);
+  if (!validation.isValid) {
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(
+        ErrorCodes.MISSING_REQUIRED_FIELDS,
+        `Missing required fields: ${validation.missingFields.join(', ')}`
+      )
+    );
   }
 
   try {
     const user = await User.create({
+      tenantId,
       name,
       email,
       phone,
@@ -126,40 +158,122 @@ async function createEmployee(req: NextApiRequest, res: NextApiResponse) {
     });
 
     // Trigger webhook for new employee
-    await triggerHRISWebhook(
-      'employee.created',
-      user.get('id') as string,
-      name,
-      { email, phone, position, department, branchId },
-      branchId,
-      branchName
-    );
-
-    return res.status(201).json({ employee: user, message: 'Employee created successfully' });
-  } catch (error: any) {
-    if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({ error: 'Email already exists' });
+    if (triggerHRISWebhook) {
+      try {
+        await triggerHRISWebhook(
+          'employee.created',
+          user.get('id') as string,
+          name,
+          { email, phone, position, department, branchId },
+          branchId,
+          branchName
+        );
+      } catch (webhookError) {
+        console.warn('Webhook trigger failed:', webhookError);
+      }
     }
-    throw error;
+
+    return res.status(HttpStatus.CREATED).json(
+      successResponse(user, undefined, 'Employee created successfully')
+    );
+  } catch (error: any) {
+    console.error('Error creating employee:', error);
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(HttpStatus.CONFLICT).json(
+        errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'Email already exists')
+      );
+    }
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(HttpStatus.BAD_REQUEST).json(
+        errorResponse(ErrorCodes.VALIDATION_ERROR, error.message)
+      );
+    }
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to create employee')
+    );
   }
 }
 
-function getMockEmployees() {
-  return [
-    { id: '1', name: 'Ahmad Wijaya', email: 'ahmad@bedagang.com', phone: '081234567890', position: 'Branch Manager', department: 'Operations', branchId: '1', branchName: 'Cabang Pusat Jakarta', joinDate: '2023-06-15', status: 'active', performance: { score: 92, trend: 'up', kpiAchievement: 104, attendance: 98, rating: 4.8 } },
-    { id: '2', name: 'Siti Rahayu', email: 'siti@bedagang.com', phone: '082345678901', position: 'Branch Manager', department: 'Operations', branchId: '2', branchName: 'Cabang Bandung', joinDate: '2023-08-01', status: 'active', performance: { score: 88, trend: 'up', kpiAchievement: 102, attendance: 96, rating: 4.5 } },
-    { id: '3', name: 'Budi Santoso', email: 'budi@bedagang.com', phone: '083456789012', position: 'Branch Manager', department: 'Operations', branchId: '3', branchName: 'Cabang Surabaya', joinDate: '2023-09-10', status: 'active', performance: { score: 78, trend: 'down', kpiAchievement: 92, attendance: 94, rating: 4.0 } },
-    { id: '4', name: 'Dewi Lestari', email: 'dewi@bedagang.com', phone: '084567890123', position: 'Supervisor', department: 'Operations', branchId: '1', branchName: 'Cabang Pusat Jakarta', joinDate: '2024-01-15', status: 'active', performance: { score: 85, trend: 'stable', kpiAchievement: 98, attendance: 97, rating: 4.3 } },
-    { id: '5', name: 'Eko Prasetyo', email: 'eko@bedagang.com', phone: '085678901234', position: 'Kasir Senior', department: 'Sales', branchId: '1', branchName: 'Cabang Pusat Jakarta', joinDate: '2024-02-01', status: 'active', performance: { score: 90, trend: 'up', kpiAchievement: 110, attendance: 99, rating: 4.6 } },
-  ];
+async function updateEmployee(req: NextApiRequest, res: NextApiResponse) {
+  if (!User) {
+    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'User model not available')
+    );
+  }
+
+  const { id } = req.query;
+  const updateData = req.body;
+
+  if (!id) {
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Employee ID is required')
+    );
+  }
+
+  try {
+    const user = await User.findByPk(id);
+    
+    if (!user) {
+      return res.status(HttpStatus.NOT_FOUND).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'Employee not found')
+      );
+    }
+
+    // Don't allow updating password through this endpoint
+    delete updateData.password;
+
+    await user.update(updateData);
+
+    return res.status(HttpStatus.OK).json(
+      successResponse(user, undefined, 'Employee updated successfully')
+    );
+  } catch (error: any) {
+    console.error('Error updating employee:', error);
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(HttpStatus.CONFLICT).json(
+        errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'Email already exists')
+      );
+    }
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to update employee')
+    );
+  }
 }
 
-function getMockDepartmentStats() {
-  return [
-    { department: 'Operations', totalEmployees: 15, activeEmployees: 14, avgPerformance: 86, avgAttendance: 96 },
-    { department: 'Sales', totalEmployees: 45, activeEmployees: 43, avgPerformance: 84, avgAttendance: 95 },
-    { department: 'Warehouse', totalEmployees: 12, activeEmployees: 12, avgPerformance: 78, avgAttendance: 93 },
-    { department: 'Finance', totalEmployees: 5, activeEmployees: 5, avgPerformance: 90, avgAttendance: 98 },
-    { department: 'HR', totalEmployees: 3, activeEmployees: 3, avgPerformance: 88, avgAttendance: 97 },
-  ];
+async function deleteEmployee(req: NextApiRequest, res: NextApiResponse) {
+  if (!User) {
+    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'User model not available')
+    );
+  }
+
+  const { id } = req.query;
+
+  if (!id) {
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Employee ID is required')
+    );
+  }
+
+  try {
+    const user = await User.findByPk(id);
+    
+    if (!user) {
+      return res.status(HttpStatus.NOT_FOUND).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'Employee not found')
+      );
+    }
+
+    // Soft delete by setting isActive to false
+    await user.update({ isActive: false });
+
+    return res.status(HttpStatus.OK).json(
+      successResponse(null, undefined, 'Employee deactivated successfully')
+    );
+  } catch (error) {
+    console.error('Error deleting employee:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to delete employee')
+    );
+  }
 }

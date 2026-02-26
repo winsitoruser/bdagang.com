@@ -147,7 +147,7 @@ export default function Settings() {
   return (
     <>
       <Head>
-        <title>Settings - Admin Panel</title>
+        <title>Pengaturan - Panel Admin</title>
       </Head>
 
       <div className="min-h-screen bg-gray-50">
@@ -158,15 +158,17 @@ export default function Settings() {
               <div className="flex items-center space-x-3">
                 <SettingsIcon className="h-8 w-8 text-blue-600" />
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
-                  <p className="text-sm text-gray-500 mt-1">Configure system-wide settings</p>
+                  <h1 className="text-3xl font-bold text-gray-900">Pengaturan</h1>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Konfigurasi pengaturan sistem dan preferensi
+                  </p>
                 </div>
               </div>
               <Link
                 href="/admin/dashboard"
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Back to Dashboard
+                Kembali ke Dashboard
               </Link>
             </div>
           </div>
@@ -178,7 +180,9 @@ export default function Settings() {
             <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center">
                 <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-                <p className="text-sm text-green-800">Settings saved successfully!</p>
+                <p className="text-sm text-green-800">
+                  Pengaturan berhasil disimpan!
+                </p>
               </div>
             </div>
           )}
@@ -223,11 +227,11 @@ export default function Settings() {
                 {activeTab === 'general' && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4">General Settings</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Pengaturan Umum</h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Site Name
+                            Nama Situs
                           </label>
                           <input
                             type="text"
@@ -238,7 +242,7 @@ export default function Settings() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Site URL
+                            URL Situs
                           </label>
                           <input
                             type="url"
@@ -249,7 +253,7 @@ export default function Settings() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Admin Email
+                            Email Admin
                           </label>
                           <input
                             type="email"
@@ -260,7 +264,7 @@ export default function Settings() {
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Timezone
+                            Zona Waktu
                           </label>
                           <select
                             value={settings.timezone}
@@ -281,7 +285,7 @@ export default function Settings() {
                 {activeTab === 'email' && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Email Configuration</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Pengaturan Email</h2>
                       <div className="grid grid-cols-1 gap-6">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -309,7 +313,7 @@ export default function Settings() {
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Secure Connection
+                              Keamanan Koneksi
                             </label>
                             <select
                               value={settings.smtpSecure ? 'true' : 'false'}
@@ -348,16 +352,16 @@ export default function Settings() {
                   </div>
                 )}
 
-                {/* Notifications Settings */}
+                {/* Notification Settings */}
                 {activeTab === 'notifications' && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Notification Preferences</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Preferensi Notifikasi</h2>
                       <div className="space-y-4">
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                           <div>
-                            <p className="font-medium text-gray-900">Email Notifications</p>
-                            <p className="text-sm text-gray-500">Receive notifications via email</p>
+                            <p className="font-medium text-gray-900">Notifikasi Email</p>
+                            <p className="text-sm text-gray-500">Terima notifikasi melalui email</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -372,8 +376,8 @@ export default function Settings() {
 
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                           <div>
-                            <p className="font-medium text-gray-900">Push Notifications</p>
-                            <p className="text-sm text-gray-500">Receive push notifications</p>
+                            <p className="font-medium text-gray-900">Notifikasi Push</p>
+                            <p className="text-sm text-gray-500">Terima notifikasi push</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -388,8 +392,8 @@ export default function Settings() {
 
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                           <div>
-                            <p className="font-medium text-gray-900">New Partner Registration</p>
-                            <p className="text-sm text-gray-500">Notify when new partner registers</p>
+                            <p className="font-medium text-gray-900">Pendaftaran Partner Baru</p>
+                            <p className="text-sm text-gray-500">Notifikasi ketika partner baru mendaftar</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -404,8 +408,8 @@ export default function Settings() {
 
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                           <div>
-                            <p className="font-medium text-gray-900">Activation Requests</p>
-                            <p className="text-sm text-gray-500">Notify on new activation requests</p>
+                            <p className="font-medium text-gray-900">Aktivasi Akun</p>
+                            <p className="text-sm text-gray-500">Notifikasi ketika akun diaktifkan</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -420,8 +424,8 @@ export default function Settings() {
 
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                           <div>
-                            <p className="font-medium text-gray-900">Payment Received</p>
-                            <p className="text-sm text-gray-500">Notify when payment is received</p>
+                            <p className="font-medium text-gray-900">Pembayaran</p>
+                            <p className="text-sm text-gray-500">Notifikasi ketika pembayaran diterima</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -442,11 +446,11 @@ export default function Settings() {
                 {activeTab === 'payment' && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Payment Gateway Configuration</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Pengaturan Pembayaran</h2>
                       <div className="space-y-6">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Payment Gateway
+                            Pembayaran Gateway
                           </label>
                           <select
                             value={settings.paymentGateway}
@@ -485,8 +489,8 @@ export default function Settings() {
                             </div>
                             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                               <div>
-                                <p className="font-medium text-gray-900">Production Mode</p>
-                                <p className="text-sm text-gray-500">Use production environment</p>
+                                <p className="font-medium text-gray-900">Mode Produksi</p>
+                                <p className="text-sm text-gray-500">Gunakan lingkungan produksi</p>
                               </div>
                               <label className="relative inline-flex items-center cursor-pointer">
                                 <input
@@ -509,12 +513,12 @@ export default function Settings() {
                 {activeTab === 'backup' && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Backup Configuration</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Pengaturan Cadangan</h2>
                       <div className="space-y-6">
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                           <div>
-                            <p className="font-medium text-gray-900">Auto Backup</p>
-                            <p className="text-sm text-gray-500">Automatically backup database</p>
+                            <p className="font-medium text-gray-900">Cadangan Otomatis</p>
+                            <p className="text-sm text-gray-500">Cadangkan database secara otomatis</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -529,7 +533,7 @@ export default function Settings() {
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Backup Frequency
+                            Frekuensi Cadangan
                           </label>
                           <select
                             value={settings.backupFrequency}
@@ -537,16 +541,16 @@ export default function Settings() {
                             disabled={!settings.autoBackup}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
                           >
-                            <option value="hourly">Hourly</option>
-                            <option value="daily">Daily</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="monthly">Monthly</option>
+                            <option value="hourly">Setiap Jam</option>
+                            <option value="daily">Harian</option>
+                            <option value="weekly">Mingguan</option>
+                            <option value="monthly">Bulanan</option>
                           </select>
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Retention Period (days)
+                            Periode Penyimpanan (hari)
                           </label>
                           <input
                             type="number"
@@ -565,12 +569,12 @@ export default function Settings() {
                 {activeTab === 'security' && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Security Settings</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Pengaturan Keamanan</h2>
                       <div className="space-y-6">
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                           <div>
-                            <p className="font-medium text-gray-900">Two-Factor Authentication</p>
-                            <p className="text-sm text-gray-500">Require 2FA for admin login</p>
+                            <p className="font-medium text-gray-900">Autentikasi Dua Faktor</p>
+                            <p className="text-sm text-gray-500">Wajibkan autentikasi dua faktor untuk login admin</p>
                           </div>
                           <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -585,7 +589,7 @@ export default function Settings() {
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Session Timeout (minutes)
+                            Batas Waktu Sesi (menit)
                           </label>
                           <input
                             type="number"
@@ -597,7 +601,7 @@ export default function Settings() {
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Password Expiry (days)
+                            Masa Berlaku Kata Sandi (hari)
                           </label>
                           <input
                             type="number"
@@ -609,7 +613,7 @@ export default function Settings() {
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Max Login Attempts
+                            Maksimal Percobaan Login
                           </label>
                           <input
                             type="number"
@@ -630,8 +634,8 @@ export default function Settings() {
                     disabled={loading}
                     className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Save className="h-5 w-5" />
-                    <span>{loading ? 'Saving...' : 'Save Settings'}</span>
+                    <Save className="h-5 w-5 mr-2" />
+                    <span>{loading ? 'Menyimpan...' : 'Simpan Perubahan'}</span>
                   </button>
                 </div>
               </div>

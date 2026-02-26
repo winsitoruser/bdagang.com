@@ -13,9 +13,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    // Check if user is admin or super_admin
-    if (!['ADMIN', 'super_admin'].includes(session.user?.role as string)) {
-      return res.status(403).json({ success: false, message: 'Forbidden' });
+    // Check if user is admin or super_admin (support various role formats)
+    const userRole = (session.user?.role as string)?.toLowerCase();
+    const allowedRoles = ['admin', 'super_admin', 'superadmin'];
+    
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Forbidden - Admin access required' });
     }
 
     const { id } = req.query;
@@ -55,7 +58,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method === 'PUT') {
       // Only super_admin can update modules
-      if (session.user?.role !== 'super_admin') {
+      const isSuperAdmin = ['super_admin', 'superadmin'].includes(userRole);
+      if (!isSuperAdmin) {
         return res.status(403).json({ success: false, message: 'Only super admin can update modules' });
       }
 
@@ -117,7 +121,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method === 'DELETE') {
       // Only super_admin can delete modules
-      if (session.user?.role !== 'super_admin') {
+      const isSuperAdmin = ['super_admin', 'superadmin'].includes(userRole);
+      if (!isSuperAdmin) {
         return res.status(403).json({ success: false, message: 'Only super admin can delete modules' });
       }
 

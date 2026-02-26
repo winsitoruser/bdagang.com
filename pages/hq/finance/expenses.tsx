@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import TransactionFormModal from '../../../components/hq/finance/TransactionFormModal';
 import Link from 'next/link';
 import {
   TrendingDown,
@@ -160,29 +161,92 @@ export default function ExpenseManagement() {
   const [viewMode, setViewMode] = useState<'list' | 'category' | 'branch'>('list');
   const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newExpense, setNewExpense] = useState({
-    description: '',
-    category: 'COGS',
-    branch: '',
-    amount: 0,
-    vendor: '',
-    date: new Date().toISOString().split('T')[0],
-    notes: ''
-  });
+  const [branches, setBranches] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  
+  // Fetch branches and accounts for modal
+  useEffect(() => {
+    const fetchBranchesAndAccounts = async () => {
+      try {
+        const [branchRes, accountRes] = await Promise.all([
+          fetch('/api/hq/branches?limit=100'),
+          fetch('/api/hq/finance/accounts?limit=100')
+        ]);
+        
+        if (branchRes.ok) {
+          const branchData = await branchRes.json();
+          setBranches(branchData.branches || []);
+        }
+        
+        if (accountRes.ok) {
+          const accountData = await accountRes.json();
+          setAccounts(accountData.accounts || []);
+        }
+      } catch (error) {
+        console.error('Error fetching branches/accounts:', error);
+      }
+    };
+    
+    if (mounted) {
+      fetchBranchesAndAccounts();
+    }
+  }, [mounted]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/hq/finance/expenses?period=${period}`);
+      // Fetch expense transactions (type=expense)
+      const response = await fetch(`/api/hq/finance/transactions?type=expense&limit=100&offset=0`);
       if (response.ok) {
-        const data = await response.json();
-        setSummary(data.summary || mockSummary);
-        setCategories(data.categories || mockCategories);
-        setExpenses(data.expenses || mockExpenses);
-        setBranchExpenses(data.branches || mockBranchExpenses);
+        const result = await response.json();
+        const transactions = result.data || [];
+        
+        // Calculate summary from transactions
+        const totalExpenses = transactions.reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0);
+        
+        // Group by category
+        const categoryMap: { [key: string]: number } = {};
+        transactions.forEach((t: any) => {
+          const cat = t.category || 'Other';
+          categoryMap[cat] = (categoryMap[cat] || 0) + parseFloat(t.amount);
+        });
+        
+        // Update summary
+        setSummary({
+          ...mockSummary,
+          totalExpenses,
+          cogs: categoryMap['COGS'] || 0,
+          payroll: categoryMap['Payroll'] || 0,
+          utilities: categoryMap['Utilities'] || 0,
+          marketing: categoryMap['Marketing'] || 0,
+          logistics: categoryMap['Logistics'] || 0,
+          maintenance: categoryMap['Maintenance'] || 0,
+          other: categoryMap['Other'] || 0
+        });
+        
+        // Map transactions to expenses
+        const mappedExpenses = transactions.map((t: any) => ({
+          id: t.id,
+          date: t.transactionDate,
+          description: t.description,
+          category: t.category,
+          branch: t.branch?.code || 'N/A',
+          amount: parseFloat(t.amount),
+          status: t.status === 'completed' ? 'approved' : t.status === 'pending' ? 'pending' : 'rejected',
+          approver: t.approvedBy || '-',
+          vendor: t.reference || '-'
+        }));
+        
+        setExpenses(mappedExpenses);
+      } else {
+        // Fallback to mock data
+        setSummary(mockSummary);
+        setExpenses(mockExpenses);
       }
     } catch (error) {
       console.error('Error fetching expense data:', error);
+      setSummary(mockSummary);
+      setExpenses(mockExpenses);
     } finally {
       setLoading(false);
     }
@@ -290,6 +354,36 @@ export default function ExpenseManagement() {
               <Plus className="w-4 h-4" />
               Add Expense
             </button>
+            
+            {/* Transaction Form Modal */}
+            <TransactionFormModal
+              isOpen={showAddModal}
+              onClose={() => setShowAddModal(false)}
+              onSubmit={async (data) => {
+                try {
+                  const response = await fetch('/api/hq/finance/transactions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      ...data,
+                      type: 'expense',
+                      tenantId: 'default-tenant',
+                      createdBy: 'current-user'
+                    })
+                  });
+                  
+                  if (response.ok) {
+                    setShowAddModal(false);
+                    fetchData();
+                  }
+                } catch (error) {
+                  console.error('Error creating expense:', error);
+                }
+              }}
+              transaction={null}
+              branches={branches}
+              accounts={accounts}
+            />
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
               Export
@@ -536,144 +630,6 @@ export default function ExpenseManagement() {
           )}
         </div>
 
-        {/* Add Expense Modal */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl w-full max-w-lg">
-              <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Add New Expense</h2>
-                <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-                  <input
-                    type="text"
-                    value={newExpense.description}
-                    onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    placeholder="Enter expense description"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                    <select
-                      value={newExpense.category}
-                      onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="COGS">COGS (Cost of Goods Sold)</option>
-                      <option value="Payroll">Payroll & Benefits</option>
-                      <option value="Utilities">Utilities</option>
-                      <option value="Marketing">Marketing</option>
-                      <option value="Logistics">Logistics</option>
-                      <option value="Maintenance">Maintenance</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Branch *</label>
-                    <select
-                      value={newExpense.branch}
-                      onChange={(e) => setNewExpense({ ...newExpense, branch: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="">Select Branch</option>
-                      <option value="HQ-001">Cabang Pusat Jakarta</option>
-                      <option value="BR-002">Cabang Bandung</option>
-                      <option value="BR-003">Cabang Surabaya</option>
-                      <option value="BR-004">Cabang Medan</option>
-                      <option value="BR-005">Cabang Yogyakarta</option>
-                      <option value="ALL">All Branches</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount (Rp) *</label>
-                    <input
-                      type="number"
-                      value={newExpense.amount}
-                      onChange={(e) => setNewExpense({ ...newExpense, amount: parseInt(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-                    <input
-                      type="date"
-                      value={newExpense.date}
-                      onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Vendor/Supplier</label>
-                  <input
-                    type="text"
-                    value={newExpense.vendor}
-                    onChange={(e) => setNewExpense({ ...newExpense, vendor: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    placeholder="Enter vendor name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                  <textarea
-                    value={newExpense.notes}
-                    onChange={(e) => setNewExpense({ ...newExpense, notes: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    rows={3}
-                    placeholder="Additional notes"
-                  />
-                </div>
-              </div>
-              <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    const newExp: ExpenseItem = {
-                      id: String(expenses.length + 1),
-                      date: newExpense.date,
-                      description: newExpense.description,
-                      category: newExpense.category,
-                      branch: newExpense.branch,
-                      amount: newExpense.amount,
-                      status: 'pending',
-                      approver: '-',
-                      vendor: newExpense.vendor
-                    };
-                    setExpenses([newExp, ...expenses]);
-                    setShowAddModal(false);
-                    setNewExpense({
-                      description: '',
-                      category: 'COGS',
-                      branch: '',
-                      amount: 0,
-                      vendor: '',
-                      date: new Date().toISOString().split('T')[0],
-                      notes: ''
-                    });
-                  }}
-                  disabled={!newExpense.description || !newExpense.branch || newExpense.amount <= 0}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Add Expense
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </HQLayout>
   );

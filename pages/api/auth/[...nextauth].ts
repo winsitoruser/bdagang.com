@@ -130,6 +130,16 @@ export const authOptions: NextAuthOptions = {
         session.user.businessStructure = token.businessStructure as string;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // Check if user needs onboarding
+      if (url.startsWith(baseUrl)) {
+        // Allow onboarding and auth pages
+        if (url.includes('/onboarding') || url.includes('/auth/') || url.includes('/admin/')) {
+          return url;
+        }
+      }
+      return baseUrl;
     }
   },
   secret: process.env.NEXTAUTH_SECRET,

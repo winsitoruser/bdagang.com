@@ -89,7 +89,7 @@ export default function OutletsManagement() {
       const response = await fetch(`/api/admin/outlets?${params}`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch outlets');
+        throw new Error('Gagal memuat outlet');
       }
 
       const data = await response.json();
@@ -145,7 +145,7 @@ export default function OutletsManagement() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading outlets...</p>
+            <p className="mt-4 text-gray-600">Memuat outlet...</p>
           </div>
         </div>
       </AdminLayout>
@@ -155,7 +155,7 @@ export default function OutletsManagement() {
   return (
     <>
       <Head>
-        <title>Outlets Management - Admin Bedagang</title>
+        <title>Manajemen Outlet - Admin Bedagang</title>
       </Head>
 
       <AdminLayout>
@@ -163,14 +163,14 @@ export default function OutletsManagement() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Outlets Management</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Manajemen Outlet</h1>
               <p className="mt-2 text-sm text-gray-600">
-                Monitor all POS outlets across partners
+                Pantau semua outlet POS di seluruh mitra
               </p>
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-gray-900">{totalOutlets}</p>
-              <p className="text-xs text-gray-500">Total Outlets</p>
+              <p className="text-xs text-gray-500">Total Outlet</p>
             </div>
           </div>
         </div>
@@ -183,7 +183,7 @@ export default function OutletsManagement() {
               {/* Search */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Search
+                  Cari
                 </label>
                 <div className="relative">
                   <input
@@ -191,7 +191,7 @@ export default function OutletsManagement() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder="Search by name, code, manager..."
+                    placeholder="Cari berdasarkan nama, kode, manajer..."
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
@@ -208,22 +208,22 @@ export default function OutletsManagement() {
                   onChange={(e) => setActiveFilter(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">All Status</option>
-                  <option value="true">Active</option>
-                  <option value="false">Inactive</option>
+                  <option value="">Semua Status</option>
+                  <option value="true">Aktif</option>
+                  <option value="false">Tidak Aktif</option>
                 </select>
               </div>
 
               {/* City Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  City
+                  Kota
                 </label>
                 <input
                   type="text"
                   value={cityFilter}
                   onChange={(e) => setCityFilter(e.target.value)}
-                  placeholder="Filter by city"
+                  placeholder="Filter berdasarkan kota"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -231,14 +231,14 @@ export default function OutletsManagement() {
 
             <div className="mt-4 flex justify-between items-center">
               <p className="text-sm text-gray-600">
-                Showing {outlets.length} of {totalOutlets} outlets
+                Menampilkan {outlets.length} dari {totalOutlets} outlet
               </p>
               <button
                 onClick={handleSearch}
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Filter className="h-4 w-4 mr-2" />
-                Apply Filters
+                Terapkan Filter
               </button>
             </div>
           </div>
@@ -276,7 +276,7 @@ export default function OutletsManagement() {
 
                     {/* Partner Info */}
                     <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">Partner</p>
+                      <p className="text-xs text-gray-500 mb-1">Mitra</p>
                       <p className="text-sm font-medium text-gray-900">
                         {outlet.partner.business_name}
                       </p>
@@ -288,7 +288,7 @@ export default function OutletsManagement() {
                       <div className="text-sm text-gray-600">
                         <p>{outlet.city}</p>
                         {outlet.manager_name && (
-                          <p className="text-xs text-gray-500">Manager: {outlet.manager_name}</p>
+                          <p className="text-xs text-gray-500">Manajer: {outlet.manager_name}</p>
                         )}
                       </div>
                     </div>
@@ -303,7 +303,7 @@ export default function OutletsManagement() {
                       </div>
                       {outlet.pos_device_id && (
                         <span className="text-xs text-gray-500">
-                          Device: {outlet.pos_device_id.slice(0, 8)}...
+                          Perangkat: {outlet.pos_device_id.slice(0, 8)}...
                         </span>
                       )}
                     </div>
@@ -311,18 +311,18 @@ export default function OutletsManagement() {
                     {/* Transaction Stats */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Today</p>
+                        <p className="text-xs text-gray-500 mb-1">Hari Ini</p>
                         <p className="text-lg font-bold text-gray-900">
                           {outlet.today_transactions}
                         </p>
-                        <p className="text-xs text-gray-500">transactions</p>
+                        <p className="text-xs text-gray-500">transaksi</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">This Month</p>
+                        <p className="text-xs text-gray-500 mb-1">Bulan Ini</p>
                         <p className="text-lg font-bold text-gray-900">
                           {outlet.monthly_transactions}
                         </p>
-                        <p className="text-xs text-gray-500">transactions</p>
+                        <p className="text-xs text-gray-500">transaksi</p>
                       </div>
                     </div>
 
@@ -335,7 +335,7 @@ export default function OutletsManagement() {
                       className="mt-4 w-full inline-flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                     >
                       <Eye className="h-4 w-4 mr-2" />
-                      View Details
+                      Lihat Detail
                     </button>
                   </div>
                 </div>
@@ -351,17 +351,17 @@ export default function OutletsManagement() {
                 disabled={currentPage === 1}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Previous
+                Sebelumnya
               </button>
               <span className="px-4 py-2 text-gray-700">
-                Page {currentPage} of {totalPages}
+                Halaman {currentPage} dari {totalPages}
               </span>
               <button
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next
+                Berikutnya
               </button>
             </div>
           )}
@@ -369,7 +369,7 @@ export default function OutletsManagement() {
           {outlets.length === 0 && !loading && (
             <div className="bg-white rounded-lg shadow p-12 text-center">
               <Store className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">No outlets found</p>
+              <p className="text-gray-600">Tidak ada outlet ditemukan</p>
             </div>
           )}
         </div>

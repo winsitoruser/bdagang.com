@@ -1,107 +1,265 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { Op } from 'sequelize';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { getPaginationParams, getPaginationMeta } from '../../../../lib/api/pagination';
 
-const mockInvoices = [
-  {
-    id: '1',
-    invoiceNumber: 'INV-2026-0245',
-    customer: 'PT ABC Corporation',
-    customerType: 'corporate',
-    branch: 'Cabang Pusat Jakarta',
-    branchCode: 'HQ-001',
-    issueDate: '2026-02-20',
-    dueDate: '2026-03-20',
-    total: 85250000,
-    status: 'sent',
-    paidAmount: 0
-  },
-  {
-    id: '2',
-    invoiceNumber: 'INV-2026-0244',
-    customer: 'Hotel Grand Indonesia',
-    customerType: 'corporate',
-    branch: 'Cabang Pusat Jakarta',
-    branchCode: 'HQ-001',
-    issueDate: '2026-02-18',
-    dueDate: '2026-03-18',
-    total: 127000000,
-    status: 'partial',
-    paidAmount: 60000000
-  },
-  {
-    id: '3',
-    invoiceNumber: 'INV-2026-0240',
-    customer: 'CV Maju Jaya',
-    customerType: 'corporate',
-    branch: 'Cabang Bandung',
-    branchCode: 'BR-002',
-    issueDate: '2026-02-10',
-    dueDate: '2026-02-25',
-    total: 46750000,
-    status: 'overdue',
-    paidAmount: 0
-  },
-  {
-    id: '4',
-    invoiceNumber: 'INV-2026-0238',
-    customer: 'Restaurant Chain XYZ',
-    customerType: 'corporate',
-    branch: 'Cabang Surabaya',
-    branchCode: 'BR-003',
-    issueDate: '2026-02-05',
-    dueDate: '2026-02-20',
-    total: 102000000,
-    status: 'paid',
-    paidAmount: 102000000
-  }
-];
-
-const mockSummary = {
-  totalInvoices: 156,
-  totalAmount: 2850000000,
-  paidAmount: 2150000000,
-  pendingAmount: 520000000,
-  overdueAmount: 180000000,
-  draftCount: 8,
-  sentCount: 32,
-  paidCount: 98,
-  overdueCount: 18
-};
+let Invoice: any, Branch: any;
+try {
+  const InvoiceModel = require('../../../../models/finance/Invoice');
+  const models = require('../../../../models');
+  
+  Invoice = InvoiceModel.default || InvoiceModel;
+  Branch = models.Branch;
+} catch (e) {
+  console.warn('Finance Invoice models not available:', e);
+  Invoice = null;
+  Branch = null;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'GET') {
-    const { status, branchId } = req.query;
+  try {
+    switch (req.method) {
+      case 'GET':
+        return await getInvoices(req, res);
+      case 'POST':
+        return await createInvoice(req, res);
+      case 'PUT':
+        return await updateInvoice(req, res);
+      case 'DELETE':
+        return await deleteInvoice(req, res);
+      default:
+        res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
+    }
+  } catch (error) {
+    console.error('Finance Invoices API Error:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
+  }
+}
+
+async function getInvoices(req: NextApiRequest, res: NextApiResponse) {
+  if (!Invoice) {
+    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Invoice model not available')
+    );
+  }
+
+  const { search, status, branchId, startDate, endDate } = req.query;
+  const { limit, offset } = getPaginationParams(req.query);
+
+  try {
+    const where: any = {};
     
-    let filteredInvoices = mockInvoices;
+    if (search) {
+      where[Op.or] = [
+        { invoiceNumber: { [Op.iLike]: `%${search}%` } },
+        { customerName: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
     
     if (status && status !== 'all') {
-      filteredInvoices = filteredInvoices.filter(inv => inv.status === status);
+      where.status = status;
     }
     
     if (branchId && branchId !== 'all') {
-      filteredInvoices = filteredInvoices.filter(inv => inv.branchCode === branchId);
+      where.branchId = branchId;
     }
-    
-    return res.status(200).json({
-      summary: mockSummary,
-      invoices: filteredInvoices
+
+    if (startDate && endDate) {
+      where.invoiceDate = {
+        [Op.between]: [new Date(startDate as string), new Date(endDate as string)]
+      };
+    }
+
+    const { count, rows } = await Invoice.findAndCountAll({
+      where,
+      include: [
+        { model: Branch, as: 'branch', attributes: ['id', 'code', 'name'] }
+      ],
+      order: [['invoiceDate', 'DESC']],
+      limit,
+      offset
     });
+
+    return res.status(HttpStatus.OK).json(
+      successResponse(rows, getPaginationMeta(count, limit, offset))
+    );
+  } catch (error) {
+    console.error('Error fetching invoices:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch invoices')
+    );
   }
-  
-  if (req.method === 'POST') {
-    const newInvoice = req.body;
-    // In production, save to database
-    return res.status(201).json({
-      success: true,
-      invoice: {
-        id: String(mockInvoices.length + 1),
-        invoiceNumber: `INV-2026-${String(mockInvoices.length + 246).padStart(4, '0')}`,
-        ...newInvoice,
-        status: 'draft',
-        paidAmount: 0
+}
+
+async function createInvoice(req: NextApiRequest, res: NextApiResponse) {
+  if (!Invoice) {
+    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Invoice model not available')
+    );
+  }
+
+  const {
+    tenantId,
+    branchId,
+    invoiceDate,
+    dueDate,
+    type,
+    customerName,
+    customerEmail,
+    customerPhone,
+    totalAmount,
+    taxAmount,
+    discountAmount,
+    items,
+    createdBy
+  } = req.body;
+
+  if (!tenantId || !invoiceDate || !type || !customerName || !totalAmount || !createdBy) {
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(
+        ErrorCodes.MISSING_REQUIRED_FIELDS,
+        'Missing required fields: tenantId, invoiceDate, type, customerName, totalAmount, createdBy'
+      )
+    );
+  }
+
+  try {
+    // Generate invoice number
+    const today = new Date();
+    const prefix = type === 'sales' ? 'INV' : type === 'purchase' ? 'PINV' : 'IBINV';
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+    const count = await Invoice.count({
+      where: {
+        invoiceNumber: { [Op.like]: `${prefix}-${dateStr}%` }
       }
     });
+    const invoiceNumber = `${prefix}-${dateStr}-${String(count + 1).padStart(4, '0')}`;
+
+    const invoice = await Invoice.create({
+      tenantId,
+      branchId,
+      invoiceNumber,
+      invoiceDate: new Date(invoiceDate),
+      dueDate: dueDate ? new Date(dueDate) : null,
+      type,
+      customerName,
+      customerEmail,
+      customerPhone,
+      totalAmount: parseFloat(totalAmount),
+      taxAmount: taxAmount ? parseFloat(taxAmount) : 0,
+      discountAmount: discountAmount ? parseFloat(discountAmount) : 0,
+      outstandingAmount: parseFloat(totalAmount),
+      status: 'draft',
+      items: items || [],
+      createdBy
+    });
+
+    return res.status(HttpStatus.CREATED).json(
+      successResponse(invoice, undefined, 'Invoice created successfully')
+    );
+  } catch (error: any) {
+    console.error('Error creating invoice:', error);
+    if (error.name === 'SequelizeValidationError') {
+      return res.status(HttpStatus.BAD_REQUEST).json(
+        errorResponse(ErrorCodes.VALIDATION_ERROR, error.message)
+      );
+    }
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to create invoice')
+    );
   }
-  
-  res.setHeader('Allow', ['GET', 'POST']);
-  return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+}
+
+async function updateInvoice(req: NextApiRequest, res: NextApiResponse) {
+  if (!Invoice) {
+    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Invoice model not available')
+    );
+  }
+
+  const { id } = req.query;
+  const updateData = req.body;
+
+  if (!id) {
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Invoice ID is required')
+    );
+  }
+
+  try {
+    const invoice = await Invoice.findByPk(id);
+    
+    if (!invoice) {
+      return res.status(HttpStatus.NOT_FOUND).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'Invoice not found')
+      );
+    }
+
+    // Don't allow updating paid invoices
+    if (invoice.status === 'paid') {
+      return res.status(HttpStatus.BAD_REQUEST).json(
+        errorResponse(ErrorCodes.VALIDATION_ERROR, 'Cannot update paid invoice')
+      );
+    }
+
+    await invoice.update(updateData);
+
+    return res.status(HttpStatus.OK).json(
+      successResponse(invoice, undefined, 'Invoice updated successfully')
+    );
+  } catch (error: any) {
+    console.error('Error updating invoice:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to update invoice')
+    );
+  }
+}
+
+async function deleteInvoice(req: NextApiRequest, res: NextApiResponse) {
+  if (!Invoice) {
+    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Invoice model not available')
+    );
+  }
+
+  const { id } = req.query;
+
+  if (!id) {
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Invoice ID is required')
+    );
+  }
+
+  try {
+    const invoice = await Invoice.findByPk(id);
+    
+    if (!invoice) {
+      return res.status(HttpStatus.NOT_FOUND).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'Invoice not found')
+      );
+    }
+
+    // Don't allow deleting paid invoices
+    if (invoice.status === 'paid') {
+      return res.status(HttpStatus.BAD_REQUEST).json(
+        errorResponse(ErrorCodes.VALIDATION_ERROR, 'Cannot delete paid invoice')
+      );
+    }
+
+    await invoice.update({ status: 'cancelled' });
+
+    return res.status(HttpStatus.OK).json(
+      successResponse(null, undefined, 'Invoice cancelled successfully')
+    );
+  } catch (error) {
+    console.error('Error deleting invoice:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to delete invoice')
+    );
+  }
 }

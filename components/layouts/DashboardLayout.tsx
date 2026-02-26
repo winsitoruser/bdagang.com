@@ -143,14 +143,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transform transition-all duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transform transition-all duration-300 ease-in-out flex flex-col ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 ${
           sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
         } w-64`}
       >
         {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 flex-shrink-0">
           <Link href="/dashboard" className={`flex items-center space-x-2 transition-all ${
             sidebarCollapsed ? 'lg:justify-center lg:w-full' : ''
           }`}>
@@ -171,13 +171,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto">
+        {/* Navigation - Scrollable */}
+        <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto overflow-x-hidden"
+          style={{ maxHeight: 'calc(100vh - 64px - 120px)' }}
+        >
           {filteredConfig.groups.map((group, groupIndex) => renderMenuGroup(group, groupIndex))}
         </nav>
 
-        {/* User Info & Logout */}
-        <div className="border-t border-gray-200 p-4">
+        {/* User Info & Logout - Fixed at bottom */}
+        <div className="border-t border-gray-200 p-4 flex-shrink-0">
           <div className={`flex items-center space-x-3 mb-3 ${
             sidebarCollapsed ? 'lg:justify-center' : ''
           }`}>

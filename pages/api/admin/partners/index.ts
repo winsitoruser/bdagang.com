@@ -16,8 +16,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Check authentication
     const session = await getServerSession(req, res, authOptions);
-    if (!session || !['ADMIN', 'SUPER_ADMIN'].includes(session.user?.role as string)) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    
+    if (!session) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    const userRole = (session.user?.role as string)?.toLowerCase();
+    const allowedRoles = ['admin', 'super_admin', 'superadmin'];
+    
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ success: false, error: 'Access denied - Admin access required' });
     }
 
     if (req.method === 'GET') {

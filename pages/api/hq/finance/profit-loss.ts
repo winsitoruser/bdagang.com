@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 const mockPLSummary = {
   revenue: 4120000000,
@@ -41,22 +42,40 @@ const mockBranchPL = [
 ];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  try {
+    switch (req.method) {
+      case 'GET':
+        return await getProfitLoss(req, res);
+      default:
+        res.setHeader('Allow', ['GET']);
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
+    }
+  } catch (error) {
+    console.error('Profit & Loss API Error:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
+}
 
+async function getProfitLoss(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { period = 'month' } = req.query;
 
-    return res.status(200).json({
-      summary: mockPLSummary,
-      items: mockPLItems,
-      branches: mockBranchPL,
-      period
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse({
+        summary: mockPLSummary,
+        items: mockPLItems,
+        branches: mockBranchPL,
+        period
+      })
+    );
   } catch (error) {
-    console.error('Error fetching P&L data:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching P&L:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch profit & loss')
+    );
   }
 }

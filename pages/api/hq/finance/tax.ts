@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 interface TaxObligation {
   id: string;
@@ -63,11 +64,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return updateTaxStatus(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('Tax API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -99,18 +104,22 @@ function getTaxData(req: NextApiRequest, res: NextApiResponse) {
     totalPending: filteredObligations.filter(t => t.status !== 'paid').reduce((sum, t) => sum + t.amount, 0)
   };
 
-  return res.status(200).json({
-    obligations: filteredObligations,
-    branchTax: mockBranchTax,
-    summary
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse({
+      obligations: filteredObligations,
+      branchTax: mockBranchTax,
+      summary
+    })
+  );
 }
 
 function calculateTax(req: NextApiRequest, res: NextApiResponse) {
   const { type, period, branchId, revenue, expenses, salaries } = req.body;
   
   if (!type || !period) {
-    return res.status(400).json({ error: 'Tax type and period are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Tax type and period are required')
+    );
   }
 
   let calculatedAmount = 0;
@@ -137,25 +146,30 @@ function calculateTax(req: NextApiRequest, res: NextApiResponse) {
       break;
   }
 
-  return res.status(200).json({
-    type,
-    period,
-    calculatedAmount,
-    details,
-    message: 'Tax calculated successfully'
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse({
+      type,
+      period,
+      calculatedAmount,
+      details
+    }, undefined, 'Tax calculated successfully')
+  );
 }
 
 function updateTaxStatus(req: NextApiRequest, res: NextApiResponse) {
   const { id, status, paidDate, reference } = req.body;
   
   if (!id || !status) {
-    return res.status(400).json({ error: 'Tax ID and status are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Tax ID and status are required')
+    );
   }
 
   const obligation = mockTaxObligations.find(t => t.id === id);
   if (!obligation) {
-    return res.status(404).json({ error: 'Tax obligation not found' });
+    return res.status(HttpStatus.NOT_FOUND).json(
+      errorResponse(ErrorCodes.NOT_FOUND, 'Tax obligation not found')
+    );
   }
 
   obligation.status = status;
@@ -164,5 +178,7 @@ function updateTaxStatus(req: NextApiRequest, res: NextApiResponse) {
     obligation.reference = reference;
   }
 
-  return res.status(200).json({ obligation, message: 'Tax status updated successfully' });
+  return res.status(HttpStatus.OK).json(
+    successResponse(obligation, undefined, 'Tax status updated successfully')
+  );
 }

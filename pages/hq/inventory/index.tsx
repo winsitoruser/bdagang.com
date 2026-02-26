@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import HQLayout from '../../../components/hq/HQLayout';
+import ProductFormModal from '../../../components/hq/inventory/ProductFormModal';
 import {
   Package,
   RefreshCw,
@@ -123,10 +124,83 @@ export default function HQInventoryDashboard() {
   const [topProducts, setTopProducts] = useState<TopProduct[]>(mockTopProducts);
   const [activities, setActivities] = useState<RecentActivity[]>(mockActivities);
   const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('week');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [branches, setBranches] = useState([]);
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [productsRes, branchesRes] = await Promise.all([
+        fetch('/api/hq/inventory/products?limit=100&offset=0'),
+        fetch('/api/hq/branches?limit=100')
+      ]);
+      
+      if (productsRes.ok) {
+        const result = await productsRes.json();
+        const products = result.data || [];
+        
+        const totalProducts = products.length;
+        const totalStock = products.reduce((sum: number, p: any) => {
+          const stockSum = p.stocks?.reduce((s: number, st: any) => s + st.quantity, 0) || 0;
+          return sum + stockSum;
+        }, 0);
+        const totalValue = products.reduce((sum: number, p: any) => {
+          const stockSum = p.stocks?.reduce((s: number, st: any) => s + st.quantity, 0) || 0;
+          return sum + (stockSum * parseFloat(p.costPrice || 0));
+        }, 0);
+        
+        const lowStockItems = products.filter((p: any) => {
+          const stockSum = p.stocks?.reduce((s: number, st: any) => s + st.quantity, 0) || 0;
+          return p.reorderPoint && stockSum <= p.reorderPoint;
+        }).length;
+        
+        const outOfStockItems = products.filter((p: any) => {
+          const stockSum = p.stocks?.reduce((s: number, st: any) => s + st.quantity, 0) || 0;
+          return stockSum === 0;
+        }).length;
+        
+        setSummary({
+          ...mockSummary,
+          totalProducts,
+          totalStock,
+          totalValue,
+          lowStockItems,
+          outOfStockItems
+        });
+        
+        const topProds = products.slice(0, 5).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          sku: p.sku,
+          category: p.category,
+          totalStock: p.stocks?.reduce((s: number, st: any) => s + st.quantity, 0) || 0,
+          stockValue: (p.stocks?.reduce((s: number, st: any) => s + st.quantity, 0) || 0) * parseFloat(p.costPrice || 0),
+          movement: 'medium' as const,
+          trend: 0
+        }));
+        
+        setTopProducts(topProds.length > 0 ? topProds : mockTopProducts);
+      } else {
+        setSummary(mockSummary);
+        setTopProducts(mockTopProducts);
+      }
+      
+      if (branchesRes.ok) {
+        const branchData = await branchesRes.json();
+        setBranches(branchData.branches || []);
+      }
+    } catch (error) {
+      console.error('Error fetching inventory data:', error);
+      setSummary(mockSummary);
+      setTopProducts(mockTopProducts);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   useEffect(() => {
     setMounted(true);
-    setLoading(false);
+    fetchData();
   }, []);
 
   if (!mounted) return null;

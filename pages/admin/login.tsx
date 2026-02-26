@@ -59,7 +59,7 @@ export default function AdminLogin() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-          <p className="mt-4 text-white">Loading...</p>
+          <p className="mt-4 text-white">Memuat...</p>
         </div>
       </div>
     );
@@ -68,8 +68,8 @@ export default function AdminLogin() {
   return (
     <>
       <Head>
-        <title>Admin Login - Bedagang Admin Panel</title>
-        <meta name="description" content="Login to Bedagang Admin Panel" />
+        <title>Login Admin - Panel Admin Bedagang</title>
+        <meta name="description" content="Masuk ke Panel Admin Bedagang" />
       </Head>
 
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 py-12 px-4 sm:px-6 lg:px-8">
@@ -80,10 +80,10 @@ export default function AdminLogin() {
               <Shield className="h-10 w-10 text-blue-600" />
             </div>
             <h2 className="mt-6 text-4xl font-extrabold text-white">
-              Admin Panel
+              Panel Admin
             </h2>
             <p className="mt-2 text-sm text-blue-100">
-              Bedagang Management System
+              Sistem Manajemen Bedagang
             </p>
           </div>
 
@@ -107,7 +107,7 @@ export default function AdminLogin() {
 
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                  Email Address
+                  Alamat Email
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -144,7 +144,7 @@ export default function AdminLogin() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="appearance-none block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-150"
-                    placeholder="Enter your password"
+                    placeholder="Masukkan kata sandi Anda"
                   />
                   <button
                     type="button"
@@ -172,10 +172,10 @@ export default function AdminLogin() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Signing in...
+                      Masuk...
                     </span>
                   ) : (
-                    'Sign in to Admin Panel'
+                    'Masuk ke Panel Admin'
                   )}
                 </button>
               </div>
@@ -183,7 +183,7 @@ export default function AdminLogin() {
 
             <div className="mt-6 text-center">
               <p className="text-xs text-gray-500">
-                Admin access only. Unauthorized access is prohibited.
+                Hanya untuk admin. Akses tidak sah dilarang.
               </p>
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function AdminLogin() {
           {/* Footer */}
           <div className="text-center">
             <p className="text-sm text-blue-100">
-              © 2024 Bedagang. All rights reserved.
+              © 2024 Bedagang. Hak cipta dilindungi.
             </p>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 interface BudgetItem {
   id: string;
@@ -110,11 +111,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return updateBudget(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('Budget API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -143,14 +148,18 @@ function getBudgets(req: NextApiRequest, res: NextApiResponse) {
     draftBudgets: filtered.filter(b => b.status === 'draft').length
   };
 
-  return res.status(200).json({ budgets: filtered, summary });
+  return res.status(HttpStatus.OK).json(
+    successResponse({ budgets: filtered, summary })
+  );
 }
 
 function createBudget(req: NextApiRequest, res: NextApiResponse) {
   const { year, month, branches } = req.body;
   
   if (!year || !month) {
-    return res.status(400).json({ error: 'Year and month are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Year and month are required')
+    );
   }
 
   const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
@@ -169,19 +178,25 @@ function createBudget(req: NextApiRequest, res: NextApiResponse) {
     createdAt: new Date().toISOString()
   };
 
-  return res.status(201).json({ budget: newBudget, message: 'Budget created successfully' });
+  return res.status(HttpStatus.CREATED).json(
+    successResponse(newBudget, undefined, 'Budget created successfully')
+  );
 }
 
 function updateBudget(req: NextApiRequest, res: NextApiResponse) {
   const { id, action, branches, approvedBy } = req.body;
   
   if (!id) {
-    return res.status(400).json({ error: 'Budget ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Budget ID is required')
+    );
   }
 
   const budget = mockBudgets.find(b => b.id === id);
   if (!budget) {
-    return res.status(404).json({ error: 'Budget not found' });
+    return res.status(HttpStatus.NOT_FOUND).json(
+      errorResponse(ErrorCodes.NOT_FOUND, 'Budget not found')
+    );
   }
 
   if (action === 'approve') {
@@ -197,5 +212,7 @@ function updateBudget(req: NextApiRequest, res: NextApiResponse) {
     budget.totalBudget = branches.reduce((sum: number, b: BranchBudget) => sum + b.totalBudget, 0);
   }
 
-  return res.status(200).json({ budget, message: 'Budget updated successfully' });
+  return res.status(HttpStatus.OK).json(
+    successResponse(budget, undefined, 'Budget updated successfully')
+  );
 }

@@ -147,7 +147,7 @@ export default function SubscriptionsManagement() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading subscriptions...</p>
+          <p className="mt-4 text-gray-600">Memuat langganan...</p>
         </div>
       </div>
     );
@@ -156,7 +156,7 @@ export default function SubscriptionsManagement() {
   return (
     <>
       <Head>
-        <title>Subscriptions Management - Admin Panel</title>
+        <title>Langganan - Panel Admin</title>
       </Head>
 
       <div className="min-h-screen bg-gray-50">
@@ -165,14 +165,16 @@ export default function SubscriptionsManagement() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Subscriptions Management</h1>
-                <p className="text-sm text-gray-500 mt-1">Manage partner subscriptions and renewals</p>
+                <h1 className="text-3xl font-bold text-gray-900">Langganan</h1>
+                <p className="mt-1 text-sm text-gray-500">
+                  Kelola langganan tenant dan paket
+                </p>
               </div>
               <Link
                 href="/admin/dashboard"
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Back to Dashboard
+                Kembali ke Dashboard
               </Link>
             </div>
           </div>
@@ -184,7 +186,7 @@ export default function SubscriptionsManagement() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Active</p>
+                  <p className="text-sm text-gray-600">Total Aktif</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">
                     {subscriptions.filter(s => s.status === 'active').length}
                   </p>
@@ -198,7 +200,7 @@ export default function SubscriptionsManagement() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Expiring Soon</p>
+                  <p className="text-sm text-gray-600">Akan Berakhir</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">
                     {subscriptions.filter(s => {
                       const days = Math.ceil((new Date(s.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
@@ -215,7 +217,7 @@ export default function SubscriptionsManagement() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Expired</p>
+                  <p className="text-sm text-gray-600">Berakhir</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">
                     {subscriptions.filter(s => s.status === 'expired').length}
                   </p>
@@ -229,7 +231,7 @@ export default function SubscriptionsManagement() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Monthly Revenue</p>
+                  <p className="text-sm text-gray-600">Pendapatan Bulanan</p>
                   <p className="text-xl font-bold text-gray-900 mt-1">
                     {formatCurrency(subscriptions.reduce((sum, s) => sum + (s.package?.price || 0), 0))}
                   </p>
@@ -246,7 +248,7 @@ export default function SubscriptionsManagement() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Search
+                  Cari
                 </label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -255,7 +257,7 @@ export default function SubscriptionsManagement() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && fetchSubscriptions()}
-                    placeholder="Search partner name, email..."
+                    placeholder="Cari langganan..."
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -270,10 +272,10 @@ export default function SubscriptionsManagement() {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="expired">Expired</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="">Semua Status</option>
+                  <option value="active">Aktif</option>
+                  <option value="expired">Berakhir</option>
+                  <option value="cancelled">Dibatalkan</option>
                   <option value="pending">Pending</option>
                 </select>
               </div>
@@ -284,7 +286,7 @@ export default function SubscriptionsManagement() {
                   className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
                 >
                   <Filter className="h-4 w-4" />
-                  <span>Apply Filters</span>
+                  <span>Terapkan Filter</span>
                 </button>
               </div>
             </div>
@@ -307,25 +309,25 @@ export default function SubscriptionsManagement() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Partner
+                      Tanggal Mulai
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Package
+                      Tanggal Berakhir
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Period
+                      Paket
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Amount
+                      Jumlah Bayar
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Auto Renew
+                      Perpanjang Otomatis
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
+                      Aksi
                     </th>
                   </tr>
                 </thead>
@@ -333,30 +335,22 @@ export default function SubscriptionsManagement() {
                   {subscriptions.map((subscription) => (
                     <tr key={subscription.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {subscription.partner?.businessName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {subscription.partner?.email}
-                          </div>
+                        <div className="text-sm text-gray-900">
+                          {formatDate(subscription.startDate)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Package className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="text-sm text-gray-900">{subscription.package?.name}</span>
+                        <div className="text-sm text-gray-900">
+                          {formatDate(subscription.endDate)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(subscription.status)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {formatDate(subscription.startDate)} - {formatDate(subscription.endDate)}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {getDaysRemaining(subscription.endDate)}
+                        <div className="flex items-center">
+                          <Package className="h-4 w-4 text-gray-400 mr-2" />
+                          <span className="text-sm text-gray-900">{subscription.package?.name}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -371,11 +365,11 @@ export default function SubscriptionsManagement() {
                         {subscription.autoRenew ? (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                             <RefreshCw className="h-3 w-3 mr-1" />
-                            Yes
+                            Ya
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            No
+                            Tidak
                           </span>
                         )}
                       </td>
@@ -407,14 +401,14 @@ export default function SubscriptionsManagement() {
                       disabled={currentPage === 1}
                       className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Previous
+                      Sebelumnya
                     </button>
                     <button
                       onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                       disabled={currentPage === totalPages}
                       className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      Berikutnya
                     </button>
                   </div>
                 </div>

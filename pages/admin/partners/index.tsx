@@ -155,7 +155,7 @@ export default function PartnersManagement() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading partners...</p>
+            <p className="mt-4 text-gray-600">Memuat mitra...</p>
           </div>
         </div>
       </AdminLayout>
@@ -165,7 +165,7 @@ export default function PartnersManagement() {
   return (
     <>
       <Head>
-        <title>Partners Management - Admin Bedagang</title>
+        <title>Manajemen Mitra - Admin Bedagang</title>
       </Head>
 
       <AdminLayout>
@@ -173,9 +173,9 @@ export default function PartnersManagement() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Partners Management</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Manajemen Mitra</h1>
               <p className="mt-2 text-sm text-gray-600">
-                Manage all partners and their subscriptions
+                Kelola semua mitra dan langganan mereka
               </p>
             </div>
             <button
@@ -183,7 +183,7 @@ export default function PartnersManagement() {
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="h-5 w-5 mr-2" />
-              Add Partner
+              Tambah Mitra
             </button>
           </div>
         </div>
@@ -196,7 +196,7 @@ export default function PartnersManagement() {
               {/* Search */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Search
+                  Cari
                 </label>
                 <div className="relative">
                   <input
@@ -204,7 +204,7 @@ export default function PartnersManagement() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder="Search by name, email, phone..."
+                    placeholder="Cari berdasarkan nama, email, telepon..."
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
@@ -221,24 +221,24 @@ export default function PartnersManagement() {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="pending">Pending</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="suspended">Suspended</option>
+                  <option value="">Semua Status</option>
+                  <option value="active">Aktif</option>
+                  <option value="pending">Menunggu</option>
+                  <option value="inactive">Tidak Aktif</option>
+                  <option value="suspended">Ditangguhkan</option>
                 </select>
               </div>
 
               {/* City Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  City
+                  Kota
                 </label>
                 <input
                   type="text"
                   value={cityFilter}
                   onChange={(e) => setCityFilter(e.target.value)}
-                  placeholder="Filter by city"
+                  placeholder="Filter berdasarkan kota"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -246,14 +246,14 @@ export default function PartnersManagement() {
 
             <div className="mt-4 flex justify-between items-center">
               <p className="text-sm text-gray-600">
-                Showing {partners.length} of {totalPartners} partners
+                Menampilkan {partners.length} dari {totalPartners} mitra
               </p>
               <button
                 onClick={handleSearch}
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Filter className="h-4 w-4 mr-2" />
-                Apply Filters
+                Terapkan Filter
               </button>
             </div>
           </div>
@@ -265,25 +265,25 @@ export default function PartnersManagement() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Business
+                      Bisnis
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Owner
+                      Pemilik
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Location
+                      Lokasi
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Package
+                      Paket
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Outlets/Users
+                      Outlet/Pengguna
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
+                      Aksi
                     </th>
                   </tr>
                 </thead>
@@ -332,14 +332,14 @@ export default function PartnersManagement() {
                           <button
                             onClick={() => router.push(`/admin/partners/${partner.id}`)}
                             className="text-blue-600 hover:text-blue-900"
-                            title="View Details"
+                            title="Lihat Detail"
                           >
                             <Eye className="h-5 w-5" />
                           </button>
                           <button
                             onClick={() => router.push(`/admin/partners/${partner.id}/edit`)}
                             className="text-green-600 hover:text-green-900"
-                            title="Edit"
+                            title="Ubah"
                           >
                             <Edit className="h-5 w-5" />
                           </button>
@@ -347,7 +347,7 @@ export default function PartnersManagement() {
                             <button
                               onClick={() => handleStatusChange(partner.id, 'suspended')}
                               className="text-red-600 hover:text-red-900"
-                              title="Suspend"
+                              title="Tangguhkan"
                             >
                               <XCircle className="h-5 w-5" />
                             </button>
@@ -356,7 +356,7 @@ export default function PartnersManagement() {
                             <button
                               onClick={() => handleStatusChange(partner.id, 'active')}
                               className="text-green-600 hover:text-green-900"
-                              title="Activate"
+                              title="Aktifkan"
                             >
                               <CheckCircle className="h-5 w-5" />
                             </button>
@@ -377,20 +377,20 @@ export default function PartnersManagement() {
                   disabled={currentPage === 1}
                   className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
-                  Previous
+                  Sebelumnya
                 </button>
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
                   className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
-                  Next
+                  Berikutnya
                 </button>
               </div>
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm text-gray-700">
-                    Showing page <span className="font-medium">{currentPage}</span> of{' '}
+                    Halaman <span className="font-medium">{currentPage}</span> dari{' '}
                     <span className="font-medium">{totalPages}</span>
                   </p>
                 </div>

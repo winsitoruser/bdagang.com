@@ -3,6 +3,9 @@ import HQLayout from '../../../components/hq/HQLayout';
 import DataTable, { Column } from '../../../components/hq/ui/DataTable';
 import Modal, { ConfirmDialog } from '../../../components/hq/ui/Modal';
 import { StatusBadge, PriorityBadge } from '../../../components/hq/ui';
+import FulfillmentAssignmentModal from '../../../components/hq/requisitions/FulfillmentAssignmentModal';
+import CreateShipmentModal from '../../../components/hq/shipping/CreateShipmentModal';
+import ShipmentTrackingModal from '../../../components/hq/shipping/ShipmentTrackingModal';
 import {
   Package,
   Plus,
@@ -120,6 +123,10 @@ export default function InternalRequisitions() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [selectedRequisition, setSelectedRequisition] = useState<Requisition | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showFulfillmentModal, setShowFulfillmentModal] = useState(false);
+  const [showCreateShipmentModal, setShowCreateShipmentModal] = useState(false);
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [currentShipmentId, setCurrentShipmentId] = useState<string | null>(null);
 
   const mockRequisitions: Requisition[] = [
     {
@@ -316,6 +323,79 @@ export default function InternalRequisitions() {
     }
   };
 
+  const handleAssignFulfillment = async (branchId: string, deliveryDate: string, notes: string) => {
+    if (!selectedRequisition) return;
+
+    try {
+      const response = await fetch(`/api/hq/requisitions/${selectedRequisition.id}/assign-fulfillment`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fulfillingBranchId: branchId,
+          estimatedDeliveryDate: deliveryDate || null,
+          notes: notes || null
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert('Cabang pemenuhan berhasil ditetapkan!');
+        setShowFulfillmentModal(false);
+        fetchRequisitions();
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to assign fulfillment');
+      }
+    } catch (error: any) {
+      console.error('Error assigning fulfillment:', error);
+      throw error;
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const response = await fetch('/api/hq/requisitions/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          format: 'csv',
+          filters: {
+            status: statusFilter !== 'all' ? statusFilter : undefined,
+            priority: priorityFilter !== 'all' ? priorityFilter : undefined
+          }
+        })
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `requisitions-${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert('Gagal mengekspor data');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Gagal mengekspor data');
+    }
+  };
+
+  const handleCreateShipment = (shipment: any) => {
+    alert(`Shipment ${shipment.shipmentNumber} berhasil dibuat!`);
+    setShowCreateShipmentModal(false);
+    fetchRequisitions();
+  };
+
+  const handleTrackShipment = (shipmentId: string) => {
+    setCurrentShipmentId(shipmentId);
+    setShowTrackingModal(true);
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved':
@@ -365,7 +445,10 @@ export default function InternalRequisitions() {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+            <button 
+              onClick={handleExport}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
               <Download className="w-4 h-4" />
               Export
             </button>
@@ -647,13 +730,31 @@ export default function InternalRequisitions() {
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500 mb-2">Dipenuhi Oleh</h4>
-                  <div className="flex items-center gap-2">
-                    <Package className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <div className="font-medium">
-                        {selectedRequisition?.fulfillingBranch?.name || 'Belum ditentukan'}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Package className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <div className="font-medium">
+                          {selectedRequisition?.fulfillingBranch?.name || 'Belum ditentukan'}
+                        </div>
                       </div>
                     </div>
+                    {!selectedRequisition?.fulfillingBranch && ['submitted', 'under_review', 'approved'].includes(selectedRequisition?.status) && (
+                      <button
+                        onClick={() => setShowFulfillmentModal(true)}
+                        className="text-sm px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Tentukan Pemenuhan
+                      </button>
+                    )}
+                    {selectedRequisition?.fulfillingBranch && ['submitted', 'under_review', 'approved'].includes(selectedRequisition?.status) && (
+                      <button
+                        onClick={() => setShowFulfillmentModal(true)}
+                        className="text-sm px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Ubah Pemenuhan
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -680,6 +781,43 @@ export default function InternalRequisitions() {
                   <div className="font-bold text-lg">{formatCurrency(selectedRequisition?.estimatedValue || 0)}</div>
                 </div>
               </div>
+
+              {/* Shipping Actions */}
+              {selectedRequisition?.fulfillingBranch && selectedRequisition?.status === 'approved' && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-blue-900">Siap untuk Pengiriman</h4>
+                      <p className="text-sm text-blue-700">Requisition telah disetujui dan siap dibuat shipment</p>
+                    </div>
+                    <button
+                      onClick={() => setShowCreateShipmentModal(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    >
+                      <Truck className="w-4 h-4" />
+                      Buat Shipment
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {['processing', 'ready_to_ship', 'in_transit', 'delivered'].includes(selectedRequisition?.status) && (
+                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium text-green-900">Shipment Aktif</h4>
+                      <p className="text-sm text-green-700">Lacak status pengiriman real-time</p>
+                    </div>
+                    <button
+                      onClick={() => handleTrackShipment('ship-001')}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                    >
+                      <MapPin className="w-4 h-4" />
+                      Lacak Pengiriman
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <h4 className="font-medium text-gray-900 mb-3">Daftar Item</h4>
               <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -758,6 +896,35 @@ export default function InternalRequisitions() {
             </div>
           </div>
         </div>
+        )}
+
+        {/* Fulfillment Assignment Modal */}
+        {showFulfillmentModal && selectedRequisition && (
+          <FulfillmentAssignmentModal
+            requisition={selectedRequisition}
+            onClose={() => setShowFulfillmentModal(false)}
+            onAssign={handleAssignFulfillment}
+          />
+        )}
+
+        {/* Create Shipment Modal */}
+        {showCreateShipmentModal && selectedRequisition && (
+          <CreateShipmentModal
+            requisition={selectedRequisition}
+            onClose={() => setShowCreateShipmentModal(false)}
+            onSuccess={handleCreateShipment}
+          />
+        )}
+
+        {/* Shipment Tracking Modal */}
+        {showTrackingModal && currentShipmentId && (
+          <ShipmentTrackingModal
+            shipmentId={currentShipmentId}
+            onClose={() => {
+              setShowTrackingModal(false);
+              setCurrentShipmentId(null);
+            }}
+          />
         )}
       </div>
     </HQLayout>

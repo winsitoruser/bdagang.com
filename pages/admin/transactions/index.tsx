@@ -73,7 +73,7 @@ export default function TransactionsOverview() {
       const response = await fetch(`/api/admin/transactions/summary?${params}`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch transaction summary');
+        throw new Error('Gagal memuat ringkasan transaksi');
       }
 
       const data = await response.json();
@@ -108,7 +108,7 @@ export default function TransactionsOverview() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading transaction data...</p>
+            <p className="mt-4 text-gray-600">Memuat data transaksi...</p>
           </div>
         </div>
       </AdminLayout>
@@ -118,7 +118,7 @@ export default function TransactionsOverview() {
   return (
     <>
       <Head>
-        <title>Transaction Overview - Admin Bedagang</title>
+        <title>Ringkasan Transaksi - Admin Bedagang</title>
       </Head>
 
       <AdminLayout>
@@ -126,17 +126,17 @@ export default function TransactionsOverview() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Transaction Overview</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Ringkasan Transaksi</h1>
               <p className="mt-2 text-sm text-gray-600">
-                Monitor transaction performance across partners and outlets
+                Pantau kinerja transaksi di seluruh mitra dan outlet
               </p>
             </div>
             <button
-              onClick={() => alert('Export feature coming soon')}
+              onClick={() => alert('Fitur ekspor akan segera hadir')}
               className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
               <Download className="h-5 w-5 mr-2" />
-              Export
+              Ekspor
             </button>
           </div>
         </div>
@@ -149,7 +149,7 @@ export default function TransactionsOverview() {
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Total Transactions</p>
+                    <p className="text-sm font-medium text-gray-600">Total Transaksi</p>
                     <p className="text-3xl font-bold text-gray-900 mt-2">
                       {formatNumber(overall.total_transactions)}
                     </p>
@@ -163,7 +163,7 @@ export default function TransactionsOverview() {
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                    <p className="text-sm font-medium text-gray-600">Total Pendapatan</p>
                     <p className="text-2xl font-bold text-gray-900 mt-2">
                       {formatCurrency(overall.total_revenue)}
                     </p>
@@ -177,7 +177,7 @@ export default function TransactionsOverview() {
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Avg Transaction Value</p>
+                    <p className="text-sm font-medium text-gray-600">Nilai Rata-rata Transaksi</p>
                     <p className="text-2xl font-bold text-gray-900 mt-2">
                       {formatCurrency(overall.avg_transaction_value)}
                     </p>
@@ -196,22 +196,22 @@ export default function TransactionsOverview() {
               {/* Group By */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Group By
+                  Kelompokkan Berdasarkan
                 </label>
                 <select
                   value={groupBy}
                   onChange={(e) => setGroupBy(e.target.value as 'partner' | 'outlet')}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="partner">By Partner</option>
-                  <option value="outlet">By Outlet</option>
+                  <option value="partner">Mitra</option>
+                  <option value="outlet">Outlet</option>
                 </select>
               </div>
 
               {/* Start Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Date
+                  Tanggal Mulai
                 </label>
                 <input
                   type="date"
@@ -224,7 +224,7 @@ export default function TransactionsOverview() {
               {/* End Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  End Date
+                  Tanggal Akhir
                 </label>
                 <input
                   type="date"
@@ -237,7 +237,7 @@ export default function TransactionsOverview() {
               {/* Limit */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Show Top
+                  Tampilkan Top
                 </label>
                 <select
                   value={limit}
@@ -258,7 +258,7 @@ export default function TransactionsOverview() {
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Filter className="h-4 w-4 mr-2" />
-                Apply Filters
+                Terapkan Filter
               </button>
             </div>
           </div>
@@ -267,7 +267,7 @@ export default function TransactionsOverview() {
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
-                Performance by {groupBy === 'partner' ? 'Partner' : 'Outlet'}
+                Kinerja oleh {groupBy === 'partner' ? 'Mitra' : 'Outlet'}
               </h3>
             </div>
             <div className="overflow-x-auto">
@@ -275,27 +275,27 @@ export default function TransactionsOverview() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Rank
+                      Peringkat
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {groupBy === 'partner' ? 'Partner' : 'Outlet'}
+                      {groupBy === 'partner' ? 'Mitra' : 'Outlet'}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Location
+                      Lokasi
                     </th>
                     {groupBy === 'partner' && (
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Outlets
+                        Outlet
                       </th>
                     )}
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Transactions
+                      Total Transaksi
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Revenue
+                      Total Pendapatan
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Avg Value
+                      Nilai Rata-rata
                     </th>
                   </tr>
                 </thead>

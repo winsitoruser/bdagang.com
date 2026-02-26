@@ -18,7 +18,9 @@ import {
   Store,
   FileCheck,
   DollarSign,
-  ShoppingBag
+  ShoppingBag,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -30,7 +32,7 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
   const { data: session } = useSession();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleLogout = async () => {
     await signOut({ redirect: true, callbackUrl: '/admin/login' });
@@ -38,55 +40,61 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
 
   const menuItems = [
     {
-      title: 'Dashboard',
+      title: 'Dasbor',
       icon: LayoutDashboard,
       href: '/admin/dashboard',
       active: router.pathname === '/admin/dashboard'
     },
     {
-      title: 'Tenants',
+      title: 'Tenant',
       icon: Building2,
       href: '/admin/tenants',
       active: router.pathname.startsWith('/admin/tenants')
     },
     {
-      title: 'Modules',
+      title: 'Cabang',
+      icon: Store,
+      href: '/admin/branches',
+      active: router.pathname.startsWith('/admin/branches')
+    },
+    {
+      title: 'Modul',
       icon: Boxes,
       href: '/admin/modules',
       active: router.pathname === '/admin/modules'
     },
     {
-      title: 'Analytics',
+      title: 'Analitik',
       icon: BarChart3,
       href: '/admin/analytics',
       active: router.pathname === '/admin/analytics'
     },
     {
-      title: 'Business Types',
+      title: 'Jenis Bisnis',
       icon: ShoppingBag,
       href: '/admin/business-types',
       active: router.pathname === '/admin/business-types'
     },
     {
-      title: 'Partners',
+      title: 'Mitra',
       icon: Users,
       href: '/admin/partners',
       active: router.pathname === '/admin/partners'
     },
     {
-      title: 'Outlets',
+      title: 'Outlet',
       icon: Store,
       href: '/admin/outlets',
       active: router.pathname === '/admin/outlets'
     },
     {
-      title: 'Activations',
+      title: 'Aktivasi',
       icon: FileCheck,
       href: '/admin/activations',
       active: router.pathname === '/admin/activations'
     },
     {
-      title: 'Transactions',
+      title: 'Transaksi',
       icon: DollarSign,
       href: '/admin/transactions',
       active: router.pathname === '/admin/transactions'
@@ -101,6 +109,7 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
           <div className="flex items-center justify-between h-16">
             {/* Left side */}
             <div className="flex items-center">
+              {/* Mobile menu toggle */}
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 lg:hidden"
@@ -108,14 +117,23 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
                 {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
               
-              <div className="flex items-center ml-4 lg:ml-0">
+              {/* Desktop sidebar toggle */}
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="hidden lg:block p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                title={sidebarCollapsed ? 'Buka sidebar' : 'Tutup sidebar'}
+              >
+                {sidebarCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+              </button>
+              
+              <div className="flex items-center ml-4">
                 <div className="flex-shrink-0">
                   <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                     BEDAGANG
                   </h1>
                 </div>
                 <div className="hidden md:block ml-4">
-                  <span className="text-sm text-gray-500 font-medium">Admin Panel</span>
+                  <span className="text-sm text-gray-500 font-medium">Panel Admin</span>
                 </div>
               </div>
             </div>
@@ -137,17 +155,17 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
                 className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Logout</span>
+                <span className="hidden sm:inline">Keluar</span>
               </button>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Sidebar */}
+      {/* Sidebar - Desktop */}
       <aside
-        className={`fixed left-0 top-16 h-full bg-white border-r border-gray-200 transition-all duration-300 z-20 ${
-          sidebarOpen ? 'w-64' : 'w-0 lg:w-20'
+        className={`hidden lg:block fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-all duration-300 z-20 overflow-hidden ${
+          sidebarCollapsed ? 'w-20' : 'w-64'
         }`}
       >
         <nav className="h-full overflow-y-auto py-4">
@@ -158,14 +176,25 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all ${
+                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all group relative ${
                     item.active
                       ? 'bg-blue-50 text-blue-600 font-medium'
                       : 'text-gray-700 hover:bg-gray-50'
+                  } ${
+                    sidebarCollapsed ? 'justify-center' : ''
                   }`}
+                  title={sidebarCollapsed ? item.title : ''}
                 >
                   <Icon className={`h-5 w-5 flex-shrink-0 ${item.active ? 'text-blue-600' : 'text-gray-400'}`} />
-                  {sidebarOpen && <span className="text-sm">{item.title}</span>}
+                  {!sidebarCollapsed && <span className="text-sm">{item.title}</span>}
+                  
+                  {/* Tooltip for collapsed state */}
+                  {sidebarCollapsed && (
+                    <div className="absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+                      {item.title}
+                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+                    </div>
+                  )}
                 </Link>
               );
             })}
@@ -173,10 +202,40 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
         </nav>
       </aside>
 
-      {/* Main Content - Full Width */}
+      {/* Sidebar - Mobile */}
+      <aside
+        className={`lg:hidden fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-transform duration-300 z-40 w-64 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <nav className="h-full overflow-y-auto py-4">
+          <div className="space-y-1 px-3">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg transition-all ${
+                    item.active
+                      ? 'bg-blue-50 text-blue-600 font-medium'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Icon className={`h-5 w-5 flex-shrink-0 ${item.active ? 'text-blue-600' : 'text-gray-400'}`} />
+                  <span className="text-sm">{item.title}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </aside>
+
+      {/* Main Content */}
       <main
         className={`pt-16 transition-all duration-300 min-h-screen ${
-          sidebarOpen ? 'lg:pl-64' : 'lg:pl-20'
+          sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
         }`}
       >
         <div className="p-4 sm:p-6 lg:p-8 w-full">
@@ -187,10 +246,10 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
       </main>
 
       {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
+      {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden"
-          onClick={() => setMobileMenuOpen(false)}
+          className="fixed inset-0 bg-gray-600 bg-opacity-75 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
         />
       )}
     </div>
