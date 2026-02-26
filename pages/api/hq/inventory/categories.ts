@@ -1,5 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+let CategoryModel: any;
+try {
+  const models = require('../../../../models');
+  CategoryModel = models.Category;
+} catch (e) { console.warn('Category model not available'); }
+
 interface Category {
   id: string;
   name: string;
@@ -67,52 +73,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-function getCategories(req: NextApiRequest, res: NextApiResponse) {
+async function getCategories(req: NextApiRequest, res: NextApiResponse) {
   const { parentId, flat, search } = req.query;
 
-  let result = categories;
+  if (CategoryModel) {
+    try {
+      const { Op } = require('sequelize');
+      const where: any = { isActive: true };
+      if (search) where.name = { [Op.iLike]: `%${search}%` };
+      if (parentId && parentId !== 'null') where.parentId = parentId;
+      else if (parentId === 'null') where.parentId = null;
 
+      const dbCats = await CategoryModel.findAll({ where, order: [['sortOrder', 'ASC'], ['name', 'ASC']] });
+
+      if (dbCats.length > 0) {
+        const mapped = dbCats.map((c: any) => ({
+          id: c.id, name: c.name, slug: c.slug || c.name.toLowerCase().replace(/\s+/g, '-'),
+          description: c.description || '', parentId: c.parentId || null, parentName: null,
+          level: c.parentId ? 1 : 0, productCount: c.productCount || 0,
+          isActive: c.isActive, sortOrder: c.sortOrder || 0, icon: c.icon || '📦', color: c.color || '#3B82F6'
+        }));
+        return res.status(200).json({ categories: mapped });
+      }
+    } catch (e: any) { console.warn('Categories DB failed:', e.message); }
+  }
+
+  // Mock fallback
+  let result = categories;
   if (search) {
     const searchStr = (search as string).toLowerCase();
     const flattenAndFilter = (cats: Category[]): Category[] => {
       const filtered: Category[] = [];
       cats.forEach(cat => {
-        if (cat.name.toLowerCase().includes(searchStr) || cat.description.toLowerCase().includes(searchStr)) {
-          filtered.push(cat);
-        }
-        if (cat.children) {
-          filtered.push(...flattenAndFilter(cat.children));
-        }
+        if (cat.name.toLowerCase().includes(searchStr) || cat.description.toLowerCase().includes(searchStr)) filtered.push(cat);
+        if (cat.children) filtered.push(...flattenAndFilter(cat.children));
       });
       return filtered;
     };
-    result = flattenAndFilter(categories);
-    return res.status(200).json({ categories: result });
+    return res.status(200).json({ categories: flattenAndFilter(categories) });
   }
-
   if (parentId) {
-    if (parentId === 'null') {
-      result = categories.filter(c => c.parentId === null);
-    } else {
-      const parent = categories.find(c => c.id === parentId);
-      result = parent?.children || [];
-    }
+    if (parentId === 'null') result = categories.filter(c => c.parentId === null);
+    else { const parent = categories.find(c => c.id === parentId); result = parent?.children || []; }
   }
-
   if (flat === 'true') {
     const flatten = (cats: Category[]): Category[] => {
-      const flattened: Category[] = [];
-      cats.forEach(cat => {
-        flattened.push({ ...cat, children: undefined });
-        if (cat.children) {
-          flattened.push(...flatten(cat.children));
-        }
-      });
-      return flattened;
+      const f: Category[] = [];
+      cats.forEach(cat => { f.push({ ...cat, children: undefined }); if (cat.children) f.push(...flatten(cat.children)); });
+      return f;
     };
     result = flatten(categories);
   }
-
   return res.status(200).json({ categories: result });
 }
 

@@ -1,5 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+let PriceTierModel: any, ProductPriceModel: any, ProductModel: any;
+try {
+  const models = require('../../../../models');
+  PriceTierModel = models.PriceTier;
+  ProductPriceModel = models.ProductPrice;
+  ProductModel = models.Product;
+} catch (e) { console.warn('Pricing models not available'); }
+
 interface PriceTier {
   id: string;
   code: string;
@@ -88,17 +96,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-function getPricing(req: NextApiRequest, res: NextApiResponse) {
+async function getPricing(req: NextApiRequest, res: NextApiResponse) {
   const { type, search, category, lockedOnly } = req.query;
 
+  // Try DB for tiers
+  if (type === 'tiers' && PriceTierModel) {
+    try {
+      const { Op } = require('sequelize');
+      const where: any = {};
+      if (search) where[Op.or] = [{ name: { [Op.iLike]: `%${search}%` } }, { code: { [Op.iLike]: `%${search}%` } }];
+      const dbTiers = await PriceTierModel.findAll({ where, order: [['name', 'ASC']] });
+      if (dbTiers.length > 0) return res.status(200).json({ priceTiers: dbTiers });
+    } catch (e: any) { console.warn('PriceTier DB failed:', e.message); }
+  }
+
+  // Try DB for product prices
+  if (type === 'products' && ProductPriceModel && ProductModel) {
+    try {
+      const { Op } = require('sequelize');
+      const where: any = {};
+      if (search) where[Op.or] = [{ '$product.name$': { [Op.iLike]: `%${search}%` } }, { '$product.sku$': { [Op.iLike]: `%${search}%` } }];
+      const dbPrices = await ProductPriceModel.findAll({
+        where, limit: 50,
+        include: [{ model: ProductModel, as: 'product', attributes: ['id', 'name', 'sku', 'costPrice'] }]
+      });
+      if (dbPrices.length > 0) return res.status(200).json({ productPrices: dbPrices });
+    } catch (e: any) { console.warn('ProductPrice DB failed:', e.message); }
+  }
+
+  // Mock fallback
   if (type === 'tiers') {
     let filteredTiers = priceTiers;
     if (search) {
-      const searchStr = (search as string).toLowerCase();
-      filteredTiers = filteredTiers.filter(t => 
-        t.name.toLowerCase().includes(searchStr) || 
-        t.code.toLowerCase().includes(searchStr)
-      );
+      const s = (search as string).toLowerCase();
+      filteredTiers = filteredTiers.filter(t => t.name.toLowerCase().includes(s) || t.code.toLowerCase().includes(s));
     }
     return res.status(200).json({ priceTiers: filteredTiers });
   }
@@ -106,18 +137,11 @@ function getPricing(req: NextApiRequest, res: NextApiResponse) {
   if (type === 'products') {
     let filteredProducts = productPrices;
     if (search) {
-      const searchStr = (search as string).toLowerCase();
-      filteredProducts = filteredProducts.filter(p => 
-        p.productName.toLowerCase().includes(searchStr) || 
-        p.sku.toLowerCase().includes(searchStr)
-      );
+      const s = (search as string).toLowerCase();
+      filteredProducts = filteredProducts.filter(p => p.productName.toLowerCase().includes(s) || p.sku.toLowerCase().includes(s));
     }
-    if (category && category !== 'Semua Kategori') {
-      filteredProducts = filteredProducts.filter(p => p.category === category);
-    }
-    if (lockedOnly === 'true') {
-      filteredProducts = filteredProducts.filter(p => p.isLocked);
-    }
+    if (category && category !== 'Semua Kategori') filteredProducts = filteredProducts.filter(p => p.category === category);
+    if (lockedOnly === 'true') filteredProducts = filteredProducts.filter(p => p.isLocked);
     return res.status(200).json({ productPrices: filteredProducts });
   }
 
