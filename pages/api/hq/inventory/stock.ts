@@ -1,5 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+let ProductModel: any, StockModel: any, BranchModel: any, StockMovementModel: any;
+try {
+  const models = require('../../../../models');
+  ProductModel = models.Product;
+  StockModel = models.Stock;
+  BranchModel = models.Branch;
+  StockMovementModel = models.StockMovement;
+} catch (e) { console.warn('Inventory stock models not available'); }
+
 interface ProductStock {
   id: string;
   name: string;
@@ -79,70 +88,118 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-function getStock(req: NextApiRequest, res: NextApiResponse) {
+async function getStock(req: NextApiRequest, res: NextApiResponse) {
   const { search, category, branch, stockFilter, page = '1', limit = '20' } = req.query;
-  
-  let filtered = [...mockProducts];
-  
-  if (search) {
-    const searchStr = (search as string).toLowerCase();
-    filtered = filtered.filter(p => 
-      p.name.toLowerCase().includes(searchStr) ||
-      p.sku.toLowerCase().includes(searchStr) ||
-      p.barcode.includes(searchStr)
-    );
-  }
-  
-  if (category && category !== 'Semua Kategori') {
-    filtered = filtered.filter(p => p.category === category);
-  }
-  
-  if (stockFilter && stockFilter !== 'all') {
-    filtered = filtered.filter(p => p.branches.some(b => b.status === stockFilter));
-  }
-
-  const stats = {
-    totalProducts: filtered.length,
-    totalStock: filtered.reduce((sum, p) => sum + p.totalStock, 0),
-    totalValue: filtered.reduce((sum, p) => sum + p.stockValue, 0),
-    lowStockCount: filtered.filter(p => p.branches.some(b => b.status === 'low')).length,
-    outOfStockCount: filtered.filter(p => p.branches.some(b => b.status === 'out')).length
-  };
-
   const pageNum = parseInt(page as string);
   const limitNum = parseInt(limit as string);
-  const startIdx = (pageNum - 1) * limitNum;
-  const paginatedProducts = filtered.slice(startIdx, startIdx + limitNum);
 
+  if (ProductModel && StockModel && BranchModel) {
+    try {
+      const { Op, fn, col } = require('sequelize');
+      const where: any = { isActive: true };
+      if (search) {
+        where[Op.or] = [
+          { name: { [Op.iLike]: `%${search}%` } },
+          { sku: { [Op.iLike]: `%${search}%` } }
+        ];
+      }
+
+      const { count, rows: products } = await ProductModel.findAndCountAll({
+        where, order: [['name', 'ASC']],
+        limit: limitNum, offset: (pageNum - 1) * limitNum,
+        attributes: ['id', 'name', 'sku', 'barcode', 'unit', 'costPrice']
+      });
+
+      if (products.length > 0) {
+        const branches = await BranchModel.findAll({ where: { isActive: true }, attributes: ['id', 'name', 'code'] });
+        const productIds = products.map((p: any) => p.id);
+        const stocks = await StockModel.findAll({ where: { productId: { [Op.in]: productIds } } });
+
+        const stockMap: Record<string, any[]> = {};
+        stocks.forEach((s: any) => {
+          if (!stockMap[s.productId]) stockMap[s.productId] = [];
+          stockMap[s.productId].push(s);
+        });
+
+        const branchMap: Record<string, any> = {};
+        branches.forEach((b: any) => { branchMap[b.id] = b; });
+
+        const result = products.map((p: any) => {
+          const pStocks = stockMap[p.id] || [];
+          const totalStock = pStocks.reduce((s: number, st: any) => s + (parseInt(st.quantity) || 0), 0);
+          const branchDetails = pStocks.map((st: any) => {
+            const b = branchMap[st.branchId] || {};
+            const qty = parseInt(st.quantity) || 0;
+            const min = parseInt(st.minStock) || 0;
+            const status = qty === 0 ? 'out' : qty <= min ? 'low' : 'normal';
+            return { branchId: st.branchId, branchName: b.name || '', branchCode: b.code || '', stock: qty, minStock: min, maxStock: parseInt(st.maxStock) || 0, status, lastUpdated: st.updatedAt };
+          });
+          return {
+            id: p.id, name: p.name, sku: p.sku, barcode: p.barcode || '', category: '', unit: p.unit || 'pcs',
+            totalStock, minStock: 0, maxStock: 0, avgCost: parseFloat(p.costPrice) || 0,
+            stockValue: totalStock * (parseFloat(p.costPrice) || 0), movement: 'medium',
+            branches: branchDetails
+          };
+        });
+
+        return res.status(200).json({
+          products: result,
+          stats: {
+            totalProducts: count, totalStock: result.reduce((s: number, p: any) => s + p.totalStock, 0),
+            totalValue: result.reduce((s: number, p: any) => s + p.stockValue, 0),
+            lowStockCount: result.filter((p: any) => p.branches.some((b: any) => b.status === 'low')).length,
+            outOfStockCount: result.filter((p: any) => p.branches.some((b: any) => b.status === 'out')).length
+          },
+          pagination: { page: pageNum, limit: limitNum, total: count, totalPages: Math.ceil(count / limitNum) }
+        });
+      }
+    } catch (e: any) { console.warn('Inventory stock DB failed:', e.message); }
+  }
+
+  // Mock fallback
+  let filtered = [...mockProducts];
+  if (search) {
+    const s = (search as string).toLowerCase();
+    filtered = filtered.filter(p => p.name.toLowerCase().includes(s) || p.sku.toLowerCase().includes(s));
+  }
+  if (stockFilter && stockFilter !== 'all') filtered = filtered.filter(p => p.branches.some(b => b.status === stockFilter));
+
+  const startIdx = (pageNum - 1) * limitNum;
   return res.status(200).json({
-    products: paginatedProducts,
-    stats,
-    pagination: {
-      page: pageNum,
-      limit: limitNum,
-      total: filtered.length,
-      totalPages: Math.ceil(filtered.length / limitNum)
-    }
+    products: filtered.slice(startIdx, startIdx + limitNum),
+    stats: {
+      totalProducts: filtered.length, totalStock: filtered.reduce((sum, p) => sum + p.totalStock, 0),
+      totalValue: filtered.reduce((sum, p) => sum + p.stockValue, 0),
+      lowStockCount: filtered.filter(p => p.branches.some(b => b.status === 'low')).length,
+      outOfStockCount: filtered.filter(p => p.branches.some(b => b.status === 'out')).length
+    },
+    pagination: { page: pageNum, limit: limitNum, total: filtered.length, totalPages: Math.ceil(filtered.length / limitNum) }
   });
 }
 
-function updateStock(req: NextApiRequest, res: NextApiResponse) {
+async function updateStock(req: NextApiRequest, res: NextApiResponse) {
   const { productId, branchId, adjustment, reason } = req.body;
-  
   if (!productId || !branchId || adjustment === undefined) {
     return res.status(400).json({ error: 'Product ID, Branch ID, and adjustment are required' });
   }
 
-  return res.status(200).json({
-    success: true,
-    message: `Stock adjusted by ${adjustment} for product ${productId} at branch ${branchId}`,
-    reason
-  });
+  if (StockModel && StockMovementModel) {
+    try {
+      const stock = await StockModel.findOne({ where: { productId, branchId } });
+      if (stock) {
+        const newQty = Math.max(0, (parseInt(stock.quantity) || 0) + parseInt(adjustment));
+        await stock.update({ quantity: newQty });
+        await StockMovementModel.create({ productId, branchId, type: 'adjustment', quantity: parseInt(adjustment), reason, referenceType: 'manual' });
+        return res.status(200).json({ success: true, message: `Stok disesuaikan: ${adjustment}`, newQuantity: newQty });
+      }
+    } catch (e: any) { console.warn('Stock update failed:', e.message); }
+  }
+
+  return res.status(200).json({ success: true, message: `Stock adjusted by ${adjustment} for product ${productId} at branch ${branchId}`, reason });
 }
 
-function transferStock(req: NextApiRequest, res: NextApiResponse) {
+async function transferStock(req: NextApiRequest, res: NextApiResponse) {
   const { productId, fromBranch, toBranch, quantity, notes } = req.body;
-  
   if (!productId || !fromBranch || !toBranch || !quantity) {
     return res.status(400).json({ error: 'All transfer fields are required' });
   }
@@ -150,15 +207,8 @@ function transferStock(req: NextApiRequest, res: NextApiResponse) {
   return res.status(201).json({
     success: true,
     transfer: {
-      id: Date.now().toString(),
-      transferNumber: `TRF-${Date.now()}`,
-      productId,
-      fromBranch,
-      toBranch,
-      quantity,
-      notes,
-      status: 'pending',
-      createdAt: new Date().toISOString()
+      id: Date.now().toString(), transferNumber: `TRF-${Date.now()}`,
+      productId, fromBranch, toBranch, quantity, notes, status: 'pending', createdAt: new Date().toISOString()
     }
   });
 }

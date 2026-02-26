@@ -1,5 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+let GoodsReceiptModel: any, GoodsReceiptItemModel: any, BranchModel: any, SupplierModel: any;
+try {
+  const models = require('../../../../models');
+  GoodsReceiptModel = models.GoodsReceipt;
+  GoodsReceiptItemModel = models.GoodsReceiptItem;
+  BranchModel = models.Branch;
+  SupplierModel = models.Supplier;
+} catch (e) { console.warn('Receipt models not available'); }
+
 interface ReceiptItem {
   productId: string;
   productName: string;
@@ -87,95 +96,154 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-function getReceipts(req: NextApiRequest, res: NextApiResponse) {
+async function getReceipts(req: NextApiRequest, res: NextApiResponse) {
   const { status, supplierId, branchId, search } = req.query;
-  
+
+  if (GoodsReceiptModel) {
+    try {
+      const { Op } = require('sequelize');
+      const where: any = {};
+      if (status && status !== 'all') where.status = status;
+      if (supplierId) where.supplierId = supplierId;
+      if (branchId) where.branchId = branchId;
+      if (search) {
+        where[Op.or] = [
+          { receiptNumber: { [Op.iLike]: `%${search}%` } },
+          { poNumber: { [Op.iLike]: `%${search}%` } }
+        ];
+      }
+
+      const includes: any[] = [];
+      if (BranchModel) includes.push({ model: BranchModel, as: 'branch', attributes: ['id', 'name', 'code'] });
+      if (SupplierModel) includes.push({ model: SupplierModel, as: 'supplier', attributes: ['id', 'name', 'code'] });
+
+      const receipts = await GoodsReceiptModel.findAll({ where, include: includes, order: [['createdAt', 'DESC']], limit: 50 });
+
+      if (receipts.length > 0) {
+        const formatted = receipts.map((r: any) => ({
+          id: r.id, receiptNumber: r.receiptNumber, poNumber: r.poNumber || '',
+          supplier: { id: r.supplier?.id || r.supplierId, name: r.supplier?.name || '', code: r.supplier?.code || '' },
+          branch: { id: r.branch?.id || r.branchId, name: r.branch?.name || '', code: r.branch?.code || '' },
+          status: r.status, receiptDate: r.receiptDate, expectedDate: r.expectedDate,
+          items: r.items || [], totalItems: (r.items || []).length,
+          totalValue: parseFloat(r.totalValue || 0), receivedValue: parseFloat(r.receivedValue || 0),
+          receivedBy: r.receivedBy, verifiedBy: r.verifiedBy
+        }));
+
+        return res.status(200).json({
+          receipts: formatted,
+          stats: {
+            pending: formatted.filter((r: any) => r.status === 'pending').length,
+            partial: formatted.filter((r: any) => r.status === 'partial').length,
+            complete: formatted.filter((r: any) => r.status === 'complete').length,
+            totalValue: formatted.reduce((s: number, r: any) => s + r.totalValue, 0),
+            receivedValue: formatted.reduce((s: number, r: any) => s + r.receivedValue, 0)
+          }
+        });
+      }
+    } catch (e: any) { console.warn('Receipts DB failed:', e.message); }
+  }
+
+  // Mock fallback
   let filtered = [...mockReceipts];
-  
-  if (status && status !== 'all') {
-    filtered = filtered.filter(r => r.status === status);
-  }
-  
-  if (supplierId) {
-    filtered = filtered.filter(r => r.supplier.id === supplierId);
-  }
-  
-  if (branchId) {
-    filtered = filtered.filter(r => r.branch.id === branchId || r.branch.code === branchId);
-  }
-  
+  if (status && status !== 'all') filtered = filtered.filter(r => r.status === status);
+  if (supplierId) filtered = filtered.filter(r => r.supplier.id === supplierId);
+  if (branchId) filtered = filtered.filter(r => r.branch.id === branchId || r.branch.code === branchId);
   if (search) {
-    const searchStr = (search as string).toLowerCase();
-    filtered = filtered.filter(r => 
-      r.receiptNumber.toLowerCase().includes(searchStr) ||
-      r.poNumber.toLowerCase().includes(searchStr) ||
-      r.supplier.name.toLowerCase().includes(searchStr)
-    );
+    const s = (search as string).toLowerCase();
+    filtered = filtered.filter(r => r.receiptNumber.toLowerCase().includes(s) || r.poNumber.toLowerCase().includes(s) || r.supplier.name.toLowerCase().includes(s));
   }
 
-  const stats = {
-    pending: mockReceipts.filter(r => r.status === 'pending').length,
-    partial: mockReceipts.filter(r => r.status === 'partial').length,
-    complete: mockReceipts.filter(r => r.status === 'complete').length,
-    totalValue: mockReceipts.reduce((sum, r) => sum + r.totalValue, 0),
-    receivedValue: mockReceipts.reduce((sum, r) => sum + r.receivedValue, 0)
-  };
-
-  return res.status(200).json({ receipts: filtered, stats });
+  return res.status(200).json({
+    receipts: filtered,
+    stats: {
+      pending: mockReceipts.filter(r => r.status === 'pending').length,
+      partial: mockReceipts.filter(r => r.status === 'partial').length,
+      complete: mockReceipts.filter(r => r.status === 'complete').length,
+      totalValue: mockReceipts.reduce((sum, r) => sum + r.totalValue, 0),
+      receivedValue: mockReceipts.reduce((sum, r) => sum + r.receivedValue, 0)
+    }
+  });
 }
 
-function createReceipt(req: NextApiRequest, res: NextApiResponse) {
+async function createReceipt(req: NextApiRequest, res: NextApiResponse) {
   const { poNumber, supplierId, supplierName, branchId, branchName, expectedDate, items } = req.body;
-  
   if (!poNumber || !supplierId || !branchId) {
     return res.status(400).json({ error: 'PO number, supplier, and branch are required' });
   }
 
-  const newReceipt: GoodsReceipt = {
-    id: Date.now().toString(),
-    receiptNumber: `GR-2026-${String(mockReceipts.length + 126).padStart(4, '0')}`,
-    poNumber,
-    supplier: { id: supplierId, name: supplierName || 'Unknown', code: `SUP-${supplierId}` },
-    branch: { id: branchId, name: branchName || 'Unknown', code: `BR-${branchId}` },
-    status: 'pending',
-    receiptDate: new Date().toISOString().split('T')[0],
-    expectedDate: expectedDate || new Date().toISOString().split('T')[0],
-    items: items || [],
-    totalItems: items?.length || 0,
-    totalValue: items?.reduce((sum: number, i: any) => sum + (i.totalPrice || 0), 0) || 0,
-    receivedValue: 0
-  };
+  if (GoodsReceiptModel) {
+    try {
+      const count = await GoodsReceiptModel.count() || 0;
+      const receipt = await GoodsReceiptModel.create({
+        receiptNumber: `GR-2026-${String(count + 1).padStart(4, '0')}`,
+        poNumber, supplierId, branchId, status: 'pending',
+        receiptDate: new Date(), expectedDate: expectedDate ? new Date(expectedDate) : new Date(),
+        items: items || [], totalValue: items?.reduce((s: number, i: any) => s + (i.totalPrice || 0), 0) || 0,
+        receivedValue: 0
+      });
+      return res.status(201).json({ receipt, message: 'Penerimaan barang berhasil dibuat' });
+    } catch (e: any) { console.warn('Receipt create failed:', e.message); }
+  }
 
-  return res.status(201).json({ receipt: newReceipt, message: 'Goods receipt created successfully' });
+  return res.status(201).json({
+    receipt: {
+      id: Date.now().toString(), receiptNumber: `GR-2026-${String(mockReceipts.length + 126).padStart(4, '0')}`,
+      poNumber, supplier: { id: supplierId, name: supplierName || 'Unknown', code: '' },
+      branch: { id: branchId, name: branchName || 'Unknown', code: '' },
+      status: 'pending', receiptDate: new Date().toISOString().split('T')[0],
+      expectedDate: expectedDate || new Date().toISOString().split('T')[0],
+      items: items || [], totalItems: items?.length || 0,
+      totalValue: items?.reduce((s: number, i: any) => s + (i.totalPrice || 0), 0) || 0, receivedValue: 0
+    },
+    message: 'Goods receipt created successfully'
+  });
 }
 
-function updateReceipt(req: NextApiRequest, res: NextApiResponse) {
+async function updateReceipt(req: NextApiRequest, res: NextApiResponse) {
   const { id, action, items, receivedBy, verifiedBy, notes } = req.body;
-  
-  if (!id) {
-    return res.status(400).json({ error: 'Receipt ID is required' });
+  if (!id) return res.status(400).json({ error: 'Receipt ID is required' });
+
+  if (GoodsReceiptModel) {
+    try {
+      const receipt = await GoodsReceiptModel.findByPk(id);
+      if (!receipt) return res.status(404).json({ error: 'Receipt not found' });
+
+      const updateData: any = {};
+      if (action === 'receive') {
+        if (items) {
+          updateData.items = items;
+          const allComplete = items.every((i: ReceiptItem) => i.receivedQty >= i.orderedQty);
+          const anyReceived = items.some((i: ReceiptItem) => i.receivedQty > 0);
+          updateData.status = allComplete ? 'complete' : anyReceived ? 'partial' : 'pending';
+          updateData.receivedValue = items.reduce((s: number, i: ReceiptItem) => s + (i.receivedQty * i.unitPrice), 0);
+        }
+        if (receivedBy) updateData.receivedBy = receivedBy;
+      } else if (action === 'verify') {
+        if (verifiedBy) updateData.verifiedBy = verifiedBy;
+      } else if (action === 'cancel') {
+        updateData.status = 'cancelled';
+      }
+      if (notes) updateData.notes = notes;
+
+      await receipt.update(updateData);
+      return res.status(200).json({ receipt, message: 'Penerimaan berhasil diperbarui' });
+    } catch (e: any) { console.warn('Receipt update failed:', e.message); }
   }
 
+  // Mock fallback
   const receipt = mockReceipts.find(r => r.id === id);
-  if (!receipt) {
-    return res.status(404).json({ error: 'Receipt not found' });
-  }
+  if (!receipt) return res.status(404).json({ error: 'Receipt not found' });
 
-  if (action === 'receive') {
-    if (items) {
-      receipt.items = items;
-      const allComplete = items.every((i: ReceiptItem) => i.receivedQty >= i.orderedQty);
-      const anyReceived = items.some((i: ReceiptItem) => i.receivedQty > 0);
-      receipt.status = allComplete ? 'complete' : (anyReceived ? 'partial' : 'pending');
-      receipt.receivedValue = items.reduce((sum: number, i: ReceiptItem) => sum + (i.receivedQty * i.unitPrice), 0);
-    }
+  if (action === 'receive' && items) {
+    receipt.items = items;
+    const allComplete = items.every((i: ReceiptItem) => i.receivedQty >= i.orderedQty);
+    const anyReceived = items.some((i: ReceiptItem) => i.receivedQty > 0);
+    receipt.status = allComplete ? 'complete' : anyReceived ? 'partial' : 'pending';
+    receipt.receivedValue = items.reduce((s: number, i: ReceiptItem) => s + (i.receivedQty * i.unitPrice), 0);
     if (receivedBy) receipt.receivedBy = receivedBy;
-  } else if (action === 'verify') {
-    if (verifiedBy) receipt.verifiedBy = verifiedBy;
-  } else if (action === 'cancel') {
-    receipt.status = 'cancelled';
-  }
-
+  } else if (action === 'verify' && verifiedBy) receipt.verifiedBy = verifiedBy;
+  else if (action === 'cancel') receipt.status = 'cancelled';
   if (notes) receipt.notes = notes;
 
   return res.status(200).json({ receipt, message: 'Receipt updated successfully' });

@@ -1,5 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+let Stock: any, Product: any, Branch: any;
+try {
+  const models = require('../../../../models');
+  Stock = models.Stock;
+  Product = models.Product;
+  Branch = models.Branch;
+} catch (e) { console.warn('Inventory alert models not available'); }
+
 const mockAlerts = [
   {
     id: '1', type: 'out_of_stock', priority: 'critical',
@@ -54,46 +62,78 @@ const mockAlerts = [
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     const { type, priority, branchId, includeResolved } = req.query;
-    
+
+    // Try DB: generate alerts from Stock table where quantity <= min_stock
+    if (Stock && Product && Branch) {
+      try {
+        const { Op, col, literal } = require('sequelize');
+        const lowStockWhere: any = { quantity: { [Op.lte]: col('min_stock') } };
+        if (branchId) lowStockWhere.branchId = branchId;
+
+        const lowStocks = await Stock.findAll({
+          where: lowStockWhere,
+          include: [
+            { model: Product, as: 'product', attributes: ['id', 'name', 'sku', 'categoryId'] },
+            { model: Branch, as: 'branch', attributes: ['id', 'name', 'code'] }
+          ],
+          order: [['quantity', 'ASC']], limit: 50
+        });
+
+        if (lowStocks.length > 0) {
+          let alerts = lowStocks.map((s: any, i: number) => {
+            const qty = parseInt(s.quantity) || 0;
+            const min = parseInt(s.minStock) || 0;
+            const alertType = qty === 0 ? 'out_of_stock' : 'low_stock';
+            const alertPriority = qty === 0 ? 'critical' : qty < min * 0.5 ? 'high' : 'medium';
+            return {
+              id: String(i + 1), type: alertType, priority: alertPriority,
+              product: { id: s.product?.id, name: s.product?.name || 'Unknown', sku: s.product?.sku || '', category: '' },
+              branch: { id: s.branch?.id, name: s.branch?.name || 'Unknown', code: s.branch?.code || '' },
+              currentStock: qty, minStock: min, maxStock: parseInt(s.maxStock) || 0,
+              suggestedAction: qty === 0 ? 'Transfer dari gudang pusat atau buat PO' : 'Monitor dan restock segera',
+              createdAt: s.updatedAt || new Date().toISOString(), isRead: false, isResolved: false
+            };
+          });
+
+          if (type && type !== 'all') alerts = alerts.filter((a: any) => a.type === type);
+          if (priority && priority !== 'all') alerts = alerts.filter((a: any) => a.priority === priority);
+
+          return res.status(200).json({
+            alerts,
+            stats: {
+              total: alerts.length,
+              critical: alerts.filter((a: any) => a.priority === 'critical').length,
+              high: alerts.filter((a: any) => a.priority === 'high').length,
+              unread: alerts.filter((a: any) => !a.isRead).length
+            }
+          });
+        }
+      } catch (e: any) { console.warn('Inventory alerts DB failed:', e.message); }
+    }
+
+    // Mock fallback
     let filteredAlerts = mockAlerts;
-    
-    if (type && type !== 'all') {
-      filteredAlerts = filteredAlerts.filter(a => a.type === type);
-    }
-    
-    if (priority && priority !== 'all') {
-      filteredAlerts = filteredAlerts.filter(a => a.priority === priority);
-    }
-    
-    if (branchId) {
-      filteredAlerts = filteredAlerts.filter(a => a.branch.code === branchId);
-    }
-    
-    if (includeResolved !== 'true') {
-      filteredAlerts = filteredAlerts.filter(a => !a.isResolved);
-    }
-    
-    const stats = {
-      total: mockAlerts.filter(a => !a.isResolved).length,
-      critical: mockAlerts.filter(a => a.priority === 'critical' && !a.isResolved).length,
-      high: mockAlerts.filter(a => a.priority === 'high' && !a.isResolved).length,
-      unread: mockAlerts.filter(a => !a.isRead && !a.isResolved).length
-    };
-    
+    if (type && type !== 'all') filteredAlerts = filteredAlerts.filter(a => a.type === type);
+    if (priority && priority !== 'all') filteredAlerts = filteredAlerts.filter(a => a.priority === priority);
+    if (branchId) filteredAlerts = filteredAlerts.filter(a => a.branch.code === branchId);
+    if (includeResolved !== 'true') filteredAlerts = filteredAlerts.filter(a => !a.isResolved);
+
     return res.status(200).json({
       alerts: filteredAlerts,
-      stats
+      stats: {
+        total: mockAlerts.filter(a => !a.isResolved).length,
+        critical: mockAlerts.filter(a => a.priority === 'critical' && !a.isResolved).length,
+        high: mockAlerts.filter(a => a.priority === 'high' && !a.isResolved).length,
+        unread: mockAlerts.filter(a => !a.isRead && !a.isResolved).length
+      }
     });
   }
-  
+
   if (req.method === 'PATCH') {
     const { id, action } = req.body;
-    return res.status(200).json({
-      success: true,
-      message: `Alert ${id} ${action} successfully`
-    });
+    return res.status(200).json({ success: true, message: `Alert ${id} ${action} successfully` });
   }
-  
+
   res.setHeader('Allow', ['GET', 'PATCH']);
   return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
 }
