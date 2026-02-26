@@ -60,6 +60,7 @@ export default function LeaveManagementPage() {
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (typeFilter !== 'all') params.set('leaveType', typeFilter);
       const res = await fetch(`/api/hq/hris/leave?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.success) {
         setLeaves(json.data || []);
@@ -91,6 +92,7 @@ export default function LeaveManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: 'approved' })
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.success) {
         toast.success('Cuti disetujui');
@@ -108,6 +110,7 @@ export default function LeaveManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status: 'rejected', rejectionReason: actionReason })
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.success) {
         toast.success('Cuti ditolak');

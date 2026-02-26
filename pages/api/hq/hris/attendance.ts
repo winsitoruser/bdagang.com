@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Op } from 'sequelize';
+
+let Op: any;
+try { Op = require('sequelize').Op; } catch (e) {}
 
 let EmployeeAttendance: any, Employee: any, Branch: any;
 try {

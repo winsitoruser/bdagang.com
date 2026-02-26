@@ -1,8 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Op } from 'sequelize';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { getPaginationParams, getPaginationMeta } from '../../../../lib/api/pagination';
 import { validateRequiredFields } from '../../../../lib/api/validation';
+
+let Op: any;
+try { Op = require('sequelize').Op; } catch (e) {}
 
 let Employee: any, User: any, Branch: any, EmployeeKPI: any, EmployeeAttendance: any;
 try {

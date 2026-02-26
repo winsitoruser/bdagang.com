@@ -61,6 +61,7 @@ export default function AttendanceSettingsPage() {
     try {
       const params = selectedBranch ? `?branchId=${selectedBranch}` : '';
       const res = await fetch(`/api/hq/hris/attendance/settings${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.success && json.data) {
         setSettings({ ...defaultSettings, ...json.data });
@@ -87,6 +88,7 @@ export default function AttendanceSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...settings, branchId: selectedBranch || null })
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.success) {
         toast.success('Pengaturan berhasil disimpan');

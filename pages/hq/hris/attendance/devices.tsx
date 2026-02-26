@@ -57,6 +57,7 @@ export default function DeviceManagementPage() {
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (typeFilter !== 'all') params.set('deviceType', typeFilter);
       const res = await fetch(`/api/hq/hris/attendance/devices?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.success) {
         setDevices(json.data || []);
@@ -96,6 +97,7 @@ export default function DeviceManagementPage() {
         method, headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.success) {
         toast.success(isEdit ? 'Device berhasil diupdate' : 'Device berhasil ditambahkan');
@@ -129,6 +131,7 @@ export default function DeviceManagementPage() {
     if (!confirm('Yakin ingin menonaktifkan device ini?')) return;
     try {
       const res = await fetch(`/api/hq/hris/attendance/devices?id=${deviceId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.success) {
         toast.success('Device dinonaktifkan');
