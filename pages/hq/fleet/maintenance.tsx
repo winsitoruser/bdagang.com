@@ -13,18 +13,34 @@ import {
   Filter
 } from 'lucide-react';
 import { mockMaintenanceRecords } from '../../../lib/mockData/fleetAdvanced';
-import { mockMaintenanceSchedules } from '../../../lib/mockData/fleetPhase2';
-import { mockVehicles } from '../../../lib/mockData/fleet';
 
 export default function MaintenanceManagement() {
   const [mounted, setMounted] = useState(false);
-  const [schedules, setSchedules] = useState(mockMaintenanceSchedules);
-  const [records, setRecords] = useState(mockMaintenanceRecords);
+  const [schedules, setSchedules] = useState<any[]>([]);
+  const [records, setRecords] = useState<any[]>(mockMaintenanceRecords);
   const [activeTab, setActiveTab] = useState<'schedules' | 'history'>('schedules');
+  const [vehicleMap, setVehicleMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setMounted(true);
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      const [schedRes, vehRes] = await Promise.all([
+        fetch('/api/fleet/maintenance/schedules'),
+        fetch('/api/fleet/vehicles?limit=100')
+      ]);
+      if (schedRes.ok) { const d = await schedRes.json(); setSchedules(d.data || []); }
+      if (vehRes.ok) {
+        const d = await vehRes.json();
+        const map: Record<string, string> = {};
+        (d.data || []).forEach((v: any) => { map[v.id] = v.licensePlate || v.vehicleNumber; });
+        setVehicleMap(map);
+      }
+    } catch (e) { console.error('Maintenance fetch failed:', e); }
+  };
 
   if (!mounted) return null;
 
@@ -34,8 +50,7 @@ export default function MaintenanceManagement() {
   const avgCost = records.length > 0 ? totalCost / records.length : 0;
 
   const getVehicleInfo = (vehicleId: string) => {
-    const vehicle = mockVehicles.find(v => v.id === vehicleId);
-    return vehicle ? vehicle.licensePlate : vehicleId;
+    return vehicleMap[vehicleId] || vehicleId;
   };
 
   return (

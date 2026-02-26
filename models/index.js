@@ -118,6 +118,7 @@ db.FleetRoute = require('./FleetRoute');
 db.FleetRouteAssignment = require('./FleetRouteAssignment');
 db.FleetGpsLocation = require('./FleetGpsLocation');
 db.FleetMaintenanceSchedule = require('./FleetMaintenanceSchedule');
+db.FleetFuelTransaction = require('./FleetFuelTransaction');
 
 // Third-party Integration Models
 db.IntegrationProvider = require('./IntegrationProvider');

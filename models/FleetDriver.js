@@ -14,7 +14,7 @@ const FleetDriver = sequelize.define('FleetDriver', {
     field: 'tenant_id'
   },
   userId: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true,
     references: { model: 'users', key: 'id' },
     field: 'user_id'

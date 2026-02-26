@@ -24,6 +24,7 @@ import {
   LineChart
 } from 'lucide-react';
 import { mockFleetKPIs } from '../../../lib/mockData/fleetAdvanced';
+// KPI page uses computed chart data - fetches fleet stats from API
 import {
   LineChart as RechartsLine,
   Line,
@@ -46,12 +47,34 @@ import {
 
 export default function FleetKPIDashboard() {
   const [mounted, setMounted] = useState(false);
-  const [kpis, setKpis] = useState(mockFleetKPIs);
+  const [kpis, setKpis] = useState<any>(mockFleetKPIs);
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month' | 'year'>('month');
 
   useEffect(() => {
     setMounted(true);
+    fetchKPIs();
   }, []);
+
+  const fetchKPIs = async () => {
+    try {
+      const [vehRes, costRes] = await Promise.all([
+        fetch('/api/fleet/vehicles?limit=100'),
+        fetch('/api/fleet/costs')
+      ]);
+      if (vehRes.ok && costRes.ok) {
+        const vehData = await vehRes.json();
+        const costData = await costRes.json();
+        // Merge real stats into KPIs if available
+        if (vehData.stats) {
+          setKpis((prev: any) => ({
+            ...prev,
+            totalVehicles: vehData.stats.total || prev.totalVehicles,
+            activeVehicles: vehData.stats.active || prev.activeVehicles,
+          }));
+        }
+      }
+    } catch (e) { console.error('KPI fetch failed:', e); }
+  };
 
   if (!mounted) return null;
 

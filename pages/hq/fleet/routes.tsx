@@ -14,19 +14,32 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { mockRoutes } from '../../../lib/mockData/fleetAdvanced';
-import { mockRouteAssignments } from '../../../lib/mockData/fleetPhase2';
 
 export default function RouteManagement() {
   const [mounted, setMounted] = useState(false);
-  const [routes, setRoutes] = useState(mockRoutes);
-  const [assignments, setAssignments] = useState(mockRouteAssignments);
+  const [routes, setRoutes] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'routes' | 'assignments'>('routes');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setMounted(true);
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [routesRes, assignRes] = await Promise.all([
+        fetch('/api/fleet/routes'),
+        fetch('/api/fleet/routes/assignments')
+      ]);
+      if (routesRes.ok) { const d = await routesRes.json(); setRoutes(d.data || []); }
+      if (assignRes.ok) { const d = await assignRes.json(); setAssignments(d.data || []); }
+    } catch (e) { console.error('Failed to fetch fleet routes:', e); }
+    setLoading(false);
+  };
 
   if (!mounted) return null;
 
@@ -188,7 +201,7 @@ export default function RouteManagement() {
                         <div className="mt-3 pt-3 border-t border-gray-200">
                           <p className="text-xs text-gray-500 mb-2">Stops:</p>
                           <div className="flex flex-wrap gap-2">
-                            {route.stops.map((stop, idx) => (
+                            {route.stops.map((stop: any, idx: number) => (
                               <span key={idx} className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
                                 {stop.sequence}. {stop.locationName}
                               </span>
