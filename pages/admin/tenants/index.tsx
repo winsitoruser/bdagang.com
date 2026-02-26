@@ -153,7 +153,7 @@ export default function TenantsManagement() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading tenants...</p>
+            <p className="mt-4 text-gray-600">Memuat tenant...</p>
           </div>
         </div>
       </AdminLayout>
@@ -163,7 +163,7 @@ export default function TenantsManagement() {
   return (
     <>
       <Head>
-        <title>Tenant Management - Admin Panel</title>
+        <title>Manajemen Tenant - Panel Admin</title>
       </Head>
 
       <AdminLayout>
@@ -171,9 +171,9 @@ export default function TenantsManagement() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Tenant Management</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Manajemen Tenant</h1>
               <p className="mt-1 text-sm text-gray-500">
-                Manage all tenants and their modules
+                Kelola semua tenant dan modul mereka
               </p>
             </div>
             <Link
@@ -181,7 +181,7 @@ export default function TenantsManagement() {
               className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
               <Plus className="w-5 h-5 mr-2" />
-              Create Tenant
+              Buat Tenant
             </Link>
           </div>
         </div>
@@ -195,7 +195,7 @@ export default function TenantsManagement() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search tenants..."
+                placeholder="Cari tenant..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -208,8 +208,8 @@ export default function TenantsManagement() {
               onChange={(e) => setFilterBusinessType(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Business Types</option>
-              <option value="retail">Retail</option>
+              <option value="all">Semua Jenis Bisnis</option>
+              <option value="retail">Ritel</option>
               <option value="fnb">F&B</option>
               <option value="hybrid">Hybrid</option>
             </select>
@@ -220,9 +220,9 @@ export default function TenantsManagement() {
               onChange={(e) => setFilterStatus(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending Setup</option>
+              <option value="all">Semua Status</option>
+              <option value="active">Aktif</option>
+              <option value="pending">Menunggu Pengaturan</option>
             </select>
 
             {/* Clear Filters */}
@@ -234,7 +234,7 @@ export default function TenantsManagement() {
               }}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              Clear Filters
+              Bersihkan Filter
             </button>
           </div>
         </div>
@@ -250,19 +250,19 @@ export default function TenantsManagement() {
                   Tenant
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Business Type
+                  Jenis Bisnis
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Partner
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Users
+                  Pengguna
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  Aksi
                 </th>
               </tr>
             </thead>
@@ -305,7 +305,7 @@ export default function TenantsManagement() {
                         </div>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-400">No partner</span>
+                      <span className="text-sm text-gray-400">Tidak ada partner</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -324,28 +324,28 @@ export default function TenantsManagement() {
                       <Link
                         href={`/admin/tenants/${tenant.id}`}
                         className="text-blue-600 hover:text-blue-900"
-                        title="View Details"
+                        title="Lihat Detail"
                       >
                         <Eye className="w-5 h-5" />
                       </Link>
                       <Link
                         href={`/admin/tenants/${tenant.id}/edit`}
                         className="text-green-600 hover:text-green-900"
-                        title="Edit"
+                        title="Ubah"
                       >
                         <Edit className="w-5 h-5" />
                       </Link>
                       <Link
                         href={`/admin/tenants/${tenant.id}/modules`}
                         className="text-purple-600 hover:text-purple-900"
-                        title="Manage Modules"
+                        title="Kelola Modul"
                       >
                         <Package className="w-5 h-5" />
                       </Link>
                       <button
                         onClick={() => handleDelete(tenant.id)}
                         className="text-red-600 hover:text-red-900"
-                        title="Delete"
+                        title="Hapus"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -359,9 +359,9 @@ export default function TenantsManagement() {
           {tenants.length === 0 && (
             <div className="text-center py-12">
               <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No tenants found</h3>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">Tidak ada tenant</h3>
               <p className="mt-1 text-sm text-gray-500">
-                Get started by creating a new tenant.
+                Mulai dengan membuat tenant baru.
               </p>
             </div>
           )}
@@ -371,7 +371,8 @@ export default function TenantsManagement() {
         {totalPages > 1 && (
           <div className="mt-4 flex items-center justify-between">
             <div className="text-sm text-gray-700">
-              Page {currentPage} of {totalPages}
+              Halaman <span className="font-medium">{currentPage}</span> dari{' '}
+              <span className="font-medium">{totalPages}</span>
             </div>
             <div className="flex space-x-2">
               <button
@@ -379,14 +380,14 @@ export default function TenantsManagement() {
                 disabled={currentPage === 1}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Previous
+                Sebelumnya
               </button>
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next
+                Berikutnya
               </button>
             </div>
           </div>

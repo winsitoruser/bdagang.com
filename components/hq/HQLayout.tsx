@@ -45,7 +45,10 @@ import {
   Calculator,
   ArrowRightLeft,
   FileSpreadsheet,
-  Plug
+  Plug,
+  MapPin,
+  Navigation,
+  Wrench
 } from 'lucide-react';
 
 interface HQLayoutProps {
@@ -95,6 +98,19 @@ const navigation: NavItem[] = [
       { name: 'Internal Requisition', href: '/hq/requisitions', icon: ClipboardList },
       { name: 'Purchase Order', href: '/hq/purchase-orders', icon: ShoppingCart },
       { name: 'Supplier', href: '/hq/suppliers', icon: Truck },
+    ]
+  },
+  { 
+    name: 'Fleet Management', 
+    icon: Truck,
+    children: [
+      { name: 'Fleet Overview', href: '/hq/fleet', icon: Truck },
+      { name: 'KPI Dashboard', href: '/hq/fleet/kpi', icon: BarChart3 },
+      { name: 'Route Management', href: '/hq/fleet/routes', icon: MapPin },
+      { name: 'GPS Tracking', href: '/hq/fleet/tracking', icon: Navigation },
+      { name: 'Fuel Management', href: '/hq/fleet/fuel', icon: DollarSign },
+      { name: 'Maintenance', href: '/hq/fleet/maintenance', icon: Wrench },
+      { name: 'Cost Reporting', href: '/hq/fleet/costs', icon: TrendingUp },
     ]
   },
   { 

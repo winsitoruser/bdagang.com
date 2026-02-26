@@ -70,11 +70,33 @@ export default function HRISDashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/hq/hris/employees');
+      const response = await fetch('/api/hq/hris/employees?limit=100&offset=0');
       if (response.ok) {
-        const data = await response.json();
-        setEmployees(data.employees || mockEmployees);
-        setDepartmentStats(data.departmentStats || mockDepartmentStats);
+        const result = await response.json();
+        const employeeData = result.data || [];
+        
+        setEmployees(employeeData.length > 0 ? employeeData : mockEmployees);
+        
+        if (employeeData.length > 0) {
+          const departments = ['Operations', 'Sales', 'Warehouse', 'Finance', 'HR'];
+          const stats = departments.map(dept => {
+            const deptEmployees = employeeData.filter((e: Employee) => e.department === dept);
+            return {
+              department: dept,
+              totalEmployees: deptEmployees.length,
+              activeEmployees: deptEmployees.filter((e: Employee) => e.status === 'active').length,
+              avgPerformance: deptEmployees.length > 0 
+                ? Math.round(deptEmployees.reduce((sum: number, e: Employee) => sum + e.performance.score, 0) / deptEmployees.length)
+                : 0,
+              avgAttendance: deptEmployees.length > 0
+                ? Math.round(deptEmployees.reduce((sum: number, e: Employee) => sum + e.performance.attendance, 0) / deptEmployees.length)
+                : 0
+            };
+          });
+          setDepartmentStats(stats);
+        } else {
+          setDepartmentStats(mockDepartmentStats);
+        }
       } else {
         setEmployees(mockEmployees);
         setDepartmentStats(mockDepartmentStats);

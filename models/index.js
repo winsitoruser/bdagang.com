@@ -83,6 +83,7 @@ db.BranchRealTimeMetrics = require('./BranchRealTimeMetrics');
 // Branch Setup & Onboarding
 db.BranchSetup = require('./BranchSetup');
 db.BranchModule = require('./BranchModule');
+db.SyncLog = require('./SyncLog');
 
 // Admin Panel Models
 db.Partner = require('./Partner');

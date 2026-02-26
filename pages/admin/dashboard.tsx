@@ -37,6 +37,12 @@ interface DashboardStats {
   outlets: {
     total: number;
   };
+  branches: {
+    total: number;
+  };
+  users: {
+    total: number;
+  };
   activations: {
     pending: number;
     recent: number;
@@ -166,7 +172,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          <p className="mt-4 text-gray-600">Memuat dasbor...</p>
         </div>
       </div>
     );
@@ -177,12 +183,12 @@ export default function AdminDashboard() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
-          <p className="mt-4 text-gray-600">Error: {error}</p>
+          <p className="mt-4 text-gray-600">Kesalahan: {error}</p>
           <button
             onClick={fetchDashboardStats}
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
-            Retry
+            Coba Lagi
           </button>
         </div>
       </div>
@@ -194,21 +200,21 @@ export default function AdminDashboard() {
   }
 
   const menuItems = [
-    { icon: Activity, label: 'Dashboard', path: '/admin/dashboard', active: true },
-    { icon: Users, label: 'Partners', path: '/admin/partners' },
-    { icon: FileCheck, label: 'Activations', path: '/admin/activations', badge: stats.activations.pending },
-    { icon: Store, label: 'Outlets', path: '/admin/outlets' },
-    { icon: DollarSign, label: 'Transactions', path: '/admin/transactions' },
-    { icon: Package, label: 'Subscriptions', path: '/admin/subscriptions' },
-    { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
-    { icon: Settings, label: 'Settings', path: '/admin/settings' },
+    { icon: Activity, label: 'Dasbor', path: '/admin/dashboard', active: true },
+    { icon: Users, label: 'Tenant', path: '/admin/partners' },
+    { icon: Store, label: 'Cabang', path: '/admin/branches', badge: stats.branches?.total },
+    { icon: FileCheck, label: 'Aktivasi', path: '/admin/activations', badge: stats.activations.pending },
+    { icon: Package, label: 'Outlet', path: '/admin/outlets' },
+    { icon: DollarSign, label: 'Transaksi', path: '/admin/transactions' },
+    { icon: BarChart3, label: 'Analitik', path: '/admin/analytics' },
+    { icon: Settings, label: 'Pengaturan', path: '/admin/settings' },
   ];
 
   return (
     <>
       <Head>
-        <title>Admin Dashboard - Bedagang</title>
-        <meta name="description" content="Bedagang Admin Dashboard" />
+        <title>Dasbor Admin - Bedagang</title>
+        <meta name="description" content="Dasbor Admin Bedagang" />
       </Head>
 
       <div className="min-h-screen bg-gray-50">
@@ -230,7 +236,7 @@ export default function AdminDashboard() {
                   </div>
                   <div>
                     <h1 className="text-lg font-bold text-gray-900">BEDAGANG</h1>
-                    <p className="text-xs text-gray-500">Admin Panel</p>
+                    <p className="text-xs text-gray-500">Panel Admin</p>
                   </div>
                 </div>
               </div>
@@ -241,7 +247,7 @@ export default function AdminDashboard() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search partners, outlets, transactions..."
+                    placeholder="Cari tenant, outlet, transaksi..."
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -312,8 +318,8 @@ export default function AdminDashboard() {
               <div className="mb-8">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
-                    <p className="text-gray-600 mt-1">Monitor your business performance and key metrics</p>
+                    <h2 className="text-2xl font-bold text-gray-900">Ringkasan Dasbor</h2>
+                    <p className="text-gray-600 mt-1">Pantau kinerja bisnis dan metrik utama Anda</p>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="relative">
@@ -323,9 +329,9 @@ export default function AdminDashboard() {
                       >
                         <Calendar className="h-4 w-4 text-gray-600" />
                         <span className="text-sm text-gray-700">
-                          {timeRange === '1m' ? 'Last month' : 
-                           timeRange === '3m' ? 'Last 3 months' : 
-                           timeRange === '6m' ? 'Last 6 months' : 'Last year'}
+                          {timeRange === '1m' ? 'Bulan lalu' : 
+                           timeRange === '3m' ? '3 bulan terakhir' : 
+                           timeRange === '6m' ? '6 bulan terakhir' : 'Tahun lalu'}
                         </span>
                         <Filter className="h-4 w-4 text-gray-600" />
                       </button>
@@ -333,10 +339,10 @@ export default function AdminDashboard() {
                       {showFilterModal && (
                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                           <div className="py-2">
-                            <button onClick={() => handleFilterChange('1m')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Last month</button>
-                            <button onClick={() => handleFilterChange('3m')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Last 3 months</button>
-                            <button onClick={() => handleFilterChange('6m')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Last 6 months</button>
-                            <button onClick={() => handleFilterChange('1y')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Last year</button>
+                            <button onClick={() => handleFilterChange('1m')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Bulan lalu</button>
+                            <button onClick={() => handleFilterChange('3m')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">3 bulan terakhir</button>
+                            <button onClick={() => handleFilterChange('6m')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">6 bulan terakhir</button>
+                            <button onClick={() => handleFilterChange('1y')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Tahun lalu</button>
                           </div>
                         </div>
                       )}
@@ -348,15 +354,15 @@ export default function AdminDashboard() {
                         className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                       >
                         <Download className="h-4 w-4" />
-                        <span className="text-sm">Export</span>
+                        <span className="text-sm">Ekspor</span>
                       </button>
                       
                       {showExportModal && (
                         <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                           <div className="py-2">
-                            <button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Export CSV</button>
-                            <button onClick={() => handleExport('excel')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Export Excel</button>
-                            <button onClick={() => handleExport('pdf')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Export PDF</button>
+                            <button onClick={() => handleExport('csv')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Ekspor CSV</button>
+                            <button onClick={() => handleExport('excel')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Ekspor Excel</button>
+                            <button onClick={() => handleExport('pdf')} className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm text-gray-700">Ekspor PDF</button>
                           </div>
                         </div>
                       )}
@@ -367,8 +373,8 @@ export default function AdminDashboard() {
 
               {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {/* Total Partners */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                {/* Total Tenants */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push('/admin/partners')}>
                   <div className="flex items-start justify-between mb-4">
                     <div className="p-3 bg-blue-50 rounded-lg">
                       <Users className="h-6 w-6 text-blue-600" />
@@ -379,21 +385,21 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-gray-600 text-sm font-medium mb-1">Total Partners</p>
+                    <p className="text-gray-600 text-sm font-medium mb-1">Total Tenant</p>
                     <p className="text-3xl font-bold text-gray-900 mb-2">{stats.partners.total}</p>
                     <div className="flex items-center space-x-3 text-xs">
-                      <span className="text-green-600 font-medium">{stats.partners.active} Active</span>
+                      <span className="text-green-600 font-medium">{stats.partners.active} Aktif</span>
                       <span className="text-gray-400">•</span>
-                      <span className="text-yellow-600 font-medium">{stats.partners.pending} Pending</span>
+                      <span className="text-yellow-600 font-medium">{stats.partners.pending} Trial</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Active Outlets */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                {/* Total Branches */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer" onClick={() => router.push('/admin/branches')}>
                   <div className="flex items-start justify-between mb-4">
-                    <div className="p-3 bg-green-50 rounded-lg">
-                      <Store className="h-6 w-6 text-green-600" />
+                    <div className="p-3 bg-teal-50 rounded-lg">
+                      <Store className="h-6 w-6 text-teal-600" />
                     </div>
                     <div className="flex items-center space-x-1 text-green-600 text-sm font-medium">
                       <ArrowUpRight className="h-4 w-4" />
@@ -401,34 +407,35 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-gray-600 text-sm font-medium mb-1">Active Outlets</p>
-                    <p className="text-3xl font-bold text-gray-900 mb-2">{stats.outlets.total}</p>
-                    <p className="text-xs text-gray-500">POS terminals operational</p>
+                    <p className="text-gray-600 text-sm font-medium mb-1">Total Cabang</p>
+                    <p className="text-3xl font-bold text-gray-900 mb-2">{stats.branches?.total || 0}</p>
+                    <p className="text-xs text-gray-500">Di {stats.partners.active} tenant</p>
                   </div>
                 </div>
 
-                {/* Pending Activations */}
+                {/* Total Users */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between mb-4">
-                    <div className="p-3 bg-yellow-50 rounded-lg">
-                      <FileCheck className="h-6 w-6 text-yellow-600" />
+                    <div className="p-3 bg-purple-50 rounded-lg">
+                      <Users className="h-6 w-6 text-purple-600" />
                     </div>
-                    <button className="px-2 py-1 bg-yellow-50 text-yellow-700 rounded text-xs font-medium hover:bg-yellow-100">
-                      Review
-                    </button>
+                    <div className="flex items-center space-x-1 text-green-600 text-sm font-medium">
+                      <ArrowUpRight className="h-4 w-4" />
+                      <span>5%</span>
+                    </div>
                   </div>
                   <div>
-                    <p className="text-gray-600 text-sm font-medium mb-1">Pending Activations</p>
-                    <p className="text-3xl font-bold text-gray-900 mb-2">{stats.activations.pending}</p>
-                    <p className="text-xs text-gray-500">{stats.activations.recent} requests this week</p>
+                    <p className="text-gray-600 text-sm font-medium mb-1">Total Pengguna</p>
+                    <p className="text-3xl font-bold text-gray-900 mb-2">{stats.users?.total || 0}</p>
+                    <p className="text-xs text-gray-500">Pengguna di seluruh sistem</p>
                   </div>
                 </div>
 
                 {/* Monthly Revenue */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between mb-4">
-                    <div className="p-3 bg-purple-50 rounded-lg">
-                      <DollarSign className="h-6 w-6 text-purple-600" />
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <DollarSign className="h-6 w-6 text-green-600" />
                     </div>
                     <div className="flex items-center space-x-1 text-green-600 text-sm font-medium">
                       <ArrowUpRight className="h-4 w-4" />
@@ -436,9 +443,9 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-gray-600 text-sm font-medium mb-1">Monthly Revenue</p>
+                    <p className="text-gray-600 text-sm font-medium mb-1">Pendapatan Bulanan</p>
                     <p className="text-2xl font-bold text-gray-900 mb-2">{formatCurrency(stats.revenue.monthly)}</p>
-                    <p className="text-xs text-gray-500">YTD: {formatCurrency(stats.revenue.yearly)}</p>
+                    <p className="text-xs text-gray-500">Tahun ini: {formatCurrency(stats.revenue.yearly)}</p>
                   </div>
                 </div>
               </div>
@@ -449,8 +456,8 @@ export default function AdminDashboard() {
                 <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Partner Growth</h3>
-                      <p className="text-sm text-gray-500 mt-1">Monthly partner acquisition trend</p>
+                      <h3 className="text-lg font-bold text-gray-900">Pertumbuhan Tenant</h3>
+                      <p className="text-sm text-gray-500 mt-1">Tren akuisisi tenant bulanan</p>
                     </div>
                     <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                       <MoreVertical className="h-5 w-5 text-gray-400" />
@@ -532,8 +539,8 @@ export default function AdminDashboard() {
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">Revenue Trend</h3>
-                      <p className="text-sm text-gray-500 mt-1">Monthly comparison</p>
+                      <h3 className="text-lg font-bold text-gray-900">Tren Pendapatan</h3>
+                      <p className="text-sm text-gray-500 mt-1">Perbandingan bulanan</p>
                     </div>
                     <TrendingUp className="h-5 w-5 text-green-600" />
                   </div>
@@ -670,7 +677,7 @@ export default function AdminDashboard() {
                     <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <button
-                        onClick={() => router.push('/admin/partners')}
+                        onClick={() => router.push('/api/hq/tenants')}
                         className="relative overflow-hidden p-5 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl transition-all transform hover:scale-105 hover:shadow-lg group"
                       >
                         <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
@@ -679,8 +686,8 @@ export default function AdminDashboard() {
                           <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg inline-block mb-3">
                             <Users className="h-6 w-6 text-white" />
                           </div>
-                          <p className="text-white font-semibold text-sm">Manage Partners</p>
-                          <p className="text-blue-100 text-xs mt-1">{stats.partners.total} partners</p>
+                          <p className="text-white font-semibold text-sm">Manage Tenants</p>
+                          <p className="text-blue-100 text-xs mt-1">{stats.partners.total} tenants</p>
                         </div>
                       </button>
                       

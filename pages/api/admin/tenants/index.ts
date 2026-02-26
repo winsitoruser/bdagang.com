@@ -8,7 +8,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const session = await getServerSession(req, res, authOptions);
     
-    if (!session || !['ADMIN', 'SUPER_ADMIN', 'super_admin'].includes(session.user?.role as string)) {
+    if (!session) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+
+    const userRole = (session.user?.role as string)?.toLowerCase();
+    const allowedRoles = ['admin', 'super_admin', 'superadmin'];
+    
+    if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
@@ -95,7 +102,20 @@ async function getTenants(req: NextApiRequest, res: NextApiResponse, models: any
 
 async function createTenant(req: NextApiRequest, res: NextApiResponse, models: any) {
   const { Tenant, BusinessType } = models;
-  const { businessTypeId, businessName, businessEmail, businessPhone, businessAddress, partnerId } = req.body;
+  const { 
+    businessTypeId, 
+    businessName, 
+    businessEmail, 
+    businessPhone, 
+    businessAddress, 
+    partnerId,
+    tenantType,
+    maxBranches,
+    subscriptionPlan,
+    ownerName,
+    ownerEmail,
+    ownerPhone
+  } = req.body;
 
   if (!businessTypeId || !businessName) {
     return res.status(400).json({ 
@@ -109,6 +129,18 @@ async function createTenant(req: NextApiRequest, res: NextApiResponse, models: a
     return res.status(404).json({ success: false, error: 'Business type not found' });
   }
 
+  // Set maxBranches based on tenant type and subscription plan
+  let finalMaxBranches = maxBranches || 1;
+  let maxUsers = 5;
+  
+  if (subscriptionPlan === 'professional') {
+    finalMaxBranches = tenantType === 'multi' ? 5 : 1;
+    maxUsers = 20;
+  } else if (subscriptionPlan === 'enterprise') {
+    finalMaxBranches = 999; // Unlimited
+    maxUsers = 999; // Unlimited
+  }
+
   const tenant = await Tenant.create({
     businessTypeId,
     businessName,
@@ -116,6 +148,13 @@ async function createTenant(req: NextApiRequest, res: NextApiResponse, models: a
     businessPhone,
     businessAddress,
     partnerId,
+    subscriptionPlan: subscriptionPlan || 'basic',
+    maxBranches: finalMaxBranches,
+    maxUsers: maxUsers,
+    status: 'trial',
+    contactName: ownerName,
+    contactEmail: ownerEmail,
+    contactPhone: ownerPhone,
     setupCompleted: false,
     onboardingStep: 0
   });
@@ -140,8 +179,35 @@ async function createTenant(req: NextApiRequest, res: NextApiResponse, models: a
     });
   }
 
+  // Create owner user for the tenant
+  const bcrypt = require('bcryptjs');
+  const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase();
+  const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+  const ownerUser = await db.User.create({
+    name: ownerName,
+    email: ownerEmail,
+    phone: ownerPhone,
+    password: hashedPassword,
+    tenantId: tenant.id,
+    role: 'owner',
+    isActive: true
+  });
+
+  // TODO: Send email dengan credentials ke owner
+  // For now, return temp password in response (should be sent via email in production)
+
   return res.status(201).json({
     success: true,
-    data: tenant
+    data: {
+      tenant,
+      owner: {
+        id: ownerUser.id,
+        name: ownerUser.name,
+        email: ownerUser.email,
+        tempPassword: tempPassword // Remove this in production, send via email
+      }
+    },
+    message: 'Tenant created successfully. Owner credentials have been generated.'
   });
 }

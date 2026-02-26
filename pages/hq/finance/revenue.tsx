@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import TransactionFormModal from '../../../components/hq/finance/TransactionFormModal';
 import Link from 'next/link';
 import {
   TrendingUp,
@@ -140,20 +141,100 @@ export default function RevenueAnalysis() {
   const [productRevenue, setProductRevenue] = useState<ProductRevenue[]>(mockProductRevenue);
   const [hourlyRevenue, setHourlyRevenue] = useState<HourlyRevenue[]>(mockHourlyRevenue);
   const [viewMode, setViewMode] = useState<'branch' | 'product' | 'time'>('branch');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [branches, setBranches] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  
+  useEffect(() => {
+    const fetchBranchesAndAccounts = async () => {
+      try {
+        const [branchRes, accountRes] = await Promise.all([
+          fetch('/api/hq/branches?limit=100'),
+          fetch('/api/hq/finance/accounts?limit=100')
+        ]);
+        
+        if (branchRes.ok) {
+          const branchData = await branchRes.json();
+          setBranches(branchData.branches || []);
+        }
+        
+        if (accountRes.ok) {
+          const accountData = await accountRes.json();
+          setAccounts(accountData.accounts || []);
+        }
+      } catch (error) {
+        console.error('Error fetching branches/accounts:', error);
+      }
+    };
+    
+    if (mounted) {
+      fetchBranchesAndAccounts();
+    }
+  }, [mounted]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/hq/finance/revenue?period=${period}`);
+      const response = await fetch(`/api/hq/finance/transactions?type=income&limit=100&offset=0`);
       if (response.ok) {
-        const data = await response.json();
-        setRevenueData(data.summary || mockRevenueData);
-        setBranchRevenue(data.branches || mockBranchRevenue);
-        setProductRevenue(data.products || mockProductRevenue);
-        setHourlyRevenue(data.hourly || mockHourlyRevenue);
+        const result = await response.json();
+        const transactions = result.data || [];
+        
+        const totalRevenue = transactions.reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0);
+        const totalTransactions = transactions.length;
+        const avgTicketSize = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+        
+        const categoryMap: { [key: string]: number } = {};
+        transactions.forEach((t: any) => {
+          const cat = t.category || 'Other';
+          categoryMap[cat] = (categoryMap[cat] || 0) + parseFloat(t.amount);
+        });
+        
+        const branchMap: { [key: string]: { revenue: number; count: number; name: string; code: string } } = {};
+        transactions.forEach((t: any) => {
+          const branchId = t.branchId || 'unknown';
+          if (!branchMap[branchId]) {
+            branchMap[branchId] = {
+              revenue: 0,
+              count: 0,
+              name: t.branch?.name || 'Unknown',
+              code: t.branch?.code || 'N/A'
+            };
+          }
+          branchMap[branchId].revenue += parseFloat(t.amount);
+          branchMap[branchId].count += 1;
+        });
+        
+        const mappedBranches = Object.keys(branchMap).map((id, index) => ({
+          id,
+          name: branchMap[id].name,
+          code: branchMap[id].code,
+          revenue: branchMap[id].revenue,
+          transactions: branchMap[id].count,
+          avgTicket: branchMap[id].count > 0 ? branchMap[id].revenue / branchMap[id].count : 0,
+          growth: 0,
+          contribution: totalRevenue > 0 ? (branchMap[id].revenue / totalRevenue) * 100 : 0
+        }));
+        
+        setRevenueData({
+          ...mockRevenueData,
+          totalRevenue,
+          avgTicketSize,
+          totalTransactions,
+          cashSales: categoryMap['Cash Sales'] || 0,
+          cardSales: categoryMap['Card Sales'] || 0,
+          digitalSales: categoryMap['Digital Sales'] || 0
+        });
+        
+        setBranchRevenue(mappedBranches.length > 0 ? mappedBranches : mockBranchRevenue);
+      } else {
+        setRevenueData(mockRevenueData);
+        setBranchRevenue(mockBranchRevenue);
       }
     } catch (error) {
       console.error('Error fetching revenue data:', error);
+      setRevenueData(mockRevenueData);
+      setBranchRevenue(mockBranchRevenue);
     } finally {
       setLoading(false);
     }

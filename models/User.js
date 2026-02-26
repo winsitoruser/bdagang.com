@@ -38,6 +38,15 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
+    assignedBranchId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'assigned_branch_id',
+      references: {
+        model: 'branches',
+        key: 'id'
+      }
+    },
     role: {
       type: DataTypes.ENUM('super_admin', 'owner', 'admin', 'manager', 'cashier', 'staff'),
       defaultValue: 'staff'
@@ -75,6 +84,18 @@ module.exports = (sequelize, DataTypes) => {
     User.belongsTo(models.Tenant, {
       foreignKey: 'tenantId',
       as: 'tenant'
+    });
+
+    // User belongs to an assigned branch
+    User.belongsTo(models.Branch, {
+      foreignKey: 'assignedBranchId',
+      as: 'assignedBranch'
+    });
+
+    // User has many Branches (as manager)
+    User.hasMany(models.Branch, {
+      foreignKey: 'managerId',
+      as: 'managedBranches'
     });
   };
 

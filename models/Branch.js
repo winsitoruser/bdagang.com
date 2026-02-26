@@ -66,6 +66,29 @@ const Branch = sequelize.define('Branch', {
     },
     field: 'manager_id'
   },
+  tenantId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'tenants',
+      key: 'id'
+    },
+    field: 'tenant_id'
+  },
+  region: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
+  lastSyncAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'last_sync_at'
+  },
+  syncStatus: {
+    type: DataTypes.ENUM('synced', 'pending', 'failed', 'never'),
+    defaultValue: 'never',
+    field: 'sync_status'
+  },
   operatingHours: {
     type: DataTypes.JSON,
     allowNull: true,
@@ -99,6 +122,12 @@ const Branch = sequelize.define('Branch', {
 });
 
 Branch.associate = function(models) {
+  // Branch belongs to Tenant
+  Branch.belongsTo(models.Tenant, {
+    foreignKey: 'tenantId',
+    as: 'tenant'
+  });
+
   // Branch belongs to Store
   Branch.belongsTo(models.Store, {
     foreignKey: 'storeId',
@@ -133,6 +162,44 @@ Branch.associate = function(models) {
   Branch.hasMany(models.StoreSetting, {
     foreignKey: 'branchId',
     as: 'branchSettings'
+  });
+
+  // Branch has many Users assigned
+  Branch.hasMany(models.User, {
+    foreignKey: 'assignedBranchId',
+    as: 'assignedUsers'
+  });
+
+  // Branch has many Sync Logs
+  if (models.SyncLog) {
+    Branch.hasMany(models.SyncLog, {
+      foreignKey: 'branchId',
+      as: 'syncLogs'
+    });
+  }
+};
+
+// Instance methods
+Branch.prototype.needsSync = function() {
+  if (!this.lastSyncAt) return true;
+  const hoursSinceSync = (new Date() - new Date(this.lastSyncAt)) / (1000 * 60 * 60);
+  return hoursSinceSync > 24 || this.syncStatus === 'failed';
+};
+
+Branch.prototype.markSynced = async function() {
+  return this.update({
+    lastSyncAt: new Date(),
+    syncStatus: 'synced'
+  });
+};
+
+Branch.prototype.markSyncFailed = async function(error) {
+  return this.update({
+    syncStatus: 'failed',
+    settings: {
+      ...this.settings,
+      lastSyncError: error
+    }
   });
 };
 

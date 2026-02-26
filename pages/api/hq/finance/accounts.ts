@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 const mockSummary = {
   totalReceivables: 450000000,
@@ -26,19 +27,39 @@ const mockPayables = [
 ];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
-
   try {
-    return res.status(200).json({
-      summary: mockSummary,
-      receivables: mockReceivables,
-      payables: mockPayables
-    });
+    switch (req.method) {
+      case 'GET':
+        return await getAccounts(req, res);
+      default:
+        res.setHeader('Allow', ['GET']);
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
+    }
   } catch (error) {
-    console.error('Error fetching accounts data:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Finance Accounts API Error:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
+  }
+}
+
+async function getAccounts(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    // TODO: Replace with real Account model when available
+    // For now, return mock data in standard format
+    return res.status(HttpStatus.OK).json(
+      successResponse({
+        summary: mockSummary,
+        receivables: mockReceivables,
+        payables: mockPayables
+      })
+    );
+  } catch (error) {
+    console.error('Error fetching accounts:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch accounts')
+    );
   }
 }

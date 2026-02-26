@@ -1,14 +1,23 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Op } from 'sequelize';
 
-let Branch: any, PosTransaction: any, FinanceTransaction: any;
+let Branch: any, PosTransaction: any, FinanceTransaction: any, FinanceInvoice: any, FinanceAccount: any;
 try {
   const models = require('../../../../models');
   Branch = models.Branch;
   PosTransaction = models.PosTransaction;
   FinanceTransaction = models.FinanceTransaction;
+  
+  // Import new finance models
+  const Transaction = require('../../../../models/finance/Transaction');
+  const Invoice = require('../../../../models/finance/Invoice');
+  const Account = require('../../../../models/finance/Account');
+  
+  FinanceTransaction = Transaction.default || Transaction;
+  FinanceInvoice = Invoice.default || Invoice;
+  FinanceAccount = Account.default || Account;
 } catch (e) {
-  console.warn('Models not available');
+  console.warn('Models not available:', e);
 }
 
 const mockSummary = {
@@ -69,7 +78,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Try to fetch real data from database
     try {
-      if (Branch && PosTransaction) {
+      if (Branch && (PosTransaction || FinanceTransaction)) {
         const dbBranches = await Branch.findAll({
           where: { isActive: true },
           attributes: ['id', 'code', 'name', 'type'],
@@ -77,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
         
         if (dbBranches && dbBranches.length > 0) {
-          // Calculate revenue per branch from POS transactions
+          // Calculate revenue per branch from transactions
           const branchData = await Promise.all(dbBranches.map(async (branch: any) => {
             const whereClause: any = {
               branchId: branch.id,
@@ -85,23 +94,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               transactionDate: { [Op.between]: [startDate, now] }
             };
 
-            const revenue = await PosTransaction.sum('total', { where: whereClause }) || 0;
+            // Try new FinanceTransaction model first, fallback to PosTransaction
+            let revenue = 0;
+            let expenses = 0;
+            
+            if (FinanceTransaction) {
+              const incomeSum = await FinanceTransaction.sum('amount', { 
+                where: { ...whereClause, type: 'income' } 
+              }) || 0;
+              const expenseSum = await FinanceTransaction.sum('amount', { 
+                where: { ...whereClause, type: 'expense' } 
+              }) || 0;
+              revenue = parseFloat(incomeSum.toString());
+              expenses = parseFloat(expenseSum.toString());
+            } else if (PosTransaction) {
+              revenue = await PosTransaction.sum('total', { where: whereClause }) || 0;
+              expenses = revenue * 0.7; // Estimate 70% as expenses
+            }
             
             // Get previous period for growth calculation
             const prevStart = new Date(startDate);
             const prevEnd = new Date(startDate);
             prevStart.setMonth(prevStart.getMonth() - 1);
             
-            const prevRevenue = await PosTransaction.sum('total', {
-              where: {
-                branchId: branch.id,
-                status: 'completed',
-                transactionDate: { [Op.between]: [prevStart, prevEnd] }
-              }
-            }) || 0;
+            let prevRevenue = 0;
+            if (FinanceTransaction) {
+              prevRevenue = await FinanceTransaction.sum('amount', {
+                where: {
+                  branchId: branch.id,
+                  status: 'completed',
+                  type: 'income',
+                  transactionDate: { [Op.between]: [prevStart, prevEnd] }
+                }
+              }) || 0;
+            } else if (PosTransaction) {
+              prevRevenue = await PosTransaction.sum('total', {
+                where: {
+                  branchId: branch.id,
+                  status: 'completed',
+                  transactionDate: { [Op.between]: [prevStart, prevEnd] }
+                }
+              }) || 0;
+            }
 
             const growth = prevRevenue > 0 ? ((revenue - prevRevenue) / prevRevenue * 100) : 0;
-            const expenses = revenue * 0.7; // Estimate 70% as expenses
             const profit = revenue - expenses;
             const margin = revenue > 0 ? (profit / revenue * 100) : 0;
 
@@ -125,6 +161,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const totalExpenses = branches.reduce((sum, b) => sum + b.expenses, 0);
           const grossProfit = totalRevenue - totalExpenses;
 
+          // Get invoice data if available
+          let pendingInvoices = mockSummary.pendingInvoices;
+          let overdueInvoices = mockSummary.overdueInvoices;
+          let accountsReceivable = mockSummary.accountsReceivable;
+          let accountsPayable = mockSummary.accountsPayable;
+          
+          if (FinanceInvoice) {
+            const invoiceStats = await FinanceInvoice.findAll({
+              where: {
+                invoiceDate: { [Op.between]: [startDate, now] }
+              },
+              attributes: [
+                'status',
+                [FinanceInvoice.sequelize.fn('COUNT', FinanceInvoice.sequelize.col('id')), 'count'],
+                [FinanceInvoice.sequelize.fn('SUM', FinanceInvoice.sequelize.col('outstandingAmount')), 'total']
+              ],
+              group: ['status'],
+              raw: true
+            });
+
+            invoiceStats.forEach((stat: any) => {
+              if (stat.status === 'sent' || stat.status === 'partial') {
+                pendingInvoices = parseInt(stat.count) || 0;
+                accountsReceivable = parseFloat(stat.total) || 0;
+              } else if (stat.status === 'overdue') {
+                overdueInvoices = parseInt(stat.count) || 0;
+              }
+            });
+          }
+
           summary = {
             totalRevenue,
             totalExpenses,
@@ -133,13 +199,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             grossMargin: totalRevenue > 0 ? Math.round((grossProfit / totalRevenue) * 100) : 0,
             netMargin: totalRevenue > 0 ? Math.round((grossProfit * 0.8 / totalRevenue) * 100) : 0,
             cashOnHand: mockSummary.cashOnHand,
-            accountsReceivable: mockSummary.accountsReceivable,
-            accountsPayable: mockSummary.accountsPayable,
-            pendingInvoices: mockSummary.pendingInvoices,
-            overdueInvoices: mockSummary.overdueInvoices,
+            accountsReceivable,
+            accountsPayable,
+            pendingInvoices,
+            overdueInvoices,
             monthlyGrowth: branches.length > 0 ? Math.round(branches.reduce((sum, b) => sum + b.growth, 0) / branches.length * 10) / 10 : 0,
             yearlyGrowth: mockSummary.yearlyGrowth
           };
+        }
+        
+        // Fetch recent transactions
+        if (FinanceTransaction) {
+          const recentTxns = await FinanceTransaction.findAll({
+            where: {
+              transactionDate: { [Op.between]: [startDate, now] }
+            },
+            include: [
+              { model: Branch, as: 'branch', attributes: ['code', 'name'] }
+            ],
+            order: [['transactionDate', 'DESC']],
+            limit: 10
+          });
+
+          if (recentTxns && recentTxns.length > 0) {
+            transactions = recentTxns.map((txn: any) => ({
+              id: txn.id,
+              date: txn.transactionDate,
+              description: txn.description,
+              branch: txn.branch?.code || 'N/A',
+              type: txn.type,
+              category: txn.category,
+              amount: parseFloat(txn.amount),
+              status: txn.status
+            }));
+          }
         }
       }
     } catch (dbError) {

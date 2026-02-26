@@ -1,9 +1,27 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Branch, User, Store } from '../../../../models';
 import { Op } from 'sequelize';
+const { tenantContext, requireTenant, addTenantFilter } = require('../../../../middleware/tenantContext');
+
+const getDb = () => require('../../../../models');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    // Apply tenant context middleware
+    await new Promise((resolve, reject) => {
+      tenantContext(req, res, (err: any) => {
+        if (err) reject(err);
+        else resolve(true);
+      });
+    });
+
+    await new Promise((resolve, reject) => {
+      requireTenant(req, res, (err: any) => {
+        if (err) reject(err);
+        else resolve(true);
+      });
+    });
+
     switch (req.method) {
       case 'GET':
         return await getBranches(req, res);
@@ -26,7 +44,10 @@ async function getBranches(req: NextApiRequest, res: NextApiResponse) {
   const offset = (pageNum - 1) * limitNum;
 
   try {
-    const where: any = {};
+    let where: any = {};
+    
+    // Add tenant filtering
+    where = addTenantFilter(where, req);
     
     if (search) {
       where[Op.or] = [
@@ -126,6 +147,7 @@ async function getBranches(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createBranch(req: NextApiRequest, res: NextApiResponse) {
+  const db = getDb();
   const { code, name, type, address, city, province, phone, email, managerId } = req.body;
 
   if (!code || !name) {
@@ -133,8 +155,21 @@ async function createBranch(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    // Create the branch
+    // Check tenant limits
+    const tenant = await db.Tenant.findByPk((req as any).tenantId, {
+      include: [{ model: db.Branch, as: 'branches' }]
+    });
+
+    if (tenant && !tenant.canAddBranch()) {
+      return res.status(400).json({ 
+        error: 'Branch limit reached',
+        message: `Maximum ${tenant.maxBranches} branches allowed for your subscription plan`
+      });
+    }
+
+    // Create the branch with tenant
     const branch = await Branch.create({
+      tenantId: (req as any).tenantId,
       code,
       name,
       type: type || 'branch',

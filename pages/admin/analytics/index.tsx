@@ -103,11 +103,11 @@ export default function AnalyticsDashboard() {
       'super_admin': 'Super Admin',
       'SUPER_ADMIN': 'Super Admin',
       'ADMIN': 'Admin',
-      'owner': 'Owner',
+      'owner': 'Pemilik',
       'admin': 'Admin',
-      'manager': 'Manager',
-      'cashier': 'Cashier',
-      'staff': 'Staff'
+      'manager': 'Manajer',
+      'cashier': 'Kasir',
+      'staff': 'Staf'
     };
     return labels[role] || role;
   };
@@ -118,7 +118,7 @@ export default function AnalyticsDashboard() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading analytics...</p>
+            <p className="mt-4 text-gray-600">Memuat analitik...</p>
           </div>
         </div>
       </AdminLayout>
@@ -130,7 +130,7 @@ export default function AnalyticsDashboard() {
       <AdminLayout>
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <p className="text-red-600">Error: {error || 'Failed to load analytics'}</p>
+            <p className="text-red-600">Kesalahan: {error || 'Gagal memuat analitik'}</p>
           </div>
         </div>
       </AdminLayout>
@@ -140,7 +140,7 @@ export default function AnalyticsDashboard() {
   return (
     <>
       <Head>
-        <title>Analytics Dashboard - Admin Panel</title>
+        <title>Dasbor Analitik - Panel Admin</title>
       </Head>
 
       <AdminLayout>
@@ -148,9 +148,9 @@ export default function AnalyticsDashboard() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Dasbor Analitik</h1>
               <p className="mt-2 text-sm text-gray-600">
-                System-wide analytics and insights
+                Analitik dan wawasan di seluruh sistem
               </p>
             </div>
             <button
@@ -158,7 +158,7 @@ export default function AnalyticsDashboard() {
               className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
             >
               <Activity className="w-5 h-5 mr-2" />
-              Refresh
+              Muat Ulang
             </button>
           </div>
         </div>
@@ -169,12 +169,12 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Tenants</p>
+                <p className="text-sm text-gray-600">Total Tenant</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">
                   {analytics.overview.totalTenants}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  {analytics.overview.activeTenants} active, {analytics.overview.pendingTenants} pending
+                  {analytics.overview.activeTenants} aktif, {analytics.overview.pendingTenants} menunggu
                 </p>
               </div>
               <Building2 className="w-12 h-12 text-blue-600" />
@@ -184,12 +184,12 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Users</p>
+                <p className="text-sm text-gray-600">Total Pengguna</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">
                   {analytics.overview.totalUsers}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Across all tenants
+                  Di semua tenant
                 </p>
               </div>
               <Users className="w-12 h-12 text-green-600" />
@@ -199,12 +199,12 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Partners</p>
+                <p className="text-sm text-gray-600">Total Mitra</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">
                   {analytics.overview.totalPartners}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Registered partners
+                  Mitra terdaftar
                 </p>
               </div>
               <TrendingUp className="w-12 h-12 text-purple-600" />
@@ -214,12 +214,12 @@ export default function AnalyticsDashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Modules</p>
+                <p className="text-sm text-gray-600">Total Modul</p>
                 <p className="text-3xl font-bold text-gray-900 mt-2">
                   {analytics.overview.totalModules}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Available modules
+                  Modul tersedia
                 </p>
               </div>
               <Package className="w-12 h-12 text-orange-600" />
@@ -234,7 +234,7 @@ export default function AnalyticsDashboard() {
           {/* Tenants by Business Type */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900">Tenants by Business Type</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Tenant per Jenis Bisnis</h2>
               <PieChart className="w-5 h-5 text-gray-400" />
             </div>
             <div className="space-y-4">

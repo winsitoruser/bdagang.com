@@ -11,17 +11,16 @@ export default async function handler(
 ) {
   try {
     const session = await getServerSession(req, res, authOptions);
-
-    if (!session || !session.user) {
+    
+    if (!session) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
-    // Only admin and super_admin can manage webhooks
-    if (!['super_admin', 'admin'].includes(session.user.role)) {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Insufficient permissions' 
-      });
+    const userRole = (session.user?.role as string)?.toLowerCase();
+    const allowedRoles = ['admin', 'super_admin', 'superadmin'];
+    
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ success: false, error: 'Access denied - Admin access required' });
     }
 
     if (req.method === 'GET') {

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 const mockSummary = {
   openingBalance: 980000000,
@@ -38,23 +39,41 @@ const mockForecast = [
 ];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  try {
+    switch (req.method) {
+      case 'GET':
+        return await getCashFlow(req, res);
+      default:
+        res.setHeader('Allow', ['GET']);
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
+    }
+  } catch (error) {
+    console.error('Cash Flow API Error:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
+}
 
+async function getCashFlow(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { period = 'month' } = req.query;
 
-    return res.status(200).json({
-      summary: mockSummary,
-      items: mockCashFlowItems,
-      accounts: mockBankAccounts,
-      forecast: mockForecast,
-      period
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse({
+        summary: mockSummary,
+        items: mockCashFlowItems,
+        accounts: mockBankAccounts,
+        forecast: mockForecast,
+        period
+      })
+    );
   } catch (error) {
-    console.error('Error fetching cash flow data:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching cash flow:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch cash flow')
+    );
   }
 }
