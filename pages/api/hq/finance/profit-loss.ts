@@ -1,6 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
+let PosTransaction: any, Branch: any, FinanceTransaction: any;
+try {
+  const models = require('../../../../models');
+  PosTransaction = models.PosTransaction;
+  Branch = models.Branch;
+  try { const FT = require('../../../../models/finance/Transaction'); FinanceTransaction = FT.default || FT; } catch (e2) { FinanceTransaction = models.FinanceTransaction; }
+} catch (e) { console.warn('P&L models not available'); }
+
 const mockPLSummary = {
   revenue: 4120000000,
   cogs: 2472000000,
@@ -64,13 +72,61 @@ async function getProfitLoss(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { period = 'month' } = req.query;
 
+    const now = new Date();
+    let startDate = new Date();
+    switch (period) {
+      case 'week': startDate.setDate(now.getDate() - 7); break;
+      case 'month': startDate.setMonth(now.getMonth() - 1); break;
+      case 'year': startDate.setFullYear(now.getFullYear() - 1); break;
+      default: startDate.setMonth(now.getMonth() - 1);
+    }
+
+    if (PosTransaction && Branch) {
+      try {
+        const { Op } = require('sequelize');
+        const branches = await Branch.findAll({ where: { isActive: true }, attributes: ['id', 'code', 'name'] });
+
+        if (branches.length > 0) {
+          const branchPL = await Promise.all(branches.map(async (b: any) => {
+            const revenue = await PosTransaction.sum('total', { where: { branchId: b.id, status: 'closed', createdAt: { [Op.between]: [startDate, now] } } }) || 0;
+            let expenses = 0;
+            if (FinanceTransaction) {
+              expenses = await FinanceTransaction.sum('amount', { where: { branchId: b.id, type: 'expense', status: 'completed', transactionDate: { [Op.between]: [startDate, now] } } }) || 0;
+            }
+            const cogs = revenue * 0.6;
+            const grossProfit = revenue - cogs;
+            const opex = expenses > 0 ? expenses : revenue * 0.15;
+            const netIncome = grossProfit - opex;
+            return { id: b.id, name: b.name, code: b.code, revenue, cogs, grossProfit, opex, netIncome, margin: revenue > 0 ? Math.round(netIncome / revenue * 100) : 0 };
+          }));
+
+          const totalRevenue = branchPL.reduce((s, b) => s + b.revenue, 0);
+          if (totalRevenue > 0) {
+            const totalCogs = branchPL.reduce((s, b) => s + b.cogs, 0);
+            const totalGross = totalRevenue - totalCogs;
+            const totalOpex = branchPL.reduce((s, b) => s + b.opex, 0);
+            const netIncome = totalGross - totalOpex;
+
+            return res.status(HttpStatus.OK).json(successResponse({
+              summary: {
+                revenue: totalRevenue, cogs: totalCogs, grossProfit: totalGross,
+                grossMargin: Math.round(totalGross / totalRevenue * 100),
+                operatingExpenses: totalOpex, operatingIncome: totalGross - totalOpex,
+                operatingMargin: Math.round((totalGross - totalOpex) / totalRevenue * 100),
+                otherIncome: 0, otherExpenses: 0, ebitda: totalGross - totalOpex,
+                depreciation: 0, interestExpense: 0, taxExpense: Math.round(netIncome * 0.22),
+                netIncome: Math.round(netIncome * 0.78), netMargin: Math.round(netIncome * 0.78 / totalRevenue * 100),
+                growth: 0
+              },
+              items: mockPLItems, branches: branchPL, period
+            }));
+          }
+        }
+      } catch (e: any) { console.warn('P&L DB failed:', e.message); }
+    }
+
     return res.status(HttpStatus.OK).json(
-      successResponse({
-        summary: mockPLSummary,
-        items: mockPLItems,
-        branches: mockBranchPL,
-        period
-      })
+      successResponse({ summary: mockPLSummary, items: mockPLItems, branches: mockBranchPL, period })
     );
   } catch (error) {
     console.error('Error fetching P&L:', error);

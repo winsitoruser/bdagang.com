@@ -1,6 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
+let FinanceBudget: any;
+try {
+  const models = require('../../../../models');
+  FinanceBudget = models.FinanceBudget;
+} catch (e) { console.warn('FinanceBudget not available'); }
+
 interface BudgetItem {
   id: string;
   category: string;
@@ -123,22 +129,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-function getBudgets(req: NextApiRequest, res: NextApiResponse) {
+async function getBudgets(req: NextApiRequest, res: NextApiResponse) {
   const { year, month, status, branchId } = req.query;
-  
+
+  if (FinanceBudget) {
+    try {
+      const where: any = {};
+      if (year) where.year = parseInt(year as string);
+      if (month) where.month = parseInt(month as string);
+      if (status && status !== 'all') where.status = status;
+
+      const budgets = await FinanceBudget.findAll({ where, order: [['year', 'DESC'], ['month', 'DESC']] });
+      if (budgets.length > 0) {
+        const summary = {
+          totalBudget: budgets.reduce((s: number, b: any) => s + parseFloat(b.totalBudget || 0), 0),
+          totalActual: budgets.reduce((s: number, b: any) => s + parseFloat(b.totalActual || 0), 0),
+          totalVariance: budgets.reduce((s: number, b: any) => s + parseFloat(b.variance || 0), 0),
+          activeBudgets: budgets.filter((b: any) => b.status === 'active').length,
+          draftBudgets: budgets.filter((b: any) => b.status === 'draft').length
+        };
+        return res.status(HttpStatus.OK).json(successResponse({ budgets, summary }));
+      }
+    } catch (e: any) { console.warn('Budget DB failed:', e.message); }
+  }
+
+  // Mock fallback
   let filtered = [...mockBudgets];
-  
-  if (year) {
-    filtered = filtered.filter(b => b.year === parseInt(year as string));
-  }
-  
-  if (month) {
-    filtered = filtered.filter(b => b.month === parseInt(month as string));
-  }
-  
-  if (status && status !== 'all') {
-    filtered = filtered.filter(b => b.status === status);
-  }
+  if (year) filtered = filtered.filter(b => b.year === parseInt(year as string));
+  if (month) filtered = filtered.filter(b => b.month === parseInt(month as string));
+  if (status && status !== 'all') filtered = filtered.filter(b => b.status === status);
 
   const summary = {
     totalBudget: filtered.reduce((sum, b) => sum + b.totalBudget, 0),
@@ -148,71 +167,69 @@ function getBudgets(req: NextApiRequest, res: NextApiResponse) {
     draftBudgets: filtered.filter(b => b.status === 'draft').length
   };
 
-  return res.status(HttpStatus.OK).json(
-    successResponse({ budgets: filtered, summary })
-  );
+  return res.status(HttpStatus.OK).json(successResponse({ budgets: filtered, summary }));
 }
 
-function createBudget(req: NextApiRequest, res: NextApiResponse) {
+async function createBudget(req: NextApiRequest, res: NextApiResponse) {
   const { year, month, branches } = req.body;
-  
   if (!year || !month) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Year and month are required')
-    );
+    return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Year and month are required'));
   }
 
   const monthNames = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-  
-  const newBudget: Budget = {
-    id: Date.now().toString(),
-    period: `${monthNames[month]} ${year}`,
-    year,
-    month,
-    status: 'draft',
-    totalBudget: branches?.reduce((sum: number, b: any) => sum + (b.totalBudget || 0), 0) || 0,
-    totalActual: 0,
-    variance: 0,
-    branches: branches || [],
-    createdBy: 'Admin HQ',
-    createdAt: new Date().toISOString()
-  };
 
-  return res.status(HttpStatus.CREATED).json(
-    successResponse(newBudget, undefined, 'Budget created successfully')
-  );
+  if (FinanceBudget) {
+    try {
+      const budget = await FinanceBudget.create({
+        period: `${monthNames[month]} ${year}`, year, month, status: 'draft',
+        totalBudget: branches?.reduce((sum: number, b: any) => sum + (b.totalBudget || 0), 0) || 0,
+        totalActual: 0, variance: 0, branches: branches || [],
+        createdBy: 'Admin HQ'
+      });
+      return res.status(HttpStatus.CREATED).json(successResponse(budget, undefined, 'Budget berhasil dibuat'));
+    } catch (e: any) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse(ErrorCodes.DATABASE_ERROR, e.message));
+    }
+  }
+
+  const newBudget: Budget = {
+    id: Date.now().toString(), period: `${monthNames[month]} ${year}`, year, month, status: 'draft',
+    totalBudget: branches?.reduce((sum: number, b: any) => sum + (b.totalBudget || 0), 0) || 0,
+    totalActual: 0, variance: 0, branches: branches || [], createdBy: 'Admin HQ', createdAt: new Date().toISOString()
+  };
+  return res.status(HttpStatus.CREATED).json(successResponse(newBudget, undefined, 'Budget created successfully'));
 }
 
-function updateBudget(req: NextApiRequest, res: NextApiResponse) {
+async function updateBudget(req: NextApiRequest, res: NextApiResponse) {
   const { id, action, branches, approvedBy } = req.body;
-  
-  if (!id) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Budget ID is required')
-    );
+  if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.VALIDATION_ERROR, 'Budget ID is required'));
+
+  if (FinanceBudget) {
+    try {
+      const budget = await FinanceBudget.findByPk(id);
+      if (!budget) return res.status(HttpStatus.NOT_FOUND).json(errorResponse(ErrorCodes.NOT_FOUND, 'Budget not found'));
+
+      const updateData: any = {};
+      if (action === 'approve') { updateData.status = 'approved'; updateData.approvedBy = approvedBy || 'Finance Director'; updateData.approvedAt = new Date(); }
+      else if (action === 'activate') updateData.status = 'active';
+      else if (action === 'close') updateData.status = 'closed';
+      else if (branches) { updateData.branches = branches; updateData.totalBudget = branches.reduce((s: number, b: any) => s + (b.totalBudget || 0), 0); }
+
+      await budget.update(updateData);
+      return res.status(HttpStatus.OK).json(successResponse(budget, undefined, 'Budget diperbarui'));
+    } catch (e: any) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse(ErrorCodes.DATABASE_ERROR, e.message));
+    }
   }
 
+  // Mock fallback
   const budget = mockBudgets.find(b => b.id === id);
-  if (!budget) {
-    return res.status(HttpStatus.NOT_FOUND).json(
-      errorResponse(ErrorCodes.NOT_FOUND, 'Budget not found')
-    );
-  }
+  if (!budget) return res.status(HttpStatus.NOT_FOUND).json(errorResponse(ErrorCodes.NOT_FOUND, 'Budget not found'));
 
-  if (action === 'approve') {
-    budget.status = 'approved';
-    budget.approvedBy = approvedBy || 'Finance Director';
-    budget.approvedAt = new Date().toISOString();
-  } else if (action === 'activate') {
-    budget.status = 'active';
-  } else if (action === 'close') {
-    budget.status = 'closed';
-  } else if (branches) {
-    budget.branches = branches;
-    budget.totalBudget = branches.reduce((sum: number, b: BranchBudget) => sum + b.totalBudget, 0);
-  }
+  if (action === 'approve') { budget.status = 'approved'; budget.approvedBy = approvedBy || 'Finance Director'; budget.approvedAt = new Date().toISOString(); }
+  else if (action === 'activate') budget.status = 'active';
+  else if (action === 'close') budget.status = 'closed';
+  else if (branches) { budget.branches = branches; budget.totalBudget = branches.reduce((sum: number, b: BranchBudget) => sum + b.totalBudget, 0); }
 
-  return res.status(HttpStatus.OK).json(
-    successResponse(budget, undefined, 'Budget updated successfully')
-  );
+  return res.status(HttpStatus.OK).json(successResponse(budget, undefined, 'Budget updated successfully'));
 }
