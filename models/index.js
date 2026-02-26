@@ -97,6 +97,11 @@ db.ActivationRequest = require('./ActivationRequest');
 db.KybApplication = require('./KybApplication');
 db.KybDocument = require('./KybDocument');
 
+// Attendance System Models
+db.AttendanceDevice = require('./AttendanceDevice');
+db.AttendanceDeviceLog = require('./AttendanceDeviceLog');
+db.AttendanceSettings = require('./AttendanceSettings');
+
 // Fleet Management Models
 db.FleetVehicle = require('./FleetVehicle');
 db.FleetDriver = require('./FleetDriver');

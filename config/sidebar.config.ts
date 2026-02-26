@@ -37,6 +37,7 @@ import {
   Navigation,
   Wrench,
   Fuel,
+  Fingerprint,
   Utensils,
   Calendar,
   ChefHat,
@@ -238,6 +239,9 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'hris-kpi', name: 'KPI Karyawan', href: '/hq/hris/kpi', icon: Target },
             { id: 'hris-kpi-settings', name: 'KPI Settings', href: '/hq/hris/kpi-settings', icon: Settings },
             { id: 'hris-attendance', name: 'Kehadiran', href: '/hq/hris/attendance', icon: CalendarCheck },
+            { id: 'hris-attendance-daily', name: 'Absensi Harian', href: '/hq/hris/attendance/daily', icon: Calendar },
+            { id: 'hris-attendance-devices', name: 'Kelola Device', href: '/hq/hris/attendance/devices', icon: Fingerprint },
+            { id: 'hris-attendance-settings', name: 'Pengaturan Absensi', href: '/hq/hris/attendance/settings', icon: Settings },
             { id: 'hris-performance', name: 'Performance Review', href: '/hq/hris/performance', icon: Award },
           ]
         }
