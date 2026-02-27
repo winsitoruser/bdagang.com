@@ -1,5 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+let PosTransaction: any, Branch: any, FinanceTransaction: any;
+try {
+  const models = require('../../../../models');
+  PosTransaction = models.PosTransaction;
+  Branch = models.Branch;
+  FinanceTransaction = models.FinanceTransaction;
+  // Also try finance/ subfolder
+  if (!FinanceTransaction) {
+    const FT = require('../../../../models/finance/Transaction');
+    FinanceTransaction = FT.default || FT;
+  }
+} catch (e) { console.warn('Revenue models not available'); }
+
 const mockRevenueData = {
   totalRevenue: 4120000000,
   previousRevenue: 3665000000,
@@ -56,6 +69,59 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { period = 'month', branchId } = req.query;
 
+    // Calculate date range
+    const now = new Date();
+    let startDate = new Date();
+    switch (period) {
+      case 'week': startDate.setDate(now.getDate() - 7); break;
+      case 'month': startDate.setMonth(now.getMonth() - 1); break;
+      case 'year': startDate.setFullYear(now.getFullYear() - 1); break;
+      default: startDate.setMonth(now.getMonth() - 1);
+    }
+
+    // Try DB first
+    if (PosTransaction && Branch) {
+      try {
+        const { Op } = require('sequelize');
+        const sequelize = require('../../../../lib/sequelize');
+
+        // Get branches
+        const branches = await Branch.findAll({ where: { isActive: true }, attributes: ['id', 'code', 'name'], order: [['name', 'ASC']] });
+
+        if (branches.length > 0) {
+          // Revenue per branch from POS transactions (status: closed = completed sale)
+          const branchRevenue = await Promise.all(branches.map(async (b: any) => {
+            const where: any = { branchId: b.id, status: 'closed', createdAt: { [Op.between]: [startDate, now] } };
+            const total = await PosTransaction.sum('total', { where }) || 0;
+            const count = await PosTransaction.count({ where }) || 0;
+            const avgTicket = count > 0 ? Math.round(total / count) : 0;
+            return { id: b.id, name: b.name, code: b.code, revenue: total, transactions: count, avgTicket, growth: 0, contribution: 0 };
+          }));
+
+          const totalRevenue = branchRevenue.reduce((s, b) => s + b.revenue, 0);
+          branchRevenue.forEach(b => { b.contribution = totalRevenue > 0 ? Math.round(b.revenue / totalRevenue * 1000) / 10 : 0; });
+
+          if (totalRevenue > 0) {
+            const totalTxns = branchRevenue.reduce((s, b) => s + b.transactions, 0);
+            return res.status(200).json({
+              summary: {
+                totalRevenue, previousRevenue: 0, growth: 0,
+                avgDailyRevenue: Math.round(totalRevenue / 30),
+                avgTicketSize: totalTxns > 0 ? Math.round(totalRevenue / totalTxns) : 0,
+                totalTransactions: totalTxns,
+                cashSales: 0, cardSales: 0, digitalSales: 0, onlineSales: 0, offlineSales: totalRevenue
+              },
+              branches: branchRevenue,
+              products: mockProductRevenue,
+              hourly: mockHourlyRevenue,
+              period
+            });
+          }
+        }
+      } catch (e: any) { console.warn('Revenue DB failed:', e.message); }
+    }
+
+    // Mock fallback
     return res.status(200).json({
       summary: mockRevenueData,
       branches: mockBranchRevenue,

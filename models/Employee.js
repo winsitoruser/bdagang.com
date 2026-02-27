@@ -69,19 +69,38 @@ module.exports = (sequelize, DataTypes) => {
       comment: 'Job position/title'
     },
     department: {
-      type: DataTypes.ENUM('MANAGEMENT', 'CLINICAL', 'PHARMACY', 'FINANCE', 'ADMINISTRATION'),
+      type: DataTypes.ENUM(
+        'MANAGEMENT', 'OPERATIONS', 'SALES', 'FINANCE', 'ADMINISTRATION',
+        'WAREHOUSE', 'KITCHEN', 'CUSTOMER_SERVICE', 'IT', 'HR',
+        'CLINICAL', 'PHARMACY', 'MARKETING', 'LOGISTICS', 'PRODUCTION'
+      ),
       allowNull: false
+    },
+    branchId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: 'branches',
+        key: 'id'
+      },
+      comment: 'Branch assignment for this employee'
     },
     workLocation: {
       type: DataTypes.ENUM(
-        'MAIN_PHARMACY', 'CLINIC_PHARMACY', 'CASHIER_FRONT', 'CASHIER_PHARMACY',
-        'GENERAL_CLINIC', 'SPECIALIST_CLINIC', 'FRONT_DESK', 'REGISTRATION',
-        'LAB_SECTION', 'INVENTORY', 'ADMIN_OFFICE', 'FINANCE_DEPT', 'MULTIPLE'
+        'MAIN_STORE', 'WAREHOUSE', 'CASHIER_FRONT', 'KITCHEN',
+        'FRONT_DESK', 'ADMIN_OFFICE', 'FINANCE_DEPT', 'FIELD',
+        'MAIN_PHARMACY', 'CLINIC_PHARMACY', 'CASHIER_PHARMACY',
+        'GENERAL_CLINIC', 'SPECIALIST_CLINIC', 'REGISTRATION',
+        'LAB_SECTION', 'INVENTORY', 'MULTIPLE', 'REMOTE'
       ),
       allowNull: false
     },
     role: {
-      type: DataTypes.ENUM('ADMIN', 'DOCTOR', 'NURSE', 'PHARMACIST', 'CASHIER', 'INVENTORY_MANAGER', 'RECEPTIONIST'),
+      type: DataTypes.ENUM(
+        'ADMIN', 'MANAGER', 'SUPERVISOR', 'STAFF', 'CASHIER',
+        'INVENTORY_MANAGER', 'WAREHOUSE_STAFF', 'DRIVER', 'CHEF', 'WAITER',
+        'DOCTOR', 'NURSE', 'PHARMACIST', 'RECEPTIONIST', 'SALES_REP'
+      ),
       allowNull: false,
       comment: 'System role for permissions'
     },
@@ -163,6 +182,9 @@ module.exports = (sequelize, DataTypes) => {
         fields: ['userId']
       },
       {
+        fields: ['branchId']
+      },
+      {
         fields: ['department']
       },
       {
@@ -184,6 +206,15 @@ module.exports = (sequelize, DataTypes) => {
       as: 'user',
       constraints: false
     });
+
+    // Relasi dengan Branch
+    if (models.Branch) {
+      Employee.belongsTo(models.Branch, {
+        foreignKey: 'branchId',
+        as: 'branch',
+        constraints: false
+      });
+    }
 
     // Relasi dengan Employee sub-models
     Employee.hasMany(models.EmployeeEducation, {

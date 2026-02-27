@@ -1,6 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
+let FinanceTransaction: any, FinanceAccount: any;
+try {
+  const models = require('../../../../models');
+  FinanceAccount = models.FinanceAccount;
+  try { const FT = require('../../../../models/finance/Transaction'); FinanceTransaction = FT.default || FT; } catch (e2) { FinanceTransaction = models.FinanceTransaction; }
+} catch (e) { console.warn('Cash flow models not available'); }
+
 const mockSummary = {
   openingBalance: 980000000,
   closingBalance: 1250000000,
@@ -61,14 +68,65 @@ async function getCashFlow(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { period = 'month' } = req.query;
 
+    const now = new Date();
+    let startDate = new Date();
+    switch (period) {
+      case 'week': startDate.setDate(now.getDate() - 7); break;
+      case 'month': startDate.setMonth(now.getMonth() - 1); break;
+      case 'year': startDate.setFullYear(now.getFullYear() - 1); break;
+      default: startDate.setMonth(now.getMonth() - 1);
+    }
+
+    if (FinanceTransaction) {
+      try {
+        const { Op } = require('sequelize');
+        const where: any = { transactionDate: { [Op.between]: [startDate, now] }, status: 'completed' };
+
+        const incomeTotal = await FinanceTransaction.sum('amount', { where: { ...where, type: 'income' } }) || 0;
+        const expenseTotal = await FinanceTransaction.sum('amount', { where: { ...where, type: 'expense' } }) || 0;
+
+        const recentItems = await FinanceTransaction.findAll({
+          where: { transactionDate: { [Op.between]: [startDate, now] } },
+          order: [['transactionDate', 'DESC']], limit: 20
+        });
+
+        if (recentItems.length > 0) {
+          const items = recentItems.map((t: any) => ({
+            id: t.id, date: t.transactionDate, description: t.description,
+            category: t.category || 'Operating',
+            type: t.type === 'income' ? 'inflow' : t.type === 'expense' ? 'outflow' : 'transfer',
+            source: '', destination: '',
+            amount: parseFloat(t.amount), status: t.status, reference: t.reference || ''
+          }));
+
+          let accounts = mockBankAccounts;
+          if (FinanceAccount) {
+            try {
+              const dbAccounts = await FinanceAccount.findAll({ where: { accountType: 'asset' }, limit: 10 });
+              if (dbAccounts.length > 0) {
+                accounts = dbAccounts.map((a: any) => ({
+                  id: a.id, name: a.accountName, bank: '', accountNumber: a.accountCode,
+                  type: 'checking', balance: parseFloat(a.balance || 0), currency: 'IDR'
+                }));
+              }
+            } catch (e) {}
+          }
+
+          return res.status(HttpStatus.OK).json(successResponse({
+            summary: {
+              ...mockSummary,
+              cashInflow: parseFloat(incomeTotal.toString()),
+              cashOutflow: parseFloat(expenseTotal.toString()),
+              netChange: parseFloat(incomeTotal.toString()) - parseFloat(expenseTotal.toString())
+            },
+            items, accounts, forecast: mockForecast, period
+          }));
+        }
+      } catch (e: any) { console.warn('Cash flow DB failed:', e.message); }
+    }
+
     return res.status(HttpStatus.OK).json(
-      successResponse({
-        summary: mockSummary,
-        items: mockCashFlowItems,
-        accounts: mockBankAccounts,
-        forecast: mockForecast,
-        period
-      })
+      successResponse({ summary: mockSummary, items: mockCashFlowItems, accounts: mockBankAccounts, forecast: mockForecast, period })
     );
   } catch (error) {
     console.error('Error fetching cash flow:', error);

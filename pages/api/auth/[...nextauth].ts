@@ -73,6 +73,10 @@ export const authOptions: NextAuthOptions = {
             branchCode: user.assignedBranch?.code || null,
             tenantName: user.tenant?.name || null,
             assignedBranchId: user.assignedBranchId || null,
+            kybStatus: user.tenant?.kybStatus || null,
+            dataScope: user.dataScope || 'own_branch',
+            businessCode: user.tenant?.businessCode || null,
+            businessStructure: user.tenant?.businessStructure || 'single',
           };
         } catch (error) {
           console.error('Auth error:', error);
@@ -102,6 +106,10 @@ export const authOptions: NextAuthOptions = {
         token.branchCode = user.branchCode;
         token.tenantName = user.tenantName;
         token.assignedBranchId = user.assignedBranchId;
+        token.kybStatus = user.kybStatus;
+        token.dataScope = user.dataScope;
+        token.businessCode = user.businessCode;
+        token.businessStructure = user.businessStructure;
       }
       return token;
     },
@@ -116,6 +124,10 @@ export const authOptions: NextAuthOptions = {
         session.user.branchCode = token.branchCode as string;
         session.user.tenantName = token.tenantName as string;
         session.user.assignedBranchId = token.assignedBranchId as string;
+        session.user.kybStatus = token.kybStatus as string;
+        session.user.dataScope = token.dataScope as string;
+        session.user.businessCode = token.businessCode as string;
+        session.user.businessStructure = token.businessStructure as string;
       }
       return session;
     },

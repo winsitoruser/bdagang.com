@@ -1,5 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+let Product: any, Stock: any, Branch: any, StockMovement: any;
+try {
+  const models = require('../../../../models');
+  Product = models.Product;
+  Stock = models.Stock;
+  Branch = models.Branch;
+  StockMovement = models.StockMovement;
+} catch (e) { console.warn('Inventory summary models not available'); }
+
 const mockSummary = {
   totalProducts: 1250,
   totalStock: 85200,
@@ -37,23 +46,64 @@ const mockActivities = [
 ];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'GET') {
-    const { branchId, period } = req.query;
-    
-    let filteredBranchStock = mockBranchStock;
-    
-    if (branchId && branchId !== 'all') {
-      filteredBranchStock = mockBranchStock.filter(b => b.code === branchId);
-    }
-    
-    return res.status(200).json({
-      summary: mockSummary,
-      branchStock: filteredBranchStock,
-      topProducts: mockTopProducts,
-      activities: mockActivities
-    });
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
-  
-  res.setHeader('Allow', ['GET']);
-  return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+
+  const { branchId, period } = req.query;
+
+  if (Product && Stock && Branch) {
+    try {
+      const { Op, fn, col, literal } = require('sequelize');
+      const branches = await Branch.findAll({ where: { isActive: true }, attributes: ['id', 'name', 'code'], order: [['name', 'ASC']] });
+
+      if (branches.length > 0) {
+        const branchStock = await Promise.all(branches.map(async (b: any) => {
+          const totalProducts = await Stock.count({ where: { branchId: b.id }, distinct: true, col: 'productId' }) || 0;
+          const stockAgg = await Stock.findOne({
+            where: { branchId: b.id },
+            attributes: [
+              [fn('SUM', col('quantity')), 'totalStock'],
+              [fn('SUM', literal('quantity * cost_price')), 'stockValue']
+            ], raw: true
+          }) as any;
+          const lowStock = await Stock.count({ where: { branchId: b.id, quantity: { [Op.gt]: 0, [Op.lte]: col('min_stock') } } }) || 0;
+          const outOfStock = await Stock.count({ where: { branchId: b.id, quantity: 0 } }) || 0;
+
+          return {
+            id: b.id, name: b.name, code: b.code, totalProducts,
+            totalStock: parseInt(stockAgg?.totalStock || '0'),
+            stockValue: parseFloat(stockAgg?.stockValue || '0'),
+            lowStock, outOfStock, overStock: 0, lastSync: 'just now', status: 'synced'
+          };
+        }));
+
+        let filtered = branchStock;
+        if (branchId && branchId !== 'all') filtered = branchStock.filter(b => b.code === branchId);
+
+        const totalProducts = await Product.count({ where: { isActive: true } }) || 0;
+        const totalStock = branchStock.reduce((s: number, b: any) => s + b.totalStock, 0);
+        const totalValue = branchStock.reduce((s: number, b: any) => s + b.stockValue, 0);
+        const lowStockItems = branchStock.reduce((s: number, b: any) => s + b.lowStock, 0);
+        const outOfStockItems = branchStock.reduce((s: number, b: any) => s + b.outOfStock, 0);
+
+        if (totalProducts > 0) {
+          return res.status(200).json({
+            summary: { totalProducts, totalStock, totalValue, lowStockItems, outOfStockItems, overStockItems: 0, pendingTransfers: 0, pendingOrders: 0 },
+            branchStock: filtered, topProducts: mockTopProducts, activities: mockActivities
+          });
+        }
+      }
+    } catch (e: any) { console.warn('Inventory summary DB failed:', e.message); }
+  }
+
+  // Mock fallback
+  let filteredBranchStock = mockBranchStock;
+  if (branchId && branchId !== 'all') filteredBranchStock = mockBranchStock.filter(b => b.code === branchId);
+
+  return res.status(200).json({
+    summary: mockSummary, branchStock: filteredBranchStock,
+    topProducts: mockTopProducts, activities: mockActivities
+  });
 }

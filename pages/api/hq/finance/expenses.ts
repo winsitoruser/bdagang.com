@@ -1,5 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+let FinanceTransaction: any, Branch: any;
+try {
+  const models = require('../../../../models');
+  Branch = models.Branch;
+  // Try finance subfolder model first
+  try {
+    const FT = require('../../../../models/finance/Transaction');
+    FinanceTransaction = FT.default || FT;
+  } catch (e2) {
+    FinanceTransaction = models.FinanceTransaction;
+  }
+} catch (e) { console.warn('Expense models not available'); }
+
 const mockSummary = {
   totalExpenses: 2884000000,
   previousExpenses: 2650000000,
@@ -50,12 +63,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { period = 'month' } = req.query;
 
+    const now = new Date();
+    let startDate = new Date();
+    switch (period) {
+      case 'week': startDate.setDate(now.getDate() - 7); break;
+      case 'month': startDate.setMonth(now.getMonth() - 1); break;
+      case 'year': startDate.setFullYear(now.getFullYear() - 1); break;
+      default: startDate.setMonth(now.getMonth() - 1);
+    }
+
+    if (FinanceTransaction) {
+      try {
+        const { Op } = require('sequelize');
+        const where: any = { type: 'expense', transactionDate: { [Op.between]: [startDate, now] } };
+
+        const transactions = await FinanceTransaction.findAll({
+          where, order: [['transactionDate', 'DESC']], limit: 50,
+          include: Branch ? [{ model: Branch, as: 'branch', attributes: ['code', 'name'] }] : []
+        });
+
+        if (transactions.length > 0) {
+          const totalExpenses = transactions.reduce((s: number, t: any) => s + parseFloat(t.amount || 0), 0);
+          const byCategory: Record<string, number> = {};
+          transactions.forEach((t: any) => { byCategory[t.category || 'other'] = (byCategory[t.category || 'other'] || 0) + parseFloat(t.amount || 0); });
+
+          const categories = Object.entries(byCategory).map(([name, amount], i) => ({
+            id: String(i + 1), name, icon: 'circle', amount,
+            budget: 0, percentage: totalExpenses > 0 ? Math.round(amount / totalExpenses * 100) : 0,
+            trend: 0, color: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'][i % 6]
+          }));
+
+          const expenseList = transactions.map((t: any) => ({
+            id: t.id, date: t.transactionDate, description: t.description,
+            category: t.category || 'other', branch: t.branch?.code || 'N/A',
+            amount: parseFloat(t.amount), status: t.status, approver: '', vendor: ''
+          }));
+
+          return res.status(200).json({
+            summary: { ...mockSummary, totalExpenses },
+            categories, expenses: expenseList,
+            branches: mockBranchExpenses, period
+          });
+        }
+      } catch (e: any) { console.warn('Expenses DB failed:', e.message); }
+    }
+
     return res.status(200).json({
-      summary: mockSummary,
-      categories: mockCategories,
-      expenses: mockExpenses,
-      branches: mockBranchExpenses,
-      period
+      summary: mockSummary, categories: mockCategories,
+      expenses: mockExpenses, branches: mockBranchExpenses, period
     });
   } catch (error) {
     console.error('Error fetching expense data:', error);

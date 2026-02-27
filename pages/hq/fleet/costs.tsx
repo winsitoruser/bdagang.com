@@ -13,25 +13,39 @@ import {
   Calendar,
   Filter
 } from 'lucide-react';
-import { mockCostRecords, getTotalCostByCategory } from '../../../lib/mockData/fleetPhase2';
 
 export default function CostReporting() {
   const [mounted, setMounted] = useState(false);
-  const [costs, setCosts] = useState(mockCostRecords);
+  const [costs, setCosts] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [summary, setSummary] = useState<any>({ totalAmount: 0, byCategory: {} });
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    fetchCosts();
+  }, [selectedCategory]);
+
+  const fetchCosts = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedCategory !== 'all') params.set('category', selectedCategory);
+      const res = await fetch(`/api/fleet/costs?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCosts(data.data || []);
+        setSummary(data.summary || { totalAmount: 0, byCategory: {} });
+      }
+    } catch (e) { console.error('Costs fetch failed:', e); }
+  };
 
   if (!mounted) return null;
 
-  const totalCost = costs.reduce((sum, c) => sum + c.amount, 0);
-  const fuelCost = getTotalCostByCategory('fuel');
-  const maintenanceCost = getTotalCostByCategory('maintenance');
-  const salaryCost = getTotalCostByCategory('salary');
-  const insuranceCost = getTotalCostByCategory('insurance');
+  const totalCost = summary.totalAmount || costs.reduce((sum: number, c: any) => sum + (c.amount || 0), 0);
+  const fuelCost = summary.byCategory?.fuel || 0;
+  const maintenanceCost = summary.byCategory?.maintenance || 0;
+  const salaryCost = summary.byCategory?.salary || 0;
+  const insuranceCost = summary.byCategory?.insurance || 0;
 
   const costByCategory = [
     { category: 'Fuel', amount: fuelCost, icon: Fuel, color: 'bg-orange-100 text-orange-600', percentage: (fuelCost / totalCost) * 100 },

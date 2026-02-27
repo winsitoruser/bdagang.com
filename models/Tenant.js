@@ -41,6 +41,45 @@ module.exports = (sequelize) => {
       defaultValue: 0,
       field: 'onboarding_step'
     },
+    // KYB fields (from admin branch)
+    kybStatus: {
+      type: DataTypes.STRING(30),
+      defaultValue: 'pending_kyb',
+      field: 'kyb_status'
+    },
+    businessStructure: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'single',
+      field: 'business_structure'
+    },
+    parentTenantId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'parent_tenant_id',
+      references: { model: 'tenants', key: 'id' }
+    },
+    isHq: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      field: 'is_hq'
+    },
+    activatedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'activated_at'
+    },
+    activatedBy: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'activated_by'
+    },
+    businessCode: {
+      type: DataTypes.STRING(20),
+      unique: true,
+      allowNull: true,
+      field: 'business_code'
+    },
+    // Subscription & admin fields (from main branch)
     name: {
       type: DataTypes.STRING(255),
       allowNull: true
@@ -156,6 +195,26 @@ module.exports = (sequelize) => {
       as: 'tenantModules'
     });
 
+    // KYB Applications
+    if (models.KybApplication) {
+      Tenant.hasMany(models.KybApplication, {
+        foreignKey: 'tenantId',
+        as: 'kybApplications'
+      });
+    }
+
+    // Sub-branches (for HQ tenants)
+    Tenant.hasMany(models.Tenant, {
+      foreignKey: 'parentTenantId',
+      as: 'subBranches'
+    });
+
+    // Parent HQ
+    Tenant.belongsTo(models.Tenant, {
+      foreignKey: 'parentTenantId',
+      as: 'parentTenant'
+    });
+
     // Tenant has many branches
     Tenant.hasMany(models.Branch, {
       foreignKey: 'tenantId',
@@ -163,10 +222,12 @@ module.exports = (sequelize) => {
     });
 
     // Tenant has many stores
-    Tenant.hasMany(models.Store, {
-      foreignKey: 'tenantId',
-      as: 'stores'
-    });
+    if (models.Store) {
+      Tenant.hasMany(models.Store, {
+        foreignKey: 'tenantId',
+        as: 'stores'
+      });
+    }
 
     // Tenant has many sync logs
     if (models.SyncLog) {

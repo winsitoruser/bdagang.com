@@ -1,16 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Op } from 'sequelize';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { getPaginationParams, getPaginationMeta } from '../../../../lib/api/pagination';
 import { validateRequiredFields } from '../../../../lib/api/validation';
 
-let User: any, Branch: any;
+let Op: any;
+try { Op = require('sequelize').Op; } catch (e) {}
+
+let Employee: any, User: any, Branch: any, EmployeeKPI: any, EmployeeAttendance: any;
 try {
   const models = require('../../../../models');
+  Employee = models.Employee;
   User = models.User;
   Branch = models.Branch;
+  EmployeeKPI = models.EmployeeKPI;
+  EmployeeAttendance = models.EmployeeAttendance;
 } catch (e) {
   console.warn('HRIS models not available:', e);
+  Employee = null;
   User = null;
   Branch = null;
 }
@@ -50,9 +56,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function getEmployees(req: NextApiRequest, res: NextApiResponse) {
-  if (!User) {
+  if (!Employee && !User) {
     return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'User model not available')
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Employee model not available')
     );
   }
 
@@ -60,33 +66,143 @@ async function getEmployees(req: NextApiRequest, res: NextApiResponse) {
   const { limit, offset } = getPaginationParams(req.query);
 
   try {
+    // Use Employee model if available, fallback to User
+    if (Employee) {
+      const where: any = {};
+
+      if (search) {
+        where[Op.or] = [
+          { name: { [Op.iLike]: `%${search}%` } },
+          { email: { [Op.iLike]: `%${search}%` } },
+          { employeeId: { [Op.iLike]: `%${search}%` } }
+        ];
+      }
+
+      if (department && department !== 'all') {
+        where.department = department;
+      }
+
+      if (status && status !== 'all') {
+        where.status = status.toString().toUpperCase();
+      }
+
+      if (branchId && branchId !== 'all') {
+        where.branchId = branchId;
+      }
+
+      const includes: any[] = [
+        { model: User, as: 'user', attributes: ['id', 'name', 'email', 'avatar'], required: false }
+      ];
+      if (Branch) {
+        includes.push({ model: Branch, as: 'branch', attributes: ['id', 'code', 'name', 'city'], required: false });
+      }
+
+      const { count, rows } = await Employee.findAndCountAll({
+        where,
+        include: includes,
+        order: [['name', 'ASC']],
+        limit,
+        offset
+      });
+
+      // Batch-fetch KPI & attendance data for these employees
+      const employeeIds = rows.map((e: any) => e.id);
+      const currentPeriod = new Date().toISOString().substring(0, 7);
+
+      let kpiMap: Record<string, any> = {};
+      let attendanceMap: Record<string, any> = {};
+
+      if (EmployeeKPI && employeeIds.length > 0) {
+        try {
+          const kpis = await EmployeeKPI.findAll({
+            where: { employeeId: { [Op.in]: employeeIds }, period: currentPeriod }
+          });
+          kpis.forEach((k: any) => {
+            if (!kpiMap[k.employeeId]) kpiMap[k.employeeId] = [];
+            kpiMap[k.employeeId].push(k);
+          });
+        } catch (e) { /* KPI table may not exist yet */ }
+      }
+
+      if (EmployeeAttendance && employeeIds.length > 0) {
+        try {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const attendances = await EmployeeAttendance.findAll({
+            where: {
+              employeeId: { [Op.in]: employeeIds },
+              date: { [Op.gte]: thirtyDaysAgo.toISOString().split('T')[0] }
+            }
+          });
+          attendances.forEach((a: any) => {
+            if (!attendanceMap[a.employeeId]) attendanceMap[a.employeeId] = [];
+            attendanceMap[a.employeeId].push(a);
+          });
+        } catch (e) { /* Attendance table may not exist yet */ }
+      }
+
+      const employees = rows.map((emp: any) => {
+        const empKpis = kpiMap[emp.id] || [];
+        const empAtt = attendanceMap[emp.id] || [];
+
+        const totalTarget = empKpis.reduce((s: number, k: any) => s + (parseFloat(k.target) || 0), 0);
+        const totalActual = empKpis.reduce((s: number, k: any) => s + (parseFloat(k.actual) || 0), 0);
+        const kpiAchievement = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
+
+        const totalDays = empAtt.length || 1;
+        const presentDays = empAtt.filter((a: any) => ['present', 'late'].includes(a.status)).length;
+        const attendanceRate = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
+
+        const score = empKpis.length > 0 || empAtt.length > 0
+          ? Math.round((kpiAchievement * 0.6) + (attendanceRate * 0.4))
+          : 0;
+
+        return {
+          id: emp.id,
+          employeeId: emp.employeeId,
+          name: emp.name,
+          email: emp.email,
+          phone: emp.phoneNumber,
+          position: emp.position,
+          department: emp.department,
+          branchId: emp.branchId || emp.tenantId,
+          branchName: emp.branch?.name || emp.workLocation || 'HQ',
+          joinDate: emp.joinDate,
+          status: emp.status?.toLowerCase() || 'active',
+          avatar: emp.user?.avatar || null,
+          performance: {
+            score: score || null,
+            trend: 'stable',
+            kpiAchievement: kpiAchievement || null,
+            attendance: attendanceRate || null,
+            rating: score > 0 ? Math.round((score / 20) * 10) / 10 : null
+          },
+          manager: null,
+          baseSalary: emp.baseSalary,
+          salaryGrade: emp.salaryGrade
+        };
+      });
+
+      return res.status(HttpStatus.OK).json(
+        successResponse(employees, getPaginationMeta(count, limit, offset))
+      );
+    }
+
+    // Fallback: use User model if Employee not available
     const where: any = {};
-    
     if (search) {
       where[Op.or] = [
         { name: { [Op.iLike]: `%${search}%` } },
         { email: { [Op.iLike]: `%${search}%` } }
       ];
     }
-    
-    if (department && department !== 'all') {
-      where.department = department;
-    }
-    
     if (status && status !== 'all') {
       where.isActive = status === 'active';
-    }
-    
-    if (branchId && branchId !== 'all') {
-      where.branchId = branchId;
     }
 
     const { count, rows } = await User.findAndCountAll({
       where,
       attributes: { exclude: ['password'] },
-      include: [
-        { model: Branch, as: 'branch', attributes: ['id', 'code', 'name', 'city'] }
-      ],
       order: [['name', 'ASC']],
       limit,
       offset
@@ -98,20 +214,14 @@ async function getEmployees(req: NextApiRequest, res: NextApiResponse) {
       email: user.email,
       phone: user.phone,
       position: user.role || 'Staff',
-      department: user.department || 'Operations',
-      branchId: user.branch?.id,
-      branchName: user.branch?.name || 'HQ',
+      department: 'Operations',
+      branchId: user.branchId,
+      branchName: 'HQ',
       joinDate: user.createdAt,
       status: user.isActive ? 'active' : 'inactive',
       avatar: user.avatar,
-      performance: {
-        score: Math.floor(Math.random() * 30) + 70,
-        trend: ['up', 'down', 'stable'][Math.floor(Math.random() * 3)],
-        kpiAchievement: Math.floor(Math.random() * 30) + 80,
-        attendance: Math.floor(Math.random() * 10) + 90,
-        rating: (Math.random() * 2 + 3).toFixed(1)
-      },
-      manager: user.managerId || null
+      performance: { score: null, trend: 'stable', kpiAchievement: null, attendance: null, rating: null },
+      manager: null
     }));
 
     return res.status(HttpStatus.OK).json(
@@ -126,15 +236,15 @@ async function getEmployees(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createEmployee(req: NextApiRequest, res: NextApiResponse) {
-  if (!User) {
+  if (!Employee && !User) {
     return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'User model not available')
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Employee model not available')
     );
   }
 
-  const { name, email, phone, position, department, branchId, branchName, tenantId } = req.body;
+  const { name, email, phone, position, department, workLocation, branchId, branchName, tenantId } = req.body;
 
-  const validation = validateRequiredFields(req.body, ['name', 'email', 'tenantId']);
+  const validation = validateRequiredFields(req.body, ['name', 'email', 'position', 'department']);
   if (!validation.isValid) {
     return res.status(HttpStatus.BAD_REQUEST).json(
       errorResponse(
@@ -145,16 +255,22 @@ async function createEmployee(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const user = await User.create({
-      tenantId,
+    // Generate employee ID
+    const count = await Employee.count({ where: tenantId ? { tenantId } : {} });
+    const employeeIdCode = `EMP${String(count + 1).padStart(3, '0')}`;
+
+    const employee = await Employee.create({
+      employeeId: employeeIdCode,
       name,
       email,
-      phone,
-      role: position || 'STAFF',
-      department: department || 'Operations',
-      branchId,
-      isActive: true,
-      password: 'default123' // Should be hashed in production
+      phoneNumber: phone,
+      position,
+      department: department || 'ADMINISTRATION',
+      workLocation: workLocation || 'ADMIN_OFFICE',
+      role: 'CASHIER',
+      status: 'ACTIVE',
+      joinDate: new Date(),
+      tenantId
     });
 
     // Trigger webhook for new employee
@@ -162,7 +278,7 @@ async function createEmployee(req: NextApiRequest, res: NextApiResponse) {
       try {
         await triggerHRISWebhook(
           'employee.created',
-          user.get('id') as string,
+          employee.id,
           name,
           { email, phone, position, department, branchId },
           branchId,
@@ -174,13 +290,13 @@ async function createEmployee(req: NextApiRequest, res: NextApiResponse) {
     }
 
     return res.status(HttpStatus.CREATED).json(
-      successResponse(user, undefined, 'Employee created successfully')
+      successResponse(employee, undefined, 'Employee created successfully')
     );
   } catch (error: any) {
     console.error('Error creating employee:', error);
     if (error.name === 'SequelizeUniqueConstraintError') {
       return res.status(HttpStatus.CONFLICT).json(
-        errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'Email already exists')
+        errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'Employee ID or email already exists')
       );
     }
     if (error.name === 'SequelizeValidationError') {
@@ -195,9 +311,10 @@ async function createEmployee(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function updateEmployee(req: NextApiRequest, res: NextApiResponse) {
-  if (!User) {
+  const model = Employee || User;
+  if (!model) {
     return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'User model not available')
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Employee model not available')
     );
   }
 
@@ -211,21 +328,23 @@ async function updateEmployee(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const user = await User.findByPk(id);
+    const record = await model.findByPk(id);
     
-    if (!user) {
+    if (!record) {
       return res.status(HttpStatus.NOT_FOUND).json(
         errorResponse(ErrorCodes.NOT_FOUND, 'Employee not found')
       );
     }
 
-    // Don't allow updating password through this endpoint
+    // Don't allow updating sensitive fields
     delete updateData.password;
+    delete updateData.id;
+    delete updateData.employeeId;
 
-    await user.update(updateData);
+    await record.update(updateData);
 
     return res.status(HttpStatus.OK).json(
-      successResponse(user, undefined, 'Employee updated successfully')
+      successResponse(record, undefined, 'Employee updated successfully')
     );
   } catch (error: any) {
     console.error('Error updating employee:', error);
@@ -241,9 +360,10 @@ async function updateEmployee(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function deleteEmployee(req: NextApiRequest, res: NextApiResponse) {
-  if (!User) {
+  const model = Employee || User;
+  if (!model) {
     return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'User model not available')
+      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Employee model not available')
     );
   }
 
@@ -256,16 +376,20 @@ async function deleteEmployee(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const user = await User.findByPk(id);
+    const record = await model.findByPk(id);
     
-    if (!user) {
+    if (!record) {
       return res.status(HttpStatus.NOT_FOUND).json(
         errorResponse(ErrorCodes.NOT_FOUND, 'Employee not found')
       );
     }
 
-    // Soft delete by setting isActive to false
-    await user.update({ isActive: false });
+    // Soft delete
+    if (Employee) {
+      await record.update({ status: 'INACTIVE', endDate: new Date() });
+    } else {
+      await record.update({ isActive: false });
+    }
 
     return res.status(HttpStatus.OK).json(
       successResponse(null, undefined, 'Employee deactivated successfully')

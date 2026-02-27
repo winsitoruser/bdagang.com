@@ -19,8 +19,21 @@ interface HRISWebhookPayload {
   triggeredBy?: string;
 }
 
-// In-memory webhook storage
-const hrisWebhooks: any[] = [];
+let HRISWebhookLog: any;
+try {
+  const models = require('../../../../models');
+  HRISWebhookLog = models.HRISWebhookLog;
+} catch (e) {
+  console.warn('HRISWebhookLog model not available:', e);
+}
+
+const EVENT_TYPES = [
+  'employee.created', 'employee.updated', 'employee.terminated',
+  'attendance.clock_in', 'attendance.clock_out', 'attendance.late', 'attendance.absent',
+  'kpi.target_set', 'kpi.updated', 'kpi.achieved', 'kpi.not_achieved',
+  'performance.review_created', 'performance.review_submitted', 'performance.review_acknowledged',
+  'leave.requested', 'leave.approved', 'leave.rejected'
+];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -39,17 +52,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-function getWebhooks(req: NextApiRequest, res: NextApiResponse) {
-  return res.status(200).json({ 
-    webhooks: hrisWebhooks,
-    eventTypes: [
-      'employee.created', 'employee.updated', 'employee.terminated',
-      'attendance.clock_in', 'attendance.clock_out', 'attendance.late', 'attendance.absent',
-      'kpi.target_set', 'kpi.updated', 'kpi.achieved', 'kpi.not_achieved',
-      'performance.review_created', 'performance.review_submitted', 'performance.review_acknowledged',
-      'leave.requested', 'leave.approved', 'leave.rejected'
-    ]
-  });
+async function getWebhooks(req: NextApiRequest, res: NextApiResponse) {
+  const { eventType, limit: qLimit } = req.query;
+  const take = Math.min(parseInt(qLimit as string) || 50, 200);
+
+  if (HRISWebhookLog) {
+    try {
+      const where: any = {};
+      if (eventType && eventType !== 'all') where.eventType = eventType;
+
+      const webhooks = await HRISWebhookLog.findAll({
+        where,
+        order: [['createdAt', 'DESC']],
+        limit: take
+      });
+
+      return res.status(200).json({ webhooks, eventTypes: EVENT_TYPES });
+    } catch (e: any) {
+      console.warn('Webhook DB query failed:', e.message);
+    }
+  }
+
+  return res.status(200).json({ webhooks: [], eventTypes: EVENT_TYPES });
 }
 
 async function triggerWebhook(req: NextApiRequest, res: NextApiResponse) {
@@ -70,14 +94,7 @@ async function triggerWebhook(req: NextApiRequest, res: NextApiResponse) {
     triggeredBy
   };
 
-  // Log webhook
-  hrisWebhooks.push({
-    id: Date.now().toString(),
-    ...payload,
-    status: 'triggered'
-  });
-
-  // Process webhook based on event type
+  await persistWebhook(payload);
   await processHRISWebhook(payload);
 
   return res.status(200).json({ 
@@ -87,8 +104,27 @@ async function triggerWebhook(req: NextApiRequest, res: NextApiResponse) {
   });
 }
 
+async function persistWebhook(payload: HRISWebhookPayload) {
+  if (HRISWebhookLog) {
+    try {
+      await HRISWebhookLog.create({
+        eventType: payload.eventType,
+        employeeId: payload.employeeId,
+        employeeName: payload.employeeName,
+        branchId: payload.branchId || null,
+        branchName: payload.branchName || null,
+        data: typeof payload.data === 'object' ? payload.data : { raw: payload.data },
+        triggeredBy: payload.triggeredBy || null,
+        status: 'triggered'
+      });
+    } catch (e: any) {
+      console.warn('Failed to persist webhook:', e.message);
+    }
+  }
+}
+
 async function processHRISWebhook(payload: HRISWebhookPayload) {
-  const { eventType, employeeName, branchName, data } = payload;
+  const { eventType, employeeName, branchName } = payload;
 
   console.log(`[HRIS Webhook] ${eventType}:`, {
     employee: employeeName,
@@ -99,37 +135,42 @@ async function processHRISWebhook(payload: HRISWebhookPayload) {
   // Event-specific processing
   switch (eventType) {
     case 'attendance.late':
-      // Send notification to manager
       console.log(`[Alert] ${employeeName} terlambat di ${branchName}`);
       break;
     
     case 'attendance.absent':
-      // Send urgent notification
       console.log(`[Alert] ${employeeName} tidak hadir di ${branchName}`);
       break;
     
     case 'kpi.not_achieved':
-      // Alert to HQ
       console.log(`[KPI Alert] ${employeeName} tidak mencapai target KPI`);
       break;
     
     case 'kpi.achieved':
-      // Congratulations notification
       console.log(`[KPI] ${employeeName} berhasil mencapai target KPI`);
       break;
     
     case 'performance.review_submitted':
-      // Notify reviewer
       console.log(`[Review] Performance review submitted for ${employeeName}`);
       break;
     
     case 'leave.requested':
-      // Notify approver
       console.log(`[Leave] ${employeeName} mengajukan cuti`);
       break;
     
     default:
       console.log(`[HRIS] Event ${eventType} processed`);
+  }
+
+  // Update status to processed
+  if (HRISWebhookLog) {
+    try {
+      const { Op } = require('sequelize');
+      await HRISWebhookLog.update(
+        { status: 'processed' },
+        { where: { employeeId: payload.employeeId, eventType: payload.eventType, status: 'triggered' }, limit: 1 }
+      );
+    } catch (_) {}
   }
 }
 
@@ -154,12 +195,7 @@ export async function triggerHRISWebhook(
     triggeredBy
   };
 
-  hrisWebhooks.push({
-    id: Date.now().toString(),
-    ...payload,
-    status: 'triggered'
-  });
-
+  await persistWebhook(payload);
   await processHRISWebhook(payload);
 
   return payload;

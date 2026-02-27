@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
+import { signIn } from 'next-auth/react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -131,16 +132,24 @@ const Register: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('🎉 Registrasi berhasil! Silakan login.', {
-          duration: 4000,
+        toast.success('🎉 Registrasi berhasil! Mengalihkan ke onboarding...', {
+          duration: 3000,
           style: {
             background: '#10B981',
             color: 'white',
           },
         });
-        setTimeout(() => {
+        // Auto-login after registration
+        const loginResult = await signIn('credentials', {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        });
+        if (loginResult?.ok) {
+          router.push('/onboarding');
+        } else {
           router.push('/auth/login');
-        }, 2000);
+        }
       } else {
         toast.error(data.message || 'Registrasi gagal. Silakan coba lagi.', {
           duration: 4000,

@@ -18,20 +18,37 @@ import {
   EyeOff
 } from 'lucide-react';
 import { mockGPSLocations, mockLocationAlerts, mockGeofences } from '../../../lib/mockData/fleetPhase2';
-import { mockVehicles } from '../../../lib/mockData/fleet';
 
 export default function GPSTracking() {
   const [mounted, setMounted] = useState(false);
-  const [locations, setLocations] = useState(mockGPSLocations);
-  const [alerts, setAlerts] = useState(mockLocationAlerts);
-  const [geofences, setGeofences] = useState(mockGeofences);
+  const [locations, setLocations] = useState<any[]>(mockGPSLocations);
+  const [alerts, setAlerts] = useState<any[]>(mockLocationAlerts);
+  const [geofences, setGeofences] = useState<any[]>(mockGeofences);
   const [activeTab, setActiveTab] = useState<'map' | 'alerts' | 'geofences'>('map');
   const [showGeofences, setShowGeofences] = useState(true);
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  const [vehicleMap, setVehicleMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setMounted(true);
+    fetchTracking();
   }, []);
+
+  const fetchTracking = async () => {
+    try {
+      const res = await fetch('/api/fleet/tracking/live');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data && data.data.length > 0) {
+          const locs = data.data.map((v: any) => ({ ...v.location, vehicleId: v.vehicleId }));
+          setLocations(locs);
+          const map: Record<string, string> = {};
+          data.data.forEach((v: any) => { map[v.vehicleId] = v.licensePlate || v.vehicleNumber; });
+          setVehicleMap(map);
+        }
+      }
+    } catch (e) { console.error('Tracking fetch failed:', e); }
+  };
 
   if (!mounted) return null;
 
@@ -41,8 +58,7 @@ export default function GPSTracking() {
   const activeGeofences = geofences.filter(g => g.status === 'active').length;
 
   const getVehicleInfo = (vehicleId: string) => {
-    const vehicle = mockVehicles.find(v => v.id === vehicleId);
-    return vehicle ? vehicle.licensePlate : vehicleId;
+    return vehicleMap[vehicleId] || vehicleId;
   };
 
   return (

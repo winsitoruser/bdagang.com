@@ -207,13 +207,13 @@ async function calculateBranchSales(branchId: string, period: string): Promise<n
         endDate.setHours(23, 59, 59, 999);
     }
 
-    const result = await PosTransaction.sum('total', {
+    const result = await PosTransaction.sum('grandTotal', {
       where: {
         branchId: branchId,
         transactionDate: {
           [Op.between]: [startDate, endDate]
         },
-        status: 'completed'
+        status: 'closed'
       }
     });
 
@@ -238,7 +238,7 @@ async function getTransactionCount(branchId: string, period: string): Promise<nu
         transactionDate: {
           [Op.gte]: startDate
         },
-        status: 'completed'
+        status: 'closed'
       }
     });
 
@@ -656,11 +656,11 @@ async function getSalesTrend(): Promise<SalesTrend[]> {
       
       const result = await sequelize.query(`
         SELECT 
-          COALESCE(SUM(total), 0) as sales,
+          COALESCE(SUM(grand_total), 0) as sales,
           COUNT(*) as transactions
         FROM pos_transactions
         WHERE transaction_date BETWEEN :startDate AND :endDate
-        AND status = 'completed'
+        AND status = 'closed'
       `, {
         replacements: { startDate: date, endDate },
         type: QueryTypes.SELECT

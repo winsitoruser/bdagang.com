@@ -47,6 +47,40 @@ module.exports = (sequelize) => {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
       field: 'is_active'
+    },
+    category: {
+      type: DataTypes.STRING(50),
+      defaultValue: 'operations'
+    },
+    features: {
+      type: DataTypes.JSONB,
+      defaultValue: []
+    },
+    pricingTier: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'basic',
+      field: 'pricing_tier'
+    },
+    setupComplexity: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'simple',
+      field: 'setup_complexity'
+    },
+    color: {
+      type: DataTypes.STRING(20),
+      defaultValue: '#3B82F6'
+    },
+    previewImage: {
+      type: DataTypes.STRING(500),
+      field: 'preview_image'
+    },
+    version: {
+      type: DataTypes.STRING(20),
+      defaultValue: '1.0.0'
+    },
+    tags: {
+      type: DataTypes.JSONB,
+      defaultValue: []
     }
   }, {
     tableName: 'modules',
@@ -94,6 +128,19 @@ module.exports = (sequelize) => {
       foreignKey: 'moduleId',
       as: 'tenantModules'
     });
+
+    // Module dependencies
+    if (models.ModuleDependency) {
+      Module.hasMany(models.ModuleDependency, {
+        foreignKey: 'moduleId',
+        as: 'dependencies'
+      });
+
+      Module.hasMany(models.ModuleDependency, {
+        foreignKey: 'dependsOnModuleId',
+        as: 'dependedBy'
+      });
+    }
   };
 
   return Module;

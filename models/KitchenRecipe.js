@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const { sequelize } = require('../lib/sequelizeClient');
+const sequelize = require('../lib/sequelize');
 
 const KitchenRecipe = sequelize.define('KitchenRecipe', {
   id: {

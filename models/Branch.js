@@ -7,6 +7,15 @@ const Branch = sequelize.define('Branch', {
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true
   },
+  tenantId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    references: {
+      model: 'tenants',
+      key: 'id'
+    },
+    field: 'tenant_id'
+  },
   storeId: {
     type: DataTypes.UUID,
     allowNull: true,

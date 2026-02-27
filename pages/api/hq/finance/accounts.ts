@@ -1,15 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
+let FinanceReceivable: any, FinancePayable: any, FinanceReceivablePayment: any, FinancePayablePayment: any;
+try {
+  const models = require('../../../../models');
+  FinanceReceivable = models.FinanceReceivable;
+  FinancePayable = models.FinancePayable;
+  FinanceReceivablePayment = models.FinanceReceivablePayment;
+  FinancePayablePayment = models.FinancePayablePayment;
+} catch (e) { console.warn('Finance account models not available'); }
+
 const mockSummary = {
-  totalReceivables: 450000000,
-  totalPayables: 320000000,
-  netPosition: 130000000,
-  overdueReceivables: 85000000,
-  overduePayables: 45000000,
-  dueThisWeek: 120000000,
-  collectedThisMonth: 380000000,
-  paidThisMonth: 290000000
+  totalReceivables: 450000000, totalPayables: 320000000, netPosition: 130000000,
+  overdueReceivables: 85000000, overduePayables: 45000000, dueThisWeek: 120000000,
+  collectedThisMonth: 380000000, paidThisMonth: 290000000
 };
 
 const mockReceivables = [
@@ -29,8 +33,7 @@ const mockPayables = [
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
-      case 'GET':
-        return await getAccounts(req, res);
+      case 'GET': return await getAccounts(req, res);
       default:
         res.setHeader('Allow', ['GET']);
         return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
@@ -47,14 +50,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function getAccounts(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // TODO: Replace with real Account model when available
-    // For now, return mock data in standard format
+    if (FinanceReceivable && FinancePayable) {
+      try {
+        const { Op } = require('sequelize');
+        const now = new Date();
+        const receivables = await FinanceReceivable.findAll({ order: [['dueDate', 'ASC']] });
+        const payables = await FinancePayable.findAll({ order: [['dueDate', 'ASC']] });
+
+        const totalReceivables = receivables.reduce((s: number, r: any) => s + parseFloat(r.balance || 0), 0);
+        const totalPayables = payables.reduce((s: number, p: any) => s + parseFloat(p.balance || 0), 0);
+        const overdueReceivables = receivables.filter((r: any) => r.status === 'overdue').reduce((s: number, r: any) => s + parseFloat(r.balance || 0), 0);
+        const overduePayables = payables.filter((p: any) => p.status === 'overdue').reduce((s: number, p: any) => s + parseFloat(p.balance || 0), 0);
+
+        if (receivables.length > 0 || payables.length > 0) {
+          return res.status(HttpStatus.OK).json(successResponse({
+            summary: {
+              totalReceivables, totalPayables,
+              netPosition: totalReceivables - totalPayables,
+              overdueReceivables, overduePayables,
+              dueThisWeek: 0, collectedThisMonth: 0, paidThisMonth: 0
+            },
+            receivables, payables
+          }));
+        }
+      } catch (e: any) {
+        console.warn('Finance accounts DB failed:', e.message);
+      }
+    }
+
     return res.status(HttpStatus.OK).json(
-      successResponse({
-        summary: mockSummary,
-        receivables: mockReceivables,
-        payables: mockPayables
-      })
+      successResponse({ summary: mockSummary, receivables: mockReceivables, payables: mockPayables })
     );
   } catch (error) {
     console.error('Error fetching accounts:', error);

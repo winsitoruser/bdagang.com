@@ -133,11 +133,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       needsOnboarding: !user.tenant.setupCompleted
     });
 
-  } catch (error) {
-    console.error('Business config error:', error);
+  } catch (error: any) {
+    console.error('Business config error:', error?.message, error?.original?.message || '');
+    console.error('Stack:', error?.stack?.split('\n').slice(0, 5).join('\n'));
     return res.status(500).json({
       success: false,
-      error: 'Failed to fetch business configuration'
+      error: 'Failed to fetch business configuration',
+      debug: process.env.NODE_ENV === 'development' ? error?.message : undefined
     });
   }
 }

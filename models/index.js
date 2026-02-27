@@ -41,6 +41,7 @@ db.BusinessType = require('./BusinessType')(sequelize);
 db.Module = require('./Module')(sequelize);
 db.BusinessTypeModule = require('./BusinessTypeModule')(sequelize);
 db.TenantModule = require('./TenantModule')(sequelize);
+db.ModuleDependency = require('./ModuleDependency')(sequelize);
 db.ShiftHandover = require('./ShiftHandover');
 db.CustomerLoyalty = require('./CustomerLoyalty');
 db.LoyaltyProgram = require('./LoyaltyProgram');
@@ -93,10 +94,82 @@ db.PartnerOutlet = require('./PartnerOutlet');
 db.PartnerUser = require('./PartnerUser');
 db.ActivationRequest = require('./ActivationRequest');
 
+// KYB (Know Your Business) Models
+db.KybApplication = require('./KybApplication');
+db.KybDocument = require('./KybDocument');
+
+// HRIS Models
+db.EmployeeAttendance = require('./EmployeeAttendance');
+db.EmployeeKPI = require('./EmployeeKPI');
+db.KPITemplate = require('./KPITemplate');
+db.KPIScoring = require('./KPIScoring');
+db.PerformanceReview = require('./PerformanceReview');
+db.LeaveRequest = require('./LeaveRequest');
+db.HRISWebhookLog = require('./HRISWebhookLog');
+
+// Attendance System Models
+db.AttendanceDevice = require('./AttendanceDevice');
+db.AttendanceDeviceLog = require('./AttendanceDeviceLog');
+db.AttendanceSettings = require('./AttendanceSettings');
+
+// Fleet Management Models
+db.FleetVehicle = require('./FleetVehicle');
+db.FleetDriver = require('./FleetDriver');
+db.FleetRoute = require('./FleetRoute');
+db.FleetRouteAssignment = require('./FleetRouteAssignment');
+db.FleetGpsLocation = require('./FleetGpsLocation');
+db.FleetMaintenanceSchedule = require('./FleetMaintenanceSchedule');
+db.FleetFuelTransaction = require('./FleetFuelTransaction');
+
 // Third-party Integration Models
 db.IntegrationProvider = require('./IntegrationProvider');
 db.IntegrationConfig = require('./IntegrationConfig');
 db.IntegrationRequest = require('./IntegrationRequest');
+db.IntegrationLog = require('./IntegrationLog');
+db.IntegrationWebhook = require('./IntegrationWebhook');
+
+// Finance Models
+db.FinanceAccount = require('./FinanceAccount');
+db.FinanceBudget = require('./FinanceBudget');
+db.FinanceInvoice = require('./FinanceInvoice');
+db.FinanceInvoiceItem = require('./FinanceInvoiceItem');
+db.FinanceInvoicePayment = require('./FinanceInvoicePayment');
+db.FinancePayable = require('./FinancePayable');
+db.FinancePayablePayment = require('./FinancePayablePayment');
+db.FinanceReceivable = require('./FinanceReceivable');
+db.FinanceReceivablePayment = require('./FinanceReceivablePayment');
+db.FinanceTransaction = require('./FinanceTransaction');
+db.Invoice = require('./Invoice');
+
+// Kitchen Extended Models
+db.KitchenRecipe = require('./KitchenRecipe');
+db.KitchenRecipeIngredient = require('./KitchenRecipeIngredient');
+db.KitchenSettings = require('./KitchenSettings');
+db.KitchenStaff = require('./KitchenStaff');
+
+// Promo Models
+db.Promo = require('./Promo');
+db.PromoBundle = require('./PromoBundle');
+db.PromoCategory = require('./PromoCategory');
+db.PromoProduct = require('./PromoProduct');
+
+// Supply Chain Models
+db.InternalRequisition = require('./InternalRequisition');
+db.InternalRequisitionItem = require('./InternalRequisitionItem');
+
+// Additional Models
+db.AuditLog = require('./AuditLog');
+db.BillingCycle = require('./BillingCycle');
+db.NotificationSetting = require('./NotificationSetting');
+db.OutletIntegration = require('./OutletIntegration');
+db.PartnerIntegration = require('./PartnerIntegration');
+db.Plan = require('./Plan');
+db.PriceTier = require('./PriceTier');
+db.PrinterConfig = require('./PrinterConfig');
+db.Role = require('./Role');
+db.SystemBackup = require('./SystemBackup');
+db.Unit = require('./Unit');
+db.Voucher = require('./Voucher');
 
 // Load associations if they exist
 // Associations are defined in the models themselves or in separate files

@@ -1,12 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
-import { QueryTypes } from 'sequelize';
 import { 
   calculateAchievementPercentage,
   getKPIStatus,
   STANDARD_SCORING_LEVELS
 } from '@/lib/hq/kpi-calculator';
+
+let QueryTypes: any;
+try { QueryTypes = require('sequelize').QueryTypes; } catch (e) {}
 
 /**
  * HRIS Export API
