@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 const mockAlerts = [
   {
@@ -52,7 +53,8 @@ const mockAlerts = [
 ];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'GET') {
+  try {
+    if (req.method === 'GET') {
     const { type, priority, branchId, includeResolved } = req.query;
     
     let filteredAlerts = mockAlerts;
@@ -80,20 +82,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       unread: mockAlerts.filter(a => !a.isRead && !a.isResolved).length
     };
     
-    return res.status(200).json({
-      alerts: filteredAlerts,
-      stats
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse({ alerts: filteredAlerts, stats })
+    );
   }
   
   if (req.method === 'PATCH') {
     const { id, action } = req.body;
-    return res.status(200).json({
-      success: true,
-      message: `Alert ${id} ${action} successfully`
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse({ id, action }, undefined, `Alert ${id} ${action} successfully`)
+    );
   }
   
   res.setHeader('Allow', ['GET', 'PATCH']);
-  return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+    errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+  );
+  } catch (error) {
+    console.error('Inventory Alerts API Error:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
+  }
 }

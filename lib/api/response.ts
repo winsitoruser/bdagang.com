@@ -18,11 +18,19 @@ export interface ApiErrorResponse {
 }
 
 export interface PaginationMeta {
-  total: number;
-  limit: number;
-  offset: number;
-  page: number;
-  totalPages: number;
+  total?: number;
+  limit?: number;
+  offset?: number;
+  page?: number;
+  totalPages?: number;
+  pagination?: {
+    total: number;
+    limit: number;
+    offset?: number;
+    page: number;
+    totalPages: number;
+  };
+  [key: string]: any; // Allow additional metadata like stats
 }
 
 /**

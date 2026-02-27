@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 interface ProductStock {
   id: string;
@@ -71,11 +72,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return transferStock(req, res);
       default:
         res.setHeader('Allow', ['GET', 'PUT', 'POST']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('Inventory Stock API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -114,51 +119,61 @@ function getStock(req: NextApiRequest, res: NextApiResponse) {
   const startIdx = (pageNum - 1) * limitNum;
   const paginatedProducts = filtered.slice(startIdx, startIdx + limitNum);
 
-  return res.status(200).json({
-    products: paginatedProducts,
-    stats,
-    pagination: {
-      page: pageNum,
-      limit: limitNum,
-      total: filtered.length,
-      totalPages: Math.ceil(filtered.length / limitNum)
-    }
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse(
+      { products: paginatedProducts, stats },
+      {
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: filtered.length,
+          totalPages: Math.ceil(filtered.length / limitNum)
+        }
+      }
+    )
+  );
 }
 
 function updateStock(req: NextApiRequest, res: NextApiResponse) {
   const { productId, branchId, adjustment, reason } = req.body;
   
   if (!productId || !branchId || adjustment === undefined) {
-    return res.status(400).json({ error: 'Product ID, Branch ID, and adjustment are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Product ID, Branch ID, and adjustment are required')
+    );
   }
 
-  return res.status(200).json({
-    success: true,
-    message: `Stock adjusted by ${adjustment} for product ${productId} at branch ${branchId}`,
-    reason
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse(
+      { productId, branchId, adjustment, reason },
+      undefined,
+      `Stock adjusted by ${adjustment} for product ${productId} at branch ${branchId}`
+    )
+  );
 }
 
 function transferStock(req: NextApiRequest, res: NextApiResponse) {
   const { productId, fromBranch, toBranch, quantity, notes } = req.body;
   
   if (!productId || !fromBranch || !toBranch || !quantity) {
-    return res.status(400).json({ error: 'All transfer fields are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'All transfer fields are required')
+    );
   }
 
-  return res.status(201).json({
-    success: true,
-    transfer: {
-      id: Date.now().toString(),
-      transferNumber: `TRF-${Date.now()}`,
-      productId,
-      fromBranch,
-      toBranch,
-      quantity,
-      notes,
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    }
-  });
+  const transfer = {
+    id: Date.now().toString(),
+    transferNumber: `TRF-${Date.now()}`,
+    productId,
+    fromBranch,
+    toBranch,
+    quantity,
+    notes,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+
+  return res.status(HttpStatus.CREATED).json(
+    successResponse(transfer, undefined, 'Stock transfer created successfully')
+  );
 }

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 const mockTransfers = [
   {
@@ -39,7 +40,8 @@ const mockTransfers = [
 ];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'GET') {
+  try {
+    if (req.method === 'GET') {
     const { status, fromBranch, toBranch } = req.query;
     
     let filteredTransfers = mockTransfers;
@@ -63,26 +65,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       received: mockTransfers.filter(t => t.status === 'received').length
     };
     
-    return res.status(200).json({
-      transfers: filteredTransfers,
-      stats
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse({ transfers: filteredTransfers, stats })
+    );
   }
   
   if (req.method === 'POST') {
     const newTransfer = req.body;
-    return res.status(201).json({
-      success: true,
-      transfer: {
-        id: String(mockTransfers.length + 1),
-        transferNumber: `TRF-2026-${String(mockTransfers.length + 90).padStart(4, '0')}`,
-        ...newTransfer,
-        status: 'pending',
-        requestDate: new Date().toISOString()
-      }
-    });
+    const transfer = {
+      id: String(mockTransfers.length + 1),
+      transferNumber: `TRF-2026-${String(mockTransfers.length + 90).padStart(4, '0')}`,
+      ...newTransfer,
+      status: 'pending',
+      requestDate: new Date().toISOString()
+    };
+    return res.status(HttpStatus.CREATED).json(
+      successResponse(transfer, undefined, 'Transfer created successfully')
+    );
   }
   
   res.setHeader('Allow', ['GET', 'POST']);
-  return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+  return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+    errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+  );
+  } catch (error) {
+    console.error('Inventory Transfers API Error:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
+  }
 }

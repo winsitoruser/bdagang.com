@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 interface Category {
   id: string;
@@ -59,11 +60,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return deleteCategory(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('Inventory Categories API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -87,7 +92,7 @@ function getCategories(req: NextApiRequest, res: NextApiResponse) {
       return filtered;
     };
     result = flattenAndFilter(categories);
-    return res.status(200).json({ categories: result });
+    return res.status(HttpStatus.OK).json(successResponse(result));
   }
 
   if (parentId) {
@@ -113,14 +118,16 @@ function getCategories(req: NextApiRequest, res: NextApiResponse) {
     result = flatten(categories);
   }
 
-  return res.status(200).json({ categories: result });
+  return res.status(HttpStatus.OK).json(successResponse(result));
 }
 
 function createCategory(req: NextApiRequest, res: NextApiResponse) {
   const { name, slug, description, parentId, icon, color, isActive } = req.body;
 
   if (!name) {
-    return res.status(400).json({ error: 'Name is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Name is required')
+    );
   }
 
   const categorySlug = slug || name.toLowerCase().replace(/\s+/g, '-');
@@ -135,7 +142,9 @@ function createCategory(req: NextApiRequest, res: NextApiResponse) {
   };
   
   if (checkSlug(categories)) {
-    return res.status(400).json({ error: 'Category slug already exists' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Category slug already exists')
+    );
   }
 
   const newCategory: Category = {
@@ -165,14 +174,18 @@ function createCategory(req: NextApiRequest, res: NextApiResponse) {
     categories.push(newCategory);
   }
 
-  return res.status(201).json({ category: newCategory, message: 'Category created successfully' });
+  return res.status(HttpStatus.CREATED).json(
+    successResponse(newCategory, undefined, 'Category created successfully')
+  );
 }
 
 function updateCategory(req: NextApiRequest, res: NextApiResponse) {
   const { id, name, slug, description, icon, color, isActive, sortOrder } = req.body;
 
   if (!id) {
-    return res.status(400).json({ error: 'Category ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Category ID is required')
+    );
   }
 
   const updateCat = (cats: Category[]): boolean => {
@@ -197,17 +210,23 @@ function updateCategory(req: NextApiRequest, res: NextApiResponse) {
   };
 
   if (!updateCat(categories)) {
-    return res.status(404).json({ error: 'Category not found' });
+    return res.status(HttpStatus.NOT_FOUND).json(
+      errorResponse(ErrorCodes.NOT_FOUND, 'Category not found')
+    );
   }
 
-  return res.status(200).json({ message: 'Category updated successfully' });
+  return res.status(HttpStatus.OK).json(
+    successResponse(null, undefined, 'Category updated successfully')
+  );
 }
 
 function deleteCategory(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.body;
 
   if (!id) {
-    return res.status(400).json({ error: 'Category ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Category ID is required')
+    );
   }
 
   const deleteCat = (cats: Category[]): { found: boolean; hasChildren: boolean; hasProducts: boolean } => {
@@ -234,16 +253,24 @@ function deleteCategory(req: NextApiRequest, res: NextApiResponse) {
   const result = deleteCat(categories);
 
   if (!result.found) {
-    return res.status(404).json({ error: 'Category not found' });
+    return res.status(HttpStatus.NOT_FOUND).json(
+      errorResponse(ErrorCodes.NOT_FOUND, 'Category not found')
+    );
   }
 
   if (result.hasChildren) {
-    return res.status(400).json({ error: 'Cannot delete category with children' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Cannot delete category with children')
+    );
   }
 
   if (result.hasProducts) {
-    return res.status(400).json({ error: 'Cannot delete category with products' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Cannot delete category with products')
+    );
   }
 
-  return res.status(200).json({ message: 'Category deleted successfully' });
+  return res.status(HttpStatus.OK).json(
+    successResponse(null, undefined, 'Category deleted successfully')
+  );
 }

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 interface ReceiptItem {
   productId: string;
@@ -79,11 +80,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return updateReceipt(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('Goods Receipt API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -121,14 +126,18 @@ function getReceipts(req: NextApiRequest, res: NextApiResponse) {
     receivedValue: mockReceipts.reduce((sum, r) => sum + r.receivedValue, 0)
   };
 
-  return res.status(200).json({ receipts: filtered, stats });
+  return res.status(HttpStatus.OK).json(
+    successResponse({ receipts: filtered, stats })
+  );
 }
 
 function createReceipt(req: NextApiRequest, res: NextApiResponse) {
   const { poNumber, supplierId, supplierName, branchId, branchName, expectedDate, items } = req.body;
   
   if (!poNumber || !supplierId || !branchId) {
-    return res.status(400).json({ error: 'PO number, supplier, and branch are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'PO number, supplier, and branch are required')
+    );
   }
 
   const newReceipt: GoodsReceipt = {
@@ -146,19 +155,25 @@ function createReceipt(req: NextApiRequest, res: NextApiResponse) {
     receivedValue: 0
   };
 
-  return res.status(201).json({ receipt: newReceipt, message: 'Goods receipt created successfully' });
+  return res.status(HttpStatus.CREATED).json(
+    successResponse(newReceipt, undefined, 'Goods receipt created successfully')
+  );
 }
 
 function updateReceipt(req: NextApiRequest, res: NextApiResponse) {
   const { id, action, items, receivedBy, verifiedBy, notes } = req.body;
   
   if (!id) {
-    return res.status(400).json({ error: 'Receipt ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Receipt ID is required')
+    );
   }
 
   const receipt = mockReceipts.find(r => r.id === id);
   if (!receipt) {
-    return res.status(404).json({ error: 'Receipt not found' });
+    return res.status(HttpStatus.NOT_FOUND).json(
+      errorResponse(ErrorCodes.NOT_FOUND, 'Receipt not found')
+    );
   }
 
   if (action === 'receive') {
@@ -178,5 +193,7 @@ function updateReceipt(req: NextApiRequest, res: NextApiResponse) {
 
   if (notes) receipt.notes = notes;
 
-  return res.status(200).json({ receipt, message: 'Receipt updated successfully' });
+  return res.status(HttpStatus.OK).json(
+    successResponse(receipt, undefined, 'Receipt updated successfully')
+  );
 }

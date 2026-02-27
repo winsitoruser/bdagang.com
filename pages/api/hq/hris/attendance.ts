@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Op } from 'sequelize';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 let EmployeeAttendance: any, Employee: any, Branch: any;
 try {
@@ -20,11 +21,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return await recordAttendance(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('Attendance API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -158,19 +163,21 @@ async function getAttendance(req: NextApiRequest, res: NextApiResponse) {
 
     const dailyTrend = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
-    return res.status(200).json({
-      attendance,
-      branchSummary,
-      dailyTrend,
-      summary: {
-        totalEmployees: attendance.length,
-        avgAttendance: attendance.length > 0 
-          ? Math.round(attendance.reduce((sum, a) => sum + a.attendanceRate, 0) / attendance.length * 10) / 10 
-          : 0,
-        perfectAttendance: attendance.filter(a => a.attendanceRate === 100).length,
-        lowAttendance: attendance.filter(a => a.attendanceRate < 80).length
-      }
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse({
+        attendance,
+        branchSummary,
+        dailyTrend,
+        summary: {
+          totalEmployees: attendance.length,
+          avgAttendance: attendance.length > 0 
+            ? Math.round(attendance.reduce((sum, a) => sum + a.attendanceRate, 0) / attendance.length * 10) / 10 
+            : 0,
+          perfectAttendance: attendance.filter(a => a.attendanceRate === 100).length,
+          lowAttendance: attendance.filter(a => a.attendanceRate < 80).length
+        }
+      })
+    );
   } catch (error) {
     console.error('Error fetching attendance:', error);
     return res.status(200).json(getMockAttendanceData(branchId as string, employeeId as string));
@@ -181,7 +188,9 @@ async function recordAttendance(req: NextApiRequest, res: NextApiResponse) {
   const { employeeId, branchId, date, clockIn, clockOut, status, notes } = req.body;
 
   if (!employeeId || !date) {
-    return res.status(400).json({ error: 'employeeId and date are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'employeeId and date are required')
+    );
   }
 
   try {
@@ -206,14 +215,18 @@ async function recordAttendance(req: NextApiRequest, res: NextApiResponse) {
       await record.update({ clockIn, clockOut, status, notes });
     }
 
-    return res.status(200).json({ 
-      success: true, 
-      message: created ? 'Attendance recorded' : 'Attendance updated',
-      record
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse(
+        record,
+        undefined,
+        created ? 'Attendance recorded' : 'Attendance updated'
+      )
+    );
   } catch (error) {
     console.error('Error recording attendance:', error);
-    return res.status(500).json({ error: 'Failed to record attendance' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to record attendance')
+    );
   }
 }
 

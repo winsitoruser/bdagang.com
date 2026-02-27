@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 interface KPITemplate {
   id: string;
@@ -70,11 +71,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return deleteKPITemplate(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('KPI Settings API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -86,34 +91,38 @@ function getKPISettings(req: NextApiRequest, res: NextApiResponse) {
     if (category && category !== 'all') {
       filtered = filtered.filter(t => t.category === category);
     }
-    return res.status(200).json({ templates: filtered });
+    return res.status(HttpStatus.OK).json(successResponse({ templates: filtered }));
   }
 
   if (type === 'scoring') {
-    return res.status(200).json({ scoringRules: mockScoringRules });
+    return res.status(HttpStatus.OK).json(successResponse({ scoringRules: mockScoringRules }));
   }
 
   if (type === 'periods') {
-    return res.status(200).json({ periods: mockPeriodSettings });
+    return res.status(HttpStatus.OK).json(successResponse({ periods: mockPeriodSettings }));
   }
 
-  return res.status(200).json({
-    templates: mockTemplates,
-    scoringRules: mockScoringRules,
-    periods: mockPeriodSettings,
-    summary: {
-      totalTemplates: mockTemplates.length,
-      activeTemplates: mockTemplates.filter(t => t.isActive).length,
-      totalWeight: mockTemplates.reduce((sum, t) => sum + t.weight, 0)
-    }
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse({
+      templates: mockTemplates,
+      scoringRules: mockScoringRules,
+      periods: mockPeriodSettings,
+      summary: {
+        totalTemplates: mockTemplates.length,
+        activeTemplates: mockTemplates.filter(t => t.isActive).length,
+        totalWeight: mockTemplates.reduce((sum, t) => sum + t.weight, 0)
+      }
+    })
+  );
 }
 
 function createKPITemplate(req: NextApiRequest, res: NextApiResponse) {
   const { name, description, category, weight, targetType, defaultTarget, minValue, maxValue, applicableTo } = req.body;
 
   if (!name || !category || !weight) {
-    return res.status(400).json({ error: 'Name, category, and weight are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Name, category, and weight are required')
+    );
   }
 
   const newTemplate: KPITemplate = {
@@ -130,50 +139,70 @@ function createKPITemplate(req: NextApiRequest, res: NextApiResponse) {
     applicableTo: applicableTo || ['all']
   };
 
-  return res.status(201).json({ template: newTemplate, message: 'KPI template created successfully' });
+  return res.status(HttpStatus.CREATED).json(
+    successResponse(newTemplate, undefined, 'KPI template created successfully')
+  );
 }
 
 function updateKPISettings(req: NextApiRequest, res: NextApiResponse) {
   const { type, id, ...data } = req.body;
 
   if (!id) {
-    return res.status(400).json({ error: 'ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'ID is required')
+    );
   }
 
   if (type === 'template') {
     const template = mockTemplates.find(t => t.id === id);
     if (!template) {
-      return res.status(404).json({ error: 'Template not found' });
+      return res.status(HttpStatus.NOT_FOUND).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'Template not found')
+      );
     }
     Object.assign(template, data);
-    return res.status(200).json({ template, message: 'Template updated successfully' });
+    return res.status(HttpStatus.OK).json(
+      successResponse(template, undefined, 'Template updated successfully')
+    );
   }
 
   if (type === 'period') {
     const period = mockPeriodSettings.find(p => p.id === id);
     if (!period) {
-      return res.status(404).json({ error: 'Period not found' });
+      return res.status(HttpStatus.NOT_FOUND).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'Period not found')
+      );
     }
     Object.assign(period, data);
-    return res.status(200).json({ period, message: 'Period updated successfully' });
+    return res.status(HttpStatus.OK).json(
+      successResponse(period, undefined, 'Period updated successfully')
+    );
   }
 
-  return res.status(400).json({ error: 'Invalid type' });
+  return res.status(HttpStatus.BAD_REQUEST).json(
+    errorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid type')
+  );
 }
 
 function deleteKPITemplate(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.body;
 
   if (!id) {
-    return res.status(400).json({ error: 'Template ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Template ID is required')
+    );
   }
 
   const index = mockTemplates.findIndex(t => t.id === id);
   if (index === -1) {
-    return res.status(404).json({ error: 'Template not found' });
+    return res.status(HttpStatus.NOT_FOUND).json(
+      errorResponse(ErrorCodes.NOT_FOUND, 'Template not found')
+    );
   }
 
   mockTemplates.splice(index, 1);
 
-  return res.status(200).json({ message: 'Template deleted successfully' });
+  return res.status(HttpStatus.OK).json(
+    successResponse(null, undefined, 'Template deleted successfully')
+  );
 }

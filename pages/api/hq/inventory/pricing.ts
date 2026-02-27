@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 interface PriceTier {
   id: string;
@@ -80,11 +81,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return deletePriceTier(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('Inventory Pricing API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -100,7 +105,7 @@ function getPricing(req: NextApiRequest, res: NextApiResponse) {
         t.code.toLowerCase().includes(searchStr)
       );
     }
-    return res.status(200).json({ priceTiers: filteredTiers });
+    return res.status(HttpStatus.OK).json(successResponse({ priceTiers: filteredTiers }));
   }
 
   if (type === 'products') {
@@ -118,22 +123,26 @@ function getPricing(req: NextApiRequest, res: NextApiResponse) {
     if (lockedOnly === 'true') {
       filteredProducts = filteredProducts.filter(p => p.isLocked);
     }
-    return res.status(200).json({ productPrices: filteredProducts });
+    return res.status(HttpStatus.OK).json(successResponse({ productPrices: filteredProducts }));
   }
 
-  return res.status(200).json({ priceTiers, productPrices });
+  return res.status(HttpStatus.OK).json(successResponse({ priceTiers, productPrices }));
 }
 
 function createPriceTier(req: NextApiRequest, res: NextApiResponse) {
   const { code, name, description, multiplier, markupPercent, region } = req.body;
 
   if (!code || !name) {
-    return res.status(400).json({ error: 'Code and name are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Code and name are required')
+    );
   }
 
   const existingTier = priceTiers.find(t => t.code === code.toUpperCase());
   if (existingTier) {
-    return res.status(400).json({ error: 'Tier code already exists' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'Tier code already exists')
+    );
   }
 
   const newTier: PriceTier = {
@@ -152,7 +161,9 @@ function createPriceTier(req: NextApiRequest, res: NextApiResponse) {
 
   priceTiers.push(newTier);
 
-  return res.status(201).json({ priceTier: newTier, message: 'Price tier created successfully' });
+  return res.status(HttpStatus.CREATED).json(
+    successResponse(newTier, undefined, 'Price tier created successfully')
+  );
 }
 
 function updatePricing(req: NextApiRequest, res: NextApiResponse) {
@@ -162,7 +173,9 @@ function updatePricing(req: NextApiRequest, res: NextApiResponse) {
   if (id && !productId) {
     const tierIndex = priceTiers.findIndex(t => t.id === id);
     if (tierIndex === -1) {
-      return res.status(404).json({ error: 'Price tier not found' });
+      return res.status(HttpStatus.NOT_FOUND).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'Price tier not found')
+      );
     }
 
     if (code) priceTiers[tierIndex].code = code;
@@ -173,14 +186,18 @@ function updatePricing(req: NextApiRequest, res: NextApiResponse) {
     if (region) priceTiers[tierIndex].region = region;
     if (isActive !== undefined) priceTiers[tierIndex].isActive = isActive;
 
-    return res.status(200).json({ priceTier: priceTiers[tierIndex], message: 'Price tier updated successfully' });
+    return res.status(HttpStatus.OK).json(
+      successResponse(priceTiers[tierIndex], undefined, 'Price tier updated successfully')
+    );
   }
 
   // Update product price
   if (productId) {
     const productIndex = productPrices.findIndex(p => p.productId === productId);
     if (productIndex === -1) {
-      return res.status(404).json({ error: 'Product not found' });
+      return res.status(HttpStatus.NOT_FOUND).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'Product not found')
+      );
     }
 
     if (basePrice !== undefined) {
@@ -211,29 +228,41 @@ function updatePricing(req: NextApiRequest, res: NextApiResponse) {
       productPrices[productIndex].lockedBy = isLocked ? (lockedBy || 'Admin HQ') : null;
     }
 
-    return res.status(200).json({ productPrice: productPrices[productIndex], message: 'Product pricing updated successfully' });
+    return res.status(HttpStatus.OK).json(
+      successResponse(productPrices[productIndex], undefined, 'Product pricing updated successfully')
+    );
   }
 
-  return res.status(400).json({ error: 'Invalid request' });
+  return res.status(HttpStatus.BAD_REQUEST).json(
+    errorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid request')
+  );
 }
 
 function deletePriceTier(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.body;
 
   if (!id) {
-    return res.status(400).json({ error: 'Tier ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Tier ID is required')
+    );
   }
 
   const tierIndex = priceTiers.findIndex(t => t.id === id);
   if (tierIndex === -1) {
-    return res.status(404).json({ error: 'Price tier not found' });
+    return res.status(HttpStatus.NOT_FOUND).json(
+      errorResponse(ErrorCodes.NOT_FOUND, 'Price tier not found')
+    );
   }
 
   if (priceTiers[tierIndex].code === 'STD') {
-    return res.status(400).json({ error: 'Cannot delete standard price tier' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Cannot delete standard price tier')
+    );
   }
 
   priceTiers.splice(tierIndex, 1);
 
-  return res.status(200).json({ message: 'Price tier deleted successfully' });
+  return res.status(HttpStatus.OK).json(
+    successResponse(null, undefined, 'Price tier deleted successfully')
+  );
 }

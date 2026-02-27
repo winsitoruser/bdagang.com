@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { triggerHRISWebhook } from './webhooks';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -12,11 +13,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return await updatePerformanceReview(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('Performance Review API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -83,23 +88,27 @@ async function getPerformanceReviews(req: NextApiRequest, res: NextApiResponse) 
     filteredReviews = filteredReviews.filter(r => r.status === status);
   }
 
-  return res.status(200).json({ 
-    reviews: filteredReviews,
-    summary: {
-      total: reviews.length,
-      avgRating: reviews.reduce((sum, r) => sum + r.overallRating, 0) / reviews.length,
-      excellent: reviews.filter(r => r.overallRating >= 4.5).length,
-      good: reviews.filter(r => r.overallRating >= 3.5 && r.overallRating < 4.5).length,
-      needsImprovement: reviews.filter(r => r.overallRating < 3.5).length
-    }
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse({
+      reviews: filteredReviews,
+      summary: {
+        total: reviews.length,
+        avgRating: reviews.reduce((sum, r) => sum + r.overallRating, 0) / reviews.length,
+        excellent: reviews.filter(r => r.overallRating >= 4.5).length,
+        good: reviews.filter(r => r.overallRating >= 3.5 && r.overallRating < 4.5).length,
+        needsImprovement: reviews.filter(r => r.overallRating < 3.5).length
+      }
+    })
+  );
 }
 
 async function createPerformanceReview(req: NextApiRequest, res: NextApiResponse) {
   const { employeeId, employeeName, branchId, branchName, reviewPeriod, reviewerId, categories, strengths, areasForImprovement, goals } = req.body;
 
   if (!employeeId || !reviewPeriod || !reviewerId) {
-    return res.status(400).json({ error: 'Employee ID, review period, and reviewer ID are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Employee ID, review period, and reviewer ID are required')
+    );
   }
 
   // Calculate overall rating
@@ -142,14 +151,18 @@ async function createPerformanceReview(req: NextApiRequest, res: NextApiResponse
     branchName
   );
 
-  return res.status(201).json({ review: newReview, message: 'Performance review created successfully' });
+  return res.status(HttpStatus.CREATED).json(
+    successResponse(newReview, undefined, 'Performance review created successfully')
+  );
 }
 
 async function updatePerformanceReview(req: NextApiRequest, res: NextApiResponse) {
   const { id, status, employeeComments, managerComments, categories, overallRating } = req.body;
 
   if (!id) {
-    return res.status(400).json({ error: 'Review ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Review ID is required')
+    );
   }
 
   // In production, update database
@@ -180,5 +193,7 @@ async function updatePerformanceReview(req: NextApiRequest, res: NextApiResponse
     );
   }
 
-  return res.status(200).json({ review: updatedReview, message: 'Performance review updated successfully' });
+  return res.status(HttpStatus.OK).json(
+    successResponse(updatedReview, undefined, 'Performance review updated successfully')
+  );
 }

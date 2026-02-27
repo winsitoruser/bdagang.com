@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -11,11 +12,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return await updateKPI(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('KPI API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -90,25 +95,29 @@ async function getKPIData(req: NextApiRequest, res: NextApiResponse) {
     filteredEmployeeKPIs = employeeKPIs.filter(e => e.branchName.includes(branchId as string));
   }
 
-  return res.status(200).json({ 
-    employeeKPIs: filteredEmployeeKPIs, 
-    branchKPIs: filteredBranchKPIs,
-    summary: {
-      totalEmployees: employeeKPIs.length,
-      exceeded: employeeKPIs.filter(e => e.status === 'exceeded').length,
-      achieved: employeeKPIs.filter(e => e.status === 'achieved').length,
-      partial: employeeKPIs.filter(e => e.status === 'partial').length,
-      notAchieved: employeeKPIs.filter(e => e.status === 'not_achieved').length,
-      avgAchievement: Math.round(employeeKPIs.reduce((sum, e) => sum + e.overallAchievement, 0) / employeeKPIs.length)
-    }
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse({
+      employeeKPIs: filteredEmployeeKPIs, 
+      branchKPIs: filteredBranchKPIs,
+      summary: {
+        totalEmployees: employeeKPIs.length,
+        exceeded: employeeKPIs.filter(e => e.status === 'exceeded').length,
+        achieved: employeeKPIs.filter(e => e.status === 'achieved').length,
+        partial: employeeKPIs.filter(e => e.status === 'partial').length,
+        notAchieved: employeeKPIs.filter(e => e.status === 'not_achieved').length,
+        avgAchievement: Math.round(employeeKPIs.reduce((sum, e) => sum + e.overallAchievement, 0) / employeeKPIs.length)
+      }
+    })
+  );
 }
 
 async function createKPI(req: NextApiRequest, res: NextApiResponse) {
   const { employeeId, metrics, period } = req.body;
 
   if (!employeeId || !metrics || metrics.length === 0) {
-    return res.status(400).json({ error: 'Employee ID and metrics are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Employee ID and metrics are required')
+    );
   }
 
   // In production, save to database
@@ -120,19 +129,23 @@ async function createKPI(req: NextApiRequest, res: NextApiResponse) {
     createdAt: new Date().toISOString()
   };
 
-  return res.status(201).json({ kpi: newKPI, message: 'KPI created successfully' });
+  return res.status(HttpStatus.CREATED).json(
+    successResponse(newKPI, undefined, 'KPI created successfully')
+  );
 }
 
 async function updateKPI(req: NextApiRequest, res: NextApiResponse) {
   const { employeeId, metricId, actual } = req.body;
 
   if (!employeeId || !metricId) {
-    return res.status(400).json({ error: 'Employee ID and metric ID are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Employee ID and metric ID are required')
+    );
   }
 
   // In production, update database
-  return res.status(200).json({ 
-    message: 'KPI updated successfully',
-    updated: { employeeId, metricId, actual, updatedAt: new Date().toISOString() }
-  });
+  const updated = { employeeId, metricId, actual, updatedAt: new Date().toISOString() };
+  return res.status(HttpStatus.OK).json(
+    successResponse(updated, undefined, 'KPI updated successfully')
+  );
 }

@@ -7,6 +7,7 @@ import {
   calculateOverallScore,
   getKPIStatus
 } from '../../../../lib/hq/kpi-calculator';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 // In-memory storage for custom templates (replace with DB in production)
 let customTemplates: any[] = [];
@@ -25,11 +26,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return deleteTemplate(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('KPI Templates API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -81,19 +86,21 @@ function getTemplates(req: NextApiRequest, res: NextApiResponse) {
     ...customScoringSchemes
   ];
 
-  return res.status(200).json({
-    templates,
-    categories: KPI_CATEGORIES,
-    scoringSchemes,
-    standardLevels: STANDARD_SCORING_LEVELS,
-    summary: {
-      totalTemplates: templates.length,
-      byCategory: Object.keys(KPI_CATEGORIES).map(cat => ({
-        category: cat,
-        count: templates.filter(t => t.category === cat).length
-      }))
-    }
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse({
+      templates,
+      categories: KPI_CATEGORIES,
+      scoringSchemes,
+      standardLevels: STANDARD_SCORING_LEVELS,
+      summary: {
+        totalTemplates: templates.length,
+        byCategory: Object.keys(KPI_CATEGORIES).map(cat => ({
+          category: cat,
+          count: templates.filter(t => t.category === cat).length
+        }))
+      }
+    })
+  );
 }
 
 function createTemplate(req: NextApiRequest, res: NextApiResponse) {
@@ -104,13 +111,17 @@ function createTemplate(req: NextApiRequest, res: NextApiResponse) {
   } = req.body;
 
   if (!code || !name || !category) {
-    return res.status(400).json({ error: 'Code, name, and category are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Code, name, and category are required')
+    );
   }
 
   // Check for duplicate code
   const allTemplates = [...KPI_TEMPLATES, ...customTemplates];
   if (allTemplates.some(t => t.code === code)) {
-    return res.status(400).json({ error: 'Template code already exists' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'Template code already exists')
+    );
   }
 
   const newTemplate = {
@@ -134,45 +145,53 @@ function createTemplate(req: NextApiRequest, res: NextApiResponse) {
 
   customTemplates.push(newTemplate);
 
-  return res.status(201).json({ 
-    template: newTemplate, 
-    message: 'KPI template created successfully' 
-  });
+  return res.status(HttpStatus.CREATED).json(
+    successResponse(newTemplate, undefined, 'KPI template created successfully')
+  );
 }
 
 function updateTemplate(req: NextApiRequest, res: NextApiResponse) {
   const { id, ...updates } = req.body;
 
   if (!id) {
-    return res.status(400).json({ error: 'Template ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Template ID is required')
+    );
   }
 
   const index = customTemplates.findIndex(t => t.id === id);
   if (index === -1) {
-    return res.status(404).json({ error: 'Template not found or is a standard template' });
+    return res.status(HttpStatus.NOT_FOUND).json(
+      errorResponse(ErrorCodes.NOT_FOUND, 'Template not found or is a standard template')
+    );
   }
 
   customTemplates[index] = { ...customTemplates[index], ...updates, updatedAt: new Date().toISOString() };
 
-  return res.status(200).json({ 
-    template: customTemplates[index], 
-    message: 'KPI template updated successfully' 
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse(customTemplates[index], undefined, 'KPI template updated successfully')
+  );
 }
 
 function deleteTemplate(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
 
   if (!id) {
-    return res.status(400).json({ error: 'Template ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Template ID is required')
+    );
   }
 
   const index = customTemplates.findIndex(t => t.id === id);
   if (index === -1) {
-    return res.status(404).json({ error: 'Template not found or is a standard template' });
+    return res.status(HttpStatus.NOT_FOUND).json(
+      errorResponse(ErrorCodes.NOT_FOUND, 'Template not found or is a standard template')
+    );
   }
 
   customTemplates.splice(index, 1);
 
-  return res.status(200).json({ message: 'KPI template deleted successfully' });
+  return res.status(HttpStatus.OK).json(
+    successResponse(null, undefined, 'KPI template deleted successfully')
+  );
 }

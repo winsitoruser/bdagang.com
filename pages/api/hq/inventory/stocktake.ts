@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 interface Stocktake {
   id: string;
@@ -61,11 +62,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return deleteStocktake(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('Stocktake API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -97,14 +102,18 @@ function getStocktakes(req: NextApiRequest, res: NextApiResponse) {
     totalVariance: mockStocktakes.filter(s => s.status === 'completed').reduce((sum, s) => sum + s.varianceValue, 0)
   };
 
-  return res.status(200).json({ stocktakes: filtered, stats });
+  return res.status(HttpStatus.OK).json(
+    successResponse({ stocktakes: filtered, stats })
+  );
 }
 
 function createStocktake(req: NextApiRequest, res: NextApiResponse) {
   const { branchId, branchName, branchCode, type, scheduledDate, assignedTo, notes } = req.body;
   
   if (!branchId || !type || !scheduledDate) {
-    return res.status(400).json({ error: 'Branch, type, and scheduled date are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Branch, type, and scheduled date are required')
+    );
   }
 
   const newStocktake: Stocktake = {
@@ -123,19 +132,25 @@ function createStocktake(req: NextApiRequest, res: NextApiResponse) {
     notes
   };
 
-  return res.status(201).json({ stocktake: newStocktake, message: 'Stocktake scheduled successfully' });
+  return res.status(HttpStatus.CREATED).json(
+    successResponse(newStocktake, undefined, 'Stocktake scheduled successfully')
+  );
 }
 
 function updateStocktake(req: NextApiRequest, res: NextApiResponse) {
   const { id, action, countedItems, varianceCount, varianceValue } = req.body;
   
   if (!id) {
-    return res.status(400).json({ error: 'Stocktake ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Stocktake ID is required')
+    );
   }
 
   const stocktake = mockStocktakes.find(s => s.id === id);
   if (!stocktake) {
-    return res.status(404).json({ error: 'Stocktake not found' });
+    return res.status(HttpStatus.NOT_FOUND).json(
+      errorResponse(ErrorCodes.NOT_FOUND, 'Stocktake not found')
+    );
   }
 
   if (action === 'start') {
@@ -151,15 +166,21 @@ function updateStocktake(req: NextApiRequest, res: NextApiResponse) {
     stocktake.status = 'cancelled';
   }
 
-  return res.status(200).json({ stocktake, message: 'Stocktake updated successfully' });
+  return res.status(HttpStatus.OK).json(
+    successResponse(stocktake, undefined, 'Stocktake updated successfully')
+  );
 }
 
 function deleteStocktake(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.body;
   
   if (!id) {
-    return res.status(400).json({ error: 'Stocktake ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Stocktake ID is required')
+    );
   }
 
-  return res.status(200).json({ message: 'Stocktake deleted successfully' });
+  return res.status(HttpStatus.OK).json(
+    successResponse(null, undefined, 'Stocktake deleted successfully')
+  );
 }

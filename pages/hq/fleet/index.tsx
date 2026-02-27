@@ -90,20 +90,27 @@ export default function FleetManagement() {
   }, [vehicles, drivers, vehicleSearch, driverSearch, vehicleFilter, driverFilter]);
 
   const fetchFleetData = async () => {
-    setLoading(true);
     try {
-      const vehiclesRes = await fetch('/api/fleet/vehicles');
+      setLoading(true);
+      
+      // Fetch vehicles from new standardized API
+      const vehiclesRes = await fetch('/api/hq/fleet/vehicles');
       if (vehiclesRes.ok) {
-        const vehiclesData = await vehiclesRes.json();
-        setVehicles(vehiclesData.data || []);
-        setVehicleStats(vehiclesData.stats || { total: 0, active: 0, maintenance: 0, onRoute: 0 });
+        const result = await vehiclesRes.json();
+        const vehiclesData = result.data?.vehicles || [];
+        const stats = result.data?.stats || { total: 0, active: 0, maintenance: 0, onRoute: 0 };
+        setVehicles(vehiclesData);
+        setVehicleStats(stats);
+        setFilteredVehicles(vehiclesData);
       }
 
-      const driversRes = await fetch('/api/fleet/drivers');
+      // Fetch drivers from new standardized API
+      const driversRes = await fetch('/api/hq/fleet/drivers');
       if (driversRes.ok) {
-        const driversData = await driversRes.json();
-        setDrivers(driversData.data || []);
-        setDriverStats(driversData.stats || { total: 0, active: 0, available: 0, onDuty: 0 });
+        const result = await driversRes.json();
+        const driversData = result.data?.drivers || [];
+        setDrivers(driversData);
+        setFilteredDrivers(driversData);
       }
     } catch (error) {
       console.error('Error fetching fleet data:', error);
