@@ -1,18 +1,23 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Branch, PosTransaction } from '../../../../models';
 import { Op } from 'sequelize';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+    return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+      errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+    );
   }
 
   try {
     return await getFinanceReport(req, res);
   } catch (error) {
     console.error('Finance Report API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -71,10 +76,14 @@ async function getFinanceReport(req: NextApiRequest, res: NextApiResponse) {
       };
     }));
 
-    return res.status(200).json({ financeData });
+    return res.status(HttpStatus.OK).json(
+      successResponse({ financeData })
+    );
   } catch (error) {
     console.error('Error fetching finance report:', error);
-    return res.status(200).json({ financeData: getMockFinanceData() });
+    return res.status(HttpStatus.OK).json(
+      successResponse({ financeData: getMockFinanceData() })
+    );
   }
 }
 

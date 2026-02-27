@@ -1,18 +1,23 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Branch, PosTransaction, User } from '../../../../models';
 import { Op } from 'sequelize';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+    return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+      errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+    );
   }
 
   try {
     return await getBranchPerformance(req, res);
   } catch (error) {
     console.error('Branch Performance API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -89,10 +94,14 @@ async function getBranchPerformance(req: NextApiRequest, res: NextApiResponse) {
     performanceData.sort((a, b) => b.metrics.salesActual - a.metrics.salesActual);
     performanceData.forEach((item, index) => { item.rank = index + 1; });
 
-    return res.status(200).json({ branches: performanceData });
+    return res.status(HttpStatus.OK).json(
+      successResponse({ branches: performanceData })
+    );
   } catch (error) {
     console.error('Error fetching branch performance:', error);
-    return res.status(200).json({ branches: getMockPerformance() });
+    return res.status(HttpStatus.OK).json(
+      successResponse({ branches: getMockPerformance() })
+    );
   }
 }
 

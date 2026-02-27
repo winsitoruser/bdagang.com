@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Branch, User, Store } from '../../../../models';
 import { Op } from 'sequelize';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { getPaginationParams, getPaginationMeta } from '../../../../lib/api/pagination';
 const { tenantContext, requireTenant, addTenantFilter } = require('../../../../middleware/tenantContext');
 
 const getDb = () => require('../../../../models');
@@ -29,19 +31,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return await createBranch(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('Branch API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
 async function getBranches(req: NextApiRequest, res: NextApiResponse) {
-  const { page = '1', limit = '10', search, type, status } = req.query;
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
-  const offset = (pageNum - 1) * limitNum;
+  const { search, type, status } = req.query;
+  const { limit, offset, page } = getPaginationParams(req.query);
 
   try {
     let where: any = {};
@@ -72,7 +76,7 @@ async function getBranches(req: NextApiRequest, res: NextApiResponse) {
         { model: Store, as: 'store', attributes: ['id', 'name'] }
       ],
       order: [['createdAt', 'DESC']],
-      limit: limitNum,
+      limit,
       offset
     });
 
@@ -126,23 +130,22 @@ async function getBranches(req: NextApiRequest, res: NextApiResponse) {
       };
     }));
 
-    return res.status(200).json({
-      branches,
-      total: count,
-      page: pageNum,
-      limit: limitNum,
-      totalPages: Math.ceil(count / limitNum)
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse(
+        { branches },
+        getPaginationMeta(count, page, limit)
+      )
+    );
   } catch (error) {
     console.error('Error fetching branches:', error);
     // Return mock data if database not available
-    return res.status(200).json({
-      branches: getMockBranches(),
-      total: 5,
-      page: 1,
-      limit: 10,
-      totalPages: 1
-    });
+    const mockBranches = getMockBranches();
+    return res.status(HttpStatus.OK).json(
+      successResponse(
+        { branches: mockBranches },
+        getPaginationMeta(mockBranches.length, 1, 10)
+      )
+    );
   }
 }
 
@@ -151,7 +154,9 @@ async function createBranch(req: NextApiRequest, res: NextApiResponse) {
   const { code, name, type, address, city, province, phone, email, managerId } = req.body;
 
   if (!code || !name) {
-    return res.status(400).json({ error: 'Code and name are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Code and name are required')
+    );
   }
 
   try {
@@ -161,10 +166,12 @@ async function createBranch(req: NextApiRequest, res: NextApiResponse) {
     });
 
     if (tenant && !tenant.canAddBranch()) {
-      return res.status(400).json({ 
-        error: 'Branch limit reached',
-        message: `Maximum ${tenant.maxBranches} branches allowed for your subscription plan`
-      });
+      return res.status(HttpStatus.BAD_REQUEST).json(
+        errorResponse(
+          ErrorCodes.VALIDATION_ERROR,
+          `Branch limit reached. Maximum ${tenant.maxBranches} branches allowed for your subscription plan`
+        )
+      );
     }
 
     // Create the branch with tenant
@@ -268,18 +275,25 @@ async function createBranch(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
-    return res.status(201).json({ 
-      branch, 
-      message: 'Branch created successfully',
-      setupInitialized: initResult.success || initResult.initializedServices.length > 0,
-      initializedServices: initResult.initializedServices,
-      initializationErrors: initResult.errors,
-      redirectToSetup: true,
-      setupUrl: `/hq/branches/${branchId}/setup`
-    });
+    return res.status(HttpStatus.CREATED).json(
+      successResponse(
+        {
+          branch,
+          setupInitialized: initResult.success || initResult.initializedServices.length > 0,
+          initializedServices: initResult.initializedServices,
+          initializationErrors: initResult.errors,
+          redirectToSetup: true,
+          setupUrl: `/hq/branches/${branchId}/setup`
+        },
+        undefined,
+        'Branch created successfully'
+      )
+    );
   } catch (error: any) {
     if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(400).json({ error: 'Branch code already exists' });
+      return res.status(HttpStatus.BAD_REQUEST).json(
+        errorResponse(ErrorCodes.VALIDATION_ERROR, 'Branch code already exists')
+      );
     }
     throw error;
   }

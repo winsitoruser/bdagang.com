@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 interface ConsolidatedMetrics {
   totalRevenue: number;
@@ -49,7 +50,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     if (req.method !== 'GET') {
       res.setHeader('Allow', ['GET']);
-      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+      return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+        errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+      );
     }
 
     const { period = 'month', startDate, endDate, branchId } = req.query;
@@ -113,17 +116,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     };
 
-    return res.status(200).json({
-      metrics,
-      branchPerformance,
-      categoryPerformance,
-      trendData,
-      comparison,
-      period,
-      generatedAt: new Date().toISOString()
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse({
+        metrics,
+        branchPerformance,
+        categoryPerformance,
+        trendData,
+        comparison,
+        period,
+        generatedAt: new Date().toISOString()
+      })
+    );
   } catch (error) {
     console.error('Consolidated Report API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }

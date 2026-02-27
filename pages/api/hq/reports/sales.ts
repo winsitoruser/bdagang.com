@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 interface SalesSummary {
   totalSales: number;
@@ -60,7 +61,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     if (req.method !== 'GET') {
       res.setHeader('Allow', ['GET']);
-      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+      return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+        errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+      );
     }
 
     const { period = 'today', branchId, startDate, endDate } = req.query;
@@ -127,18 +130,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { method: 'Kredit', amount: 18500000, transactions: 342, percentage: 10 }
     ];
 
-    return res.status(200).json({
-      summary,
-      branchSales,
-      topProducts,
-      hourlySales,
-      dailySales,
-      paymentMethods,
-      period,
-      generatedAt: new Date().toISOString()
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse({
+        summary,
+        branchSales,
+        topProducts,
+        hourlySales,
+        dailySales,
+        paymentMethods,
+        period,
+        generatedAt: new Date().toISOString()
+      })
+    );
   } catch (error) {
     console.error('Sales Report API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
