@@ -127,13 +127,13 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
         <div key={item.id}>
           <button
             onClick={() => toggleMenu(item.id)}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 ${
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 ${
               isExpanded ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <div className="flex items-center gap-3">
               <Icon className="w-5 h-5" />
-              {!sidebarCollapsed && <span className="font-medium">{item.name}</span>}
+              {!sidebarCollapsed && <span className="text-sm font-medium">{item.name}</span>}
             </div>
             {!sidebarCollapsed && (
               <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -152,7 +152,7 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
       <Link
         key={item.id}
         href={item.href || '#'}
-        className={`group relative flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 ${
+        className={`group relative flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 ${
           active 
             ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
             : 'text-gray-600 hover:bg-gray-100'
@@ -160,7 +160,7 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
       >
         <div className={`flex items-center gap-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
           <Icon className="w-5 h-5" />
-          {!sidebarCollapsed && <span className="font-medium">{item.name}</span>}
+          {!sidebarCollapsed && <span className="text-sm font-medium">{item.name}</span>}
         </div>
         {!sidebarCollapsed && item.badge !== undefined && (
           <span className={`px-2 py-0.5 text-xs font-bold text-white rounded-full ${item.badgeColor || 'bg-blue-500'}`}>
@@ -244,35 +244,6 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
         <nav className="p-4 overflow-y-auto h-[calc(100vh-8rem)]">
           {filteredConfig.groups.map(group => renderMenuGroup(group))}
         </nav>
-
-        {/* User Section */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
-          <div className={`flex items-center gap-3 ${sidebarCollapsed ? 'lg:justify-center' : ''}`}>
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
-              {session?.user?.name?.charAt(0) || 'U'}
-            </div>
-            {!sidebarCollapsed && (
-              <div className="flex-1 min-w-0 hidden lg:block">
-                <p className="font-medium text-gray-900 truncate">{session?.user?.name || 'User'}</p>
-                <p className="text-xs text-gray-500 truncate">{session?.user?.email || ''}</p>
-              </div>
-            )}
-            <div className="flex-1 min-w-0 lg:hidden">
-              <p className="font-medium text-gray-900 truncate">{session?.user?.name || 'User'}</p>
-              <p className="text-xs text-gray-500 truncate">{session?.user?.email || ''}</p>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className={`mt-3 flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-all ${
-              sidebarCollapsed ? 'lg:justify-center' : ''
-            }`}
-          >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
-            {!sidebarCollapsed && <span className="hidden lg:inline">Keluar</span>}
-            <span className="lg:hidden">Keluar</span>
-          </button>
-        </div>
       </aside>
 
       {/* Collapse Toggle Button - Desktop Only */}
@@ -291,7 +262,7 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
       </button>
 
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 lg:ml-64 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+      <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         {/* Mobile Menu Button */}
         <button
           onClick={() => setSidebarOpen(true)}
@@ -365,50 +336,6 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
                 )}
               </div>
 
-              {/* User Menu */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
-                    {session?.user?.name?.charAt(0) || 'U'}
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-gray-600" />
-                </button>
-
-                {showUserMenu && (
-                  <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
-                    <div className="p-4 border-b border-gray-200">
-                      <p className="font-medium text-gray-900">{session?.user?.name || 'User'}</p>
-                      <p className="text-sm text-gray-500">{session?.user?.email || ''}</p>
-                      {userRole && (
-                        <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
-                          {userRole.replace('_', ' ')}
-                        </span>
-                      )}
-                    </div>
-                    <div className="p-2">
-                      <Link href="/hq/profile" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700">
-                        <User className="w-4 h-4" />
-                        <span className="text-sm">Profil Saya</span>
-                      </Link>
-                      <Link href="/hq/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700">
-                        <Settings className="w-4 h-4" />
-                        <span className="text-sm">Pengaturan</span>
-                      </Link>
-                      <hr className="my-2" />
-                      <button 
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span className="text-sm">Keluar</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </header>

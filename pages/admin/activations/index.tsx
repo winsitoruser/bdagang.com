@@ -20,6 +20,8 @@ import {
 
 interface ActivationRequest {
   id: string;
+  tenantId?: string;
+  source?: 'partner' | 'onboarding';
   partner: {
     id: string;
     business_name: string;
@@ -35,6 +37,13 @@ interface ActivationRequest {
     max_outlets: number;
     max_users: number;
   };
+  kyb?: {
+    id: string;
+    status: string;
+    currentStep: number;
+    completionPercentage: number;
+    submittedAt: string | null;
+  } | null;
   business_documents: any;
   notes: string;
   status: string;
@@ -265,10 +274,18 @@ export default function ActivationRequests() {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-3">
                           <Building2 className="h-6 w-6 text-blue-600" />
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {request.partner.business_name}
-                            </h3>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {request.partner.business_name}
+                              </h3>
+                              {request.source === 'onboarding' && (
+                                <span className="px-2 py-0.5 bg-sky-100 text-sky-700 text-xs font-medium rounded-full">Onboarding</span>
+                              )}
+                              {request.source === 'partner' && (
+                                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">Partner</span>
+                              )}
+                            </div>
                             <p className="text-sm text-gray-500">
                               {request.partner.owner_name} • {request.partner.email}
                             </p>
@@ -283,22 +300,39 @@ export default function ActivationRequests() {
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500 mb-1">Paket yang Diminta</p>
+                            <p className="text-xs text-gray-500 mb-1">{request.source === 'onboarding' ? 'Jenis Bisnis' : 'Paket yang Diminta'}</p>
                             <div className="flex items-center space-x-2">
                               <Package className="h-4 w-4 text-purple-600" />
                               <span className="text-sm font-medium text-gray-900">
                                 {request.package.name}
                               </span>
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {formatCurrency(request.package.price_monthly)}/bulan
-                            </p>
+                            {request.source !== 'onboarding' && request.package.price_monthly > 0 && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {formatCurrency(request.package.price_monthly)}/bulan
+                              </p>
+                            )}
                           </div>
                           <div>
-                            <p className="text-xs text-gray-500 mb-1">Batas Paket</p>
-                            <p className="text-sm text-gray-700">
-                              {request.package.max_outlets} outlet • {request.package.max_users} pengguna
-                            </p>
+                            {request.source === 'onboarding' && request.kyb ? (
+                              <>
+                                <p className="text-xs text-gray-500 mb-1">Progress KYB</p>
+                                <div className="flex items-center space-x-2">
+                                  <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${request.kyb.completionPercentage}%` }} />
+                                  </div>
+                                  <span className="text-xs font-medium text-gray-700">{request.kyb.completionPercentage}%</span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">Step {request.kyb.currentStep}/6 • {request.kyb.status}</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-xs text-gray-500 mb-1">Batas Paket</p>
+                                <p className="text-sm text-gray-700">
+                                  {request.package.max_outlets} outlet • {request.package.max_users} pengguna
+                                </p>
+                              </>
+                            )}
                           </div>
                         </div>
 

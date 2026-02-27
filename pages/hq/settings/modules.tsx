@@ -8,8 +8,12 @@ import {
   Settings, LayoutDashboard, ShoppingCart, Users, Truck, Target,
   Wallet, BarChart3, Award, Utensils, Calendar, Ticket, Building2,
   UserCheck, MapPin, Plug, Layers, Star, ArrowRight, RefreshCw,
-  MessageCircle, Globe, ChefHat, Crown, Sparkles
+  MessageCircle, Globe, ChefHat, Crown, Sparkles, Lightbulb, Store
 } from 'lucide-react';
+import ModuleRecommendations, { CategoryInfoCard } from '@/components/modules/ModuleRecommendations';
+import ModuleAnalytics from '@/components/modules/ModuleAnalytics';
+import ModuleMarketplace from '@/components/modules/ModuleMarketplace';
+import ModuleConfigPanel from '@/components/modules/ModuleConfigPanel';
 
 interface ModuleDep {
   moduleCode: string;
@@ -61,7 +65,7 @@ const ICON_MAP: Record<string, any> = {
   MessageCircle, Globe, ChefHat, Crown, Sparkles
 };
 
-const CATEGORY_ORDER = ['core', 'operations', 'finance', 'hr', 'crm', 'marketing', 'analytics', 'integration', 'system'];
+const CATEGORY_ORDER = ['core', 'fnb', 'optional', 'addon', 'operations', 'finance', 'hr', 'crm', 'marketing', 'analytics', 'integration', 'system'];
 
 const TIER_BADGES: Record<string, { label: string; color: string; bg: string }> = {
   basic: { label: 'Gratis', color: 'text-green-700', bg: 'bg-green-100' },
@@ -93,6 +97,12 @@ export default function ModuleManagement() {
     action: 'enable' | 'disable';
     dependencies?: any[];
   } | null>(null);
+  const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
+  const [bulkActionMode, setBulkActionMode] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(true);
+  const [activeTab, setActiveTab] = useState<'modules' | 'analytics' | 'marketplace'>('modules');
+  const [configModule, setConfigModule] = useState<ModuleItem | null>(null);
+  const { businessType } = useBusinessType();
 
   useEffect(() => {
     setMounted(true);
@@ -191,6 +201,53 @@ export default function ModuleManagement() {
     }
   };
 
+  const handleBulkEnable = async () => {
+    if (selectedModules.size === 0) return;
+    
+    const modulesToEnable = Array.from(selectedModules);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const moduleId of modulesToEnable) {
+      try {
+        const res = await fetch('/api/hq/modules', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ moduleId, isEnabled: true })
+        });
+        if (res.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        failCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      toast.success(`${successCount} modul berhasil diaktifkan`);
+      await fetchModules();
+      await refreshConfig();
+    }
+    if (failCount > 0) {
+      toast.error(`${failCount} modul gagal diaktifkan`);
+    }
+    
+    setSelectedModules(new Set());
+    setBulkActionMode(false);
+  };
+
+  const toggleModuleSelection = (moduleId: string) => {
+    const newSelected = new Set(selectedModules);
+    if (newSelected.has(moduleId)) {
+      newSelected.delete(moduleId);
+    } else {
+      newSelected.add(moduleId);
+    }
+    setSelectedModules(newSelected);
+  };
+
   // Filter modules
   const filteredModules = useMemo(() => {
     if (!data) return [];
@@ -229,13 +286,86 @@ export default function ModuleManagement() {
 
   if (!mounted) return null;
 
+  const handleSaveConfig = async (config: any) => {
+    if (!configModule) return;
+    
+    try {
+      const res = await fetch('/api/hq/modules/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          moduleId: configModule.id,
+          config
+        })
+      });
+      
+      if (!res.ok) throw new Error('Failed to save config');
+      
+      toast.success('Konfigurasi berhasil disimpan');
+      await fetchModules();
+    } catch (error) {
+      throw error;
+    }
+  };
+
   return (
     <HQLayout title="Modul Manajemen" subtitle="Kelola dan konfigurasi modul sesuai kebutuhan bisnis Anda">
       <div className="space-y-6">
+        
+        {/* Tabs */}
+        <div className="bg-white rounded-xl border border-gray-200 p-1">
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveTab('modules')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeTab === 'modules'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              Modul Saya
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeTab === 'analytics'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4" />
+              Analytics
+            </button>
+            <button
+              onClick={() => setActiveTab('marketplace')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeTab === 'marketplace'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <Store className="w-4 h-4" />
+              Marketplace
+            </button>
+          </div>
+        </div>
 
-        {/* Summary Cards */}
+        {/* Tab Content */}
+        {activeTab === 'analytics' && (
+          <ModuleAnalytics tenantId={''} />
+        )}
+
+        {activeTab === 'marketplace' && (
+          <ModuleMarketplace />
+        )}
+
+        {activeTab === 'modules' && (
+          <div className="space-y-6">
+
+        {/* Enhanced Summary Cards */}
         {data && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -280,7 +410,88 @@ export default function ModuleManagement() {
                 </div>
               </div>
             </div>
+            <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Utensils className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {data.modules.filter(m => m.category === 'fnb').length}
+                  </p>
+                  <p className="text-xs text-gray-500">F&B Modul</p>
+                </div>
+              </div>
+            </div>
           </div>
+        )}
+
+        {/* Quick Actions Bar */}
+        {data && data.modules.length > 0 && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-200">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-blue-600" />
+                <div>
+                  <h3 className="font-semibold text-gray-900">Quick Actions</h3>
+                  <p className="text-xs text-gray-600">Kelola modul dengan cepat</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowRecommendations(!showRecommendations)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    showRecommendations
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <Lightbulb className="w-4 h-4 inline mr-1" />
+                  {showRecommendations ? 'Sembunyikan Rekomendasi' : 'Lihat Rekomendasi'}
+                </button>
+                <button
+                  onClick={() => setBulkActionMode(!bulkActionMode)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    bulkActionMode
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {bulkActionMode ? 'Selesai Bulk Action' : 'Bulk Action'}
+                </button>
+                {bulkActionMode && selectedModules.size > 0 && (
+                  <>
+                    <button
+                      onClick={() => handleBulkEnable()}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+                    >
+                      Aktifkan {selectedModules.size} Modul
+                    </button>
+                    <button
+                      onClick={() => setSelectedModules(new Set())}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700"
+                    >
+                      Clear
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Module Recommendations */}
+        {showRecommendations && data && (
+          <ModuleRecommendations
+            businessType={typeof businessType === 'object' && businessType?.code ? businessType.code : undefined}
+            currentModules={data.modules.filter(m => m.isEnabled).map(m => m.code)}
+            onModuleClick={(moduleCode) => {
+              const module = data.modules.find(m => m.code === moduleCode);
+              if (module && !module.isEnabled) {
+                handleToggle(module);
+              }
+            }}
+          />
         )}
 
         {/* Toolbar */}
@@ -377,6 +588,7 @@ export default function ModuleManagement() {
               {/* Basic Section Header */}
               {basicMods.length > 0 && (
                 <div className="space-y-4">
+                  {categoryFilter === 'all' && <CategoryInfoCard category="core" />}
                   <div className="flex items-center gap-3 pb-2 border-b-2 border-green-200">
                     <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
                       <Package className="w-4 h-4 text-green-600" />
@@ -401,6 +613,9 @@ export default function ModuleManagement() {
                           onToggle={() => handleToggle(mod)}
                           onExpand={() => setExpandedModule(expandedModule === mod.id ? null : mod.id)}
                           getIcon={getModuleIcon}
+                          bulkMode={bulkActionMode}
+                          isSelected={selectedModules.has(mod.id)}
+                          onSelect={() => toggleModuleSelection(mod.id)}
                         />
                       ))}
                     </div>
@@ -423,6 +638,13 @@ export default function ModuleManagement() {
               {/* ===== ADD-ON / PRO MODULES SECTION ===== */}
               {addonMods.length > 0 && (
                 <div className="space-y-4">
+                  {categoryFilter === 'all' && <CategoryInfoCard category="addon" />}
+                  {categoryFilter === 'fnb' && <CategoryInfoCard category="fnb" />}
+                  {categoryFilter === 'optional' && <CategoryInfoCard category="optional" />}
+                  {categoryFilter === 'operations' && <CategoryInfoCard category="operations" />}
+                  {categoryFilter === 'finance' && <CategoryInfoCard category="finance" />}
+                  {categoryFilter === 'hr' && <CategoryInfoCard category="hr" />}
+                  {categoryFilter === 'crm' && <CategoryInfoCard category="crm" />}
                   <div className="flex items-center gap-3 pb-2 border-b-2 border-blue-200">
                     <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                       <Crown className="w-4 h-4 text-blue-600" />
@@ -447,6 +669,9 @@ export default function ModuleManagement() {
                           onToggle={() => handleToggle(mod)}
                           onExpand={() => setExpandedModule(expandedModule === mod.id ? null : mod.id)}
                           getIcon={getModuleIcon}
+                          bulkMode={bulkActionMode}
+                          isSelected={selectedModules.has(mod.id)}
+                          onSelect={() => toggleModuleSelection(mod.id)}
                         />
                       ))}
                     </div>
@@ -485,6 +710,20 @@ export default function ModuleManagement() {
             onCancel={() => setConfirmDialog(null)}
           />
         )}
+          </div>
+        )}
+
+        {/* Config Panel */}
+        {configModule && (
+          <ModuleConfigPanel
+            moduleId={configModule.id}
+            moduleCode={configModule.code}
+            moduleName={configModule.name}
+            currentConfig={{}}
+            onClose={() => setConfigModule(null)}
+            onSave={handleSaveConfig}
+          />
+        )}
       </div>
     </HQLayout>
   );
@@ -494,7 +733,7 @@ export default function ModuleManagement() {
 // Module Card (Grid View)
 // =============================
 function ModuleCard({
-  mod, isExpanded, isToggling, onToggle, onExpand, getIcon
+  mod, isExpanded, isToggling, onToggle, onExpand, getIcon, bulkMode, isSelected, onSelect
 }: {
   mod: ModuleItem;
   isExpanded: boolean;
@@ -502,6 +741,9 @@ function ModuleCard({
   onToggle: () => void;
   onExpand: () => void;
   getIcon: (name: string) => JSX.Element;
+  bulkMode?: boolean;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }) {
   const tier = TIER_BADGES[mod.pricingTier] || TIER_BADGES.basic;
 

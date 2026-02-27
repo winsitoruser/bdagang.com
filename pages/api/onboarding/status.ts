@@ -19,23 +19,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const userId = parseInt(session.user.id);
     const tenantId = session.user.tenantId;
 
-    // Get tenant info
+    // Get tenant info (with safe include)
     let tenant = null;
     if (tenantId) {
-      tenant = await db.Tenant.findByPk(tenantId, {
-        include: [{ model: db.BusinessType, as: 'businessType' }]
+      try {
+        tenant = await db.Tenant.findByPk(tenantId, {
+          include: [{ model: db.BusinessType, as: 'businessType' }]
+        });
+      } catch (e: any) {
+        console.log('[Status] Tenant include error, fetching without include:', e.message);
+        tenant = await db.Tenant.findByPk(tenantId);
+      }
+    }
+
+    // Get KYB application (with safe include)
+    let kyb = null;
+    try {
+      kyb = await db.KybApplication.findOne({
+        where: { userId },
+        include: [{
+          model: db.KybDocument,
+          as: 'documents'
+        }],
+        order: [['created_at', 'DESC']]
+      });
+    } catch (e: any) {
+      console.log('[Status] KYB include error, fetching without include:', e.message);
+      kyb = await db.KybApplication.findOne({
+        where: { userId },
+        order: [['created_at', 'DESC']]
       });
     }
 
-    // Get KYB application
-    const kyb = await db.KybApplication.findOne({
-      where: { userId },
-      include: [{
-        model: db.KybDocument,
-        as: 'documents'
-      }],
-      order: [['created_at', 'DESC']]
-    });
+    // If KYB loaded without documents, try fetching them separately
+    if (kyb && !kyb.documents) {
+      try {
+        const docs = await db.KybDocument.findAll({
+          where: { kybApplicationId: kyb.id }
+        });
+        kyb.dataValues.documents = docs;
+      } catch (e: any) {
+        console.log('[Status] Documents fetch skipped:', e.message);
+        kyb.dataValues.documents = [];
+      }
+    }
 
     // Determine overall status
     const kybStatus = tenant?.kybStatus || 'pending_kyb';

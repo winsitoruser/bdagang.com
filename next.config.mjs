@@ -42,6 +42,28 @@ const nextConfig = {
   
   // Enable SWC minification for faster builds
   swcMinify: true,
+
+  // Webpack config to fix EMFILE (too many open files) on large projects
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        poll: 1000,
+        aggregateTimeout: 300,
+        ignored: [
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/.next/**',
+          '**/public/uploads/**',
+          '**/export/**',
+          '**/scripts/**',
+          '**/seeders/**',
+          '**/migrations/**',
+        ],
+      };
+    }
+    return config;
+  },
   
   // Experimental features for better performance
   experimental: {

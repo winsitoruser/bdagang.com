@@ -12,6 +12,7 @@ import {
   Building, Globe
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getProvinces, getCities, getDistricts } from '../../data/regions';
 
 interface KybFormData {
   // Step 1
@@ -125,16 +126,7 @@ const legalEntityTypes = [
   { value: 'koperasi', label: 'Koperasi', desc: 'Badan usaha koperasi', icon: '🤲' },
 ];
 
-const provinces = [
-  'Aceh', 'Sumatera Utara', 'Sumatera Barat', 'Riau', 'Jambi', 'Sumatera Selatan',
-  'Bengkulu', 'Lampung', 'Kep. Bangka Belitung', 'Kep. Riau', 'DKI Jakarta',
-  'Jawa Barat', 'Jawa Tengah', 'DI Yogyakarta', 'Jawa Timur', 'Banten',
-  'Bali', 'Nusa Tenggara Barat', 'Nusa Tenggara Timur', 'Kalimantan Barat',
-  'Kalimantan Tengah', 'Kalimantan Selatan', 'Kalimantan Timur', 'Kalimantan Utara',
-  'Sulawesi Utara', 'Sulawesi Tengah', 'Sulawesi Selatan', 'Sulawesi Tenggara',
-  'Gorontalo', 'Sulawesi Barat', 'Maluku', 'Maluku Utara', 'Papua', 'Papua Barat',
-  'Papua Selatan', 'Papua Tengah', 'Papua Pegunungan', 'Papua Barat Daya',
-];
+const provinces = getProvinces();
 
 const referralSources = [
   { value: 'google', label: 'Google / Pencarian' },
@@ -154,6 +146,62 @@ const steps = [
   { number: 5, title: 'Struktur Bisnis', icon: GitBranch },
   { number: 6, title: 'Review & Submit', icon: MessageSquare },
 ];
+
+// Input component helpers - MOVED OUTSIDE to prevent re-creation on every render
+const InputField = ({ label, name, placeholder, type = 'text', required = false, icon: Icon, hint, value, onChange, error }: any) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    <div className="relative">
+      {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-gray-400" />}
+      <input
+        type={type}
+        name={name}
+        value={value || ''}
+        onChange={onChange}
+        className={`w-full ${Icon ? 'pl-11' : 'pl-4'} pr-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition text-sm ${
+          error ? 'border-red-400 bg-red-50' : 'border-gray-200'
+        }`}
+        placeholder={placeholder}
+      />
+    </div>
+    {hint && !error && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
+    {error && (
+      <p className="mt-1 text-xs text-red-600 flex items-center space-x-1">
+        <AlertCircle className="w-3 h-3" />
+        <span>{error}</span>
+      </p>
+    )}
+  </div>
+);
+
+const SelectField = ({ label, name, options, required = false, placeholder = 'Pilih...', value, onChange, error }: any) => (
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    <select
+      name={name}
+      value={value || ''}
+      onChange={onChange}
+      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition text-sm appearance-none bg-white ${
+        error ? 'border-red-400 bg-red-50' : 'border-gray-200'
+      }`}
+    >
+      <option value="">{placeholder}</option>
+      {options.map((opt: any) => (
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
+      ))}
+    </select>
+    {error && (
+      <p className="mt-1 text-xs text-red-600 flex items-center space-x-1">
+        <AlertCircle className="w-3 h-3" />
+        <span>{error}</span>
+      </p>
+    )}
+  </div>
+);
 
 export default function KybForm() {
   const router = useRouter();
@@ -181,12 +229,30 @@ export default function KybForm() {
     try {
       setLoading(true);
       const res = await fetch('/api/onboarding/kyb');
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Load KYB error:', res.status, errorText);
+        
+        if (res.status === 400) {
+          toast.error('Tenant tidak ditemukan. Silakan lengkapi welcome step terlebih dahulu.');
+          router.push('/onboarding/welcome');
+          return;
+        }
+        
+        toast.error(`Gagal memuat data KYB: ${res.status}`);
+        return;
+      }
+      
       const json = await res.json();
       if (json.success && json.data) {
         const d = json.data;
         setKybId(d.id);
         setDocuments(d.documents || []);
         setCurrentStep(d.currentStep || 1);
+        
+        console.log('KYB loaded successfully, ID:', d.id);
+        
         setFormData({
           businessName: d.businessName || '',
           businessCategory: d.businessCategory || '',
@@ -273,8 +339,16 @@ export default function KybForm() {
   };
 
   const saveProgress = async (nextStep?: number) => {
+    if (!kybId) {
+      console.error('Cannot save: KYB ID not found');
+      toast.error('KYB belum dimuat. Silakan refresh halaman.');
+      return false;
+    }
+    
     setSaving(true);
     try {
+      console.log('Saving KYB data, ID:', kybId, 'Step:', nextStep || currentStep);
+      
       const res = await fetch('/api/onboarding/kyb', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -283,12 +357,27 @@ export default function KybForm() {
           currentStep: nextStep || currentStep,
         }),
       });
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Save error response:', errorText);
+        toast.error(`Gagal menyimpan data: ${res.status}`);
+        return false;
+      }
+      
       const json = await res.json();
       if (!json.success) {
-        toast.error('Gagal menyimpan data');
+        console.error('Save failed:', json);
+        toast.error(json.message || 'Gagal menyimpan data');
+        return false;
       }
-    } catch {
-      toast.error('Gagal menyimpan data');
+      
+      console.log('Data saved successfully');
+      return true;
+    } catch (error: any) {
+      console.error('Save error:', error);
+      toast.error(`Gagal menyimpan data: ${error.message}`);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -297,13 +386,17 @@ export default function KybForm() {
   const nextStep = async () => {
     if (currentStep === 3) {
       // Documents step - no validation needed, just save and move
-      await saveProgress(currentStep + 1);
-      setCurrentStep(currentStep + 1);
+      const saved = await saveProgress(currentStep + 1);
+      if (saved) {
+        setCurrentStep(currentStep + 1);
+      }
       return;
     }
     if (validateStep(currentStep)) {
-      await saveProgress(currentStep + 1);
-      setCurrentStep(currentStep + 1);
+      const saved = await saveProgress(currentStep + 1);
+      if (saved) {
+        setCurrentStep(currentStep + 1);
+      }
     } else {
       toast.error('Mohon lengkapi field yang wajib diisi');
     }
@@ -339,62 +432,6 @@ export default function KybForm() {
       setSubmitting(false);
     }
   };
-
-  // Input component helpers
-  const InputField = ({ label, name, placeholder, type = 'text', required = false, icon: Icon, hint }: any) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <div className="relative">
-        {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-gray-400" />}
-        <input
-          type={type}
-          name={name}
-          value={(formData as any)[name] || ''}
-          onChange={handleChange}
-          className={`w-full ${Icon ? 'pl-11' : 'pl-4'} pr-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition text-sm ${
-            errors[name] ? 'border-red-400 bg-red-50' : 'border-gray-200'
-          }`}
-          placeholder={placeholder}
-        />
-      </div>
-      {hint && !errors[name] && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
-      {errors[name] && (
-        <p className="mt-1 text-xs text-red-600 flex items-center space-x-1">
-          <AlertCircle className="w-3 h-3" />
-          <span>{errors[name]}</span>
-        </p>
-      )}
-    </div>
-  );
-
-  const SelectField = ({ label, name, options, required = false, placeholder = 'Pilih...' }: any) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <select
-        name={name}
-        value={(formData as any)[name] || ''}
-        onChange={handleChange}
-        className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition text-sm appearance-none bg-white ${
-          errors[name] ? 'border-red-400 bg-red-50' : 'border-gray-200'
-        }`}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((opt: any) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
-      {errors[name] && (
-        <p className="mt-1 text-xs text-red-600 flex items-center space-x-1">
-          <AlertCircle className="w-3 h-3" />
-          <span>{errors[name]}</span>
-        </p>
-      )}
-    </div>
-  );
 
   if (loading || sessionStatus === 'loading') {
     return (
@@ -493,7 +530,7 @@ export default function KybForm() {
                     <p className="text-sm text-gray-500">Ceritakan tentang usaha Anda</p>
                   </div>
 
-                  <InputField label="Nama Bisnis / Usaha" name="businessName" placeholder="Contoh: Warung Makan Berkah" required icon={Building2} />
+                  <InputField label="Nama Bisnis / Usaha" name="businessName" placeholder="Contoh: Warung Makan Berkah" required icon={Building2} value={formData.businessName} onChange={handleChange} error={errors.businessName} />
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -522,11 +559,11 @@ export default function KybForm() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <SelectField label="Lama Usaha Berjalan" name="businessDuration" options={durationOptions} required />
-                    <SelectField label="Jumlah Karyawan" name="employeeCount" options={employeeOptions} />
+                    <SelectField label="Lama Usaha Berjalan" name="businessDuration" options={durationOptions} required value={formData.businessDuration} onChange={handleChange} error={errors.businessDuration} />
+                    <SelectField label="Jumlah Karyawan" name="employeeCount" options={employeeOptions} value={formData.employeeCount} onChange={handleChange} error={errors.employeeCount} />
                   </div>
 
-                  <SelectField label="Estimasi Omzet Bulanan" name="annualRevenue" options={revenueOptions} />
+                  <SelectField label="Estimasi Omzet Bulanan" name="annualRevenue" options={revenueOptions} value={formData.annualRevenue} onChange={handleChange} error={errors.annualRevenue} />
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Deskripsi Bisnis</label>
@@ -586,21 +623,21 @@ export default function KybForm() {
 
                   {formData.legalEntityType && formData.legalEntityType !== 'perorangan' && (
                     <>
-                      <InputField label="Nama Badan Usaha" name="legalEntityName" placeholder="Contoh: PT Berkah Jaya Indonesia" icon={Building} />
+                      <InputField label="Nama Badan Usaha" name="legalEntityName" placeholder="Contoh: PT Berkah Jaya Indonesia" icon={Building} value={formData.legalEntityName} onChange={handleChange} error={errors.legalEntityName} />
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <InputField label="Nomor NIB" name="nibNumber" placeholder="13 digit NIB" icon={Hash} hint="Nomor Induk Berusaha dari OSS" />
-                        <InputField label="Nomor SIUP" name="siupNumber" placeholder="Nomor SIUP" icon={FileText} />
+                        <InputField label="Nomor NIB" name="nibNumber" placeholder="13 digit NIB" icon={Hash} hint="Nomor Induk Berusaha dari OSS" value={formData.nibNumber} onChange={handleChange} error={errors.nibNumber} />
+                        <InputField label="Nomor SIUP" name="siupNumber" placeholder="Nomor SIUP" icon={FileText} value={formData.siupNumber} onChange={handleChange} error={errors.siupNumber} />
                       </div>
                     </>
                   )}
 
-                  <InputField label="Nomor NPWP" name="npwpNumber" placeholder="XX.XXX.XXX.X-XXX.XXX" icon={Hash} hint="NPWP pribadi atau badan usaha" />
+                  <InputField label="Nomor NPWP" name="npwpNumber" placeholder="XX.XXX.XXX.X-XXX.XXX" icon={Hash} hint="NPWP pribadi atau badan usaha" value={formData.npwpNumber} onChange={handleChange} error={errors.npwpNumber} />
 
                   <div className="border-t border-gray-200 pt-4">
                     <h4 className="font-medium text-gray-900 mb-3">Data KTP Pemilik / Penanggung Jawab</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <InputField label="Nama Sesuai KTP" name="ktpName" placeholder="Nama lengkap di KTP" required icon={Users} />
-                      <InputField label="Nomor KTP (NIK)" name="ktpNumber" placeholder="16 digit NIK" required icon={Hash} hint="Nomor Induk Kependudukan 16 digit" />
+                      <InputField label="Nama Sesuai KTP" name="ktpName" placeholder="Nama lengkap di KTP" required icon={Users} value={formData.ktpName} onChange={handleChange} error={errors.ktpName} />
+                      <InputField label="Nomor KTP (NIK)" name="ktpNumber" placeholder="16 digit NIK" required icon={Hash} hint="Nomor Induk Kependudukan 16 digit" value={formData.ktpNumber} onChange={handleChange} error={errors.ktpNumber} />
                     </div>
                   </div>
                 </div>
@@ -711,10 +748,10 @@ export default function KybForm() {
                       <span>Person In Charge (PIC)</span>
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <InputField label="Nama PIC" name="picName" placeholder="Nama penanggung jawab" required icon={Users} />
-                      <InputField label="Jabatan" name="picPosition" placeholder="Contoh: Owner, Manager" icon={Briefcase} />
-                      <InputField label="No. Telepon PIC" name="picPhone" placeholder="08xxxxxxxxxx" required icon={Phone} />
-                      <InputField label="Email PIC" name="picEmail" placeholder="email@domain.com" type="email" icon={Mail} />
+                      <InputField label="Nama PIC" name="picName" placeholder="Nama penanggung jawab" required icon={Users} value={formData.picName} onChange={handleChange} error={errors.picName} />
+                      <InputField label="Jabatan" name="picPosition" placeholder="Contoh: Owner, Manager" icon={Briefcase} value={formData.picPosition} onChange={handleChange} error={errors.picPosition} />
+                      <InputField label="No. Telepon PIC" name="picPhone" placeholder="08xxxxxxxxxx" required icon={Phone} value={formData.picPhone} onChange={handleChange} error={errors.picPhone} />
+                      <InputField label="Email PIC" name="picEmail" placeholder="email@domain.com" type="email" icon={Mail} value={formData.picEmail} onChange={handleChange} error={errors.picEmail} />
                     </div>
                   </div>
 
@@ -744,13 +781,58 @@ export default function KybForm() {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <InputField label="Kecamatan" name="businessDistrict" placeholder="Kecamatan" icon={MapPin} />
-                        <InputField label="Kota / Kabupaten" name="businessCity" placeholder="Kota / Kabupaten" required icon={Building2} />
+                        <SelectField
+                          label="Provinsi"
+                          name="businessProvince"
+                          options={provinces.map(p => ({ value: p, label: p }))}
+                          required
+                          value={formData.businessProvince}
+                          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                            const val = e.target.value;
+                            setFormData(prev => ({
+                              ...prev,
+                              businessProvince: val,
+                              businessCity: '',
+                              businessDistrict: '',
+                            }));
+                            setErrors(prev => ({ ...prev, businessProvince: '', businessCity: '', businessDistrict: '' }));
+                          }}
+                          error={errors.businessProvince}
+                        />
+                        <SelectField
+                          label="Kota / Kabupaten"
+                          name="businessCity"
+                          options={formData.businessProvince ? getCities(formData.businessProvince).map(c => ({ value: c, label: c })) : []}
+                          required
+                          placeholder={formData.businessProvince ? 'Pilih Kota/Kabupaten...' : 'Pilih Provinsi dahulu...'}
+                          value={formData.businessCity}
+                          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                            const val = e.target.value;
+                            setFormData(prev => ({
+                              ...prev,
+                              businessCity: val,
+                              businessDistrict: '',
+                            }));
+                            setErrors(prev => ({ ...prev, businessCity: '', businessDistrict: '' }));
+                          }}
+                          error={errors.businessCity}
+                        />
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <SelectField label="Provinsi" name="businessProvince" options={provinces.map(p => ({ value: p, label: p }))} required />
-                        <InputField label="Kode Pos" name="businessPostalCode" placeholder="Kode pos" icon={Hash} />
+                        <SelectField
+                          label="Kecamatan"
+                          name="businessDistrict"
+                          options={formData.businessCity ? getDistricts(formData.businessProvince, formData.businessCity).map(d => ({ value: d, label: d })) : []}
+                          placeholder={formData.businessCity ? 'Pilih Kecamatan...' : 'Pilih Kota/Kabupaten dahulu...'}
+                          value={formData.businessDistrict}
+                          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                            setFormData(prev => ({ ...prev, businessDistrict: e.target.value }));
+                            setErrors(prev => ({ ...prev, businessDistrict: '' }));
+                          }}
+                          error={errors.businessDistrict}
+                        />
+                        <InputField label="Kode Pos" name="businessPostalCode" placeholder="Kode pos" icon={Hash} value={formData.businessPostalCode} onChange={handleChange} error={errors.businessPostalCode} />
                       </div>
                     </div>
                   </div>
@@ -866,8 +948,8 @@ export default function KybForm() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <SelectField label="Dari mana Anda tahu Bedagang?" name="referralSource" options={referralSources} />
-                    <InputField label="Target Mulai Beroperasi" name="expectedStartDate" type="date" icon={Calendar} />
+                    <SelectField label="Dari mana Anda tahu Bedagang?" name="referralSource" options={referralSources} value={formData.referralSource} onChange={handleChange} error={errors.referralSource} />
+                    <InputField label="Target Mulai Beroperasi" name="expectedStartDate" type="date" icon={Calendar} value={formData.expectedStartDate} onChange={handleChange} error={errors.expectedStartDate} />
                   </div>
 
                   {/* Summary */}

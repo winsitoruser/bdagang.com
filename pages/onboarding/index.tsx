@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -8,7 +8,7 @@ import {
   Store, ClipboardCheck, FileText, Clock, CheckCircle2, 
   XCircle, ArrowRight, Building2, Shield, Upload, MapPin, 
   GitBranch, MessageSquare, Loader2, AlertTriangle, Sparkles,
-  ChevronRight, RefreshCw
+  ChevronRight, RefreshCw, LogOut, User, ChevronDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -57,6 +57,18 @@ export default function OnboardingDashboard() {
   const { data: session, status: sessionStatus } = useSession();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<OnboardingData | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -75,6 +87,13 @@ export default function OnboardingDashboard() {
       const json = await res.json();
       if (json.success) {
         setData(json.data);
+        
+        // If no tenant, redirect to welcome
+        if (!json.data.tenant) {
+          router.push('/onboarding/welcome');
+          return;
+        }
+        
         // If active, redirect to dashboard
         if (json.data.statusInfo.canAccessDashboard) {
           router.push('/dashboard');
@@ -142,10 +161,7 @@ export default function OnboardingDashboard() {
                 BEDAGANG
               </h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                {session?.user?.name}
-              </span>
+            <div className="flex items-center space-x-3">
               <button
                 onClick={fetchStatus}
                 className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition"
@@ -153,6 +169,53 @@ export default function OnboardingDashboard() {
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
+
+              {/* Profile & Logout */}
+              <div className="relative" ref={profileRef}>
+                <button
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="flex items-center space-x-2 px-3 py-2 rounded-xl hover:bg-gray-100 transition"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-blue-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm font-bold">
+                      {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 hidden sm:block max-w-[150px] truncate">
+                    {session?.user?.name || 'User'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {profileOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{session?.user?.name || 'User'}</p>
+                      <p className="text-xs text-gray-500 truncate">{session?.user?.email || '-'}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setProfileOpen(false);
+                        router.push('/profile');
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
+                    >
+                      <User className="w-4 h-4 text-gray-400" />
+                      <span>Profil Saya</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setProfileOpen(false);
+                        signOut({ callbackUrl: '/auth/login' });
+                      }}
+                      className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Keluar</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>

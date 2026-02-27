@@ -89,7 +89,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       <Link
         key={item.id}
         href={item.href || '#'}
-        className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all group relative ${
+        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-all group relative ${
           active
             ? 'bg-sky-50 text-sky-600 font-medium'
             : 'text-gray-700 hover:bg-gray-50'
@@ -101,7 +101,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         <Icon className={`w-5 h-5 flex-shrink-0 ${
           sidebarCollapsed ? 'lg:mx-auto' : ''
         }`} />
-        <span className={`transition-all ${
+        <span className={`text-sm transition-all ${
           sidebarCollapsed ? 'lg:hidden' : ''
         }`}>{item.name}</span>
         
@@ -121,7 +121,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       {/* Section Header */}
       {!sidebarCollapsed && (
         <div className="px-4 mb-2">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
             {group.title}
           </h3>
         </div>
@@ -173,53 +173,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
         {/* Navigation - Scrollable */}
         <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto overflow-x-hidden"
-          style={{ maxHeight: 'calc(100vh - 64px - 120px)' }}
+          style={{ maxHeight: 'calc(100vh - 64px)' }}
         >
           {filteredConfig.groups.map((group, groupIndex) => renderMenuGroup(group, groupIndex))}
         </nav>
-
-        {/* User Info & Logout - Fixed at bottom */}
-        <div className="border-t border-gray-200 p-4 flex-shrink-0">
-          <div className={`flex items-center space-x-3 mb-3 ${
-            sidebarCollapsed ? 'lg:justify-center' : ''
-          }`}>
-            <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0">
-              {session?.user?.name?.charAt(0) || 'U'}
-            </div>
-            <div className={`flex-1 min-w-0 transition-all ${
-              sidebarCollapsed ? 'lg:hidden' : ''
-            }`}>
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {session?.user?.name || 'User'}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {session?.user?.email || ''}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className={`flex items-center space-x-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-all group relative ${
-              sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''
-            }`}
-            title={sidebarCollapsed ? 'Logout' : ''}
-          >
-            <LogOut className={`w-4 h-4 flex-shrink-0 ${
-              sidebarCollapsed ? 'lg:mx-auto' : ''
-            }`} />
-            <span className={`transition-all ${
-              sidebarCollapsed ? 'lg:hidden' : ''
-            }`}>Keluar</span>
-            
-            {/* Tooltip for collapsed state */}
-            {sidebarCollapsed && (
-              <div className="hidden lg:block absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-                Keluar
-                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
-              </div>
-            )}
-          </button>
-        </div>
       </aside>
 
       {/* Collapse Toggle Button - Desktop Only */}
@@ -238,8 +195,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       </button>
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${
-        sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
+      <div className={`flex-1 transition-all duration-300 ${
+        sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
       }`}>
         {/* Top Bar */}
         <header className="sticky top-0 z-40 bg-white border-b border-gray-200">

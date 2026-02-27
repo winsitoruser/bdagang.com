@@ -138,25 +138,8 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
               </div>
             </div>
 
-            {/* Right side */}
+            {/* Right side - Empty for now */}
             <div className="flex items-center space-x-4">
-              <div className="hidden md:flex items-center space-x-3">
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{session?.user?.name || 'Admin'}</p>
-                  <p className="text-xs text-gray-500">{session?.user?.role}</p>
-                </div>
-                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white font-semibold">
-                  {session?.user?.name?.charAt(0) || 'A'}
-                </div>
-              </div>
-              
-              <button
-                onClick={handleLogout}
-                className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Keluar</span>
-              </button>
             </div>
           </div>
         </div>

@@ -39,13 +39,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (bt) businessTypeId = bt.id;
     }
 
+    // Generate unique tenant code
+    const bName = businessName || `Bisnis ${name}`;
+    const baseCode = bName.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8);
+    const uniqueSuffix = Date.now().toString(36).toUpperCase().slice(-4);
+    const tenantCode = `${baseCode || 'TNT'}-${uniqueSuffix}`;
+
     // Create tenant with pending KYB status
+    // status must be one of: 'active','inactive','suspended','trial' (DB ENUM)
+    // onboardingStep must be INTEGER (DB column is int4)
+    // code is NOT NULL in DB
     const tenant = await db.Tenant.create({
-      businessName: businessName || `Bisnis ${name}`,
+      businessName: bName,
+      name: bName,
+      code: tenantCode,
       businessTypeId,
+      status: 'trial',
       kybStatus: 'pending_kyb',
       setupCompleted: false,
       onboardingStep: 0,
+      isActive: true,
     });
 
     // Create user linked to tenant

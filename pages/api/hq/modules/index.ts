@@ -4,6 +4,158 @@ import { authOptions } from '../../auth/[...nextauth]';
 
 const getDb = () => require('../../../../models');
 
+function getMockModuleData() {
+  const mockModules = [
+    {
+      id: '1',
+      code: 'pos',
+      name: 'Point of Sale',
+      description: 'Sistem kasir dan penjualan',
+      icon: 'ShoppingCart',
+      route: '/hq/pos',
+      category: 'core',
+      features: ['Kasir', 'Transaksi', 'Pembayaran'],
+      pricingTier: 'basic',
+      setupComplexity: 'simple',
+      color: '#3B82F6',
+      version: '1.0.0',
+      tags: ['core', 'sales'],
+      isCore: true,
+      sortOrder: 1,
+      isEnabled: true,
+      enabledAt: new Date().toISOString(),
+      disabledAt: null,
+      configuredAt: null,
+      dependencies: [],
+      dependedBy: []
+    },
+    {
+      id: '2',
+      code: 'inventory',
+      name: 'Inventory',
+      description: 'Manajemen stok dan inventori',
+      icon: 'Package',
+      route: '/hq/inventory',
+      category: 'operations',
+      features: ['Stock', 'Products', 'Categories'],
+      pricingTier: 'basic',
+      setupComplexity: 'simple',
+      color: '#10B981',
+      version: '1.0.0',
+      tags: ['inventory', 'stock'],
+      isCore: true,
+      sortOrder: 2,
+      isEnabled: true,
+      enabledAt: new Date().toISOString(),
+      disabledAt: null,
+      configuredAt: null,
+      dependencies: [],
+      dependedBy: []
+    },
+    {
+      id: '3',
+      code: 'finance',
+      name: 'Finance',
+      description: 'Manajemen keuangan dan akuntansi',
+      icon: 'Wallet',
+      route: '/hq/finance',
+      category: 'finance',
+      features: ['Invoices', 'Transactions', 'Reports'],
+      pricingTier: 'basic',
+      setupComplexity: 'moderate',
+      color: '#F59E0B',
+      version: '1.0.0',
+      tags: ['finance', 'accounting'],
+      isCore: true,
+      sortOrder: 3,
+      isEnabled: true,
+      enabledAt: new Date().toISOString(),
+      disabledAt: null,
+      configuredAt: null,
+      dependencies: [],
+      dependedBy: []
+    },
+    {
+      id: '4',
+      code: 'hris',
+      name: 'HRIS',
+      description: 'Human Resource Information System',
+      icon: 'Users',
+      route: '/hq/hris',
+      category: 'hr',
+      features: ['Employees', 'Attendance', 'Payroll'],
+      pricingTier: 'professional',
+      setupComplexity: 'moderate',
+      color: '#8B5CF6',
+      version: '1.0.0',
+      tags: ['hr', 'employees'],
+      isCore: false,
+      sortOrder: 4,
+      isEnabled: false,
+      enabledAt: null,
+      disabledAt: null,
+      configuredAt: null,
+      dependencies: [],
+      dependedBy: []
+    },
+    {
+      id: '5',
+      code: 'fleet',
+      name: 'Fleet Management',
+      description: 'Manajemen armada dan kendaraan',
+      icon: 'Truck',
+      route: '/hq/fleet',
+      category: 'operations',
+      features: ['Vehicles', 'Drivers', 'Maintenance'],
+      pricingTier: 'professional',
+      setupComplexity: 'complex',
+      color: '#EF4444',
+      version: '1.0.0',
+      tags: ['fleet', 'logistics'],
+      isCore: false,
+      sortOrder: 5,
+      isEnabled: false,
+      enabledAt: null,
+      disabledAt: null,
+      configuredAt: null,
+      dependencies: [],
+      dependedBy: []
+    }
+  ];
+
+  const categories: Record<string, any[]> = {};
+  mockModules.forEach(mod => {
+    const cat = mod.category || 'other';
+    if (!categories[cat]) categories[cat] = [];
+    categories[cat].push(mod);
+  });
+
+  return {
+    modules: mockModules,
+    categories,
+    summary: {
+      total: mockModules.length,
+      enabled: mockModules.filter(m => m.isEnabled).length,
+      disabled: mockModules.filter(m => !m.isEnabled).length,
+      core: mockModules.filter(m => m.isCore).length
+    },
+    categoryLabels: {
+      core: 'Core System',
+      fnb: 'F&B (Food & Beverage)',
+      optional: 'Modul Optional',
+      addon: 'Add-on Premium',
+      operations: 'Operasional',
+      finance: 'Keuangan',
+      hr: 'SDM & HRIS',
+      crm: 'CRM & Pelanggan',
+      marketing: 'Marketing',
+      analytics: 'Analitik & Laporan',
+      system: 'Sistem & Pengaturan',
+      integration: 'Integrasi & Koneksi'
+    }
+  };
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const session = await getServerSession(req, res, authOptions);
@@ -38,139 +190,191 @@ async function getModules(
   tenantId: string,
   userRole: string
 ) {
-  const db = getDb();
-  const { Module, TenantModule, ModuleDependency } = db;
+  try {
+    const db = getDb();
+    const { Module, TenantModule, ModuleDependency } = db;
 
-  // Get all active modules
-  const allModules = await Module.findAll({
-    where: { isActive: true },
-    order: [['sortOrder', 'ASC'], ['name', 'ASC']],
-    include: [
-      {
-        model: ModuleDependency,
-        as: 'dependencies',
-        include: [{
-          model: Module,
-          as: 'dependsOn',
-          attributes: ['id', 'code', 'name', 'icon']
-        }]
-      },
-      {
-        model: ModuleDependency,
-        as: 'dependedBy',
-        include: [{
-          model: Module,
-          as: 'module',
-          attributes: ['id', 'code', 'name', 'icon']
-        }]
+    // Check if models exist
+    if (!Module) {
+      console.error('Module model not found');
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Module model not initialized'
+      });
+    }
+
+    // Get all active modules with optional dependency includes
+    const includeOptions: any[] = [];
+    
+    if (ModuleDependency) {
+      includeOptions.push(
+        {
+          model: ModuleDependency,
+          as: 'dependencies',
+          required: false,
+          include: [{
+            model: Module,
+            as: 'dependsOn',
+            attributes: ['id', 'code', 'name', 'icon']
+          }]
+        },
+        {
+          model: ModuleDependency,
+          as: 'dependedBy',
+          required: false,
+          include: [{
+            model: Module,
+            as: 'module',
+            attributes: ['id', 'code', 'name', 'icon']
+          }]
+        }
+      );
+    }
+
+    console.log('🔍 Fetching modules from database...');
+    console.log('Query: { isActive: true }');
+    
+    let allModules;
+    try {
+      allModules = await Module.findAll({
+        where: { isActive: true },
+        order: [['sortOrder', 'ASC'], ['name', 'ASC']],
+        include: includeOptions
+      });
+      console.log(`✅ Found ${allModules.length} modules in database`);
+    } catch (err: any) {
+      console.error('❌ Error fetching modules:', err.message);
+      console.error('Full error:', err);
+      throw err; // Re-throw to see the actual error
+    }
+
+    // If no modules found, log error but continue
+    if (!allModules || allModules.length === 0) {
+      console.error('⚠️ WARNING: No modules found in database!');
+      console.error('This means the query returned empty. Check:');
+      console.error('1. Are there modules with isActive=true in database?');
+      console.error('2. Is the Module model correctly configured?');
+      // Don't return mock data - return empty so we can see the real issue
+    }
+
+    // Get tenant module states
+    let tenantModules: any[] = [];
+    if (tenantId && TenantModule) {
+      tenantModules = await TenantModule.findAll({
+        where: { tenantId }
+      }).catch((err: any) => {
+        console.error('Error fetching tenant modules:', err.message);
+        return [];
+      });
+    }
+
+    const tenantModuleMap = new Map();
+    tenantModules.forEach((tm: any) => {
+      tenantModuleMap.set(tm.moduleId, {
+        isEnabled: tm.isEnabled,
+        enabledAt: tm.enabledAt,
+        disabledAt: tm.disabledAt,
+        configuredAt: tm.configuredAt,
+        configData: tm.configData
+      });
+    });
+
+    // Build enriched module list
+    const modules = allModules.map((mod: any) => {
+      const tenantState = tenantModuleMap.get(mod.id);
+      const isEnabled = tenantState?.isEnabled || false;
+
+      // Build dependency info
+      const dependencies = (mod.dependencies || []).map((dep: any) => ({
+        moduleCode: dep.dependsOn?.code,
+        moduleName: dep.dependsOn?.name,
+        moduleIcon: dep.dependsOn?.icon,
+        type: dep.dependencyType
+      }));
+
+      // Build "depended by" info (who depends on this module)
+      const dependedBy = (mod.dependedBy || []).map((dep: any) => ({
+        moduleCode: dep.module?.code,
+        moduleName: dep.module?.name,
+        moduleIcon: dep.module?.icon,
+        type: dep.dependencyType
+      }));
+
+      return {
+        id: mod.id,
+        code: mod.code,
+        name: mod.name,
+        description: mod.description,
+        icon: mod.icon,
+        route: mod.route,
+        category: mod.category,
+        features: mod.features || [],
+        pricingTier: mod.pricingTier,
+        setupComplexity: mod.setupComplexity,
+        color: mod.color,
+        version: mod.version,
+        tags: mod.tags || [],
+        isCore: mod.isCore,
+        sortOrder: mod.sortOrder,
+        // Tenant-specific state
+        isEnabled,
+        enabledAt: tenantState?.enabledAt,
+        disabledAt: tenantState?.disabledAt,
+        configuredAt: tenantState?.configuredAt,
+        // Dependencies
+        dependencies,
+        dependedBy
+      };
+    });
+
+    // Group by category
+    const categories: Record<string, any[]> = {};
+    modules.forEach((mod: any) => {
+      const cat = mod.category || 'other';
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(mod);
+    });
+
+    // Summary stats
+    const totalModules = modules.length;
+    const enabledCount = modules.filter((m: any) => m.isEnabled).length;
+    const coreCount = modules.filter((m: any) => m.isCore).length;
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        modules,
+        categories,
+        summary: {
+          total: totalModules,
+          enabled: enabledCount,
+          disabled: totalModules - enabledCount,
+          core: coreCount
+        },
+        categoryLabels: {
+          core: 'Core System',
+          fnb: 'F&B (Food & Beverage)',
+          optional: 'Modul Optional',
+          addon: 'Add-on Premium',
+          operations: 'Operasional',
+          finance: 'Keuangan',
+          hr: 'SDM & HRIS',
+          crm: 'CRM & Pelanggan',
+          marketing: 'Marketing',
+          analytics: 'Analitik & Laporan',
+          system: 'Sistem & Pengaturan',
+          integration: 'Integrasi & Koneksi'
+        }
       }
-    ]
-  });
-
-  // Get tenant module states
-  let tenantModules: any[] = [];
-  if (tenantId) {
-    tenantModules = await TenantModule.findAll({
-      where: { tenantId }
+    });
+  } catch (error: any) {
+    console.error('Error in getModules:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
-
-  const tenantModuleMap = new Map();
-  tenantModules.forEach((tm: any) => {
-    tenantModuleMap.set(tm.moduleId, {
-      isEnabled: tm.isEnabled,
-      enabledAt: tm.enabledAt,
-      disabledAt: tm.disabledAt,
-      configuredAt: tm.configuredAt,
-      configData: tm.configData
-    });
-  });
-
-  // Build enriched module list
-  const modules = allModules.map((mod: any) => {
-    const tenantState = tenantModuleMap.get(mod.id);
-    const isEnabled = tenantState?.isEnabled || false;
-
-    // Build dependency info
-    const dependencies = (mod.dependencies || []).map((dep: any) => ({
-      moduleCode: dep.dependsOn?.code,
-      moduleName: dep.dependsOn?.name,
-      moduleIcon: dep.dependsOn?.icon,
-      type: dep.dependencyType
-    }));
-
-    // Build "depended by" info (who depends on this module)
-    const dependedBy = (mod.dependedBy || []).map((dep: any) => ({
-      moduleCode: dep.module?.code,
-      moduleName: dep.module?.name,
-      moduleIcon: dep.module?.icon,
-      type: dep.dependencyType
-    }));
-
-    return {
-      id: mod.id,
-      code: mod.code,
-      name: mod.name,
-      description: mod.description,
-      icon: mod.icon,
-      route: mod.route,
-      category: mod.category,
-      features: mod.features || [],
-      pricingTier: mod.pricingTier,
-      setupComplexity: mod.setupComplexity,
-      color: mod.color,
-      version: mod.version,
-      tags: mod.tags || [],
-      isCore: mod.isCore,
-      sortOrder: mod.sortOrder,
-      // Tenant-specific state
-      isEnabled,
-      enabledAt: tenantState?.enabledAt,
-      disabledAt: tenantState?.disabledAt,
-      configuredAt: tenantState?.configuredAt,
-      // Dependencies
-      dependencies,
-      dependedBy
-    };
-  });
-
-  // Group by category
-  const categories: Record<string, any[]> = {};
-  modules.forEach((mod: any) => {
-    const cat = mod.category || 'other';
-    if (!categories[cat]) categories[cat] = [];
-    categories[cat].push(mod);
-  });
-
-  // Summary stats
-  const totalModules = modules.length;
-  const enabledCount = modules.filter((m: any) => m.isEnabled).length;
-  const coreCount = modules.filter((m: any) => m.isCore).length;
-
-  return res.status(200).json({
-    success: true,
-    data: {
-      modules,
-      categories,
-      summary: {
-        total: totalModules,
-        enabled: enabledCount,
-        disabled: totalModules - enabledCount,
-        core: coreCount
-      },
-      categoryLabels: {
-        core: 'Core System',
-        operations: 'Operasional',
-        finance: 'Keuangan',
-        hr: 'SDM & HRIS',
-        crm: 'CRM & Pelanggan',
-        marketing: 'Marketing',
-        analytics: 'Analitik & Laporan',
-        system: 'Sistem & Pengaturan',
-        integration: 'Integrasi & Koneksi'
-      }
-    }
-  });
 }
 
 async function toggleModule(

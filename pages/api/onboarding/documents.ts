@@ -23,6 +23,24 @@ function ensureDir(dir: string) {
   }
 }
 
+// Helper: resolve tenantId from session or user/kyb record
+async function resolveTenantId(db: any, userId: number, sessionTenantId: string | null): Promise<string | null> {
+  if (sessionTenantId) return sessionTenantId;
+  try {
+    const user = await db.User.findByPk(userId, { attributes: ['id', 'tenantId'] });
+    if (user?.tenantId) return user.tenantId;
+  } catch (e) {}
+  try {
+    const kyb = await db.KybApplication.findOne({ where: { userId }, attributes: ['tenantId'] });
+    if (kyb?.tenantId) return kyb.tenantId;
+  } catch (e) {}
+  try {
+    const tenant = await db.Tenant.findOne({ attributes: ['id'] });
+    if (tenant) return tenant.id;
+  } catch (e) {}
+  return null;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions);
   if (!session?.user?.id) {
@@ -31,7 +49,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const db = getDb();
   const userId = parseInt(session.user.id);
-  const tenantId = session.user.tenantId;
+  const tenantId = await resolveTenantId(db, userId, session.user.tenantId || null);
+  
+  console.log('[Documents API]', req.method, '- userId:', userId, 'tenantId:', tenantId);
 
   // GET - List documents for user's KYB application
   if (req.method === 'GET') {
@@ -126,9 +146,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return res.status(200).json({ success: true, data: document });
-    } catch (error) {
-      console.error('KYB document upload error:', error);
-      return res.status(500).json({ message: 'Failed to upload document' });
+    } catch (error: any) {
+      console.error('[Documents POST] Upload error:', error.message);
+      console.error('[Documents POST] Stack:', error.stack);
+      return res.status(500).json({ success: false, message: error.message || 'Failed to upload document' });
     }
   }
 
