@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import { QueryTypes } from 'sequelize';
 import { calculateProfitLoss, calculateGrowth } from '@/lib/hq/finance-calculator';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 /**
  * Finance Export API
@@ -13,16 +14,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const session = await getServerSession(req, res, authOptions);
     if (!session?.user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+      return res.status(HttpStatus.UNAUTHORIZED).json(
+        errorResponse(ErrorCodes.UNAUTHORIZED, 'Unauthorized')
+      );
     }
 
     const userRole = session.user.role;
     if (!['admin', 'hq_admin', 'hq_manager', 'owner', 'finance_manager'].includes(userRole || '')) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
+      return res.status(HttpStatus.FORBIDDEN).json(
+        errorResponse(ErrorCodes.FORBIDDEN, 'Access denied')
+      );
     }
 
     if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method not allowed' });
+      res.setHeader('Allow', ['GET']);
+      return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+        errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, 'Method not allowed')
+      );
     }
 
     const tenantId = session.user.tenantId;
@@ -46,11 +54,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'branches':
         return exportBranchPerformance(res, tenantId, period as string);
       default:
-        return res.status(400).json({ error: 'Invalid export type' });
+        return res.status(HttpStatus.BAD_REQUEST).json(
+          errorResponse(ErrorCodes.VALIDATION_ERROR, 'Invalid export type')
+        );
     }
   } catch (error: any) {
     console.error('Finance Export API Error:', error);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, error.message)
+    );
   }
 }
 
@@ -105,17 +117,19 @@ async function exportProfitLoss(
       type: QueryTypes.SELECT
     });
 
-    return res.status(200).json({
-      success: true,
-      data: plData.length > 0 ? plData : getMockPLExport(currentPeriod),
-      meta: { type: 'profit-loss', period: currentPeriod, exportedAt: new Date().toISOString() }
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse(
+        plData.length > 0 ? plData : getMockPLExport(currentPeriod),
+        { type: 'profit-loss', period: currentPeriod, exportedAt: new Date().toISOString() }
+      )
+    );
   } catch (error) {
-    return res.status(200).json({
-      success: true,
-      data: getMockPLExport(currentPeriod),
-      meta: { type: 'profit-loss', period: currentPeriod, exportedAt: new Date().toISOString() }
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse(
+        getMockPLExport(currentPeriod),
+        { type: 'profit-loss', period: currentPeriod, exportedAt: new Date().toISOString() }
+      )
+    );
   }
 }
 
@@ -127,11 +141,12 @@ async function exportCashFlow(
 ) {
   const currentPeriod = period || new Date().toISOString().substring(0, 7);
 
-  return res.status(200).json({
-    success: true,
-    data: getMockCashFlowExport(currentPeriod),
-    meta: { type: 'cash-flow', period: currentPeriod, exportedAt: new Date().toISOString() }
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse(
+      getMockCashFlowExport(currentPeriod),
+      { type: 'cash-flow', period: currentPeriod, exportedAt: new Date().toISOString() }
+    )
+  );
 }
 
 async function exportRevenue(
@@ -170,17 +185,19 @@ async function exportRevenue(
       type: QueryTypes.SELECT
     });
 
-    return res.status(200).json({
-      success: true,
-      data: revenue.length > 0 ? revenue : getMockRevenueExport(),
-      meta: { type: 'revenue', period: { start, end }, exportedAt: new Date().toISOString() }
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse(
+        revenue.length > 0 ? revenue : getMockRevenueExport(),
+        { type: 'revenue', period: { start, end }, exportedAt: new Date().toISOString() }
+      )
+    );
   } catch (error) {
-    return res.status(200).json({
-      success: true,
-      data: getMockRevenueExport(),
-      meta: { type: 'revenue', period: { start, end }, exportedAt: new Date().toISOString() }
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse(
+        getMockRevenueExport(),
+        { type: 'revenue', period: { start, end }, exportedAt: new Date().toISOString() }
+      )
+    );
   }
 }
 
@@ -194,11 +211,12 @@ async function exportExpenses(
   const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const end = endDate || new Date().toISOString().split('T')[0];
 
-  return res.status(200).json({
-    success: true,
-    data: getMockExpensesExport(),
-    meta: { type: 'expenses', period: { start, end }, exportedAt: new Date().toISOString() }
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse(
+      getMockExpensesExport(),
+      { type: 'expenses', period: { start, end }, exportedAt: new Date().toISOString() }
+    )
+  );
 }
 
 async function exportInvoices(
@@ -211,11 +229,12 @@ async function exportInvoices(
   const start = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const end = endDate || new Date().toISOString().split('T')[0];
 
-  return res.status(200).json({
-    success: true,
-    data: getMockInvoicesExport(),
-    meta: { type: 'invoices', period: { start, end }, exportedAt: new Date().toISOString() }
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse(
+      getMockInvoicesExport(),
+      { type: 'invoices', period: { start, end }, exportedAt: new Date().toISOString() }
+    )
+  );
 }
 
 async function exportBudget(
@@ -226,11 +245,12 @@ async function exportBudget(
 ) {
   const currentPeriod = period || new Date().toISOString().substring(0, 7);
 
-  return res.status(200).json({
-    success: true,
-    data: getMockBudgetExport(currentPeriod),
-    meta: { type: 'budget', period: currentPeriod, exportedAt: new Date().toISOString() }
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse(
+      getMockBudgetExport(currentPeriod),
+      { type: 'budget', period: currentPeriod, exportedAt: new Date().toISOString() }
+    )
+  );
 }
 
 async function exportTax(
@@ -240,11 +260,12 @@ async function exportTax(
 ) {
   const currentPeriod = period || new Date().toISOString().substring(0, 7);
 
-  return res.status(200).json({
-    success: true,
-    data: getMockTaxExport(currentPeriod),
-    meta: { type: 'tax', period: currentPeriod, exportedAt: new Date().toISOString() }
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse(
+      getMockTaxExport(currentPeriod),
+      { type: 'tax', period: currentPeriod, exportedAt: new Date().toISOString() }
+    )
+  );
 }
 
 async function exportBranchPerformance(
@@ -287,17 +308,19 @@ async function exportBranchPerformance(
       'Margin (%)': 30
     }));
 
-    return res.status(200).json({
-      success: true,
-      data: branchData.length > 0 ? branchData : getMockBranchExport(),
-      meta: { type: 'branches', period: currentPeriod, exportedAt: new Date().toISOString() }
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse(
+        branchData.length > 0 ? branchData : getMockBranchExport(),
+        { type: 'branches', period: currentPeriod, exportedAt: new Date().toISOString() }
+      )
+    );
   } catch (error) {
-    return res.status(200).json({
-      success: true,
-      data: getMockBranchExport(),
-      meta: { type: 'branches', period: currentPeriod, exportedAt: new Date().toISOString() }
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse(
+        getMockBranchExport(),
+        { type: 'branches', period: currentPeriod, exportedAt: new Date().toISOString() }
+      )
+    );
   }
 }
 

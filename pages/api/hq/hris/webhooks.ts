@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 // HRIS Webhook Event Types
 export type HRISEventType = 
@@ -44,11 +45,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return triggerWebhook(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('HRIS Webhook API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -67,20 +72,26 @@ async function getWebhooks(req: NextApiRequest, res: NextApiResponse) {
         limit: take
       });
 
-      return res.status(200).json({ webhooks, eventTypes: EVENT_TYPES });
+      return res.status(HttpStatus.OK).json(
+        successResponse({ webhooks, eventTypes: EVENT_TYPES })
+      );
     } catch (e: any) {
       console.warn('Webhook DB query failed:', e.message);
     }
   }
 
-  return res.status(200).json({ webhooks: [], eventTypes: EVENT_TYPES });
+  return res.status(HttpStatus.OK).json(
+    successResponse({ webhooks: [], eventTypes: EVENT_TYPES })
+  );
 }
 
 async function triggerWebhook(req: NextApiRequest, res: NextApiResponse) {
   const { eventType, employeeId, employeeName, branchId, branchName, data, triggeredBy } = req.body;
 
   if (!eventType || !employeeId) {
-    return res.status(400).json({ error: 'Event type and employee ID are required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Event type and employee ID are required')
+    );
   }
 
   const payload: HRISWebhookPayload = {
@@ -97,11 +108,9 @@ async function triggerWebhook(req: NextApiRequest, res: NextApiResponse) {
   await persistWebhook(payload);
   await processHRISWebhook(payload);
 
-  return res.status(200).json({ 
-    success: true, 
-    message: 'Webhook triggered successfully',
-    payload 
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse(payload, undefined, 'Webhook triggered successfully')
+  );
 }
 
 async function persistWebhook(payload: HRISWebhookPayload) {

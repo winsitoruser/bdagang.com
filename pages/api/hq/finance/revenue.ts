@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 let PosTransaction: any, Branch: any, FinanceTransaction: any;
 try {
@@ -61,16 +62,28 @@ const mockHourlyRevenue = [
 ];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
-
   try {
-    const { period = 'month', branchId } = req.query;
+    if (req.method !== 'GET') {
+      res.setHeader('Allow', ['GET']);
+      return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+        errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+      );
+    }
 
-    // Calculate date range
-    const now = new Date();
+    return getRevenue(req, res);
+  } catch (error) {
+    console.error('Revenue API Error:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
+  }
+}
+
+async function getRevenue(req: NextApiRequest, res: NextApiResponse) {
+  const { period = 'month', branchId } = req.query;
+
+  // Calculate date range
+  const now = new Date();
     let startDate = new Date();
     switch (period) {
       case 'week': startDate.setDate(now.getDate() - 7); break;
@@ -103,34 +116,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           if (totalRevenue > 0) {
             const totalTxns = branchRevenue.reduce((s, b) => s + b.transactions, 0);
-            return res.status(200).json({
-              summary: {
-                totalRevenue, previousRevenue: 0, growth: 0,
-                avgDailyRevenue: Math.round(totalRevenue / 30),
-                avgTicketSize: totalTxns > 0 ? Math.round(totalRevenue / totalTxns) : 0,
-                totalTransactions: totalTxns,
-                cashSales: 0, cardSales: 0, digitalSales: 0, onlineSales: 0, offlineSales: totalRevenue
-              },
-              branches: branchRevenue,
-              products: mockProductRevenue,
-              hourly: mockHourlyRevenue,
-              period
-            });
+            return res.status(HttpStatus.OK).json(
+              successResponse({
+                summary: {
+                  totalRevenue, previousRevenue: 0, growth: 0,
+                  avgDailyRevenue: Math.round(totalRevenue / 30),
+                  avgTicketSize: totalTxns > 0 ? Math.round(totalRevenue / totalTxns) : 0,
+                  totalTransactions: totalTxns,
+                  cashSales: 0, cardSales: 0, digitalSales: 0, onlineSales: 0, offlineSales: totalRevenue
+                },
+                branches: branchRevenue,
+                products: mockProductRevenue,
+                hourly: mockHourlyRevenue,
+                period
+              })
+            );
           }
         }
       } catch (e: any) { console.warn('Revenue DB failed:', e.message); }
     }
 
-    // Mock fallback
-    return res.status(200).json({
+  // Mock fallback
+  return res.status(HttpStatus.OK).json(
+    successResponse({
       summary: mockRevenueData,
       branches: mockBranchRevenue,
       products: mockProductRevenue,
       hourly: mockHourlyRevenue,
       period
-    });
-  } catch (error) {
-    console.error('Error fetching revenue data:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
+    })
+  );
 }

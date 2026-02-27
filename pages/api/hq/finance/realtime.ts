@@ -8,6 +8,7 @@ import {
   calculateGrowth,
   calculateBranchPerformance
 } from '@/lib/hq/finance-calculator';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 /**
  * Finance Real-time API
@@ -36,12 +37,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const session = await getServerSession(req, res, authOptions);
     if (!session?.user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+      return res.status(HttpStatus.UNAUTHORIZED).json(
+        errorResponse(ErrorCodes.UNAUTHORIZED, 'Unauthorized')
+      );
     }
 
     const userRole = session.user.role;
     if (!['admin', 'hq_admin', 'hq_manager', 'owner', 'finance_manager'].includes(userRole || '')) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
+      return res.status(HttpStatus.FORBIDDEN).json(
+        errorResponse(ErrorCodes.FORBIDDEN, 'Access denied')
+      );
     }
 
     const tenantId = session.user.tenantId;
@@ -52,11 +57,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'POST':
         return broadcastFinanceUpdate(req, res, tenantId);
       default:
-        return res.status(405).json({ error: 'Method not allowed' });
+        res.setHeader('Allow', ['GET', 'POST']);
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, 'Method not allowed')
+        );
     }
   } catch (error: any) {
     console.error('Finance Realtime API Error:', error);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, error.message)
+    );
   }
 }
 
@@ -237,17 +247,15 @@ async function getRealtimeData(
       timestamp: new Date().toISOString()
     };
 
-    return res.status(200).json({
-      success: true,
-      data: response
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse(response)
+    );
 
   } catch (error: any) {
     console.error('Error fetching realtime finance:', error);
-    return res.status(200).json({
-      success: true,
-      data: getMockRealtimeData()
-    });
+    return res.status(HttpStatus.OK).json(
+      successResponse(getMockRealtimeData())
+    );
   }
 }
 
@@ -259,7 +267,9 @@ async function broadcastFinanceUpdate(
   const { event, data, branchId } = req.body;
 
   if (!event) {
-    return res.status(400).json({ success: false, error: 'Event type required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Event type required')
+    );
   }
 
   // Broadcast to WebSocket
@@ -282,10 +292,9 @@ async function broadcastFinanceUpdate(
     console.warn('WebSocket broadcast failed:', wsError);
   }
 
-  return res.status(200).json({
-    success: true,
-    message: 'Finance update broadcasted'
-  });
+  return res.status(HttpStatus.OK).json(
+    successResponse(null, undefined, 'Finance update broadcasted')
+  );
 }
 
 function generateFinanceAlerts(branches: any[], revenueGrowth: number, netMargin: number): any[] {

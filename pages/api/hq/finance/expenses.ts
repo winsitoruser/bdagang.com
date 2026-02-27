@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 let FinanceTransaction: any, Branch: any;
 try {
@@ -55,15 +56,27 @@ const mockBranchExpenses = [
 ];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
-
   try {
-    const { period = 'month' } = req.query;
+    if (req.method !== 'GET') {
+      res.setHeader('Allow', ['GET']);
+      return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+        errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+      );
+    }
 
-    const now = new Date();
+    return getExpenses(req, res);
+  } catch (error) {
+    console.error('Expenses API Error:', error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
+  }
+}
+
+async function getExpenses(req: NextApiRequest, res: NextApiResponse) {
+  const { period = 'month' } = req.query;
+
+  const now = new Date();
     let startDate = new Date();
     switch (period) {
       case 'week': startDate.setDate(now.getDate() - 7); break;
@@ -99,21 +112,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             amount: parseFloat(t.amount), status: t.status, approver: '', vendor: ''
           }));
 
-          return res.status(200).json({
-            summary: { ...mockSummary, totalExpenses },
-            categories, expenses: expenseList,
-            branches: mockBranchExpenses, period
-          });
+          return res.status(HttpStatus.OK).json(
+            successResponse({
+              summary: { ...mockSummary, totalExpenses },
+              categories,
+              expenses: expenseList,
+              branches: mockBranchExpenses,
+              period
+            })
+          );
         }
       } catch (e: any) { console.warn('Expenses DB failed:', e.message); }
     }
 
-    return res.status(200).json({
-      summary: mockSummary, categories: mockCategories,
-      expenses: mockExpenses, branches: mockBranchExpenses, period
-    });
-  } catch (error) {
-    console.error('Error fetching expense data:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
+  return res.status(HttpStatus.OK).json(
+    successResponse({
+      summary: mockSummary,
+      categories: mockCategories,
+      expenses: mockExpenses,
+      branches: mockBranchExpenses,
+      period
+    })
+  );
 }

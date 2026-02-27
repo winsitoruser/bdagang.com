@@ -1,13 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
-
 import { 
   calculateAchievementPercentage, 
   calculateWeightedScore, 
   getKPIStatus,
   calculateTrend 
 } from '@/lib/hq/kpi-calculator';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 let QueryTypes: any;
 try { QueryTypes = require('sequelize').QueryTypes; } catch (e) {}
@@ -44,12 +44,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const session = await getServerSession(req, res, authOptions);
     if (!session?.user) {
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+      return res.status(HttpStatus.UNAUTHORIZED).json(
+        errorResponse(ErrorCodes.UNAUTHORIZED, 'Unauthorized')
+      );
     }
 
     const userRole = session.user.role;
     if (!['admin', 'hq_admin', 'hq_manager', 'owner', 'hr_manager'].includes(userRole || '')) {
-      return res.status(403).json({ success: false, error: 'Access denied - HR role required' });
+      return res.status(HttpStatus.FORBIDDEN).json(
+        errorResponse(ErrorCodes.FORBIDDEN, 'Access denied - HR role required')
+      );
     }
 
     const tenantId = session.user.tenantId;
@@ -60,11 +64,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'POST':
         return broadcastHRISUpdate(req, res, tenantId);
       default:
-        return res.status(405).json({ error: 'Method not allowed' });
+        res.setHeader('Allow', ['GET', 'POST']);
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, 'Method not allowed')
+        );
     }
   } catch (error: any) {
     console.error('HRIS Realtime API Error:', error);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, error.message)
+    );
   }
 }
 
