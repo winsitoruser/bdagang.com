@@ -1,11 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Branch, User, Store } from '../../../../models';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
 
   if (!id) {
-    return res.status(400).json({ error: 'Branch ID is required' });
+    return res.status(HttpStatus.BAD_REQUEST).json(
+      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Branch ID is required')
+    );
   }
 
   try {
@@ -18,11 +21,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return await deleteBranch(req, res, id as string);
       default:
         res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
   } catch (error) {
     console.error('Branch API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+    );
   }
 }
 
@@ -36,13 +43,19 @@ async function getBranch(req: NextApiRequest, res: NextApiResponse, id: string) 
     });
 
     if (!branch) {
-      return res.status(404).json({ error: 'Branch not found' });
+      return res.status(HttpStatus.NOT_FOUND).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'Branch not found')
+      );
     }
 
-    return res.status(200).json({ branch });
+    return res.status(HttpStatus.OK).json(
+      successResponse({ branch })
+    );
   } catch (error) {
     console.error('Error fetching branch:', error);
-    return res.status(500).json({ error: 'Failed to fetch branch' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to fetch branch')
+    );
   }
 }
 
@@ -68,10 +81,14 @@ async function updateBranch(req: NextApiRequest, res: NextApiResponse, id: strin
       isActive: isActive ?? branch.get('isActive')
     });
 
-    return res.status(200).json({ branch, message: 'Branch updated successfully' });
+    return res.status(HttpStatus.OK).json(
+      successResponse({ branch }, undefined, 'Branch updated successfully')
+    );
   } catch (error) {
     console.error('Error updating branch:', error);
-    return res.status(500).json({ error: 'Failed to update branch' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to update branch')
+    );
   }
 }
 
@@ -80,14 +97,20 @@ async function deleteBranch(req: NextApiRequest, res: NextApiResponse, id: strin
     const branch = await Branch.findByPk(id);
 
     if (!branch) {
-      return res.status(404).json({ error: 'Branch not found' });
+      return res.status(HttpStatus.NOT_FOUND).json(
+        errorResponse(ErrorCodes.NOT_FOUND, 'Branch not found')
+      );
     }
 
     await branch.destroy();
 
-    return res.status(200).json({ message: 'Branch deleted successfully' });
+    return res.status(HttpStatus.OK).json(
+      successResponse(null, undefined, 'Branch deleted successfully')
+    );
   } catch (error) {
     console.error('Error deleting branch:', error);
-    return res.status(500).json({ error: 'Failed to delete branch' });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to delete branch')
+    );
   }
 }
