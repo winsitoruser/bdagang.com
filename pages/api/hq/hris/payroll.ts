@@ -1,0 +1,640 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../auth/[...nextauth]';
+
+let sequelize: any;
+try { sequelize = require('../../../../lib/sequelize'); } catch (e) {}
+
+let PayrollComponent: any, EmployeeSalary: any, PayrollRun: any;
+try {
+  PayrollComponent = require('../../../../models/PayrollComponent');
+  EmployeeSalary = require('../../../../models/EmployeeSalary');
+  PayrollRun = require('../../../../models/PayrollRun');
+} catch (e) { console.warn('Payroll models not loaded:', e); }
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const session = await getServerSession(req, res, authOptions);
+    if (!session?.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+    const { action } = req.query;
+
+    switch (req.method) {
+      case 'GET':
+        if (action === 'components') return getComponents(req, res, session);
+        if (action === 'employee-salary') return getEmployeeSalary(req, res, session);
+        if (action === 'employee-salaries') return getEmployeeSalaries(req, res, session);
+        if (action === 'runs') return getPayrollRuns(req, res, session);
+        if (action === 'payslip') return getPayslip(req, res, session);
+        return getOverview(req, res, session);
+      case 'POST':
+        if (action === 'employee-salary') return upsertEmployeeSalary(req, res, session);
+        if (action === 'run') return createPayrollRun(req, res, session);
+        if (action === 'calculate') return calculatePayroll(req, res, session);
+        if (action === 'approve') return approvePayroll(req, res, session);
+        if (action === 'component') return createComponent(req, res, session);
+        return res.status(400).json({ error: 'Unknown action' });
+      case 'PUT':
+        if (action === 'component') return updateComponent(req, res, session);
+        if (action === 'run-status') return updateRunStatus(req, res, session);
+        return res.status(400).json({ error: 'Unknown action' });
+      case 'DELETE':
+        if (action === 'component') return deleteComponent(req, res, session);
+        return res.status(400).json({ error: 'Unknown action' });
+      default:
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+  } catch (error: any) {
+    console.error('Payroll API Error:', error);
+    return res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+}
+
+// ===== GET: Overview =====
+async function getOverview(req: NextApiRequest, res: NextApiResponse, session: any) {
+  try {
+    const tenantId = session.user.tenantId;
+
+    // Payroll components
+    let components: any[] = [];
+    if (PayrollComponent) {
+      const where: any = { isActive: true };
+      if (tenantId) where.tenantId = tenantId;
+      components = await PayrollComponent.findAll({ where, order: [['sort_order', 'ASC']] });
+    }
+    if (components.length === 0) components = getMockComponents();
+
+    // Recent payroll runs
+    let runs: any[] = [];
+    if (PayrollRun) {
+      const where: any = {};
+      if (tenantId) where.tenantId = tenantId;
+      runs = await PayrollRun.findAll({ where, order: [['created_at', 'DESC']], limit: 10 });
+    }
+
+    // Employee salary configs count
+    let salaryCount = 0;
+    if (sequelize) {
+      try {
+        const [r] = await sequelize.query(`SELECT COUNT(*) as c FROM employee_salaries WHERE is_active = true`);
+        salaryCount = parseInt(r?.[0]?.c || '0');
+      } catch (e) {}
+    }
+
+    // Summary stats
+    let stats = {
+      totalEmployees: 0,
+      configuredSalaries: salaryCount,
+      totalComponents: components.length,
+      lastPayrollRun: runs.length > 0 ? runs[0] : null,
+      monthlyPayroll: 0
+    };
+
+    if (sequelize) {
+      try {
+        const [empCount] = await sequelize.query(`SELECT COUNT(*) as c FROM employees WHERE status = 'ACTIVE'`);
+        stats.totalEmployees = parseInt(empCount?.[0]?.c || '0');
+
+        const [totalSalary] = await sequelize.query(`SELECT COALESCE(SUM(base_salary), 0) as total FROM employee_salaries WHERE is_active = true`);
+        stats.monthlyPayroll = parseFloat(totalSalary?.[0]?.total || '0');
+      } catch (e) {}
+    }
+
+    return res.json({
+      success: true,
+      components: components.map((c: any) => c.toJSON ? c.toJSON() : c),
+      runs: runs.map((r: any) => r.toJSON ? r.toJSON() : r),
+      stats
+    });
+  } catch (e: any) {
+    return res.json({
+      success: true,
+      components: getMockComponents(),
+      runs: [],
+      stats: { totalEmployees: 8, configuredSalaries: 0, totalComponents: 15, lastPayrollRun: null, monthlyPayroll: 0 }
+    });
+  }
+}
+
+// ===== GET: Components =====
+async function getComponents(req: NextApiRequest, res: NextApiResponse, session: any) {
+  try {
+    if (!PayrollComponent) return res.json({ success: true, data: getMockComponents() });
+    const components = await PayrollComponent.findAll({ order: [['sort_order', 'ASC']] });
+    return res.json({ success: true, data: components.length > 0 ? components : getMockComponents() });
+  } catch (e) {
+    return res.json({ success: true, data: getMockComponents() });
+  }
+}
+
+// ===== GET: Employee Salaries =====
+async function getEmployeeSalaries(req: NextApiRequest, res: NextApiResponse, session: any) {
+  try {
+    if (!sequelize) return res.json({ success: true, data: [] });
+    const [rows] = await sequelize.query(`
+      SELECT es.*, e.name as employee_name, e.position, e.department, e.employee_id as emp_code,
+             b.name as branch_name
+      FROM employee_salaries es
+      JOIN employees e ON es.employee_id = e.id
+      LEFT JOIN branches b ON e.branch_id = b.id
+      WHERE es.is_active = true
+      ORDER BY e.name
+    `);
+    return res.json({ success: true, data: rows || [] });
+  } catch (e: any) {
+    return res.json({ success: true, data: [] });
+  }
+}
+
+// ===== GET: Single Employee Salary =====
+async function getEmployeeSalary(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const { employeeId } = req.query;
+  if (!employeeId) return res.status(400).json({ error: 'employeeId required' });
+  try {
+    if (!sequelize) return res.json({ success: true, data: null });
+    const [rows] = await sequelize.query(`
+      SELECT es.*, e.name as employee_name, e.position, e.department
+      FROM employee_salaries es
+      JOIN employees e ON es.employee_id = e.id
+      WHERE es.employee_id = :empId AND es.is_active = true
+      ORDER BY es.effective_date DESC LIMIT 1
+    `, { replacements: { empId: employeeId } });
+
+    // Get assigned components
+    let components: any[] = [];
+    if (rows?.[0]) {
+      const [comps] = await sequelize.query(`
+        SELECT esc.*, pc.code, pc.name, pc.type, pc.category, pc.calculation_type
+        FROM employee_salary_components esc
+        JOIN payroll_components pc ON esc.component_id = pc.id
+        WHERE esc.employee_salary_id = :salaryId AND esc.is_active = true
+        ORDER BY pc.sort_order
+      `, { replacements: { salaryId: rows[0].id } });
+      components = comps || [];
+    }
+
+    return res.json({ success: true, data: rows?.[0] || null, components });
+  } catch (e: any) {
+    return res.json({ success: true, data: null, components: [] });
+  }
+}
+
+// ===== POST: Upsert Employee Salary =====
+async function upsertEmployeeSalary(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const { employeeId, payType, baseSalary, hourlyRate, dailyRate, weeklyHours,
+    overtimeRateMultiplier, overtimeHolidayMultiplier, taxStatus, taxMethod,
+    bankName, bankAccountNumber, bankAccountName, bpjsKesehatanNumber,
+    bpjsKetenagakerjaanNumber, npwp, components } = req.body;
+
+  if (!employeeId || !payType || baseSalary === undefined) {
+    return res.status(400).json({ success: false, error: 'employeeId, payType, baseSalary required' });
+  }
+
+  if (!sequelize) return res.json({ success: true, message: 'Saved (mock)' });
+
+  try {
+    // Deactivate old salary config
+    await sequelize.query(`
+      UPDATE employee_salaries SET is_active = false, end_date = CURRENT_DATE, updated_at = NOW()
+      WHERE employee_id = :empId AND is_active = true
+    `, { replacements: { empId: employeeId } });
+
+    // Create new salary config
+    const [result] = await sequelize.query(`
+      INSERT INTO employee_salaries (id, tenant_id, employee_id, pay_type, base_salary,
+        hourly_rate, daily_rate, weekly_hours, overtime_rate_multiplier, overtime_holiday_multiplier,
+        tax_status, tax_method, bank_name, bank_account_number, bank_account_name,
+        bpjs_kesehatan_number, bpjs_ketenagakerjaan_number, npwp, is_active, created_at, updated_at)
+      VALUES (uuid_generate_v4(), :tenantId, :empId, :payType, :baseSalary,
+        :hourlyRate, :dailyRate, :weeklyHours, :otMult, :otHolidayMult,
+        :taxStatus, :taxMethod, :bankName, :bankAccNum, :bankAccName,
+        :bpjsKes, :bpjsTk, :npwp, true, NOW(), NOW())
+      RETURNING *
+    `, {
+      replacements: {
+        tenantId: session.user.tenantId, empId: employeeId, payType,
+        baseSalary: baseSalary || 0, hourlyRate: hourlyRate || 0, dailyRate: dailyRate || 0,
+        weeklyHours: weeklyHours || 40, otMult: overtimeRateMultiplier || 1.5,
+        otHolidayMult: overtimeHolidayMultiplier || 2.0, taxStatus: taxStatus || 'TK/0',
+        taxMethod: taxMethod || 'gross_up', bankName: bankName || null,
+        bankAccNum: bankAccountNumber || null, bankAccName: bankAccountName || null,
+        bpjsKes: bpjsKesehatanNumber || null, bpjsTk: bpjsKetenagakerjaanNumber || null,
+        npwp: npwp || null
+      }
+    });
+
+    const salary = result?.[0];
+
+    // Assign components
+    if (salary && components && Array.isArray(components)) {
+      for (const comp of components) {
+        await sequelize.query(`
+          INSERT INTO employee_salary_components (id, employee_salary_id, component_id, amount, percentage, is_active, created_at, updated_at)
+          VALUES (uuid_generate_v4(), :salaryId, :compId, :amount, :pct, true, NOW(), NOW())
+        `, {
+          replacements: {
+            salaryId: salary.id, compId: comp.componentId,
+            amount: comp.amount || 0, pct: comp.percentage || null
+          }
+        });
+      }
+    }
+
+    return res.status(201).json({ success: true, message: 'Konfigurasi gaji berhasil disimpan', data: salary });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, error: e.message });
+  }
+}
+
+// ===== GET: Payroll Runs =====
+async function getPayrollRuns(req: NextApiRequest, res: NextApiResponse, session: any) {
+  try {
+    if (!PayrollRun) return res.json({ success: true, data: [] });
+    const runs = await PayrollRun.findAll({ order: [['created_at', 'DESC']], limit: 20 });
+    return res.json({ success: true, data: runs });
+  } catch (e) {
+    return res.json({ success: true, data: [] });
+  }
+}
+
+// ===== POST: Create Payroll Run =====
+async function createPayrollRun(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const { periodStart, periodEnd, payDate, payType, branchId, department, name } = req.body;
+  if (!periodStart || !periodEnd) {
+    return res.status(400).json({ success: false, error: 'periodStart and periodEnd required' });
+  }
+  if (!sequelize) return res.json({ success: true, message: 'Created (mock)' });
+
+  try {
+    const runCode = `PR-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Date.now().toString(36).toUpperCase()}`;
+    const [result] = await sequelize.query(`
+      INSERT INTO payroll_runs (id, tenant_id, run_code, name, period_start, period_end, pay_date,
+        pay_type, branch_id, department, status, created_by, created_at, updated_at)
+      VALUES (uuid_generate_v4(), :tenantId, :runCode, :name, :periodStart, :periodEnd, :payDate,
+        :payType, :branchId, :department, 'draft', :createdBy, NOW(), NOW())
+      RETURNING *
+    `, {
+      replacements: {
+        tenantId: session.user.tenantId, runCode,
+        name: name || `Payroll ${periodStart} - ${periodEnd}`,
+        periodStart, periodEnd, payDate: payDate || periodEnd,
+        payType: payType || 'monthly', branchId: branchId || null,
+        department: department || null, createdBy: session.user.id
+      }
+    });
+
+    return res.status(201).json({ success: true, data: result?.[0] });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, error: e.message });
+  }
+}
+
+// ===== POST: Calculate Payroll =====
+async function calculatePayroll(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const { runId } = req.body;
+  if (!runId) return res.status(400).json({ success: false, error: 'runId required' });
+  if (!sequelize) return res.json({ success: true, message: 'Calculated (mock)' });
+
+  try {
+    // Get the run
+    const [runs] = await sequelize.query(`SELECT * FROM payroll_runs WHERE id = :id`, { replacements: { id: runId } });
+    const run = runs?.[0];
+    if (!run) return res.status(404).json({ success: false, error: 'Payroll run not found' });
+
+    // Calculate working days in period
+    const start = new Date(run.period_start);
+    const end = new Date(run.period_end);
+    let workingDays = 0;
+    const d = new Date(start);
+    while (d <= end) {
+      if (d.getDay() !== 0 && d.getDay() !== 6) workingDays++;
+      d.setDate(d.getDate() + 1);
+    }
+
+    // Get employees with active salary configs
+    let empFilter = 'WHERE es.is_active = true AND e.status = \'ACTIVE\'';
+    const replacements: any = { runId };
+    if (run.branch_id) { empFilter += ' AND e.branch_id = :branchId'; replacements.branchId = run.branch_id; }
+    if (run.department) { empFilter += ' AND e.department = :dept'; replacements.dept = run.department; }
+
+    const [employees] = await sequelize.query(`
+      SELECT es.*, e.name as employee_name, e.position, e.department, e.branch_id
+      FROM employee_salaries es
+      JOIN employees e ON es.employee_id = e.id
+      ${empFilter}
+      ORDER BY e.name
+    `, { replacements });
+
+    // Get components
+    const [allComponents] = await sequelize.query(`SELECT * FROM payroll_components WHERE is_active = true ORDER BY sort_order`);
+
+    let totalGross = 0, totalDeductions = 0, totalNet = 0, totalTax = 0, totalBpjs = 0;
+
+    // Delete old items for this run
+    await sequelize.query(`DELETE FROM payroll_items WHERE payroll_run_id = :runId`, { replacements: { runId } });
+
+    for (const emp of (employees || [])) {
+      // Get employee-specific components
+      const [empComps] = await sequelize.query(`
+        SELECT esc.*, pc.code, pc.name, pc.type, pc.category, pc.calculation_type, pc.default_amount
+        FROM employee_salary_components esc
+        JOIN payroll_components pc ON esc.component_id = pc.id
+        WHERE esc.employee_salary_id = :salaryId AND esc.is_active = true
+      `, { replacements: { salaryId: emp.id } });
+
+      const baseSalary = parseFloat(emp.base_salary) || 0;
+      let payTypeMultiplier = 1;
+
+      // Calculate base pay based on pay type
+      let effectiveBaseSalary = baseSalary;
+      if (emp.pay_type === 'hourly') {
+        const hourlyRate = parseFloat(emp.hourly_rate) || (baseSalary / 173); // 173 = avg monthly hours
+        effectiveBaseSalary = hourlyRate * (parseFloat(emp.weekly_hours) || 40) * 4.33;
+      } else if (emp.pay_type === 'daily') {
+        const dailyRate = parseFloat(emp.daily_rate) || (baseSalary / workingDays);
+        effectiveBaseSalary = dailyRate * workingDays;
+      } else if (emp.pay_type === 'weekly') {
+        effectiveBaseSalary = baseSalary * 4.33;
+      }
+
+      // Calculate earnings
+      const earnings: any[] = [{ code: 'BASIC', name: 'Gaji Pokok', amount: effectiveBaseSalary }];
+      const deductions: any[] = [];
+
+      // Process assigned components
+      for (const comp of (empComps || [])) {
+        const amount = parseFloat(comp.amount) || parseFloat(comp.default_amount) || 0;
+        if (comp.type === 'earning') {
+          if (comp.calculation_type === 'per_day') {
+            earnings.push({ code: comp.code, name: comp.name, amount: amount * workingDays });
+          } else if (comp.calculation_type === 'percentage') {
+            earnings.push({ code: comp.code, name: comp.name, amount: effectiveBaseSalary * (parseFloat(comp.percentage || comp.percentage_value) || 0) / 100 });
+          } else {
+            earnings.push({ code: comp.code, name: comp.name, amount });
+          }
+        } else if (comp.type === 'deduction') {
+          deductions.push({ code: comp.code, name: comp.name, amount });
+        }
+      }
+
+      // Also add default mandatory components not already assigned
+      const assignedCodes = new Set([...(empComps || []).map((c: any) => c.code), 'BASIC']);
+      for (const comp of (allComponents || [])) {
+        if (assignedCodes.has(comp.code)) continue;
+        if (!comp.is_mandatory) continue;
+        const amt = parseFloat(comp.default_amount) || 0;
+        if (comp.type === 'earning' && amt > 0) {
+          earnings.push({ code: comp.code, name: comp.name, amount: amt });
+        }
+      }
+
+      const totalEarnings = earnings.reduce((s, e) => s + e.amount, 0);
+
+      // BPJS calculations
+      const bpjsKesEmployee = effectiveBaseSalary * 0.01; // 1%
+      const bpjsKesCompany = effectiveBaseSalary * 0.04; // 4%
+      const bpjsJhtEmployee = effectiveBaseSalary * 0.02; // 2%
+      const bpjsJhtCompany = effectiveBaseSalary * 0.037; // 3.7%
+      const bpjsJpEmployee = Math.min(effectiveBaseSalary, 9559600) * 0.01; // 1% capped
+      const bpjsJpCompany = Math.min(effectiveBaseSalary, 9559600) * 0.02; // 2% capped
+      const bpjsJkk = effectiveBaseSalary * 0.0024; // 0.24%
+      const bpjsJkm = effectiveBaseSalary * 0.003; // 0.3%
+
+      deductions.push(
+        { code: 'BPJS_KES', name: 'BPJS Kesehatan', amount: bpjsKesEmployee },
+        { code: 'BPJS_JHT', name: 'BPJS JHT', amount: bpjsJhtEmployee },
+        { code: 'BPJS_JP', name: 'BPJS JP', amount: bpjsJpEmployee }
+      );
+
+      // Simplified PPh21 calculation
+      const taxableIncome = (totalEarnings - bpjsJhtEmployee - bpjsJpEmployee) * 12; // annualize
+      const ptkp = getPTKP(emp.tax_status || 'TK/0');
+      const pkp = Math.max(0, taxableIncome - ptkp);
+      const annualTax = calculatePPh21(pkp);
+      const monthlyTax = Math.round(annualTax / 12);
+
+      deductions.push({ code: 'PPH21', name: 'PPh 21', amount: monthlyTax });
+
+      const totalDeductionsAmt = deductions.reduce((s, d) => s + d.amount, 0);
+      const grossSalary = totalEarnings;
+      const netSalary = grossSalary - totalDeductionsAmt;
+      const empBpjs = bpjsKesEmployee + bpjsJhtEmployee + bpjsJpEmployee;
+
+      // Insert payroll item
+      await sequelize.query(`
+        INSERT INTO payroll_items (id, payroll_run_id, employee_id, employee_salary_id, employee_name,
+          employee_position, department, branch_id, pay_type, working_days, actual_working_days,
+          base_salary, earnings, deductions, total_earnings, total_deductions, gross_salary,
+          tax_amount, bpjs_kes_employee, bpjs_kes_company, bpjs_tk_jht_employee, bpjs_tk_jht_company,
+          bpjs_tk_jp_employee, bpjs_tk_jp_company, bpjs_tk_jkk, bpjs_tk_jkm, net_salary, status,
+          created_at, updated_at)
+        VALUES (uuid_generate_v4(), :runId, :empId, :salaryId, :empName, :empPos, :dept, :branchId,
+          :payType, :workDays, :workDays, :baseSalary, :earnings::jsonb, :deductions::jsonb,
+          :totalEarnings, :totalDeductions, :grossSalary, :tax, :bpjsKesEmp, :bpjsKesCo,
+          :bpjsJhtEmp, :bpjsJhtCo, :bpjsJpEmp, :bpjsJpCo, :bpjsJkk, :bpjsJkm, :netSalary,
+          'calculated', NOW(), NOW())
+      `, {
+        replacements: {
+          runId, empId: emp.employee_id, salaryId: emp.id, empName: emp.employee_name,
+          empPos: emp.position, dept: emp.department, branchId: emp.branch_id,
+          payType: emp.pay_type, workDays: workingDays, baseSalary: effectiveBaseSalary,
+          earnings: JSON.stringify(earnings), deductions: JSON.stringify(deductions),
+          totalEarnings, totalDeductions: totalDeductionsAmt, grossSalary,
+          tax: monthlyTax, bpjsKesEmp: bpjsKesEmployee, bpjsKesCo: bpjsKesCompany,
+          bpjsJhtEmp: bpjsJhtEmployee, bpjsJhtCo: bpjsJhtCompany,
+          bpjsJpEmp: bpjsJpEmployee, bpjsJpCo: bpjsJpCompany,
+          bpjsJkk, bpjsJkm, netSalary
+        }
+      });
+
+      totalGross += grossSalary;
+      totalDeductions += totalDeductionsAmt;
+      totalNet += netSalary;
+      totalTax += monthlyTax;
+      totalBpjs += empBpjs;
+    }
+
+    // Update run totals
+    await sequelize.query(`
+      UPDATE payroll_runs SET total_employees = :empCount, total_gross = :gross,
+        total_deductions = :deductions, total_net = :net, total_tax = :tax,
+        total_bpjs = :bpjs, status = 'calculated', updated_at = NOW()
+      WHERE id = :runId
+    `, {
+      replacements: {
+        runId, empCount: (employees || []).length, gross: totalGross,
+        deductions: totalDeductions, net: totalNet, tax: totalTax, bpjs: totalBpjs
+      }
+    });
+
+    return res.json({
+      success: true,
+      message: `Payroll calculated for ${(employees || []).length} employees`,
+      summary: { totalEmployees: (employees || []).length, totalGross, totalDeductions, totalNet, totalTax, totalBpjs }
+    });
+  } catch (e: any) {
+    console.error('calculatePayroll error:', e);
+    return res.status(500).json({ success: false, error: e.message });
+  }
+}
+
+// ===== POST: Approve Payroll =====
+async function approvePayroll(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const { runId } = req.body;
+  if (!runId || !sequelize) return res.status(400).json({ error: 'runId required' });
+  try {
+    await sequelize.query(`
+      UPDATE payroll_runs SET status = 'approved', approved_by = :userId, approved_at = NOW(), updated_at = NOW()
+      WHERE id = :runId
+    `, { replacements: { runId, userId: session.user.id } });
+    return res.json({ success: true, message: 'Payroll approved' });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, error: e.message });
+  }
+}
+
+// ===== PUT: Update Run Status =====
+async function updateRunStatus(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const { runId, status } = req.body;
+  if (!runId || !status || !sequelize) return res.status(400).json({ error: 'runId and status required' });
+  try {
+    const updates: any = { status };
+    if (status === 'paid') updates.paidAt = new Date();
+    await sequelize.query(`
+      UPDATE payroll_runs SET status = :status ${status === 'paid' ? ', paid_at = NOW()' : ''}, updated_at = NOW()
+      WHERE id = :runId
+    `, { replacements: { runId, status } });
+    return res.json({ success: true, message: `Status updated to ${status}` });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, error: e.message });
+  }
+}
+
+// ===== GET: Payslip =====
+async function getPayslip(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const { runId, employeeId } = req.query;
+  if (!sequelize) return res.json({ success: true, data: [] });
+  try {
+    let where = 'WHERE 1=1';
+    const replacements: any = {};
+    if (runId) { where += ' AND pi.payroll_run_id = :runId'; replacements.runId = runId; }
+    if (employeeId) { where += ' AND pi.employee_id = :empId'; replacements.empId = employeeId; }
+
+    const [rows] = await sequelize.query(`
+      SELECT pi.*, pr.run_code, pr.period_start, pr.period_end, pr.pay_date, pr.status as run_status
+      FROM payroll_items pi
+      JOIN payroll_runs pr ON pi.payroll_run_id = pr.id
+      ${where}
+      ORDER BY pr.period_start DESC, pi.employee_name
+    `, { replacements });
+
+    return res.json({ success: true, data: rows || [] });
+  } catch (e: any) {
+    return res.json({ success: true, data: [] });
+  }
+}
+
+// ===== POST: Create Component =====
+async function createComponent(req: NextApiRequest, res: NextApiResponse, session: any) {
+  if (!PayrollComponent) return res.json({ success: true, message: 'Created (mock)' });
+  try {
+    const comp = await PayrollComponent.create({ ...req.body, tenantId: session.user.tenantId });
+    return res.status(201).json({ success: true, data: comp });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, error: e.message });
+  }
+}
+
+// ===== PUT: Update Component =====
+async function updateComponent(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const { id, ...data } = req.body;
+  if (!id) return res.status(400).json({ success: false, error: 'id required' });
+  if (!sequelize) return res.json({ success: true, message: 'Updated (mock)' });
+  try {
+    // Use raw SQL to handle all fields including snake_case
+    const fields: string[] = [];
+    const replacements: any = { id };
+    const fieldMap: Record<string, string> = {
+      code: 'code', name: 'name', description: 'description', type: 'type',
+      category: 'category', calculationType: 'calculation_type', calculation_type: 'calculation_type',
+      defaultAmount: 'default_amount', default_amount: 'default_amount',
+      percentageBase: 'percentage_base', percentage_base: 'percentage_base',
+      percentageValue: 'percentage_value', percentage_value: 'percentage_value',
+      formula: 'formula', isTaxable: 'is_taxable', is_taxable: 'is_taxable',
+      isMandatory: 'is_mandatory', is_mandatory: 'is_mandatory',
+      appliesToPayTypes: 'applies_to_pay_types', applies_to_pay_types: 'applies_to_pay_types',
+      applicableDepartments: 'applicable_departments', applicable_departments: 'applicable_departments',
+      sortOrder: 'sort_order', sort_order: 'sort_order',
+      isActive: 'is_active', is_active: 'is_active',
+    };
+    for (const [key, val] of Object.entries(data)) {
+      const col = fieldMap[key];
+      if (!col) continue;
+      const paramName = col.replace(/\./g, '_');
+      if (typeof val === 'object' && val !== null) {
+        fields.push(`${col} = :${paramName}::jsonb`);
+        replacements[paramName] = JSON.stringify(val);
+      } else {
+        fields.push(`${col} = :${paramName}`);
+        replacements[paramName] = val;
+      }
+    }
+    if (fields.length === 0) return res.status(400).json({ success: false, error: 'No fields to update' });
+    fields.push('updated_at = NOW()');
+    await sequelize.query(`UPDATE payroll_components SET ${fields.join(', ')} WHERE id = :id`, { replacements });
+    // Return updated row
+    const [rows] = await sequelize.query(`SELECT * FROM payroll_components WHERE id = :id`, { replacements: { id } });
+    return res.json({ success: true, data: rows?.[0] });
+  } catch (e: any) {
+    console.error('updateComponent error:', e);
+    return res.status(500).json({ success: false, error: e.message });
+  }
+}
+
+// ===== DELETE: Component =====
+async function deleteComponent(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const { id } = req.query;
+  if (!id) return res.status(400).json({ success: false, error: 'id required' });
+  if (!sequelize) return res.json({ success: true, message: 'Deleted (mock)' });
+  try {
+    await sequelize.query(`DELETE FROM payroll_components WHERE id = :id`, { replacements: { id } });
+    return res.json({ success: true, message: 'Component deleted' });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, error: e.message });
+  }
+}
+
+// ===== Helper: PTKP (Tax-free income) =====
+function getPTKP(status: string): number {
+  const ptkpMap: Record<string, number> = {
+    'TK/0': 54000000, 'TK/1': 58500000, 'TK/2': 63000000, 'TK/3': 67500000,
+    'K/0': 58500000, 'K/1': 63000000, 'K/2': 67500000, 'K/3': 72000000,
+  };
+  return ptkpMap[status] || 54000000;
+}
+
+// ===== Helper: PPh21 Calculation =====
+function calculatePPh21(pkp: number): number {
+  if (pkp <= 0) return 0;
+  let tax = 0;
+  // Progressive tax brackets (2024 Indonesia)
+  if (pkp > 5000000000) { tax += (pkp - 5000000000) * 0.35; pkp = 5000000000; }
+  if (pkp > 500000000) { tax += (pkp - 500000000) * 0.30; pkp = 500000000; }
+  if (pkp > 250000000) { tax += (pkp - 250000000) * 0.25; pkp = 250000000; }
+  if (pkp > 60000000) { tax += (pkp - 60000000) * 0.15; pkp = 60000000; }
+  tax += pkp * 0.05;
+  return Math.round(tax);
+}
+
+// ===== Mock Components =====
+function getMockComponents() {
+  return [
+    { id: '1', code: 'BASIC', name: 'Gaji Pokok', type: 'earning', category: 'fixed', calculation_type: 'fixed', default_amount: 0, is_taxable: true, is_mandatory: true },
+    { id: '2', code: 'TRANSPORT', name: 'Tunjangan Transportasi', type: 'earning', category: 'fixed', calculation_type: 'fixed', default_amount: 500000, is_taxable: false },
+    { id: '3', code: 'MEAL', name: 'Tunjangan Makan', type: 'earning', category: 'daily', calculation_type: 'per_day', default_amount: 35000, is_taxable: false },
+    { id: '4', code: 'OVERTIME', name: 'Lembur', type: 'earning', category: 'variable', calculation_type: 'formula', default_amount: 0, is_taxable: true },
+    { id: '5', code: 'PPH21', name: 'PPh 21', type: 'deduction', category: 'calculated', calculation_type: 'formula', default_amount: 0, is_taxable: true, is_mandatory: true },
+    { id: '6', code: 'BPJS_KES', name: 'BPJS Kesehatan', type: 'deduction', category: 'calculated', calculation_type: 'percentage', default_amount: 0, is_mandatory: true },
+    { id: '7', code: 'BPJS_JHT', name: 'BPJS JHT', type: 'deduction', category: 'calculated', calculation_type: 'percentage', default_amount: 0, is_mandatory: true },
+  ];
+}

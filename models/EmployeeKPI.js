@@ -12,18 +12,12 @@ const EmployeeKPI = sequelize.define('EmployeeKPI', {
   employeeId: {
     type: DataTypes.UUID,
     allowNull: false,
-    references: {
-      model: 'employees',
-      key: 'id'
-    }
+    field: 'employee_id'
   },
   branchId: {
     type: DataTypes.UUID,
     allowNull: true,
-    references: {
-      model: 'branches',
-      key: 'id'
-    }
+    field: 'branch_id'
   },
   period: {
     type: DataTypes.STRING(7),
@@ -32,10 +26,11 @@ const EmployeeKPI = sequelize.define('EmployeeKPI', {
   },
   metricName: {
     type: DataTypes.STRING,
-    allowNull: false
+    allowNull: false,
+    field: 'metric_name'
   },
   category: {
-    type: DataTypes.ENUM('sales', 'operations', 'customer', 'financial', 'hr'),
+    type: DataTypes.STRING(20),
     allowNull: false,
     defaultValue: 'operations'
   },
@@ -68,7 +63,7 @@ const EmployeeKPI = sequelize.define('EmployeeKPI', {
     }
   },
   status: {
-    type: DataTypes.ENUM('pending', 'in_progress', 'achieved', 'exceeded', 'not_achieved'),
+    type: DataTypes.STRING(20),
     allowNull: false,
     defaultValue: 'pending'
   },
@@ -79,31 +74,27 @@ const EmployeeKPI = sequelize.define('EmployeeKPI', {
   reviewedBy: {
     type: DataTypes.UUID,
     allowNull: true,
-    references: {
-      model: 'users',
-      key: 'id'
-    }
+    field: 'reviewed_by'
   },
   reviewedAt: {
     type: DataTypes.DATE,
-    allowNull: true
+    allowNull: true,
+    field: 'reviewed_at'
   },
   tenantId: {
     type: DataTypes.UUID,
-    allowNull: true
+    allowNull: true,
+    field: 'tenant_id'
+  },
+  templateId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'template_id'
   }
 }, {
   tableName: 'employee_kpis',
-  timestamps: true,
-  indexes: [
-    { fields: ['employeeId'] },
-    { fields: ['branchId'] },
-    { fields: ['period'] },
-    { fields: ['category'] },
-    { fields: ['status'] },
-    { fields: ['tenantId'] },
-    { unique: true, fields: ['employeeId', 'metricName', 'period'] }
-  ]
+  underscored: true,
+  timestamps: true
 });
 
 module.exports = EmployeeKPI;
