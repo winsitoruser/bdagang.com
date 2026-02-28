@@ -27,6 +27,7 @@ declare module "next-auth" {
     dataScope?: string
     businessCode?: string
     businessStructure?: string
+    setupCompleted?: boolean
   }
 
   /**
@@ -60,5 +61,6 @@ declare module "next-auth/jwt" {
     dataScope?: string
     businessCode?: string
     businessStructure?: string
+    setupCompleted?: boolean
   }
 }

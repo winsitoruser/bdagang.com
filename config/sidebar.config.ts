@@ -45,6 +45,11 @@ import {
   CalendarDays,
   MessageCircle,
   ShoppingBag,
+  Network,
+  Heart,
+  Clock,
+  Plane,
+  Briefcase,
   type LucideIcon
 } from 'lucide-react';
 
@@ -244,12 +249,21 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'hris-dashboard', name: 'Dashboard HRIS', href: '/hq/hris', icon: LayoutDashboard },
             { id: 'hris-kpi', name: 'KPI Karyawan', href: '/hq/hris/kpi', icon: Target },
             { id: 'hris-kpi-settings', name: 'KPI Settings', href: '/hq/hris/kpi-settings', icon: Settings },
-            { id: 'hris-attendance', name: 'Kehadiran', href: '/hq/hris/attendance', icon: CalendarCheck },
-            { id: 'hris-attendance-daily', name: 'Absensi Harian', href: '/hq/hris/attendance/daily', icon: Calendar },
+            { id: 'hris-attendance', name: 'Kehadiran & Absensi', href: '/hq/hris/attendance', icon: CalendarCheck },
             { id: 'hris-attendance-devices', name: 'Kelola Device', href: '/hq/hris/attendance/devices', icon: Fingerprint },
-            { id: 'hris-attendance-settings', name: 'Pengaturan Absensi', href: '/hq/hris/attendance/settings', icon: Settings },
             { id: 'hris-performance', name: 'Performance Review', href: '/hq/hris/performance', icon: Award },
             { id: 'hris-leave', name: 'Manajemen Cuti', href: '/hq/hris/leave', icon: CalendarDays },
+            { id: 'hris-payroll', name: 'Payroll', href: '/hq/hris/payroll', icon: Banknote },
+            { id: 'hris-employees', name: 'Database Karyawan', href: '/hq/hris/employees', icon: Users },
+            { id: 'hris-organization', name: 'Struktur Organisasi', href: '/hq/hris/organization', icon: Network },
+            { id: 'hris-workflow', name: 'Klaim & Mutasi', href: '/hq/hris/mss', icon: ArrowRightLeft },
+            { id: 'hris-ess', name: 'Employee Self Service', href: '/hq/hris/ess', icon: Heart },
+            { id: 'hris-mss', name: 'Manager Self Service', href: '/hq/hris/mss', icon: Shield },
+            { id: 'hris-ir', name: 'Industrial Relations', href: '/hq/hris/industrial-relations', icon: Shield },
+            { id: 'hris-workforce', name: 'Workforce Analytics', href: '/hq/hris/workforce-analytics', icon: BarChart3 },
+            { id: 'hris-engagement', name: 'Engagement & Culture', href: '/hq/hris/engagement', icon: MessageCircle },
+            { id: 'hris-travel', name: 'Travel & Expense', href: '/hq/hris/travel-expense', icon: Plane },
+            { id: 'hris-project', name: 'Project Management', href: '/hq/hris/project-management', icon: Briefcase },
           ]
         }
       ]

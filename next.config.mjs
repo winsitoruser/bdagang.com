@@ -27,8 +27,8 @@ const hostnames = [
 const isExport = process.env.NEXT_EXPORT === 'true';
 
 const nextConfig = {
-  // Enable standalone output for Docker deployment
-  output: 'standalone',
+  // Enable standalone output for Docker deployment (only in production)
+  ...(process.env.NODE_ENV === 'production' ? { output: 'standalone' } : {}),
   reactStrictMode: false,
   eslint: {
     ignoreDuringBuilds: true,
@@ -68,7 +68,7 @@ const nextConfig = {
   // Experimental features for better performance
   experimental: {
     // Optimize package imports
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', 'recharts'],
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', 'recharts', 'apexcharts', 'react-apexcharts'],
   },
   
   // Transpile Radix UI and other ESM packages

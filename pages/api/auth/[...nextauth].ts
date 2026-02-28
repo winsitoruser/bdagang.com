@@ -77,6 +77,7 @@ export const authOptions: NextAuthOptions = {
             dataScope: user.dataScope || 'own_branch',
             businessCode: user.tenant?.businessCode || null,
             businessStructure: user.tenant?.businessStructure || 'single',
+            setupCompleted: user.tenant?.setupCompleted ?? false,
           };
         } catch (error) {
           console.error('Auth error:', error);
@@ -110,6 +111,7 @@ export const authOptions: NextAuthOptions = {
         token.dataScope = user.dataScope;
         token.businessCode = user.businessCode;
         token.businessStructure = user.businessStructure;
+        token.setupCompleted = user.setupCompleted;
       }
       return token;
     },
@@ -128,6 +130,7 @@ export const authOptions: NextAuthOptions = {
         session.user.dataScope = token.dataScope as string;
         session.user.businessCode = token.businessCode as string;
         session.user.businessStructure = token.businessStructure as string;
+        session.user.setupCompleted = token.setupCompleted as boolean;
       }
       return session;
     },

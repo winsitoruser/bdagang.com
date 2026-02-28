@@ -10,10 +10,10 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Allow public routes
+  // Allow public routes and API routes (API routes handle their own auth)
   if (
     pathname.startsWith('/auth/') ||
-    pathname.startsWith('/api/auth/') ||
+    pathname.startsWith('/api/') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/static') ||
     pathname === '/favicon.ico'
@@ -40,32 +40,15 @@ export async function middleware(request: NextRequest) {
   // Check if tenant needs onboarding (for non-admin users)
   const userRole = (token.role as string)?.toLowerCase();
   if (!['admin', 'super_admin', 'superadmin'].includes(userRole)) {
-    // Allow onboarding page
-    if (pathname === '/onboarding') {
+    // Allow onboarding pages
+    if (pathname.startsWith('/onboarding')) {
       return NextResponse.next();
     }
 
-    // Fetch tenant info to check setup status
-    try {
-      const tenantInfoUrl = new URL('/api/tenant/info', request.url);
-      const tenantResponse = await fetch(tenantInfoUrl.toString(), {
-        headers: {
-          cookie: request.headers.get('cookie') || ''
-        }
-      });
-
-      if (tenantResponse.ok) {
-        const data = await tenantResponse.json();
-        
-        // Redirect to onboarding if setup not completed
-        if (data.tenant && !data.tenant.setupCompleted) {
-          if (pathname !== '/onboarding') {
-            return NextResponse.redirect(new URL('/onboarding', request.url));
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Middleware tenant check error:', error);
+    // Use token data to check setup status (no internal fetch to avoid circular calls)
+    const setupCompleted = token.setupCompleted as boolean | undefined;
+    if (setupCompleted === false) {
+      return NextResponse.redirect(new URL('/onboarding', request.url));
     }
   }
 

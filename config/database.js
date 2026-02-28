@@ -1,4 +1,6 @@
+require('dotenv').config({ path: '.env.local' });
 require('dotenv').config({ path: '.env.development' });
+require('dotenv').config();
 
 module.exports = {
   development: {
