@@ -50,6 +50,9 @@ import {
   Clock,
   Plane,
   Briefcase,
+  Megaphone,
+  Gift,
+  UserPlus,
   type LucideIcon
 } from 'lucide-react';
 
@@ -57,6 +60,9 @@ import {
 export type UserRole = 
   | 'super_admin' 
   | 'owner' 
+  | 'admin'
+  | 'manager'
+  | 'staff'
   | 'hq_admin' 
   | 'branch_manager' 
   | 'cashier' 
@@ -90,7 +96,10 @@ export type ModuleCode =
   | 'integrations'
   | 'fleet'
   | 'whatsapp_business'
-  | 'marketplace_integration';
+  | 'marketplace_integration'
+  | 'crm'
+  | 'sfa'
+  | 'marketing';
 
 export type LayoutType = 'hq' | 'branch' | 'admin';
 
@@ -264,6 +273,52 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'hris-engagement', name: 'Engagement & Culture', href: '/hq/hris/engagement', icon: MessageCircle },
             { id: 'hris-travel', name: 'Travel & Expense', href: '/hq/hris/travel-expense', icon: Plane },
             { id: 'hris-project', name: 'Project Management', href: '/hq/hris/project-management', icon: Briefcase },
+          ]
+        }
+      ]
+    },
+    {
+      id: 'sales-marketing',
+      title: 'Sales & Marketing',
+      items: [
+        {
+          id: 'sfa',
+          name: 'CRM & Sales Force',
+          icon: Briefcase,
+          modules: ['crm', 'sfa'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager', 'staff'],
+          children: [
+            { id: 'sfa-dashboard', name: 'Dashboard CRM', href: '/hq/sfa', icon: LayoutDashboard, modules: ['crm', 'sfa'] },
+            { id: 'sfa-leads', name: 'Leads & Pipeline', href: '/hq/sfa', icon: TrendingUp, modules: ['sfa'] },
+            { id: 'crm-customers', name: 'Customer 360°', href: '/hq/sfa', icon: Heart, modules: ['crm'] },
+            { id: 'crm-communications', name: 'Komunikasi', href: '/hq/sfa', icon: MessageCircle, modules: ['crm'] },
+            { id: 'crm-tasks', name: 'Task & Kalender', href: '/hq/sfa', icon: CalendarCheck, modules: ['crm'] },
+            { id: 'crm-forecasting', name: 'Forecasting', href: '/hq/sfa', icon: TrendingUp, modules: ['crm'] },
+            { id: 'crm-tickets', name: 'Tiket & SLA', href: '/hq/sfa', icon: Ticket, modules: ['crm'] },
+            { id: 'crm-automation', name: 'Automasi', href: '/hq/sfa', icon: Network, modules: ['crm'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
+            { id: 'sfa-teams', name: 'Tim & Territory', href: '/hq/sfa', icon: Users, modules: ['sfa'] },
+            { id: 'sfa-visits', name: 'Kunjungan & Coverage', href: '/hq/sfa', icon: Navigation, modules: ['sfa'] },
+            { id: 'sfa-orders', name: 'Order & Quotation', href: '/hq/sfa', icon: ShoppingCart, modules: ['sfa'] },
+            { id: 'sfa-targets', name: 'Target & Achievement', href: '/hq/sfa', icon: Target, modules: ['sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
+            { id: 'sfa-incentives', name: 'Insentif & Komisi', href: '/hq/sfa', icon: Award, modules: ['sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
+            { id: 'sfa-intelligence', name: 'Merchandising & Kompetitor', href: '/hq/sfa', icon: ClipboardList, modules: ['sfa'] },
+            { id: 'sfa-approval', name: 'Survey & Approval', href: '/hq/sfa', icon: Shield, modules: ['sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
+            { id: 'sfa-settings', name: 'Pengaturan', href: '/hq/sfa', icon: Settings, modules: ['crm', 'sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
+            { id: 'sfa-import-export', name: 'Import / Export', href: '/hq/sfa', icon: FileSpreadsheet, modules: ['crm', 'sfa'] },
+          ]
+        },
+        {
+          id: 'marketing',
+          name: 'Marketing & Campaign',
+          icon: Megaphone,
+          modules: ['marketing'],
+          roles: ['super_admin', 'owner', 'hq_admin'],
+          children: [
+            { id: 'mkt-dashboard', name: 'Dashboard Marketing', href: '/hq/marketing', icon: LayoutDashboard },
+            { id: 'mkt-campaigns', name: 'Campaign', href: '/hq/marketing', icon: Megaphone },
+            { id: 'mkt-promotions', name: 'Promosi', href: '/hq/marketing', icon: Gift },
+            { id: 'mkt-segments', name: 'Segmentasi Pelanggan', href: '/hq/marketing', icon: Users },
+            { id: 'mkt-budgets', name: 'Budget Marketing', href: '/hq/marketing', icon: DollarSign },
           ]
         }
       ]

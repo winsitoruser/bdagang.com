@@ -1,9 +1,25 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { triggerHRISWebhook } from './webhooks';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../auth/[...nextauth]';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+
+let triggerHRISWebhook: any;
+try {
+  const webhooks = require('./webhooks');
+  triggerHRISWebhook = webhooks.triggerHRISWebhook;
+} catch (e) {
+  triggerHRISWebhook = async () => {};
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    const session = await getServerSession(req, res, authOptions);
+    if (!session?.user) {
+      return res.status(HttpStatus.UNAUTHORIZED).json(
+        errorResponse(ErrorCodes.UNAUTHORIZED, 'Unauthorized')
+      );
+    }
+
     switch (req.method) {
       case 'GET':
         return await getPerformanceReviews(req, res);
@@ -142,14 +158,18 @@ async function createPerformanceReview(req: NextApiRequest, res: NextApiResponse
   };
 
   // Trigger webhook
-  await triggerHRISWebhook(
-    'performance.review_created',
-    employeeId,
-    employeeName || 'Unknown',
-    newReview,
-    branchId,
-    branchName
-  );
+  try {
+    await triggerHRISWebhook(
+      'performance.review_created',
+      employeeId,
+      employeeName || 'Unknown',
+      newReview,
+      branchId,
+      branchName
+    );
+  } catch (webhookErr) {
+    console.warn('Performance webhook failed:', webhookErr);
+  }
 
   return res.status(HttpStatus.CREATED).json(
     successResponse(newReview, undefined, 'Performance review created successfully')
@@ -177,20 +197,24 @@ async function updatePerformanceReview(req: NextApiRequest, res: NextApiResponse
   };
 
   // Trigger appropriate webhook based on status change
-  if (status === 'submitted') {
-    await triggerHRISWebhook(
-      'performance.review_submitted',
-      'employee-id',
-      'Employee Name',
-      updatedReview
-    );
-  } else if (status === 'acknowledged') {
-    await triggerHRISWebhook(
-      'performance.review_acknowledged',
-      'employee-id',
-      'Employee Name',
-      updatedReview
-    );
+  try {
+    if (status === 'submitted') {
+      await triggerHRISWebhook(
+        'performance.review_submitted',
+        'employee-id',
+        'Employee Name',
+        updatedReview
+      );
+    } else if (status === 'acknowledged') {
+      await triggerHRISWebhook(
+        'performance.review_acknowledged',
+        'employee-id',
+        'Employee Name',
+        updatedReview
+      );
+    }
+  } catch (webhookErr) {
+    console.warn('Performance webhook failed:', webhookErr);
   }
 
   return res.status(HttpStatus.OK).json(

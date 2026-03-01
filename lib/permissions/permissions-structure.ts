@@ -165,6 +165,48 @@ export const PERMISSIONS_STRUCTURE = {
       'settings.billing': 'Manage Billing',
       'settings.appearance': 'Manage Appearance'
     }
+  },
+
+  // CRM & SFA Module
+  crm: {
+    label: 'CRM & Sales Force',
+    permissions: {
+      'crm.view': 'View CRM Data',
+      'crm.create': 'Create CRM Records',
+      'crm.edit': 'Edit CRM Records',
+      'crm.delete': 'Delete CRM Records',
+      'crm.import': 'Import CRM Data',
+      'crm.export': 'Export CRM Data',
+      'crm.manage_customers': 'Manage Customers',
+      'crm.manage_communications': 'Manage Communications',
+      'crm.manage_tasks': 'Manage Tasks',
+      'crm.manage_tickets': 'Manage Tickets',
+      'crm.manage_forecasting': 'Manage Forecasting',
+      'crm.manage_automation': 'Manage Automation Rules',
+      'crm.approval': 'Process Approvals',
+      'crm.manage_settings': 'Manage CRM Settings'
+    }
+  },
+
+  // SFA Module
+  sfa: {
+    label: 'Sales Force Automation',
+    permissions: {
+      'sfa.view': 'View SFA Data',
+      'sfa.create': 'Create SFA Records',
+      'sfa.edit': 'Edit SFA Records',
+      'sfa.delete': 'Delete SFA Records',
+      'sfa.manage_leads': 'Manage Leads',
+      'sfa.manage_pipeline': 'Manage Pipeline',
+      'sfa.manage_teams': 'Manage Teams',
+      'sfa.manage_visits': 'Manage Visits',
+      'sfa.manage_orders': 'Manage Field Orders',
+      'sfa.manage_targets': 'Manage Targets',
+      'sfa.manage_incentives': 'Manage Incentives',
+      'sfa.manage_coverage': 'Manage Coverage Plans',
+      'sfa.manage_geofence': 'Manage Geofence',
+      'sfa.approval': 'Process SFA Approvals'
+    }
   }
 };
 

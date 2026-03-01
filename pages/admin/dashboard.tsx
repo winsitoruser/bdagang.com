@@ -24,7 +24,10 @@ import {
   Calendar,
   Download,
   Filter,
-  MoreVertical
+  MoreVertical,
+  Brain,
+  CreditCard,
+  Boxes
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -206,7 +209,10 @@ export default function AdminDashboard() {
     { icon: FileCheck, label: 'Aktivasi', path: '/admin/activations', badge: stats.activations.pending },
     { icon: Package, label: 'Outlet', path: '/admin/outlets' },
     { icon: DollarSign, label: 'Transaksi', path: '/admin/transactions' },
+    { icon: CreditCard, label: 'Langganan', path: '/admin/subscriptions', badge: stats.subscriptions?.expiring },
     { icon: BarChart3, label: 'Analitik', path: '/admin/analytics' },
+    { icon: Boxes, label: 'Modul', path: '/admin/modules' },
+    { icon: Brain, label: 'AI Models', path: '/admin/ai-models' },
     { icon: Settings, label: 'Pengaturan', path: '/admin/settings' },
   ];
 

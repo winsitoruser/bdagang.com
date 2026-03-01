@@ -1,505 +1,476 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import HQLayout from '@/components/hq/HQLayout';
-import { 
-  Users, UserCheck, UserX, Clock, TrendingUp, Award, 
-  Calendar, BarChart3, Target, Star, AlertCircle,
-  Building2, ChevronRight, Filter, Download, Search,
-  Eye, Edit, MoreVertical
+import {
+  Users, UserCheck, UserX, Clock, TrendingUp, TrendingDown, Award,
+  Calendar, BarChart3, Target, Star, AlertCircle, AlertTriangle,
+  Building2, ChevronRight, Download, Search, Eye, Edit,
+  Briefcase, DollarSign, FileText, Shield, Heart, Plane,
+  GraduationCap, UserPlus, Settings, FolderOpen, ClipboardList,
+  CheckCircle2, XCircle, ArrowRight, Bell, Zap, Activity,
+  PieChart, Layers, MapPin, CircleDot
 } from 'lucide-react';
 
-interface Employee {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  position: string;
-  department: string;
-  branchId: string;
-  branchName: string;
-  joinDate: string;
-  status: 'active' | 'inactive' | 'on_leave';
-  avatar?: string;
-  performance: {
-    score: number;
-    trend: 'up' | 'down' | 'stable';
-    kpiAchievement: number;
-    attendance: number;
-    rating: number;
-  };
-  manager?: string;
-}
-
-interface DepartmentStats {
-  department: string;
-  totalEmployees: number;
-  activeEmployees: number;
-  avgPerformance: number;
-  avgAttendance: number;
-}
-
-const mockEmployees: Employee[] = [
-  { id: '1', name: 'Ahmad Wijaya', email: 'ahmad@bedagang.com', phone: '081234567890', position: 'Branch Manager', department: 'Operations', branchId: '1', branchName: 'Cabang Pusat Jakarta', joinDate: '2023-06-15', status: 'active', performance: { score: 92, trend: 'up', kpiAchievement: 104, attendance: 98, rating: 4.8 }, manager: 'Super Admin' },
-  { id: '2', name: 'Siti Rahayu', email: 'siti@bedagang.com', phone: '082345678901', position: 'Branch Manager', department: 'Operations', branchId: '2', branchName: 'Cabang Bandung', joinDate: '2023-08-01', status: 'active', performance: { score: 88, trend: 'up', kpiAchievement: 102, attendance: 96, rating: 4.5 }, manager: 'Super Admin' },
-  { id: '3', name: 'Budi Santoso', email: 'budi@bedagang.com', phone: '083456789012', position: 'Branch Manager', department: 'Operations', branchId: '3', branchName: 'Cabang Surabaya', joinDate: '2023-09-10', status: 'active', performance: { score: 78, trend: 'down', kpiAchievement: 92, attendance: 94, rating: 4.0 }, manager: 'Super Admin' },
-  { id: '4', name: 'Dewi Lestari', email: 'dewi@bedagang.com', phone: '084567890123', position: 'Supervisor', department: 'Operations', branchId: '1', branchName: 'Cabang Pusat Jakarta', joinDate: '2024-01-15', status: 'active', performance: { score: 85, trend: 'stable', kpiAchievement: 98, attendance: 97, rating: 4.3 }, manager: 'Ahmad Wijaya' },
-  { id: '5', name: 'Eko Prasetyo', email: 'eko@bedagang.com', phone: '085678901234', position: 'Kasir Senior', department: 'Sales', branchId: '1', branchName: 'Cabang Pusat Jakarta', joinDate: '2024-02-01', status: 'active', performance: { score: 90, trend: 'up', kpiAchievement: 110, attendance: 99, rating: 4.6 }, manager: 'Dewi Lestari' },
-  { id: '6', name: 'Fitri Handayani', email: 'fitri@bedagang.com', phone: '086789012345', position: 'Kasir', department: 'Sales', branchId: '2', branchName: 'Cabang Bandung', joinDate: '2024-03-01', status: 'active', performance: { score: 82, trend: 'up', kpiAchievement: 95, attendance: 95, rating: 4.2 }, manager: 'Siti Rahayu' },
-  { id: '7', name: 'Gunawan', email: 'gunawan@bedagang.com', phone: '087890123456', position: 'Staff Gudang', department: 'Warehouse', branchId: '6', branchName: 'Gudang Pusat', joinDate: '2024-01-20', status: 'active', performance: { score: 75, trend: 'stable', kpiAchievement: 88, attendance: 92, rating: 3.8 }, manager: 'Admin HQ' },
-  { id: '8', name: 'Hendra Kusuma', email: 'hendra@bedagang.com', phone: '088901234567', position: 'Kasir', department: 'Sales', branchId: '3', branchName: 'Cabang Surabaya', joinDate: '2024-04-01', status: 'on_leave', performance: { score: 70, trend: 'down', kpiAchievement: 85, attendance: 88, rating: 3.5 }, manager: 'Budi Santoso' },
+// ── HRIS Module Definitions ──
+const HRIS_MODULES = [
+  {
+    category: 'Manajemen Karyawan',
+    color: 'blue',
+    modules: [
+      { key: 'employees', label: 'Data Karyawan', desc: 'Master data karyawan', href: '/hq/hris/employees', icon: Users, color: 'bg-blue-500' },
+      { key: 'organization', label: 'Struktur Organisasi', desc: 'Departemen & jabatan', href: '/hq/hris/organization', icon: Building2, color: 'bg-blue-600' },
+      { key: 'ess', label: 'Employee Self Service', desc: 'Layanan mandiri karyawan', href: '/hq/hris/ess', icon: UserCheck, color: 'bg-blue-400' },
+      { key: 'mss', label: 'Manager Self Service', desc: 'Layanan mandiri manajer', href: '/hq/hris/mss', icon: Briefcase, color: 'bg-blue-700' },
+    ]
+  },
+  {
+    category: 'Kehadiran & Cuti',
+    color: 'green',
+    modules: [
+      { key: 'attendance', label: 'Kehadiran', desc: 'Rekap absensi harian', href: '/hq/hris/attendance', icon: Clock, color: 'bg-green-500' },
+      { key: 'attendance-mgmt', label: 'Manajemen Absensi', desc: 'Aturan & kebijakan', href: '/hq/hris/attendance-management', icon: Settings, color: 'bg-green-600' },
+      { key: 'leave', label: 'Manajemen Cuti', desc: 'Pengajuan & persetujuan', href: '/hq/hris/leave', icon: Calendar, color: 'bg-green-400' },
+      { key: 'attendance-devices', label: 'Perangkat Absensi', desc: 'Mesin fingerprint & device', href: '/hq/hris/attendance/devices', icon: Layers, color: 'bg-green-700' },
+    ]
+  },
+  {
+    category: 'Kinerja & KPI',
+    color: 'purple',
+    modules: [
+      { key: 'kpi', label: 'KPI Dashboard', desc: 'Target & pencapaian KPI', href: '/hq/hris/kpi', icon: Target, color: 'bg-purple-500' },
+      { key: 'performance', label: 'Performance Review', desc: 'Evaluasi kinerja berkala', href: '/hq/hris/performance', icon: Award, color: 'bg-purple-600' },
+      { key: 'kpi-settings', label: 'Pengaturan KPI', desc: 'Template & scoring KPI', href: '/hq/hris/kpi-settings', icon: Settings, color: 'bg-purple-400' },
+      { key: 'engagement', label: 'Employee Engagement', desc: 'Survei & kepuasan kerja', href: '/hq/hris/engagement', icon: Heart, color: 'bg-purple-700' },
+    ]
+  },
+  {
+    category: 'Penggajian & Keuangan',
+    color: 'emerald',
+    modules: [
+      { key: 'payroll', label: 'Payroll', desc: 'Proses penggajian', href: '/hq/hris/payroll', icon: DollarSign, color: 'bg-emerald-500' },
+      { key: 'travel-expense', label: 'Travel & Expense', desc: 'Perjalanan dinas & klaim', href: '/hq/hris/travel-expense', icon: Plane, color: 'bg-emerald-600' },
+      { key: 'project-mgmt', label: 'Manajemen Proyek', desc: 'Proyek & pekerja kontrak', href: '/hq/hris/project-management', icon: FolderOpen, color: 'bg-emerald-700' },
+    ]
+  },
+  {
+    category: 'Rekrutmen & Pelatihan',
+    color: 'orange',
+    modules: [
+      { key: 'recruitment', label: 'Rekrutmen', desc: 'Lowongan & proses seleksi', href: '/hq/hris/recruitment', icon: UserPlus, color: 'bg-orange-500' },
+      { key: 'training', label: 'Pelatihan & Sertifikasi', desc: 'Program pengembangan SDM', href: '/hq/hris/training', icon: GraduationCap, color: 'bg-orange-600' },
+    ]
+  },
+  {
+    category: 'Analitik & Kepatuhan',
+    color: 'indigo',
+    modules: [
+      { key: 'workforce-analytics', label: 'Workforce Analytics', desc: 'Analitik & insight HR', href: '/hq/hris/workforce-analytics', icon: PieChart, color: 'bg-indigo-500' },
+      { key: 'industrial-relations', label: 'Hubungan Industrial', desc: 'Regulasi & kepatuhan', href: '/hq/hris/industrial-relations', icon: Shield, color: 'bg-indigo-600' },
+    ]
+  },
 ];
 
-const mockDepartmentStats: DepartmentStats[] = [
-  { department: 'Operations', totalEmployees: 15, activeEmployees: 14, avgPerformance: 86, avgAttendance: 96 },
-  { department: 'Sales', totalEmployees: 45, activeEmployees: 43, avgPerformance: 84, avgAttendance: 95 },
-  { department: 'Warehouse', totalEmployees: 12, activeEmployees: 12, avgPerformance: 78, avgAttendance: 93 },
-  { department: 'Finance', totalEmployees: 5, activeEmployees: 5, avgPerformance: 90, avgAttendance: 98 },
-  { department: 'HR', totalEmployees: 3, activeEmployees: 3, avgPerformance: 88, avgAttendance: 97 },
+// ── Mock Data for Dashboard Widgets ──
+const MOCK_PENDING_APPROVALS = [
+  { id: '1', type: 'leave', title: 'Cuti Tahunan - Fitri Handayani', subtitle: '3-7 Mar 2026 (5 hari)', status: 'pending', date: '28 Feb 2026', color: 'yellow' },
+  { id: '2', type: 'overtime', title: 'Lembur - Eko Prasetyo', subtitle: 'Sabtu, 1 Mar 2026 (4 jam)', status: 'pending', date: '27 Feb 2026', color: 'blue' },
+  { id: '3', type: 'expense', title: 'Klaim Transport - Budi Santoso', subtitle: 'Rp 450.000 - Perjalanan dinas Surabaya', status: 'pending', date: '27 Feb 2026', color: 'green' },
+  { id: '4', type: 'leave', title: 'Cuti Sakit - Hendra Kusuma', subtitle: '28 Feb 2026 (1 hari)', status: 'pending', date: '28 Feb 2026', color: 'red' },
+  { id: '5', type: 'performance', title: 'Review Q1 - Ahmad Wijaya', subtitle: 'Performance review pending approval', status: 'pending', date: '26 Feb 2026', color: 'purple' },
+];
+
+const MOCK_RECENT_ACTIVITIES = [
+  { id: '1', action: 'Karyawan baru bergabung', detail: 'Rina Wulandari - Kasir Cabang Medan', time: '2 jam lalu', icon: UserPlus, color: 'text-green-600 bg-green-50' },
+  { id: '2', action: 'Payroll diproses', detail: 'Periode Februari 2026 - 80 karyawan', time: '5 jam lalu', icon: DollarSign, color: 'text-blue-600 bg-blue-50' },
+  { id: '3', action: 'KPI diperbarui', detail: 'Q1 2026 - Target sales +15%', time: '1 hari lalu', icon: Target, color: 'text-purple-600 bg-purple-50' },
+  { id: '4', action: 'Kontrak diperpanjang', detail: 'Ahmad Wijaya - Branch Manager (2 tahun)', time: '1 hari lalu', icon: FileText, color: 'text-indigo-600 bg-indigo-50' },
+  { id: '5', action: 'Pelatihan selesai', detail: 'Customer Service Excellence - 12 peserta', time: '2 hari lalu', icon: GraduationCap, color: 'text-orange-600 bg-orange-50' },
+  { id: '6', action: 'Cuti disetujui', detail: 'Dewi Lestari - Cuti tahunan 5-7 Mar', time: '2 hari lalu', icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
+];
+
+const MOCK_UPCOMING = [
+  { id: '1', title: 'Batas Payroll Maret', date: '5 Mar 2026', type: 'deadline', color: 'red' },
+  { id: '2', title: 'Review KPI Q1', date: '10 Mar 2026', type: 'review', color: 'purple' },
+  { id: '3', title: 'Training: Leadership', date: '12 Mar 2026', type: 'training', color: 'orange' },
+  { id: '4', title: 'Kontrak Berakhir: 3 orang', date: '15 Mar 2026', type: 'alert', color: 'yellow' },
+  { id: '5', title: 'Town Hall Meeting', date: '20 Mar 2026', type: 'event', color: 'blue' },
+  { id: '6', title: 'Audit Kehadiran Q1', date: '25 Mar 2026', type: 'audit', color: 'indigo' },
+];
+
+const MOCK_DEPT_STATS = [
+  { department: 'Operations', total: 15, active: 14, perf: 86, attend: 96, color: 'blue' },
+  { department: 'Sales', total: 45, active: 43, perf: 84, attend: 95, color: 'green' },
+  { department: 'Warehouse', total: 12, active: 12, perf: 78, attend: 93, color: 'yellow' },
+  { department: 'Finance', total: 5, active: 5, perf: 90, attend: 98, color: 'purple' },
+  { department: 'HR', total: 3, active: 3, perf: 88, attend: 97, color: 'indigo' },
+  { department: 'IT', total: 4, active: 4, perf: 91, attend: 99, color: 'cyan' },
+];
+
+const QUICK_ACTIONS = [
+  { label: 'Tambah Karyawan', href: '/hq/hris/employees', icon: UserPlus, color: 'bg-blue-600' },
+  { label: 'Input Kehadiran', href: '/hq/hris/attendance', icon: Clock, color: 'bg-green-600' },
+  { label: 'Proses Payroll', href: '/hq/hris/payroll', icon: DollarSign, color: 'bg-emerald-600' },
+  { label: 'Buka Lowongan', href: '/hq/hris/recruitment', icon: UserPlus, color: 'bg-orange-600' },
+  { label: 'Buat KPI', href: '/hq/hris/kpi', icon: Target, color: 'bg-purple-600' },
+  { label: 'Jadwal Training', href: '/hq/hris/training', icon: GraduationCap, color: 'bg-red-600' },
 ];
 
 export default function HRISDashboard() {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [departmentStats, setDepartmentStats] = useState<DepartmentStats[]>([]);
+  const [stats, setStats] = useState({ total: 80, active: 76, onLeave: 3, inactive: 1, avgPerf: 84, avgKpi: 96, topPerformers: 28, attendanceToday: 95 });
+  const [pendingApprovals, setPendingApprovals] = useState(MOCK_PENDING_APPROVALS);
+  const [recentActivities, setRecentActivities] = useState(MOCK_RECENT_ACTIVITIES);
+  const [deptStats, setDeptStats] = useState(MOCK_DEPT_STATS);
+  const [upcoming, setUpcoming] = useState(MOCK_UPCOMING);
+  const [expandedCat, setExpandedCat] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/hq/hris/employees?limit=100&offset=0');
-      if (response.ok) {
-        const result = await response.json();
-        const employeeData = result.data || [];
-        
-        setEmployees(employeeData.length > 0 ? employeeData : mockEmployees);
-        
-        if (employeeData.length > 0) {
-          const departments = ['Operations', 'Sales', 'Warehouse', 'Finance', 'HR'];
-          const stats = departments.map(dept => {
-            const deptEmployees = employeeData.filter((e: Employee) => e.department === dept);
-            return {
-              department: dept,
-              totalEmployees: deptEmployees.length,
-              activeEmployees: deptEmployees.filter((e: Employee) => e.status === 'active').length,
-              avgPerformance: deptEmployees.length > 0 
-                ? Math.round(deptEmployees.reduce((sum: number, e: Employee) => sum + e.performance.score, 0) / deptEmployees.length)
-                : 0,
-              avgAttendance: deptEmployees.length > 0
-                ? Math.round(deptEmployees.reduce((sum: number, e: Employee) => sum + e.performance.attendance, 0) / deptEmployees.length)
-                : 0
-            };
-          });
-          setDepartmentStats(stats);
-        } else {
-          setDepartmentStats(mockDepartmentStats);
-        }
-      } else {
-        setEmployees(mockEmployees);
-        setDepartmentStats(mockDepartmentStats);
-      }
-    } catch (error) {
-      console.error('Error fetching HRIS data:', error);
-      setEmployees(mockEmployees);
-      setDepartmentStats(mockDepartmentStats);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     setMounted(true);
-    fetchData();
+    fetchDashboardData();
   }, []);
+
+  async function fetchDashboardData() {
+    setLoading(true);
+    try {
+      // Fetch multiple APIs in parallel
+      const [empRes, attRes, kpiRes, leaveRes] = await Promise.allSettled([
+        fetch('/api/hq/hris/employees?limit=200&offset=0').then(r => r.json()),
+        fetch('/api/hq/hris/attendance?period=month').then(r => r.json()),
+        fetch('/api/hq/hris/kpi').then(r => r.json()),
+        fetch('/api/hq/hris/leave').then(r => r.json()),
+      ]);
+
+      // Process employee stats
+      if (empRes.status === 'fulfilled' && empRes.value?.data) {
+        const employees = Array.isArray(empRes.value.data) ? empRes.value.data : [];
+        if (employees.length > 0) {
+          const total = empRes.value.meta?.total || employees.length;
+          const active = employees.filter((e: any) => e.status === 'active').length;
+          const onLeave = employees.filter((e: any) => e.status === 'on_leave').length;
+          const inactive = employees.filter((e: any) => e.status === 'inactive' || e.status === 'terminated').length;
+          const perfScores = employees.filter((e: any) => e.performance?.score > 0).map((e: any) => e.performance.score);
+          const avgPerf = perfScores.length > 0 ? Math.round(perfScores.reduce((s: number, v: number) => s + v, 0) / perfScores.length) : stats.avgPerf;
+          const topPerformers = employees.filter((e: any) => e.performance?.score >= 85).length;
+
+          // Build department stats from real data
+          const deptMap: Record<string, any> = {};
+          employees.forEach((e: any) => {
+            const dept = e.department || 'Other';
+            if (!deptMap[dept]) deptMap[dept] = { department: dept, total: 0, active: 0, perf: [], attend: [], color: 'blue' };
+            deptMap[dept].total++;
+            if (e.status === 'active') deptMap[dept].active++;
+            if (e.performance?.score) deptMap[dept].perf.push(e.performance.score);
+            if (e.performance?.attendance) deptMap[dept].attend.push(e.performance.attendance);
+          });
+          const realDeptStats = Object.values(deptMap).map((d: any, i: number) => ({
+            ...d,
+            perf: d.perf.length > 0 ? Math.round(d.perf.reduce((s: number, v: number) => s + v, 0) / d.perf.length) : 80,
+            attend: d.attend.length > 0 ? Math.round(d.attend.reduce((s: number, v: number) => s + v, 0) / d.attend.length) : 95,
+            color: ['blue', 'green', 'yellow', 'purple', 'indigo', 'cyan'][i % 6]
+          }));
+          if (realDeptStats.length > 0) setDeptStats(realDeptStats);
+
+          setStats(prev => ({ ...prev, total, active, onLeave, inactive, avgPerf, topPerformers }));
+        }
+      }
+
+      // Process attendance stats
+      if (attRes.status === 'fulfilled') {
+        const attData = attRes.value?.data || attRes.value;
+        const summary = attData?.summary;
+        if (summary?.avgAttendance) {
+          setStats(prev => ({ ...prev, attendanceToday: Math.round(summary.avgAttendance) }));
+        }
+      }
+
+      // Process KPI stats
+      if (kpiRes.status === 'fulfilled' && kpiRes.value?.summary) {
+        const kpiSummary = kpiRes.value.summary;
+        if (kpiSummary.avgAchievement) {
+          setStats(prev => ({ ...prev, avgKpi: kpiSummary.avgAchievement }));
+        }
+      }
+
+      // Process leave/pending approvals
+      if (leaveRes.status === 'fulfilled') {
+        const leaveData = leaveRes.value?.data;
+        if (Array.isArray(leaveData) && leaveData.length > 0) {
+          const pending = leaveData.filter((l: any) => l.status === 'pending');
+          if (pending.length > 0) {
+            const mapped = pending.slice(0, 5).map((l: any, i: number) => ({
+              id: l.id || String(i),
+              type: 'leave',
+              title: `Cuti ${l.leaveType === 'annual' ? 'Tahunan' : l.leaveType === 'sick' ? 'Sakit' : 'Personal'} - ${l.employeeName || 'Karyawan'}`,
+              subtitle: `${l.startDate} s/d ${l.endDate} (${l.totalDays || '-'} hari)`,
+              status: 'pending',
+              date: l.startDate || '',
+              color: l.leaveType === 'sick' ? 'red' : 'yellow'
+            }));
+            setPendingApprovals(mapped);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Dashboard data fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleApproval(id: string, status: 'approved' | 'rejected') {
+    try {
+      const res = await fetch('/api/hq/hris/leave', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status })
+      });
+      const data = await res.json();
+      if (data.success || res.ok) {
+        setPendingApprovals(prev => prev.filter(p => p.id !== id));
+      }
+    } catch (err) {
+      console.warn('Approval action failed:', err);
+    }
+  }
 
   if (!mounted) return null;
 
-  const totalEmployees = employees.length;
-  const activeEmployees = employees.filter(e => e.status === 'active').length;
-  const onLeaveEmployees = employees.filter(e => e.status === 'on_leave').length;
-  const avgPerformance = employees.reduce((sum, e) => sum + e.performance.score, 0) / totalEmployees || 0;
-  const avgKPI = employees.reduce((sum, e) => sum + e.performance.kpiAchievement, 0) / totalEmployees || 0;
-  const topPerformers = employees.filter(e => e.performance.score >= 85).length;
-
-  const filteredEmployees = employees.filter(e => {
-    const matchSearch = e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       e.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       e.branchName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchDept = departmentFilter === 'all' || e.department === departmentFilter;
-    const matchStatus = statusFilter === 'all' || e.status === statusFilter;
-    return matchSearch && matchDept && matchStatus;
-  });
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active': return <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">Aktif</span>;
-      case 'inactive': return <span className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">Tidak Aktif</span>;
-      case 'on_leave': return <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-full">Cuti</span>;
-      default: return null;
-    }
-  };
-
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case 'up': return <TrendingUp className="w-4 h-4 text-green-500" />;
-      case 'down': return <TrendingUp className="w-4 h-4 text-red-500 rotate-180" />;
-      default: return <div className="w-4 h-4 bg-gray-300 rounded-full" />;
-    }
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return 'text-green-600 bg-green-100';
-    if (score >= 70) return 'text-yellow-600 bg-yellow-100';
-    return 'text-red-600 bg-red-100';
-  };
+  const statCards = [
+    { label: 'Total Karyawan', value: stats.total, icon: Users, color: 'bg-blue-500', trend: '+3', trendUp: true },
+    { label: 'Karyawan Aktif', value: stats.active, icon: UserCheck, color: 'bg-green-500', trend: `${Math.round(stats.active / stats.total * 100)}%`, trendUp: true },
+    { label: 'Sedang Cuti', value: stats.onLeave, icon: Calendar, color: 'bg-yellow-500', trend: null, trendUp: false },
+    { label: 'Avg. Performance', value: `${stats.avgPerf}%`, icon: BarChart3, color: 'bg-purple-500', trend: '+2.3%', trendUp: true },
+    { label: 'Avg. KPI Achievement', value: `${stats.avgKpi}%`, icon: Target, color: 'bg-indigo-500', trend: '+5.1%', trendUp: true },
+    { label: 'Kehadiran Hari Ini', value: `${stats.attendanceToday}%`, icon: Clock, color: 'bg-emerald-500', trend: null, trendUp: true },
+    { label: 'Top Performers', value: stats.topPerformers, icon: Award, color: 'bg-orange-500', trend: '+5', trendUp: true },
+    { label: 'Pending Approval', value: pendingApprovals.length, icon: AlertCircle, color: 'bg-red-500', trend: null, trendUp: false },
+  ];
 
   return (
-    <HQLayout title="HRIS Dashboard" subtitle="Human Resource Information System - Monitoring Kinerja Karyawan">
+    <HQLayout title="HRIS Dashboard" subtitle="Human Resource Information System - Pusat Pengelolaan SDM">
       <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <div className="bg-white rounded-xl p-4 shadow-sm border">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="w-5 h-5 text-blue-600" />
+
+        {/* ── STATS ROW ── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+          {statCards.map((s, i) => (
+            <div key={i} className="bg-white rounded-xl p-3.5 shadow-sm border hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`p-1.5 rounded-lg ${s.color} bg-opacity-10`}>
+                  <s.icon className={`w-4 h-4 ${s.color.replace('bg-', 'text-')}`} />
+                </div>
+                {s.trend && (
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${s.trendUp ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                    {s.trend}
+                  </span>
+                )}
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Karyawan</p>
-                <p className="text-xl font-bold">{totalEmployees}</p>
-              </div>
+              <p className="text-xl font-bold text-gray-900">{s.value}</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">{s.label}</p>
             </div>
+          ))}
+        </div>
+
+        {/* ── QUICK ACTIONS ── */}
+        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-blue-600 rounded-2xl p-5 text-white">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold text-lg">Aksi Cepat</h3>
+              <p className="text-white/70 text-sm">Akses langsung ke tugas HR yang sering digunakan</p>
+            </div>
+            <Zap className="w-6 h-6 text-yellow-300" />
           </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <UserCheck className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Aktif</p>
-                <p className="text-xl font-bold">{activeEmployees}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Cuti</p>
-                <p className="text-xl font-bold">{onLeaveEmployees}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <BarChart3 className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Avg. Performance</p>
-                <p className="text-xl font-bold">{avgPerformance.toFixed(0)}%</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 rounded-lg">
-                <Target className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Avg. KPI</p>
-                <p className="text-xl font-bold">{avgKPI.toFixed(0)}%</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-4 shadow-sm border">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Award className="w-5 h-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Top Performers</p>
-                <p className="text-xl font-bold">{topPerformers}</p>
-              </div>
-            </div>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+            {QUICK_ACTIONS.map((a, i) => (
+              <button key={i} onClick={() => router.push(a.href)}
+                className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-center group">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <a.icon className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-medium">{a.label}</span>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Quick Links */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <a href="/hq/hris/kpi" className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold">KPI Dashboard</p>
-                <p className="text-sm text-blue-100">Monitor target & pencapaian</p>
-              </div>
-              <ChevronRight className="w-5 h-5" />
-            </div>
-          </a>
-          <a href="/hq/hris/attendance" className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold">Kehadiran</p>
-                <p className="text-sm text-green-100">Rekap absensi karyawan</p>
-              </div>
-              <ChevronRight className="w-5 h-5" />
-            </div>
-          </a>
-          <a href="/hq/hris/performance" className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold">Performance Review</p>
-                <p className="text-sm text-purple-100">Evaluasi kinerja</p>
-              </div>
-              <ChevronRight className="w-5 h-5" />
-            </div>
-          </a>
-          <a href="/hq/hris/reports" className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl p-4 hover:shadow-lg transition-all">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-semibold">Laporan HR</p>
-                <p className="text-sm text-orange-100">Analytics & insights</p>
-              </div>
-              <ChevronRight className="w-5 h-5" />
-            </div>
-          </a>
-        </div>
-
-        {/* Department Stats */}
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h3 className="text-lg font-semibold mb-4">Statistik per Departemen</h3>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {departmentStats.map((dept) => (
-              <div key={dept.department} className="border rounded-lg p-4 hover:shadow-md transition-all">
-                <h4 className="font-medium text-gray-900">{dept.department}</h4>
-                <div className="mt-2 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Karyawan:</span>
-                    <span className="font-medium">{dept.activeEmployees}/{dept.totalEmployees}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Performance:</span>
-                    <span className={`font-medium ${dept.avgPerformance >= 85 ? 'text-green-600' : dept.avgPerformance >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {dept.avgPerformance}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Kehadiran:</span>
-                    <span className="font-medium">{dept.avgAttendance}%</span>
-                  </div>
+        {/* ── MODULE NAVIGATION ── */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Modul HRIS</h3>
+            <p className="text-sm text-gray-500">{HRIS_MODULES.reduce((acc, c) => acc + c.modules.length, 0)} modul tersedia</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {HRIS_MODULES.map((cat) => (
+              <div key={cat.category} className="bg-white rounded-xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <div className="px-4 py-3 border-b bg-gray-50/50">
+                  <h4 className="font-semibold text-sm text-gray-800">{cat.category}</h4>
+                </div>
+                <div className="p-2">
+                  {cat.modules.map((m) => (
+                    <a key={m.key} href={m.href}
+                      className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors group">
+                      <div className={`w-9 h-9 rounded-lg ${m.color} flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
+                        <m.icon className="w-4.5 h-4.5 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 group-hover:text-indigo-600 transition-colors">{m.label}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{m.desc}</p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-indigo-400 transition-colors" />
+                    </a>
+                  ))}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Employee List */}
-        <div className="bg-white rounded-xl shadow-sm border">
-          <div className="p-4 border-b">
-            <div className="flex flex-col md:flex-row gap-4 justify-between">
-              <h3 className="text-lg font-semibold">Daftar Karyawan</h3>
-              <div className="flex flex-wrap gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Cari karyawan..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 pr-4 py-2 border rounded-lg text-sm w-64"
-                  />
-                </div>
-                <select
-                  value={departmentFilter}
-                  onChange={(e) => setDepartmentFilter(e.target.value)}
-                  className="px-3 py-2 border rounded-lg text-sm"
-                >
-                  <option value="all">Semua Departemen</option>
-                  <option value="Operations">Operations</option>
-                  <option value="Sales">Sales</option>
-                  <option value="Warehouse">Warehouse</option>
-                  <option value="Finance">Finance</option>
-                  <option value="HR">HR</option>
-                </select>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 border rounded-lg text-sm"
-                >
-                  <option value="all">Semua Status</option>
-                  <option value="active">Aktif</option>
-                  <option value="on_leave">Cuti</option>
-                  <option value="inactive">Tidak Aktif</option>
-                </select>
-                <button className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                  <Download className="w-4 h-4" />
-                  Export
-                </button>
+        {/* ── TWO COLUMN: PENDING APPROVALS + RECENT ACTIVITIES ── */}
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Pending Approvals */}
+          <div className="bg-white rounded-xl border shadow-sm">
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <h3 className="font-semibold text-gray-900">Pending Approval</h3>
+                <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">{pendingApprovals.length}</span>
               </div>
+              <a href="/hq/hris/leave" className="text-xs text-indigo-600 hover:underline flex items-center gap-1">Lihat Semua <ArrowRight className="w-3 h-3" /></a>
+            </div>
+            <div className="divide-y max-h-80 overflow-y-auto">
+              {pendingApprovals.map((item) => (
+                <div key={item.id} className="px-5 py-3 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{item.subtitle}</p>
+                    </div>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <button onClick={() => handleApproval(item.id, 'approved')} className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors" title="Approve">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleApproval(item.id, 'rejected')} className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors" title="Reject">
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">{item.date}</p>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Karyawan</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Posisi</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabang</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Performance</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">KPI</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Kehadiran</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Rating</th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filteredEmployees.map((employee) => (
-                  <tr key={employee.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
-                          {employee.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{employee.name}</p>
-                          <p className="text-sm text-gray-500">{employee.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-medium">{employee.position}</p>
-                      <p className="text-xs text-gray-500">{employee.department}</p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm">{employee.branchName}</p>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {getStatusBadge(employee.status)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <span className={`px-2 py-1 rounded text-sm font-medium ${getScoreColor(employee.performance.score)}`}>
-                          {employee.performance.score}%
-                        </span>
-                        {getTrendIcon(employee.performance.trend)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`text-sm font-medium ${employee.performance.kpiAchievement >= 100 ? 'text-green-600' : 'text-orange-600'}`}>
-                        {employee.performance.kpiAchievement}%
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="text-sm">{employee.performance.attendance}%</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                        <span className="text-sm font-medium">{employee.performance.rating}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button 
-                          onClick={() => { setSelectedEmployee(employee); setShowDetailModal(true); }}
-                          className="p-1 hover:bg-gray-100 rounded"
-                        >
-                          <Eye className="w-4 h-4 text-gray-500" />
-                        </button>
-                        <button className="p-1 hover:bg-gray-100 rounded">
-                          <Edit className="w-4 h-4 text-gray-500" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Recent Activities */}
+          <div className="bg-white rounded-xl border shadow-sm">
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <div className="flex items-center gap-2">
+                <Activity className="w-4 h-4 text-indigo-600" />
+                <h3 className="font-semibold text-gray-900">Aktivitas Terbaru</h3>
+              </div>
+            </div>
+            <div className="divide-y max-h-80 overflow-y-auto">
+              {recentActivities.map((act) => (
+                <div key={act.id} className="px-5 py-3 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg ${act.color} flex-shrink-0 mt-0.5`}>
+                      <act.icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{act.action}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{act.detail}</p>
+                    </div>
+                    <span className="text-[10px] text-gray-400 whitespace-nowrap">{act.time}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Detail Modal */}
-        {showDetailModal && selectedEmployee && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-              <div className="p-6 border-b">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                      {selectedEmployee?.name?.split(' ').map(n => n[0]).join('').substring(0, 2) || '-'}
+        {/* ── TWO COLUMN: DEPT OVERVIEW + UPCOMING CALENDAR ── */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Department Overview */}
+          <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm">
+            <div className="px-5 py-4 border-b">
+              <h3 className="font-semibold text-gray-900">Overview per Departemen</h3>
+            </div>
+            <div className="p-5">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {deptStats.map((d) => (
+                  <div key={d.department} className="border rounded-xl p-4 hover:shadow-md transition-all hover:border-indigo-200 group">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-gray-900 text-sm">{d.department}</h4>
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{d.active}/{d.total}</span>
                     </div>
-                    <div>
-                      <h3 className="text-xl font-bold">{selectedEmployee?.name}</h3>
-                      <p className="text-gray-500">{selectedEmployee?.position} - {selectedEmployee?.department}</p>
-                      {getStatusBadge(selectedEmployee?.status)}
-                    </div>
-                  </div>
-                  <button onClick={() => setShowDetailModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-                </div>
-              </div>
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Email</p>
-                    <p className="font-medium">{selectedEmployee?.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Telepon</p>
-                    <p className="font-medium">{selectedEmployee?.phone}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Cabang</p>
-                    <p className="font-medium">{selectedEmployee?.branchName}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Tanggal Bergabung</p>
-                    <p className="font-medium">{selectedEmployee?.joinDate ? new Date(selectedEmployee.joinDate).toLocaleDateString('id-ID') : '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Atasan</p>
-                    <p className="font-medium">{selectedEmployee?.manager || '-'}</p>
-                  </div>
-                </div>
-
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-4">Performance Metrics</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-blue-50 rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-blue-600">{selectedEmployee?.performance?.score || 0}%</p>
-                      <p className="text-sm text-gray-500">Performance Score</p>
-                    </div>
-                    <div className="bg-green-50 rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-green-600">{selectedEmployee?.performance?.kpiAchievement || 0}%</p>
-                      <p className="text-sm text-gray-500">KPI Achievement</p>
-                    </div>
-                    <div className="bg-purple-50 rounded-lg p-4 text-center">
-                      <p className="text-2xl font-bold text-purple-600">{selectedEmployee?.performance?.attendance || 0}%</p>
-                      <p className="text-sm text-gray-500">Attendance</p>
-                    </div>
-                    <div className="bg-yellow-50 rounded-lg p-4 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                        <p className="text-2xl font-bold text-yellow-600">{selectedEmployee?.performance?.rating || 0}</p>
+                    <div className="space-y-2.5">
+                      <div>
+                        <div className="flex justify-between text-xs mb-1"><span className="text-gray-500">Performance</span><span className={`font-medium ${d.perf >= 85 ? 'text-green-600' : d.perf >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>{d.perf}%</span></div>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5"><div className={`h-1.5 rounded-full ${d.perf >= 85 ? 'bg-green-500' : d.perf >= 70 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${d.perf}%` }} /></div>
                       </div>
-                      <p className="text-sm text-gray-500">Rating</p>
+                      <div>
+                        <div className="flex justify-between text-xs mb-1"><span className="text-gray-500">Kehadiran</span><span className="font-medium">{d.attend}%</span></div>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5"><div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${d.attend}%` }} /></div>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex gap-2 justify-end">
-                  <button className="px-4 py-2 border rounded-lg hover:bg-gray-50">Lihat Detail KPI</button>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Edit Karyawan</button>
-                </div>
+                ))}
               </div>
             </div>
           </div>
-        )}
+
+          {/* Upcoming Events */}
+          <div className="bg-white rounded-xl border shadow-sm">
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-indigo-600" />
+                <h3 className="font-semibold text-gray-900">Agenda Mendatang</h3>
+              </div>
+            </div>
+            <div className="divide-y">
+              {upcoming.map((ev) => {
+                const colors: Record<string, string> = {
+                  red: 'bg-red-500', purple: 'bg-purple-500', orange: 'bg-orange-500',
+                  yellow: 'bg-yellow-500', blue: 'bg-blue-500', indigo: 'bg-indigo-500'
+                };
+                return (
+                  <div key={ev.id} className="px-5 py-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-8 rounded-full ${colors[ev.color] || 'bg-gray-400'} flex-shrink-0`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{ev.title}</p>
+                        <p className="text-xs text-gray-500">{ev.date}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="p-3 border-t">
+              <button className="w-full text-center text-xs text-indigo-600 hover:text-indigo-700 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors">
+                Lihat Semua Agenda →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── ANNOUNCEMENTS / INFO BANNER ── */}
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-5">
+          <div className="flex items-start gap-4">
+            <div className="p-2 bg-amber-100 rounded-xl flex-shrink-0">
+              <Bell className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-amber-900">Pengumuman HR</h4>
+              <p className="text-sm text-amber-700 mt-1">Batas pengumpulan data lembur Februari 2026 adalah <strong>5 Maret 2026</strong>. Pastikan semua manajer cabang sudah menginput data timesheet dan lembur karyawan masing-masing melalui modul Timesheet atau Manager Self Service.</p>
+              <div className="flex gap-2 mt-3">
+                <a href="/hq/hris/attendance-management" className="text-xs px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700">Kelola Kehadiran</a>
+                <a href="/hq/hris/payroll" className="text-xs px-3 py-1.5 border border-amber-300 text-amber-800 rounded-lg hover:bg-amber-100">Proses Payroll</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </HQLayout>
   );

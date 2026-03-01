@@ -76,13 +76,59 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
     fetchNotifications();
   }, [router.pathname, filteredConfig.groups]);
 
-  const fetchNotifications = () => {
-    setNotifications([
-      { id: 1, type: 'urgent', title: 'IR Urgent', message: 'Cabang Surabaya meminta stok darurat', time: '5 menit lalu' },
-      { id: 2, type: 'warning', title: 'Stok Rendah', message: '3 cabang memiliki stok kritis', time: '15 menit lalu' },
-      { id: 3, type: 'info', title: 'Laporan Harian', message: 'Laporan penjualan kemarin sudah siap', time: '1 jam lalu' },
-    ]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch('/api/hq/sfa/notifications?action=my-notifications&limit=10&unreadOnly=false');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setNotifications((json.data || []).map((n: any) => ({
+            id: n.id,
+            type: n.type === 'error' ? 'urgent' : n.type === 'warning' ? 'warning' : 'info',
+            title: n.title,
+            message: n.message,
+            time: n.created_at ? formatTimeAgo(n.created_at) : '',
+            isRead: n.is_read,
+            referenceId: n.reference_id,
+            referenceType: n.reference_type,
+          })));
+          setUnreadCount(json.unreadCount || 0);
+        }
+      }
+    } catch {
+      // Fallback — keep empty
+    }
   };
+
+  // Poll notifications every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleMarkRead = async (notifId?: number) => {
+    try {
+      await fetch('/api/hq/sfa/notifications?action=mark-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notifId ? { notificationIds: [notifId] } : {}),
+      });
+      fetchNotifications();
+    } catch {}
+  };
+
+  function formatTimeAgo(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Baru saja';
+    if (mins < 60) return `${mins} menit lalu`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} jam lalu`;
+    const days = Math.floor(hours / 24);
+    return `${days} hari lalu`;
+  }
 
   if (!mounted) {
     return (
@@ -296,21 +342,35 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
                   className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                   <Bell className="w-5 h-5 text-gray-600" />
-                  {notifications.length > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
                   )}
                 </button>
 
                 {showNotifications && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
-                    <div className="p-4 border-b border-gray-200">
+                  <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                       <h3 className="font-semibold text-gray-900">Notifikasi</h3>
+                      {unreadCount > 0 && (
+                        <button onClick={() => handleMarkRead()} className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                          Tandai semua dibaca
+                        </button>
+                      )}
                     </div>
                     <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 && (
+                        <div className="p-8 text-center text-gray-400 text-sm">Tidak ada notifikasi</div>
+                      )}
                       {notifications.map((notif) => (
-                        <div key={notif.id} className="p-4 hover:bg-gray-50 border-b border-gray-100 cursor-pointer">
+                        <div
+                          key={notif.id}
+                          onClick={() => { if (!notif.isRead) handleMarkRead(notif.id); }}
+                          className={`p-4 hover:bg-gray-50 border-b border-gray-100 cursor-pointer ${!notif.isRead ? 'bg-blue-50/50' : ''}`}
+                        >
                           <div className="flex items-start gap-3">
-                            <div className={`p-2 rounded-lg ${
+                            <div className={`p-2 rounded-lg flex-shrink-0 ${
                               notif.type === 'urgent' ? 'bg-red-100' :
                               notif.type === 'warning' ? 'bg-yellow-100' : 'bg-blue-100'
                             }`}>
@@ -319,10 +379,11 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
                                <CheckCircle className="w-4 h-4 text-blue-600" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 text-sm">{notif.title}</p>
-                              <p className="text-sm text-gray-500 truncate">{notif.message}</p>
+                              <p className={`text-sm ${!notif.isRead ? 'font-semibold text-gray-900' : 'font-medium text-gray-600'}`}>{notif.title}</p>
+                              <p className="text-sm text-gray-500 line-clamp-2">{notif.message}</p>
                               <p className="text-xs text-gray-400 mt-1">{notif.time}</p>
                             </div>
+                            {!notif.isRead && <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>}
                           </div>
                         </div>
                       ))}

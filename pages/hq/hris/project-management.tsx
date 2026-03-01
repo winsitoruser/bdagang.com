@@ -1,13 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
-import { Briefcase, Users, Clock, DollarSign, Plus, Edit, Trash2, X, Check, Eye, Search, BarChart3, Calendar } from 'lucide-react';
+import { Briefcase, Users, Clock, DollarSign, Plus, Edit, Trash2, X, Check, Eye, Search, BarChart3, Calendar, FileText, FolderOpen, Upload, Download, File, FileSpreadsheet, FileImage, FilePlus, Tag, Filter, Star, Shield, AlertTriangle, ChevronDown, ChevronRight, ExternalLink, Copy, Paperclip } from 'lucide-react';
 
 interface ProjectItem { id: string; project_code: string; name: string; description: string; client_name: string; location: string; start_date: string; end_date: string; status: string; budget_amount: number; actual_cost: number; project_manager_id: number; department: string; industry: string; completion_percent: number; priority: string; milestones: any[]; }
 interface Worker { id: string; project_id: string; employee_id: number; role: string; assignment_start: string; assignment_end: string; daily_rate: number; hourly_rate: number; allocation_percent: number; status: string; worker_type: string; contract_number: string; }
 interface Timesheet { id: string; project_id: string; employee_id: number; timesheet_date: string; hours_worked: number; overtime_hours: number; activity_description: string; task_category: string; status: string; }
 interface PayrollItem { id: string; project_id: string; employee_id: number; period_start: string; period_end: string; regular_hours: number; overtime_hours: number; days_worked: number; gross_amount: number; net_amount: number; status: string; }
 
-type TabKey = 'projects' | 'workers' | 'timesheets' | 'payroll';
+interface ProjectDocument { id: string; projectId: string | null; name: string; description: string; category: string; originalFilename: string; filePath: string; fileSize: number; mimeType: string; fileExtension: string; uploadedBy: string; uploadedAt: string; tags: string; version: string; status: string; }
+interface DocTemplate { id: string; name: string; description: string; category: string; icon: string; color: string; format: string; version: string; lastUpdated: string; sections: string[]; tags: string[]; downloadCount: number; }
+
+type TabKey = 'projects' | 'workers' | 'timesheets' | 'payroll' | 'documents' | 'templates';
 
 export default function ProjectManagementPage() {
   const [tab, setTab] = useState<TabKey>('projects');
@@ -23,6 +26,32 @@ export default function ProjectManagementPage() {
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null);
   const [selectedProject, setSelectedProject] = useState('');
   const [projectDetail, setProjectDetail] = useState<any>(null);
+
+  // Document & Template states
+  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
+  const [templates, setTemplates] = useState<DocTemplate[]>([]);
+  const [templateCategories, setTemplateCategories] = useState<Record<string, DocTemplate[]>>({});
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadForm, setUploadForm] = useState({ name: '', description: '', category: 'Umum', projectId: '', tags: '' });
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [docFilter, setDocFilter] = useState({ category: '', search: '' });
+  const [tplFilter, setTplFilter] = useState({ category: '', search: '' });
+  const [selectedTemplate, setSelectedTemplate] = useState<DocTemplate | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+
+  // Bulk import states
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkType, setBulkType] = useState<'workers' | 'timesheets' | 'payroll'>('workers');
+  const [bulkCsvText, setBulkCsvText] = useState('');
+  const [bulkParsed, setBulkParsed] = useState<any[]>([]);
+  const [bulkErrors, setBulkErrors] = useState<string[]>([]);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkProjectId, setBulkProjectId] = useState('');
+  const [bulkResult, setBulkResult] = useState<{ success: number; failed: number } | null>(null);
 
   const [projForm, setProjForm] = useState({ name: '', description: '', clientName: '', location: '', startDate: '', endDate: '', budgetAmount: 0, department: '', industry: '', priority: 'medium', contractNumber: '', contractValue: 0 });
   const [workerForm, setWorkerForm] = useState({ projectId: '', employeeId: '', role: '', assignmentStart: '', assignmentEnd: '', dailyRate: 0, hourlyRate: 0, allocationPercent: 100, workerType: 'permanent' });
@@ -55,6 +84,214 @@ export default function ProjectManagementPage() {
   }, [api]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Document & Template API
+  const docApi = useCallback(async (action: string, method = 'GET', body?: any, extra = '') => {
+    const opts: any = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(`/api/hq/hris/project-documents?action=${action}${extra}`, opts);
+    return r.json();
+  }, []);
+
+  const loadDocuments = useCallback(async () => {
+    try {
+      const [docs, tpls] = await Promise.all([
+        docApi('documents'),
+        docApi('templates')
+      ]);
+      setDocuments(docs.data || []);
+      setTemplates(tpls.data || []);
+      setTemplateCategories(tpls.categories || {});
+    } catch (e) { console.error(e); }
+  }, [docApi]);
+
+  useEffect(() => {
+    if (tab === 'documents' || tab === 'templates') loadDocuments();
+  }, [tab, loadDocuments]);
+
+  const handleUpload = async () => {
+    if (uploadFiles.length === 0) { showToast('Pilih file terlebih dahulu', 'error'); return; }
+    setUploading(true);
+    try {
+      for (const file of uploadFiles) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('name', uploadForm.name || file.name);
+        formData.append('description', uploadForm.description);
+        formData.append('category', uploadForm.category);
+        formData.append('projectId', uploadForm.projectId);
+        formData.append('tags', uploadForm.tags);
+        await fetch('/api/hq/hris/project-documents?action=upload', { method: 'POST', body: formData });
+      }
+      showToast(`${uploadFiles.length} dokumen berhasil diupload`);
+      setShowUploadModal(false);
+      setUploadFiles([]);
+      setUploadForm({ name: '', description: '', category: 'Umum', projectId: '', tags: '' });
+      loadDocuments();
+    } catch (e) { showToast('Upload gagal', 'error'); }
+    setUploading(false);
+  };
+
+  const handleDeleteDoc = async (id: string) => {
+    if (!confirm('Hapus dokumen ini?')) return;
+    await docApi('documents', 'DELETE', null, `&id=${id}`);
+    showToast('Dokumen dihapus');
+    loadDocuments();
+  };
+
+  const handleDrag = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true); else if (e.type === 'dragleave') setDragActive(false); };
+  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); if (e.dataTransfer.files?.length) setUploadFiles(prev => [...prev, ...Array.from(e.dataTransfer.files)]); };
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files?.length) setUploadFiles(prev => [...prev, ...Array.from(e.target.files!)]); };
+  const removeFile = (idx: number) => setUploadFiles(prev => prev.filter((_, i) => i !== idx));
+
+  const fmtSize = (bytes: number) => { if (bytes < 1024) return bytes + ' B'; if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'; return (bytes / 1048576).toFixed(1) + ' MB'; };
+  const getFileIcon = (ext: string) => { const e = ext?.toLowerCase().replace('.', ''); if (['xlsx', 'xls', 'csv'].includes(e)) return <FileSpreadsheet className="w-5 h-5 text-green-600" />; if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(e)) return <FileImage className="w-5 h-5 text-pink-600" />; if (['pdf'].includes(e)) return <File className="w-5 h-5 text-red-600" />; return <FileText className="w-5 h-5 text-blue-600" />; };
+
+  const DOC_CATEGORIES = ['Umum', 'Kontrak', 'Proposal', 'Laporan', 'Invoice', 'SPK', 'K3/Safety', 'Legalitas', 'Foto/Dokumentasi', 'Lainnya'];
+
+  const filteredDocs = documents.filter(d => {
+    if (docFilter.category && d.category !== docFilter.category) return false;
+    if (docFilter.search && !d.name.toLowerCase().includes(docFilter.search.toLowerCase()) && !d.originalFilename?.toLowerCase().includes(docFilter.search.toLowerCase())) return false;
+    return true;
+  });
+
+  const filteredTemplates = templates.filter(t => {
+    if (tplFilter.category && t.category !== tplFilter.category) return false;
+    if (tplFilter.search && !t.name.toLowerCase().includes(tplFilter.search.toLowerCase()) && !t.description.toLowerCase().includes(tplFilter.search.toLowerCase())) return false;
+    return true;
+  });
+
+  // CSV Parser
+  const parseCsv = (csv: string): { headers: string[]; rows: Record<string, string>[] } => {
+    const lines = csv.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 2) return { headers: [], rows: [] };
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const rows = lines.slice(1).map(line => {
+      const vals = line.split(',').map(v => v.trim().replace(/"/g, ''));
+      const obj: Record<string, string> = {};
+      headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+      return obj;
+    });
+    return { headers, rows };
+  };
+
+  const BULK_HEADERS: Record<string, { required: string[]; optional: string[]; example: string }> = {
+    workers: {
+      required: ['employee_id', 'role', 'daily_rate'],
+      optional: ['hourly_rate', 'allocation_percent', 'worker_type', 'assignment_start', 'assignment_end'],
+      example: 'employee_id,role,daily_rate,worker_type,allocation_percent\n101,Site Engineer,500000,contract,100\n102,Foreman,350000,contract,100\n103,Helper,200000,freelance,50'
+    },
+    timesheets: {
+      required: ['employee_id', 'timesheet_date', 'hours_worked'],
+      optional: ['overtime_hours', 'activity_description', 'task_category'],
+      example: 'employee_id,timesheet_date,hours_worked,overtime_hours,activity_description\n101,2026-02-28,8,2,Pengecoran lantai 3\n102,2026-02-28,8,0,Supervisi pekerja\n103,2026-02-28,6,0,Angkut material'
+    },
+    payroll: {
+      required: ['employee_id', 'period_start', 'period_end'],
+      optional: [],
+      example: 'employee_id,period_start,period_end\n101,2026-02-01,2026-02-28\n102,2026-02-01,2026-02-28\n103,2026-02-01,2026-02-28'
+    }
+  };
+
+  const parseBulkCsv = (text: string, type: 'workers' | 'timesheets' | 'payroll') => {
+    const { headers, rows } = parseCsv(text);
+    const errors: string[] = [];
+    const spec = BULK_HEADERS[type];
+
+    if (rows.length === 0) { errors.push('Tidak ada data ditemukan. Pastikan CSV memiliki header dan minimal 1 baris data.'); setBulkErrors(errors); setBulkParsed([]); return; }
+
+    spec.required.forEach(h => {
+      if (!headers.includes(h)) errors.push(`Kolom wajib "${h}" tidak ditemukan di header CSV.`);
+    });
+
+    rows.forEach((row, i) => {
+      spec.required.forEach(h => {
+        if (!row[h]) errors.push(`Baris ${i + 1}: "${h}" kosong.`);
+      });
+      if (type === 'workers' && row.daily_rate && isNaN(Number(row.daily_rate))) errors.push(`Baris ${i + 1}: daily_rate bukan angka.`);
+      if (type === 'timesheets' && row.hours_worked && isNaN(Number(row.hours_worked))) errors.push(`Baris ${i + 1}: hours_worked bukan angka.`);
+    });
+
+    setBulkErrors(errors.slice(0, 10));
+    setBulkParsed(errors.filter(e => e.includes('tidak ditemukan')).length === 0 ? rows : []);
+  };
+
+  const openBulk = (type: 'workers' | 'timesheets' | 'payroll') => {
+    setBulkType(type);
+    setBulkCsvText('');
+    setBulkParsed([]);
+    setBulkErrors([]);
+    setBulkResult(null);
+    setBulkProjectId(selectedProject || '');
+    setShowBulkModal(true);
+  };
+
+  const handleBulkImport = async () => {
+    if (bulkParsed.length === 0) return;
+    if (!bulkProjectId && bulkType !== 'payroll') { showToast('Pilih proyek terlebih dahulu', 'error'); return; }
+    setBulkUploading(true);
+    setBulkResult(null);
+    try {
+      if (bulkType === 'workers') {
+        const workers = bulkParsed.map(r => ({
+          employeeId: r.employee_id, role: r.role, dailyRate: Number(r.daily_rate) || 0,
+          hourlyRate: Number(r.hourly_rate) || 0, allocationPercent: Number(r.allocation_percent) || 100,
+          workerType: r.worker_type || 'contract', assignmentStart: r.assignment_start || null, assignmentEnd: r.assignment_end || null
+        }));
+        const res = await api('workers-bulk', 'POST', { projectId: bulkProjectId, workers });
+        setBulkResult({ success: res.count || workers.length, failed: workers.length - (res.count || workers.length) });
+      } else if (bulkType === 'timesheets') {
+        const entries = bulkParsed.map(r => ({
+          projectId: bulkProjectId, employeeId: r.employee_id, timesheetDate: r.timesheet_date,
+          hoursWorked: Number(r.hours_worked) || 0, overtimeHours: Number(r.overtime_hours) || 0,
+          activityDescription: r.activity_description || '', taskCategory: r.task_category || '', status: 'submitted'
+        }));
+        const res = await api('timesheets-bulk', 'POST', { entries });
+        setBulkResult({ success: res.count || entries.length, failed: 0 });
+      } else if (bulkType === 'payroll') {
+        const projId = bulkProjectId;
+        let success = 0, failed = 0;
+        for (const r of bulkParsed) {
+          try {
+            await api('calculate-payroll', 'POST', { projectId: projId, employeeId: r.employee_id, periodStart: r.period_start, periodEnd: r.period_end });
+            success++;
+          } catch { failed++; }
+        }
+        setBulkResult({ success, failed });
+      }
+      showToast(`Bulk import berhasil!`);
+      loadData();
+    } catch (e) { showToast('Bulk import gagal', 'error'); }
+    setBulkUploading(false);
+  };
+
+  const handleCsvFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      setBulkCsvText(text);
+      parseBulkCsv(text, bulkType);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const downloadCsvTemplate = (type: 'workers' | 'timesheets' | 'payroll') => {
+    const spec = BULK_HEADERS[type];
+    const blob = new Blob([spec.example], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `template-${type}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const BULK_LABELS: Record<string, { title: string; color: string }> = {
+    workers: { title: 'Bulk Import Tenaga Kerja', color: 'green' },
+    timesheets: { title: 'Bulk Import Timesheet', color: 'blue' },
+    payroll: { title: 'Bulk Hitung Payroll', color: 'purple' }
+  };
 
   const openAdd = (type: string) => {
     setEditingItem(null); setModalType(type); setShowModal(true);
@@ -102,6 +339,8 @@ export default function ProjectManagementPage() {
     { key: 'workers', label: 'Tenaga Kerja', icon: Users },
     { key: 'timesheets', label: 'Timesheet', icon: Clock },
     { key: 'payroll', label: 'Payroll Proyek', icon: DollarSign },
+    { key: 'documents', label: 'Dokumen', icon: FolderOpen },
+    { key: 'templates', label: 'Template', icon: FileText },
   ];
 
   return (
@@ -264,9 +503,14 @@ export default function ProjectManagementPage() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Tenaga Kerja Proyek</h2>
-            <button onClick={() => openAdd('worker')} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
-              <Plus className="w-4 h-4" /> Tambah Pekerja
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => openBulk('workers')} className="flex items-center gap-2 px-4 py-2 border border-green-600 text-green-700 rounded-lg text-sm hover:bg-green-50">
+                <Upload className="w-4 h-4" /> Bulk Import CSV
+              </button>
+              <button onClick={() => openAdd('worker')} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+                <Plus className="w-4 h-4" /> Tambah Pekerja
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -310,9 +554,14 @@ export default function ProjectManagementPage() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Timesheet Proyek</h2>
-            <button onClick={() => openAdd('timesheet')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-              <Plus className="w-4 h-4" /> Input Timesheet
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => openBulk('timesheets')} className="flex items-center gap-2 px-4 py-2 border border-blue-600 text-blue-700 rounded-lg text-sm hover:bg-blue-50">
+                <Upload className="w-4 h-4" /> Bulk Import CSV
+              </button>
+              <button onClick={() => openAdd('timesheet')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                <Plus className="w-4 h-4" /> Input Timesheet
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -363,9 +612,14 @@ export default function ProjectManagementPage() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Payroll Berbasis Proyek</h2>
-            <button onClick={() => openAdd('calc-payroll')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
-              <DollarSign className="w-4 h-4" /> Hitung Payroll
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => openBulk('payroll')} className="flex items-center gap-2 px-4 py-2 border border-purple-600 text-purple-700 rounded-lg text-sm hover:bg-purple-50">
+                <Upload className="w-4 h-4" /> Bulk Hitung CSV
+              </button>
+              <button onClick={() => openAdd('calc-payroll')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
+                <DollarSign className="w-4 h-4" /> Hitung Payroll
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -414,6 +668,326 @@ export default function ProjectManagementPage() {
               </tbody>
             </table>
             {payrollItems.length === 0 && <p className="text-center text-gray-400 py-8">Belum ada data payroll proyek</p>}
+          </div>
+        </div>
+      )}
+
+      {/* DOCUMENTS TAB */}
+      {!loading && tab === 'documents' && (
+        <div>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
+            <div>
+              <h2 className="text-lg font-semibold">Dokumen Proyek</h2>
+              <p className="text-sm text-gray-500">{filteredDocs.length} dokumen</p>
+            </div>
+            <button onClick={() => { setShowUploadModal(true); setUploadFiles([]); setUploadForm({ name: '', description: '', category: 'Umum', projectId: '', tags: '' }); }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-sm font-medium hover:from-indigo-700 hover:to-purple-700 shadow-md shadow-indigo-200 transition-all">
+              <Upload className="w-4 h-4" /> Upload Dokumen
+            </button>
+          </div>
+
+          {/* Filter bar */}
+          <div className="flex flex-wrap gap-3 mb-5">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input value={docFilter.search} onChange={e => setDocFilter({ ...docFilter, search: e.target.value })} placeholder="Cari dokumen..." className="w-full pl-9 pr-3 py-2.5 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none" />
+            </div>
+            <select value={docFilter.category} onChange={e => setDocFilter({ ...docFilter, category: e.target.value })} className="px-3 py-2.5 border rounded-xl text-sm bg-white min-w-[150px]">
+              <option value="">Semua Kategori</option>
+              {DOC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {/* Documents grid */}
+          {filteredDocs.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredDocs.map(doc => (
+                <div key={doc.id} className="bg-white border rounded-xl p-4 hover:shadow-lg hover:border-indigo-200 transition-all group">
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-50 transition-colors">
+                      {getFileIcon(doc.fileExtension)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 text-sm truncate">{doc.name}</h3>
+                      <p className="text-xs text-gray-500 truncate">{doc.originalFilename}</p>
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <a href={doc.filePath} target="_blank" rel="noreferrer" className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"><Download className="w-3.5 h-3.5" /></a>
+                      <button onClick={() => handleDeleteDoc(doc.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </div>
+                  {doc.description && <p className="text-xs text-gray-500 line-clamp-2 mb-3">{doc.description}</p>}
+                  <div className="flex items-center gap-2 flex-wrap mb-3">
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-indigo-50 text-indigo-700 rounded-full"><Tag className="w-3 h-3" />{doc.category}</span>
+                    <span className="text-xs text-gray-400 uppercase font-mono">{doc.fileExtension?.replace('.', '')}</span>
+                    <span className="text-xs text-gray-400">{fmtSize(doc.fileSize)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-400 pt-2 border-t">
+                    <span>{doc.uploadedBy}</span>
+                    <span>{new Date(doc.uploadedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 bg-white border-2 border-dashed rounded-2xl">
+              <FolderOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">Belum ada dokumen</p>
+              <p className="text-sm text-gray-400 mt-1">Upload dokumen pertama Anda untuk mulai mengelola</p>
+              <button onClick={() => { setShowUploadModal(true); setUploadFiles([]); }} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+                <Upload className="w-4 h-4 inline mr-1.5" />Upload Sekarang
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* UPLOAD MODAL */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-5 border-b">
+              <div>
+                <h3 className="text-lg font-semibold">Upload Dokumen</h3>
+                <p className="text-sm text-gray-500">Upload file untuk proyek (maks 25MB per file)</p>
+              </div>
+              <button onClick={() => setShowUploadModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* Drag & Drop Zone */}
+              <div onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${dragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400 hover:bg-gray-50'}`}
+                onClick={() => fileInputRef.current?.click()}>
+                <input ref={fileInputRef} type="file" multiple onChange={handleFileSelect} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.zip,.rar" />
+                <div className={`w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center ${dragActive ? 'bg-indigo-100' : 'bg-gray-100'}`}>
+                  <Upload className={`w-7 h-7 ${dragActive ? 'text-indigo-600' : 'text-gray-400'}`} />
+                </div>
+                <p className="font-medium text-gray-700">Drag & drop file di sini</p>
+                <p className="text-sm text-gray-500 mt-1">atau <span className="text-indigo-600 font-medium">klik untuk pilih file</span></p>
+                <p className="text-xs text-gray-400 mt-2">PDF, DOC, XLS, PPT, JPG, PNG, ZIP (maks 25MB)</p>
+              </div>
+
+              {/* File list */}
+              {uploadFiles.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">{uploadFiles.length} file dipilih</p>
+                  {uploadFiles.map((file, idx) => (
+                    <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      {getFileIcon(file.name.split('.').pop() || '')}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{file.name}</p>
+                        <p className="text-xs text-gray-400">{fmtSize(file.size)}</p>
+                      </div>
+                      <button onClick={() => removeFile(idx)} className="p-1 text-gray-400 hover:text-red-500"><X className="w-4 h-4" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-sm font-medium text-gray-700">Nama Dokumen</label><input value={uploadForm.name} onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })} placeholder="Opsional (default: nama file)" className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>
+                <div><label className="text-sm font-medium text-gray-700">Kategori</label>
+                  <select value={uploadForm.category} onChange={e => setUploadForm({ ...uploadForm, category: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                    {DOC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div><label className="text-sm font-medium text-gray-700">Proyek Terkait</label>
+                <select value={uploadForm.projectId} onChange={e => setUploadForm({ ...uploadForm, projectId: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                  <option value="">Tidak spesifik (umum)</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}
+                </select>
+              </div>
+              <div><label className="text-sm font-medium text-gray-700">Deskripsi</label><textarea value={uploadForm.description} onChange={e => setUploadForm({ ...uploadForm, description: e.target.value })} placeholder="Keterangan singkat dokumen..." className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" rows={2} /></div>
+              <div><label className="text-sm font-medium text-gray-700">Tags</label><input value={uploadForm.tags} onChange={e => setUploadForm({ ...uploadForm, tags: e.target.value })} placeholder="Pisahkan dengan koma, mis: kontrak, legal" className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>
+            </div>
+            <div className="flex justify-end gap-2 p-5 border-t">
+              <button onClick={() => setShowUploadModal(false)} className="px-4 py-2 text-sm text-gray-700 border rounded-lg hover:bg-gray-50">Batal</button>
+              <button onClick={handleUpload} disabled={uploading || uploadFiles.length === 0}
+                className="px-5 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                {uploading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Uploading...</> : <><Upload className="w-4 h-4" /> Upload {uploadFiles.length > 0 ? `(${uploadFiles.length})` : ''}</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TEMPLATES TAB */}
+      {!loading && tab === 'templates' && !selectedTemplate && (
+        <div>
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold">Template Dokumen Proyek</h2>
+            <p className="text-sm text-gray-500">Kumpulan template siap pakai untuk kebutuhan manajemen proyek ({templates.length} template)</p>
+          </div>
+
+          {/* Filter bar */}
+          <div className="flex flex-wrap gap-3 mb-5">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input value={tplFilter.search} onChange={e => setTplFilter({ ...tplFilter, search: e.target.value })} placeholder="Cari template..." className="w-full pl-9 pr-3 py-2.5 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none" />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={() => setTplFilter({ ...tplFilter, category: '' })} className={`px-3 py-2 rounded-xl text-xs font-medium transition-all ${!tplFilter.category ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border text-gray-600 hover:border-indigo-300'}`}>Semua</button>
+              {Object.keys(templateCategories).map(cat => (
+                <button key={cat} onClick={() => setTplFilter({ ...tplFilter, category: cat })} className={`px-3 py-2 rounded-xl text-xs font-medium transition-all ${tplFilter.category === cat ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border text-gray-600 hover:border-indigo-300'}`}>{cat}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Template grid by category */}
+          {!tplFilter.category ? (
+            Object.entries(templateCategories).map(([cat, catTemplates]) => {
+              const visible = (catTemplates as DocTemplate[]).filter(t => !tplFilter.search || t.name.toLowerCase().includes(tplFilter.search.toLowerCase()) || t.description.toLowerCase().includes(tplFilter.search.toLowerCase()));
+              if (visible.length === 0) return null;
+              return (
+                <div key={cat} className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-1.5 h-6 rounded-full bg-indigo-500" />
+                    <h3 className="font-semibold text-gray-800">{cat}</h3>
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{visible.length}</span>
+                  </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {visible.map(tpl => (
+                      <div key={tpl.id} onClick={() => setSelectedTemplate(tpl)}
+                        className="bg-white border rounded-xl p-4 hover:shadow-lg hover:border-indigo-200 cursor-pointer transition-all group relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-20 h-20 opacity-5 group-hover:opacity-10 transition-opacity" style={{ background: `radial-gradient(circle at top right, ${tpl.color}, transparent)` }} />
+                        <div className="flex items-start gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: tpl.color + '15' }}>
+                            <FileText className="w-5 h-5" style={{ color: tpl.color }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 text-sm">{tpl.name}</h4>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">{tpl.format}</span>
+                              <span className="text-[10px] text-gray-400">v{tpl.version}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 line-clamp-2 mb-3">{tpl.description}</p>
+                        <div className="flex items-center justify-between text-xs text-gray-400">
+                          <div className="flex items-center gap-1"><Download className="w-3 h-3" />{tpl.downloadCount}x download</div>
+                          <span>{tpl.sections.length} bagian</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredTemplates.map(tpl => (
+                <div key={tpl.id} onClick={() => setSelectedTemplate(tpl)}
+                  className="bg-white border rounded-xl p-4 hover:shadow-lg hover:border-indigo-200 cursor-pointer transition-all group relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-20 h-20 opacity-5 group-hover:opacity-10 transition-opacity" style={{ background: `radial-gradient(circle at top right, ${tpl.color}, transparent)` }} />
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: tpl.color + '15' }}>
+                      <FileText className="w-5 h-5" style={{ color: tpl.color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 text-sm">{tpl.name}</h4>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">{tpl.format}</span>
+                        <span className="text-[10px] text-gray-400">v{tpl.version}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 line-clamp-2 mb-3">{tpl.description}</p>
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <div className="flex items-center gap-1"><Download className="w-3 h-3" />{tpl.downloadCount}x download</div>
+                    <span>{tpl.sections.length} bagian</span>
+                  </div>
+                </div>
+              ))}
+              {filteredTemplates.length === 0 && <p className="text-center text-gray-400 py-8 col-span-3">Tidak ada template ditemukan</p>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TEMPLATE DETAIL */}
+      {!loading && tab === 'templates' && selectedTemplate && (
+        <div>
+          <button onClick={() => setSelectedTemplate(null)} className="text-sm text-indigo-600 mb-4 hover:underline flex items-center gap-1"><ChevronRight className="w-4 h-4 rotate-180" /> Kembali ke Template</button>
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-5">
+              <div className="bg-white border rounded-2xl p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: selectedTemplate.color + '15' }}>
+                    <FileText className="w-7 h-7" style={{ color: selectedTemplate.color }} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">{selectedTemplate.name}</h2>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <span className="text-xs font-mono uppercase px-2 py-1 bg-gray-100 text-gray-600 rounded-lg">{selectedTemplate.format}</span>
+                      <span className="text-xs text-gray-500">Version {selectedTemplate.version}</span>
+                      <span className="text-xs text-gray-400">Update: {new Date(selectedTemplate.lastUpdated).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 leading-relaxed mb-5">{selectedTemplate.description}</p>
+                <div className="flex gap-3">
+                  <button onClick={async () => { await docApi('download-template', 'POST', { templateId: selectedTemplate.id }); showToast('Template siap di-download'); }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-sm font-medium hover:from-indigo-700 hover:to-purple-700 shadow-md shadow-indigo-200">
+                    <Download className="w-4 h-4" /> Download Template
+                  </button>
+                  <button onClick={() => { navigator.clipboard.writeText(`Template: ${selectedTemplate.name}\nKategori: ${selectedTemplate.category}\nFormat: ${selectedTemplate.format}\nBagian: ${selectedTemplate.sections.join(', ')}`); showToast('Info template disalin'); }}
+                    className="flex items-center gap-2 px-4 py-2.5 border rounded-xl text-sm text-gray-700 hover:bg-gray-50">
+                    <Copy className="w-4 h-4" /> Salin Info
+                  </button>
+                </div>
+              </div>
+
+              {/* Sections / Outline */}
+              <div className="bg-white border rounded-2xl p-6">
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Paperclip className="w-4 h-4 text-indigo-600" /> Isi Template ({selectedTemplate.sections.length} bagian)</h3>
+                <div className="space-y-2">
+                  {selectedTemplate.sections.map((section, idx) => (
+                    <div key={idx} className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ backgroundColor: selectedTemplate.color }}>{idx + 1}</div>
+                      <span className="text-sm text-gray-700">{section}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-5">
+              <div className="bg-white border rounded-2xl p-5">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Informasi</h4>
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between"><span className="text-gray-500">Kategori</span><span className="font-medium" style={{ color: selectedTemplate.color }}>{selectedTemplate.category}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Format</span><span className="font-mono uppercase text-xs bg-gray-100 px-2 py-1 rounded">{selectedTemplate.format}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Versi</span><span>{selectedTemplate.version}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Terakhir Update</span><span>{new Date(selectedTemplate.lastUpdated).toLocaleDateString('id-ID')}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Jumlah Bagian</span><span>{selectedTemplate.sections.length}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Total Download</span><span className="font-medium text-indigo-600">{selectedTemplate.downloadCount}x</span></div>
+                </div>
+              </div>
+
+              <div className="bg-white border rounded-2xl p-5">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Tags</h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedTemplate.tags.map((tag, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 cursor-default transition-colors">
+                      <Tag className="w-3 h-3" />{tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-2xl p-5">
+                <h4 className="font-semibold text-sm text-indigo-900 mb-2">Tips Penggunaan</h4>
+                <ul className="text-xs text-indigo-700 space-y-1.5">
+                  <li className="flex items-start gap-1.5"><Check className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> Download dan sesuaikan dengan data proyek Anda</li>
+                  <li className="flex items-start gap-1.5"><Check className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> Isi semua bagian yang ditandai wajib (*)</li>
+                  <li className="flex items-start gap-1.5"><Check className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> Pastikan tanda tangan pihak yang berwenang</li>
+                  <li className="flex items-start gap-1.5"><Check className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> Upload kembali dokumen yang sudah diisi ke tab Dokumen</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -509,6 +1083,121 @@ export default function ProjectManagementPage() {
             <div className="flex justify-end gap-2 p-5 border-t">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-700 border rounded-lg hover:bg-gray-50">Batal</button>
               <button onClick={handleSave} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">{modalType === 'calc-payroll' ? 'Hitung' : 'Simpan'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* BULK IMPORT MODAL */}
+      {showBulkModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-5 border-b">
+              <div>
+                <h3 className="text-lg font-semibold">{BULK_LABELS[bulkType].title}</h3>
+                <p className="text-sm text-gray-500">Import data dari file CSV atau paste langsung</p>
+              </div>
+              <button onClick={() => setShowBulkModal(false)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* Project selector */}
+              <div>
+                <label className="text-sm font-medium text-gray-700">Proyek <span className="text-red-500">*</span></label>
+                <select value={bulkProjectId} onChange={e => setBulkProjectId(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
+                  <option value="">Pilih Proyek</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}
+                </select>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={() => downloadCsvTemplate(bulkType)}
+                  className="flex items-center gap-2 px-3 py-2 border rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+                  <Download className="w-4 h-4" /> Download Template CSV
+                </button>
+                <button onClick={() => csvInputRef.current?.click()}
+                  className="flex items-center gap-2 px-3 py-2 border rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+                  <FilePlus className="w-4 h-4" /> Upload File CSV
+                </button>
+                <input ref={csvInputRef} type="file" accept=".csv,.txt" onChange={handleCsvFileUpload} className="hidden" />
+                <button onClick={() => { setBulkCsvText(BULK_HEADERS[bulkType].example); parseBulkCsv(BULK_HEADERS[bulkType].example, bulkType); }}
+                  className="flex items-center gap-2 px-3 py-2 border border-indigo-200 rounded-lg text-sm text-indigo-700 hover:bg-indigo-50">
+                  <Eye className="w-4 h-4" /> Isi Contoh Data
+                </button>
+              </div>
+
+              {/* CSV Text Area */}
+              <div>
+                <label className="text-sm font-medium text-gray-700">Data CSV</label>
+                <textarea value={bulkCsvText} onChange={e => { setBulkCsvText(e.target.value); if (e.target.value.trim()) parseBulkCsv(e.target.value, bulkType); else { setBulkParsed([]); setBulkErrors([]); } }}
+                  placeholder={`Paste CSV di sini...\n\nFormat header:\n${BULK_HEADERS[bulkType].required.join(', ')}${BULK_HEADERS[bulkType].optional.length ? ', ' + BULK_HEADERS[bulkType].optional.join(', ') : ''}`}
+                  className="w-full mt-1 px-3 py-2 border rounded-lg text-sm font-mono h-32 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none" />
+                <div className="flex gap-4 mt-1 text-xs text-gray-400">
+                  <span>Kolom wajib: <strong className="text-gray-600">{BULK_HEADERS[bulkType].required.join(', ')}</strong></span>
+                  {BULK_HEADERS[bulkType].optional.length > 0 && <span>Opsional: {BULK_HEADERS[bulkType].optional.join(', ')}</span>}
+                </div>
+              </div>
+
+              {/* Validation Errors */}
+              {bulkErrors.length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-sm font-medium text-red-800 mb-1 flex items-center gap-1"><AlertTriangle className="w-4 h-4" /> {bulkErrors.length} kesalahan ditemukan</p>
+                  <ul className="text-xs text-red-700 space-y-0.5 max-h-24 overflow-y-auto">
+                    {bulkErrors.map((err, i) => <li key={i}>- {err}</li>)}
+                  </ul>
+                </div>
+              )}
+
+              {/* Preview Table */}
+              {bulkParsed.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                      <Check className="w-4 h-4 text-green-600" /> {bulkParsed.length} baris siap diimport
+                    </p>
+                    {bulkErrors.length > 0 && <span className="text-xs text-amber-600">{bulkErrors.length} warning (tetap bisa import)</span>}
+                  </div>
+                  <div className="overflow-x-auto border rounded-lg max-h-48">
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="px-2 py-1.5 text-left text-gray-500">#</th>
+                          {Object.keys(bulkParsed[0] || {}).map(h => <th key={h} className="px-2 py-1.5 text-left text-gray-500 whitespace-nowrap">{h}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {bulkParsed.slice(0, 20).map((row, i) => (
+                          <tr key={i} className="hover:bg-gray-50">
+                            <td className="px-2 py-1.5 text-gray-400">{i + 1}</td>
+                            {Object.values(row).map((v: any, j) => <td key={j} className="px-2 py-1.5 whitespace-nowrap">{v || <span className="text-gray-300">-</span>}</td>)}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {bulkParsed.length > 20 && <p className="text-xs text-center text-gray-400 py-2">...dan {bulkParsed.length - 20} baris lainnya</p>}
+                  </div>
+                </div>
+              )}
+
+              {/* Result */}
+              {bulkResult && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-sm font-medium text-green-800 flex items-center gap-1"><Check className="w-4 h-4" /> Import selesai!</p>
+                  <p className="text-xs text-green-700 mt-1">Berhasil: <strong>{bulkResult.success}</strong>{bulkResult.failed > 0 && <> | Gagal: <strong className="text-red-600">{bulkResult.failed}</strong></>}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between items-center p-5 border-t">
+              <p className="text-xs text-gray-400">Gunakan template CSV untuk format yang benar</p>
+              <div className="flex gap-2">
+                <button onClick={() => setShowBulkModal(false)} className="px-4 py-2 text-sm text-gray-700 border rounded-lg hover:bg-gray-50">Tutup</button>
+                <button onClick={handleBulkImport} disabled={bulkUploading || bulkParsed.length === 0 || !bulkProjectId}
+                  className={`px-5 py-2 text-sm text-white rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    bulkType === 'workers' ? 'bg-green-600 hover:bg-green-700' : bulkType === 'timesheets' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'
+                  }`}>
+                  {bulkUploading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Mengimport...</> : <><Upload className="w-4 h-4" /> Import {bulkParsed.length} Data</>}
+                </button>
+              </div>
             </div>
           </div>
         </div>

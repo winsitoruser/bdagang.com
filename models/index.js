@@ -128,6 +128,88 @@ db.IntegrationRequest = require('./IntegrationRequest');
 db.IntegrationLog = require('./IntegrationLog');
 db.IntegrationWebhook = require('./IntegrationWebhook');
 
+// SFA (Sales Force Automation) Models
+db.SfaTerritory = require('./SfaTerritory')(sequelize);
+db.SfaLead = require('./SfaLead')(sequelize);
+db.SfaOpportunity = require('./SfaOpportunity')(sequelize);
+db.SfaActivity = require('./SfaActivity')(sequelize);
+db.SfaVisit = require('./SfaVisit')(sequelize);
+db.SfaTarget = require('./SfaTarget')(sequelize);
+db.SfaQuotation = require('./SfaQuotation')(sequelize);
+db.SfaQuotationItem = require('./SfaQuotationItem')(sequelize);
+db.SfaRoutePlan = require('./SfaRoutePlan')(sequelize);
+
+// SFA Enhanced Models (Teams, Targets, Achievements, Incentives, Plafon, Parameters)
+db.SfaTeam = require('./SfaTeam')(sequelize);
+db.SfaTeamMember = require('./SfaTeamMember')(sequelize);
+db.SfaTargetGroup = require('./SfaTargetGroup')(sequelize);
+db.SfaTargetAssignment = require('./SfaTargetAssignment')(sequelize);
+db.SfaTargetProduct = require('./SfaTargetProduct')(sequelize);
+db.SfaAchievement = require('./SfaAchievement')(sequelize);
+db.SfaAchievementDetail = require('./SfaAchievementDetail')(sequelize);
+db.SfaIncentiveScheme = require('./SfaIncentiveScheme')(sequelize);
+db.SfaIncentiveTier = require('./SfaIncentiveTier')(sequelize);
+db.SfaIncentiveCalculation = require('./SfaIncentiveCalculation')(sequelize);
+db.SfaPlafon = require('./SfaPlafon')(sequelize);
+db.SfaPlafonUsage = require('./SfaPlafonUsage')(sequelize);
+db.SfaParameter = require('./SfaParameter')(sequelize);
+
+// SFA Advanced Models (Coverage, Field Orders, Display, Competitor, Survey, Approval, Geofence, Commission)
+db.SfaCoveragePlan = require('./SfaCoveragePlan')(sequelize);
+db.SfaCoverageAssignment = require('./SfaCoverageAssignment')(sequelize);
+db.SfaFieldOrder = require('./SfaFieldOrder')(sequelize);
+db.SfaFieldOrderItem = require('./SfaFieldOrderItem')(sequelize);
+db.SfaDisplayAudit = require('./SfaDisplayAudit')(sequelize);
+db.SfaDisplayItem = require('./SfaDisplayItem')(sequelize);
+db.SfaCompetitorActivity = require('./SfaCompetitorActivity')(sequelize);
+db.SfaSurveyTemplate = require('./SfaSurveyTemplate')(sequelize);
+db.SfaSurveyQuestion = require('./SfaSurveyQuestion')(sequelize);
+db.SfaSurveyResponse = require('./SfaSurveyResponse')(sequelize);
+db.SfaApprovalWorkflow = require('./SfaApprovalWorkflow')(sequelize);
+db.SfaApprovalStep = require('./SfaApprovalStep')(sequelize);
+db.SfaApprovalRequest = require('./SfaApprovalRequest')(sequelize);
+db.SfaGeofence = require('./SfaGeofence')(sequelize);
+db.SfaProductCommission = require('./SfaProductCommission')(sequelize);
+
+// Marketing Models
+db.MktCampaign = require('./MktCampaign')(sequelize);
+db.MktCampaignChannel = require('./MktCampaignChannel')(sequelize);
+db.MktSegment = require('./MktSegment')(sequelize);
+db.MktSegmentRule = require('./MktSegmentRule')(sequelize);
+db.MktPromotion = require('./MktPromotion')(sequelize);
+db.MktPromotionUsage = require('./MktPromotionUsage')(sequelize);
+db.MktContentAsset = require('./MktContentAsset')(sequelize);
+db.MktBudget = require('./MktBudget')(sequelize);
+db.MktBudgetItem = require('./MktBudgetItem')(sequelize);
+db.MktCampaignAudience = require('./MktCampaignAudience')(sequelize);
+
+// CRM Models (Customer 360°, Communication, Tasks, Forecasting, Service, Automation, Documents, Analytics)
+db.CrmCustomer = require('./CrmCustomer')(sequelize);
+db.CrmContact = require('./CrmContact')(sequelize);
+db.CrmInteraction = require('./CrmInteraction')(sequelize);
+db.CrmCustomerSegment = require('./CrmCustomerSegment')(sequelize);
+db.CrmCustomerTag = require('./CrmCustomerTag')(sequelize);
+db.CrmCommunication = require('./CrmCommunication')(sequelize);
+db.CrmFollowUp = require('./CrmFollowUp')(sequelize);
+db.CrmEmailTemplate = require('./CrmEmailTemplate')(sequelize);
+db.CrmCommCampaign = require('./CrmCommCampaign')(sequelize);
+db.CrmTask = require('./CrmTask')(sequelize);
+db.CrmTaskTemplate = require('./CrmTaskTemplate')(sequelize);
+db.CrmCalendarEvent = require('./CrmCalendarEvent')(sequelize);
+db.CrmForecast = require('./CrmForecast')(sequelize);
+db.CrmForecastItem = require('./CrmForecastItem')(sequelize);
+db.CrmDealScore = require('./CrmDealScore')(sequelize);
+db.CrmTicket = require('./CrmTicket')(sequelize);
+db.CrmTicketComment = require('./CrmTicketComment')(sequelize);
+db.CrmSlaPolicy = require('./CrmSlaPolicy')(sequelize);
+db.CrmSatisfaction = require('./CrmSatisfaction')(sequelize);
+db.CrmAutomationRule = require('./CrmAutomationRule')(sequelize);
+db.CrmAutomationLog = require('./CrmAutomationLog')(sequelize);
+db.CrmDocument = require('./CrmDocument')(sequelize);
+db.CrmDocumentTemplate = require('./CrmDocumentTemplate')(sequelize);
+db.CrmSavedReport = require('./CrmSavedReport')(sequelize);
+db.CrmCustomDashboard = require('./CrmCustomDashboard')(sequelize);
+
 // Finance Models
 db.FinanceAccount = require('./FinanceAccount');
 db.FinanceBudget = require('./FinanceBudget');

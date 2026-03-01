@@ -1,8 +1,39 @@
 'use strict';
 
+/**
+ * Migration: Create HRIS KPI & Performance Tables
+ * 
+ * This migration creates the KPI and performance management tables:
+ * 
+ * 1. employee_kpis        - Individual KPI metrics per employee per period
+ * 2. kpi_templates         - Reusable KPI metric definitions
+ * 3. kpi_scoring           - Scoring rubrics and rules
+ * 4. performance_reviews   - Periodic performance review records
+ * 5. leave_requests        - Employee leave/cuti requests
+ * 6. hris_webhook_logs     - Webhook event audit trail
+ * 
+ * Dependencies:
+ * - employees table (employee reference)
+ * - branches table (branch reference)
+ * - users table (reviewer/approver reference)
+ * 
+ * Standards:
+ * - UUID primary keys (UUIDV4)
+ * - tenantId for multi-tenant isolation
+ * - Named indexes with descriptive prefixes
+ * - ENUM types for status and category fields
+ * - JSONB for flexible metadata and configuration
+ * - Unique constraints on logical combinations
+ * 
+ * @version 1.0.0
+ * @date 2026-02-26
+ * @author Bedagang ERP Team
+ */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // 1. employee_kpis table
+    // ──────────────────────────────────────────────────
+    // 1. employee_kpis - KPI per karyawan per periode
+    // ──────────────────────────────────────────────────
     await queryInterface.createTable('employee_kpis', {
       id: {
         type: Sequelize.UUID,
@@ -95,15 +126,17 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('employee_kpis', ['employeeId']);
-    await queryInterface.addIndex('employee_kpis', ['branchId']);
-    await queryInterface.addIndex('employee_kpis', ['period']);
-    await queryInterface.addIndex('employee_kpis', ['category']);
-    await queryInterface.addIndex('employee_kpis', ['status']);
-    await queryInterface.addIndex('employee_kpis', ['tenantId']);
-    await queryInterface.addIndex('employee_kpis', ['employeeId', 'metricName', 'period'], { unique: true });
+    await queryInterface.addIndex('employee_kpis', ['employeeId'], { name: 'idx_emp_kpis_employee' });
+    await queryInterface.addIndex('employee_kpis', ['branchId'], { name: 'idx_emp_kpis_branch' });
+    await queryInterface.addIndex('employee_kpis', ['period'], { name: 'idx_emp_kpis_period' });
+    await queryInterface.addIndex('employee_kpis', ['category'], { name: 'idx_emp_kpis_category' });
+    await queryInterface.addIndex('employee_kpis', ['status'], { name: 'idx_emp_kpis_status' });
+    await queryInterface.addIndex('employee_kpis', ['tenantId'], { name: 'idx_emp_kpis_tenant' });
+    await queryInterface.addIndex('employee_kpis', ['employeeId', 'metricName', 'period'], { unique: true, name: 'idx_emp_kpis_unique_metric' });
 
-    // 2. kpi_templates table
+    // ──────────────────────────────────────────────────
+    // 2. kpi_templates - Template definisi KPI
+    // ──────────────────────────────────────────────────
     await queryInterface.createTable('kpi_templates', {
       id: {
         type: Sequelize.UUID,
@@ -201,12 +234,14 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('kpi_templates', ['code'], { unique: true });
-    await queryInterface.addIndex('kpi_templates', ['category']);
-    await queryInterface.addIndex('kpi_templates', ['is_active']);
-    await queryInterface.addIndex('kpi_templates', ['tenant_id']);
+    await queryInterface.addIndex('kpi_templates', ['code'], { unique: true, name: 'idx_kpi_tpl_code_unique' });
+    await queryInterface.addIndex('kpi_templates', ['category'], { name: 'idx_kpi_tpl_category' });
+    await queryInterface.addIndex('kpi_templates', ['is_active'], { name: 'idx_kpi_tpl_active' });
+    await queryInterface.addIndex('kpi_templates', ['tenant_id'], { name: 'idx_kpi_tpl_tenant' });
 
-    // 3. kpi_scoring table
+    // ──────────────────────────────────────────────────
+    // 3. kpi_scoring - Rubrik penilaian KPI
+    // ──────────────────────────────────────────────────
     await queryInterface.createTable('kpi_scoring', {
       id: {
         type: Sequelize.UUID,
@@ -267,11 +302,13 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('kpi_scoring', ['scoring_type']);
-    await queryInterface.addIndex('kpi_scoring', ['is_default']);
-    await queryInterface.addIndex('kpi_scoring', ['tenant_id']);
+    await queryInterface.addIndex('kpi_scoring', ['scoring_type'], { name: 'idx_kpi_scoring_type' });
+    await queryInterface.addIndex('kpi_scoring', ['is_default'], { name: 'idx_kpi_scoring_default' });
+    await queryInterface.addIndex('kpi_scoring', ['tenant_id'], { name: 'idx_kpi_scoring_tenant' });
 
-    // 4. performance_reviews table
+    // ──────────────────────────────────────────────────
+    // 4. performance_reviews - Review kinerja berkala
+    // ──────────────────────────────────────────────────
     await queryInterface.createTable('performance_reviews', {
       id: {
         type: Sequelize.UUID,
@@ -404,15 +441,17 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('performance_reviews', ['employeeId']);
-    await queryInterface.addIndex('performance_reviews', ['branchId']);
-    await queryInterface.addIndex('performance_reviews', ['reviewerId']);
-    await queryInterface.addIndex('performance_reviews', ['reviewPeriod']);
-    await queryInterface.addIndex('performance_reviews', ['status']);
-    await queryInterface.addIndex('performance_reviews', ['tenantId']);
-    await queryInterface.addIndex('performance_reviews', ['employeeId', 'reviewPeriod'], { unique: true });
+    await queryInterface.addIndex('performance_reviews', ['employeeId'], { name: 'idx_perf_reviews_employee' });
+    await queryInterface.addIndex('performance_reviews', ['branchId'], { name: 'idx_perf_reviews_branch' });
+    await queryInterface.addIndex('performance_reviews', ['reviewerId'], { name: 'idx_perf_reviews_reviewer' });
+    await queryInterface.addIndex('performance_reviews', ['reviewPeriod'], { name: 'idx_perf_reviews_period' });
+    await queryInterface.addIndex('performance_reviews', ['status'], { name: 'idx_perf_reviews_status' });
+    await queryInterface.addIndex('performance_reviews', ['tenantId'], { name: 'idx_perf_reviews_tenant' });
+    await queryInterface.addIndex('performance_reviews', ['employeeId', 'reviewPeriod'], { unique: true, name: 'idx_perf_reviews_emp_period_unique' });
 
-    // 5. leave_requests table
+    // ──────────────────────────────────────────────────
+    // 5. leave_requests - Pengajuan cuti karyawan
+    // ──────────────────────────────────────────────────
     await queryInterface.createTable('leave_requests', {
       id: {
         type: Sequelize.UUID,
@@ -512,15 +551,17 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('leave_requests', ['employeeId']);
-    await queryInterface.addIndex('leave_requests', ['branchId']);
-    await queryInterface.addIndex('leave_requests', ['leaveType']);
-    await queryInterface.addIndex('leave_requests', ['status']);
-    await queryInterface.addIndex('leave_requests', ['startDate']);
-    await queryInterface.addIndex('leave_requests', ['tenantId']);
-    await queryInterface.addIndex('leave_requests', ['approvedBy']);
+    await queryInterface.addIndex('leave_requests', ['employeeId'], { name: 'idx_leave_req_employee' });
+    await queryInterface.addIndex('leave_requests', ['branchId'], { name: 'idx_leave_req_branch' });
+    await queryInterface.addIndex('leave_requests', ['leaveType'], { name: 'idx_leave_req_type' });
+    await queryInterface.addIndex('leave_requests', ['status'], { name: 'idx_leave_req_status' });
+    await queryInterface.addIndex('leave_requests', ['startDate'], { name: 'idx_leave_req_start' });
+    await queryInterface.addIndex('leave_requests', ['tenantId'], { name: 'idx_leave_req_tenant' });
+    await queryInterface.addIndex('leave_requests', ['approvedBy'], { name: 'idx_leave_req_approver' });
 
-    // 6. hris_webhook_logs table
+    // ──────────────────────────────────────────────────
+    // 6. hris_webhook_logs - Audit trail webhook events
+    // ──────────────────────────────────────────────────
     await queryInterface.createTable('hris_webhook_logs', {
       id: {
         type: Sequelize.UUID,
@@ -584,12 +625,12 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('hris_webhook_logs', ['eventType']);
-    await queryInterface.addIndex('hris_webhook_logs', ['employeeId']);
-    await queryInterface.addIndex('hris_webhook_logs', ['branchId']);
-    await queryInterface.addIndex('hris_webhook_logs', ['status']);
-    await queryInterface.addIndex('hris_webhook_logs', ['tenantId']);
-    await queryInterface.addIndex('hris_webhook_logs', ['createdAt']);
+    await queryInterface.addIndex('hris_webhook_logs', ['eventType'], { name: 'idx_webhook_logs_event' });
+    await queryInterface.addIndex('hris_webhook_logs', ['employeeId'], { name: 'idx_webhook_logs_employee' });
+    await queryInterface.addIndex('hris_webhook_logs', ['branchId'], { name: 'idx_webhook_logs_branch' });
+    await queryInterface.addIndex('hris_webhook_logs', ['status'], { name: 'idx_webhook_logs_status' });
+    await queryInterface.addIndex('hris_webhook_logs', ['tenantId'], { name: 'idx_webhook_logs_tenant' });
+    await queryInterface.addIndex('hris_webhook_logs', ['createdAt'], { name: 'idx_webhook_logs_created' });
   },
 
   async down(queryInterface) {

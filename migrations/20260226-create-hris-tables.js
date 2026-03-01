@@ -1,8 +1,36 @@
 'use strict';
 
+/**
+ * Migration: Create HRIS Core Tables
+ * 
+ * This migration creates the foundational HRIS tables:
+ * 
+ * 1. hris_employees          - Master employee data
+ * 2. hris_attendance          - Daily attendance records
+ * 3. hris_performance_reviews - Performance review records
+ * 
+ * Dependencies:
+ * - tenants table (multi-tenant support)
+ * - branches table (branch/location reference)
+ * 
+ * Standards:
+ * - UUID primary keys (UUIDV4)
+ * - tenantId for multi-tenant isolation
+ * - createdAt/updatedAt timestamps
+ * - createdBy/updatedBy audit fields
+ * - Proper indexes on FKs and query columns
+ * - ENUM types for status fields
+ * - JSONB for flexible metadata
+ * 
+ * @version 1.0.0
+ * @date 2026-02-26
+ * @author Bedagang ERP Team
+ */
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Create hris_employees table
+    // ──────────────────────────────────────────────────
+    // 1. hris_employees - Master data karyawan
+    // ──────────────────────────────────────────────────
     await queryInterface.createTable('hris_employees', {
       id: {
         type: Sequelize.UUID,
@@ -128,13 +156,15 @@ module.exports = {
       },
     });
 
-    await queryInterface.addIndex('hris_employees', ['tenantId']);
-    await queryInterface.addIndex('hris_employees', ['branchId']);
-    await queryInterface.addIndex('hris_employees', ['email']);
-    await queryInterface.addIndex('hris_employees', ['status']);
-    await queryInterface.addIndex('hris_employees', ['department']);
+    await queryInterface.addIndex('hris_employees', ['tenantId'], { name: 'idx_hris_employees_tenant' });
+    await queryInterface.addIndex('hris_employees', ['branchId'], { name: 'idx_hris_employees_branch' });
+    await queryInterface.addIndex('hris_employees', ['email'], { name: 'idx_hris_employees_email' });
+    await queryInterface.addIndex('hris_employees', ['status'], { name: 'idx_hris_employees_status' });
+    await queryInterface.addIndex('hris_employees', ['department'], { name: 'idx_hris_employees_dept' });
 
-    // Create hris_attendance table
+    // ──────────────────────────────────────────────────
+    // 2. hris_attendance - Rekap kehadiran harian
+    // ──────────────────────────────────────────────────
     await queryInterface.createTable('hris_attendance', {
       id: {
         type: Sequelize.UUID,
@@ -231,14 +261,16 @@ module.exports = {
       },
     });
 
-    await queryInterface.addIndex('hris_attendance', ['tenantId']);
-    await queryInterface.addIndex('hris_attendance', ['branchId']);
-    await queryInterface.addIndex('hris_attendance', ['employeeId']);
-    await queryInterface.addIndex('hris_attendance', ['date']);
-    await queryInterface.addIndex('hris_attendance', ['status']);
-    await queryInterface.addIndex('hris_attendance', ['employeeId', 'date'], { unique: true });
+    await queryInterface.addIndex('hris_attendance', ['tenantId'], { name: 'idx_hris_attendance_tenant' });
+    await queryInterface.addIndex('hris_attendance', ['branchId'], { name: 'idx_hris_attendance_branch' });
+    await queryInterface.addIndex('hris_attendance', ['employeeId'], { name: 'idx_hris_attendance_employee' });
+    await queryInterface.addIndex('hris_attendance', ['date'], { name: 'idx_hris_attendance_date' });
+    await queryInterface.addIndex('hris_attendance', ['status'], { name: 'idx_hris_attendance_status' });
+    await queryInterface.addIndex('hris_attendance', ['employeeId', 'date'], { unique: true, name: 'idx_hris_attendance_emp_date_unique' });
 
-    // Create hris_performance_reviews table
+    // ──────────────────────────────────────────────────
+    // 3. hris_performance_reviews - Evaluasi kinerja
+    // ──────────────────────────────────────────────────
     await queryInterface.createTable('hris_performance_reviews', {
       id: {
         type: Sequelize.UUID,
@@ -342,11 +374,11 @@ module.exports = {
       },
     });
 
-    await queryInterface.addIndex('hris_performance_reviews', ['tenantId']);
-    await queryInterface.addIndex('hris_performance_reviews', ['employeeId']);
-    await queryInterface.addIndex('hris_performance_reviews', ['reviewerId']);
-    await queryInterface.addIndex('hris_performance_reviews', ['reviewDate']);
-    await queryInterface.addIndex('hris_performance_reviews', ['status']);
+    await queryInterface.addIndex('hris_performance_reviews', ['tenantId'], { name: 'idx_hris_perf_reviews_tenant' });
+    await queryInterface.addIndex('hris_performance_reviews', ['employeeId'], { name: 'idx_hris_perf_reviews_employee' });
+    await queryInterface.addIndex('hris_performance_reviews', ['reviewerId'], { name: 'idx_hris_perf_reviews_reviewer' });
+    await queryInterface.addIndex('hris_performance_reviews', ['reviewDate'], { name: 'idx_hris_perf_reviews_date' });
+    await queryInterface.addIndex('hris_performance_reviews', ['status'], { name: 'idx_hris_perf_reviews_status' });
   },
 
   down: async (queryInterface, Sequelize) => {

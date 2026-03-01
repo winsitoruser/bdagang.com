@@ -8,7 +8,8 @@ import {
   Settings, LayoutDashboard, ShoppingCart, Users, Truck, Target,
   Wallet, BarChart3, Award, Utensils, Calendar, Ticket, Building2,
   UserCheck, MapPin, Plug, Layers, Star, ArrowRight, RefreshCw,
-  MessageCircle, Globe, ChefHat, Crown, Sparkles, Lightbulb, Store
+  MessageCircle, Globe, ChefHat, Crown, Sparkles, Lightbulb, Store,
+  Heart, Briefcase, Megaphone
 } from 'lucide-react';
 import ModuleRecommendations, { CategoryInfoCard } from '@/components/modules/ModuleRecommendations';
 import ModuleAnalytics from '@/components/modules/ModuleAnalytics';
@@ -62,7 +63,8 @@ const ICON_MAP: Record<string, any> = {
   LayoutDashboard, ShoppingCart, Package, Users, Award, Utensils, Calendar,
   Ticket, Wallet, BarChart3, Settings, UserCheck, Building2, Truck,
   Layers, Target, MapPin, Plug, Shield, Star, Grid3X3,
-  MessageCircle, Globe, ChefHat, Crown, Sparkles
+  MessageCircle, Globe, ChefHat, Crown, Sparkles,
+  Heart, Briefcase, Megaphone,
 };
 
 const CATEGORY_ORDER = ['core', 'fnb', 'optional', 'addon', 'operations', 'finance', 'hr', 'crm', 'marketing', 'analytics', 'integration', 'system'];

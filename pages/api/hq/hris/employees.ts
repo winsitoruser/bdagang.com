@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../auth/[...nextauth]';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { getPaginationParams, getPaginationMeta } from '../../../../lib/api/pagination';
 import { validateRequiredFields } from '../../../../lib/api/validation';
@@ -32,6 +34,13 @@ try {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    const session = await getServerSession(req, res, authOptions);
+    if (!session?.user) {
+      return res.status(HttpStatus.UNAUTHORIZED).json(
+        errorResponse(ErrorCodes.UNAUTHORIZED, 'Unauthorized')
+      );
+    }
+
     switch (req.method) {
       case 'GET':
         return await getEmployees(req, res);

@@ -455,6 +455,179 @@ export class ModuleRegistry {
       models: ['OnlineOrder'],
       components: []
     });
+
+    // ─── CRM Module (pluggable) ───
+    this.registerModule({
+      id: 'crm',
+      code: 'CRM',
+      name: 'Customer Relationship Management',
+      description: 'Customer 360°, komunikasi, task & kalender, tiket & SLA, forecasting, automasi CRM',
+      category: 'addon',
+      version: '1.0.0',
+      dependencies: [],
+      optionalDependencies: ['SFA', 'MARKETING'],
+      businessTypeConfig: {
+        fine_dining: { isRequired: false, isRecommended: true, isOptional: true, features: ['customer_360', 'communications', 'tickets'], defaultConfig: {} },
+        cloud_kitchen: { isRequired: false, isRecommended: false, isOptional: true, features: ['customer_360', 'tickets'], defaultConfig: {} },
+        qsr: { isRequired: false, isRecommended: false, isOptional: true, features: ['customer_360'], defaultConfig: {} },
+        cafe: { isRequired: false, isRecommended: true, isOptional: true, features: ['customer_360', 'communications'], defaultConfig: {} },
+        retail: { isRequired: false, isRecommended: true, isOptional: true, features: ['customer_360', 'communications', 'tickets', 'forecasting'], defaultConfig: {} },
+        distribution: { isRequired: true, isRecommended: true, isOptional: false, features: ['customer_360', 'communications', 'tasks', 'tickets', 'forecasting', 'automation'], defaultConfig: {} },
+        manufacturing: { isRequired: false, isRecommended: true, isOptional: true, features: ['customer_360', 'communications', 'tickets'], defaultConfig: {} },
+        services: { isRequired: true, isRecommended: true, isOptional: false, features: ['customer_360', 'communications', 'tasks', 'tickets', 'forecasting', 'automation'], defaultConfig: {} }
+      },
+      integrationPoints: {
+        provides: [
+          { name: 'crm.customer.created', type: 'event', description: 'Fired when CRM customer is created', schema: {} },
+          { name: 'crm.ticket.created', type: 'event', description: 'Fired when support ticket is created', schema: {} },
+          { name: 'crm.task.completed', type: 'event', description: 'Fired when CRM task is completed', schema: {} },
+          { name: 'crm.customer.data', type: 'data', description: 'Customer 360° data provider', schema: {} }
+        ],
+        consumes: [
+          { name: 'sfa.lead.converted', type: 'event', description: 'Listen to lead conversion from SFA', schema: {} },
+          { name: 'order.created', type: 'event', description: 'Listen to POS orders for customer tracking', schema: {} }
+        ]
+      },
+      features: [
+        { code: 'customer_360', name: 'Customer 360°', description: 'Full customer profile with health score, lifecycle, segmentation', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'communications', name: 'Communication Hub', description: 'Multi-channel communication tracking (call, email, meeting, WhatsApp)', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'tasks', name: 'Task & Calendar', description: 'Task management with calendar integration', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'tickets', name: 'Ticket & SLA', description: 'Support ticketing system with SLA tracking', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'forecasting', name: 'Sales Forecasting', description: 'Revenue prediction and deal scoring', isDefault: false, businessTypes: ['distribution', 'services', 'retail'], config: {} },
+        { code: 'automation', name: 'CRM Automation', description: 'Workflow automation rules and triggers', isDefault: false, businessTypes: ['distribution', 'services'], config: {} },
+        { code: 'documents', name: 'Document Management', description: 'CRM-related document storage and templates', isDefault: false, businessTypes: ['all'], config: {} }
+      ],
+      routes: [
+        { path: '/api/hq/sfa/crm', method: 'ALL', handler: 'crmHandler' },
+        { path: '/api/hq/sfa/import-export', method: 'ALL', handler: 'importExportHandler' }
+      ],
+      models: [
+        'CrmCustomer', 'CrmContact', 'CrmInteraction', 'CrmCustomerSegment', 'CrmCustomerTag',
+        'CrmCommunication', 'CrmFollowUp', 'CrmEmailTemplate', 'CrmCommCampaign',
+        'CrmTask', 'CrmTaskTemplate', 'CrmCalendarEvent',
+        'CrmForecast', 'CrmForecastItem', 'CrmDealScore',
+        'CrmTicket', 'CrmTicketComment', 'CrmSlaPolicy', 'CrmSatisfaction',
+        'CrmAutomationRule', 'CrmAutomationLog',
+        'CrmDocument', 'CrmDocumentTemplate', 'CrmSavedReport', 'CrmCustomDashboard'
+      ],
+      components: [
+        { name: 'CRMPage', path: '/pages/hq/sfa/index', type: 'page' }
+      ]
+    });
+
+    // ─── SFA Module (pluggable) ───
+    this.registerModule({
+      id: 'sfa',
+      code: 'SFA',
+      name: 'Sales Force Automation',
+      description: 'Lead management, pipeline, tim & territory, kunjungan, order, target, insentif, coverage',
+      category: 'addon',
+      version: '1.0.0',
+      dependencies: [],
+      optionalDependencies: ['CRM', 'MARKETING'],
+      businessTypeConfig: {
+        fine_dining: { isRequired: false, isRecommended: false, isOptional: true, features: ['leads', 'pipeline'], defaultConfig: {} },
+        cloud_kitchen: { isRequired: false, isRecommended: false, isOptional: true, features: ['leads'], defaultConfig: {} },
+        qsr: { isRequired: false, isRecommended: false, isOptional: true, features: ['leads', 'visits'], defaultConfig: {} },
+        cafe: { isRequired: false, isRecommended: false, isOptional: true, features: ['leads'], defaultConfig: {} },
+        retail: { isRequired: false, isRecommended: true, isOptional: true, features: ['leads', 'pipeline', 'visits', 'targets'], defaultConfig: {} },
+        distribution: { isRequired: true, isRecommended: true, isOptional: false, features: ['leads', 'pipeline', 'teams', 'visits', 'orders', 'targets', 'incentives', 'coverage', 'geofence', 'approval'], defaultConfig: {} },
+        manufacturing: { isRequired: false, isRecommended: true, isOptional: true, features: ['leads', 'pipeline', 'teams', 'visits', 'orders', 'targets'], defaultConfig: {} },
+        services: { isRequired: false, isRecommended: true, isOptional: true, features: ['leads', 'pipeline', 'teams', 'visits', 'targets'], defaultConfig: {} }
+      },
+      integrationPoints: {
+        provides: [
+          { name: 'sfa.lead.created', type: 'event', description: 'Fired when new lead is created', schema: {} },
+          { name: 'sfa.lead.converted', type: 'event', description: 'Fired when lead is converted to opportunity', schema: {} },
+          { name: 'sfa.visit.completed', type: 'event', description: 'Fired when field visit is completed', schema: {} },
+          { name: 'sfa.order.created', type: 'event', description: 'Fired when field order is created', schema: {} },
+          { name: 'sfa.target.achieved', type: 'event', description: 'Fired when sales target is achieved', schema: {} }
+        ],
+        consumes: [
+          { name: 'crm.customer.data', type: 'data', description: 'Customer data from CRM module', schema: {} },
+          { name: 'inventory.stock', type: 'data', description: 'Stock availability for field orders', schema: {} }
+        ]
+      },
+      features: [
+        { code: 'leads', name: 'Lead Management', description: 'Lead capture, scoring, and conversion tracking', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'pipeline', name: 'Pipeline Management', description: 'Visual sales pipeline with deal stages', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'teams', name: 'Team & Territory', description: 'Sales team management and territory assignment', isDefault: false, businessTypes: ['distribution', 'manufacturing'], config: {} },
+        { code: 'visits', name: 'Visit & Coverage', description: 'Field visit tracking with check-in/out and GPS', isDefault: false, businessTypes: ['distribution', 'retail'], config: {} },
+        { code: 'orders', name: 'Field Orders', description: 'On-the-go order creation and quotation', isDefault: false, businessTypes: ['distribution', 'manufacturing'], config: {} },
+        { code: 'targets', name: 'Target & Achievement', description: 'Sales target setting and achievement tracking', isDefault: false, businessTypes: ['distribution', 'retail'], config: {} },
+        { code: 'incentives', name: 'Incentive & Commission', description: 'Commission calculation and incentive schemes', isDefault: false, businessTypes: ['distribution'], config: {} },
+        { code: 'coverage', name: 'Coverage Planning', description: 'Customer coverage plans and route optimization', isDefault: false, businessTypes: ['distribution'], config: {} },
+        { code: 'geofence', name: 'Geofence', description: 'Location-based visit validation', isDefault: false, businessTypes: ['distribution'], config: {} },
+        { code: 'approval', name: 'Approval Workflow', description: 'Multi-level approval for orders and expenses', isDefault: false, businessTypes: ['distribution', 'manufacturing'], config: {} }
+      ],
+      routes: [
+        { path: '/api/hq/sfa', method: 'ALL', handler: 'sfaCoreHandler' },
+        { path: '/api/hq/sfa/enhanced', method: 'ALL', handler: 'sfaEnhancedHandler' },
+        { path: '/api/hq/sfa/advanced', method: 'ALL', handler: 'sfaAdvancedHandler' },
+        { path: '/api/hq/sfa/import-export', method: 'ALL', handler: 'importExportHandler' }
+      ],
+      models: [
+        'SfaLead', 'SfaOpportunity', 'SfaActivity', 'SfaVisit', 'SfaQuotation',
+        'SfaTerritory', 'SfaRoutePlan', 'SfaTarget',
+        'SfaTeam', 'SfaTeamMember', 'SfaTargetGroup', 'SfaTargetAssignment', 'SfaTargetProduct',
+        'SfaAchievement', 'SfaIncentiveScheme', 'SfaIncentiveTier', 'SfaPlafon',
+        'SfaCoveragePlan', 'SfaCoverageAssignment', 'SfaFieldOrder', 'SfaFieldOrderItem',
+        'SfaMerchandising', 'SfaCompetitor', 'SfaCompetitorProduct', 'SfaSurvey', 'SfaSurveyResponse',
+        'SfaApproval', 'SfaGeofence', 'SfaProductCommission', 'SfaParameter'
+      ],
+      components: [
+        { name: 'SFAPage', path: '/pages/hq/sfa/index', type: 'page' }
+      ]
+    });
+
+    // ─── Marketing Module (pluggable) ───
+    this.registerModule({
+      id: 'marketing',
+      code: 'MARKETING',
+      name: 'Marketing & Campaign',
+      description: 'Campaign management, promosi, segmentasi pelanggan, budget marketing',
+      category: 'addon',
+      version: '1.0.0',
+      dependencies: [],
+      optionalDependencies: ['CRM', 'SFA'],
+      businessTypeConfig: {
+        fine_dining: { isRequired: false, isRecommended: true, isOptional: true, features: ['campaigns', 'promotions'], defaultConfig: {} },
+        cloud_kitchen: { isRequired: false, isRecommended: true, isOptional: true, features: ['campaigns', 'promotions'], defaultConfig: {} },
+        qsr: { isRequired: false, isRecommended: true, isOptional: true, features: ['campaigns', 'promotions'], defaultConfig: {} },
+        cafe: { isRequired: false, isRecommended: true, isOptional: true, features: ['campaigns', 'promotions'], defaultConfig: {} },
+        retail: { isRequired: false, isRecommended: true, isOptional: true, features: ['campaigns', 'promotions', 'segments', 'budgets'], defaultConfig: {} },
+        distribution: { isRequired: false, isRecommended: true, isOptional: true, features: ['campaigns', 'promotions', 'segments', 'budgets'], defaultConfig: {} },
+        manufacturing: { isRequired: false, isRecommended: false, isOptional: true, features: ['campaigns'], defaultConfig: {} },
+        services: { isRequired: false, isRecommended: true, isOptional: true, features: ['campaigns', 'promotions', 'segments'], defaultConfig: {} }
+      },
+      integrationPoints: {
+        provides: [
+          { name: 'marketing.campaign.created', type: 'event', description: 'Fired when campaign is created', schema: {} },
+          { name: 'marketing.promotion.activated', type: 'event', description: 'Fired when promotion is activated', schema: {} }
+        ],
+        consumes: [
+          { name: 'crm.customer.data', type: 'data', description: 'Customer data for targeting', schema: {} },
+          { name: 'sfa.lead.created', type: 'event', description: 'Listen to leads for campaign attribution', schema: {} }
+        ]
+      },
+      features: [
+        { code: 'campaigns', name: 'Campaign Management', description: 'Create and manage marketing campaigns', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'promotions', name: 'Promotions', description: 'Promotional offers and discount management', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'segments', name: 'Customer Segmentation', description: 'Segment customers for targeted marketing', isDefault: false, businessTypes: ['retail', 'distribution', 'services'], config: {} },
+        { code: 'budgets', name: 'Marketing Budget', description: 'Budget allocation and tracking for campaigns', isDefault: false, businessTypes: ['retail', 'distribution'], config: {} }
+      ],
+      routes: [
+        { path: '/api/hq/marketing', method: 'ALL', handler: 'marketingHandler' }
+      ],
+      models: [
+        'MktCampaign', 'MktCampaignChannel', 'MktPromotion', 'MktPromotionUsage',
+        'MktSegment', 'MktSegmentRule', 'MktBudget', 'MktBudgetAllocation',
+        'MktLeadSource', 'MktAttribution'
+      ],
+      components: [
+        { name: 'MarketingPage', path: '/pages/hq/marketing/index', type: 'page' }
+      ]
+    });
   }
 }
 
