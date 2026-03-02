@@ -854,10 +854,11 @@ async function handleSuppliers(req: NextApiRequest, res: NextApiResponse, method
 
   if (method === 'POST') {
     const { code, name, contactPerson, email, phone, address, city, paymentTerms, bankName, bankAccount, notes } = req.body;
-    if (!code || !name) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Code and name required'));
+    if (!name) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Name required'));
+    const supCode = code || `SUP-${Date.now().toString(36).toUpperCase()}`;
     const [result] = await sequelize.query(`INSERT INTO suppliers (tenant_id, code, name, contact_person, email, phone, address, city, payment_terms, bank_name, bank_account, notes, is_active)
-      VALUES ((SELECT tenant_id FROM suppliers LIMIT 1), :code, :name, :contact, :email, :phone, :address, :city, :terms, :bank, :acct, :notes, true) RETURNING id`,
-      { replacements: { code, name, contact: contactPerson || null, email: email || null, phone: phone || null, address: address || null, city: city || null, terms: paymentTerms || 'Net 30', bank: bankName || null, acct: bankAccount || null, notes: notes || null } });
+      VALUES (COALESCE((SELECT tenant_id FROM suppliers LIMIT 1), (SELECT id FROM tenants LIMIT 1)), :code, :name, :contact, :email, :phone, :address, :city, :terms, :bank, :acct, :notes, true) RETURNING id`,
+      { replacements: { code: supCode, name, contact: contactPerson || null, email: email || null, phone: phone || null, address: address || null, city: city || null, terms: paymentTerms || 'Net 30', bank: bankName || null, acct: bankAccount || null, notes: notes || null } });
     return res.status(HttpStatus.CREATED).json(successResponse({ id: result[0].id }, undefined, 'Supplier created'));
   }
 
@@ -875,6 +876,13 @@ async function handleSuppliers(req: NextApiRequest, res: NextApiResponse, method
       await sequelize.query(`UPDATE suppliers SET ${sets.join(', ')} WHERE id=:id`, { replacements: params });
     }
     return res.status(HttpStatus.OK).json(successResponse({ id }, undefined, 'Supplier updated'));
+  }
+
+  if (method === 'DELETE') {
+    const { id } = req.query;
+    if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Supplier ID required'));
+    await sequelize.query("UPDATE suppliers SET is_active=false, updated_at=NOW() WHERE id=:id", { replacements: { id } });
+    return res.status(HttpStatus.OK).json(successResponse({ id }, undefined, 'Supplier deactivated'));
   }
 
   return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, 'Method not allowed'));
