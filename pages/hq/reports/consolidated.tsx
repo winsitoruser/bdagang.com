@@ -76,48 +76,6 @@ interface BranchPerformance {
   achievement: number;
 }
 
-const mockConsolidatedData: ConsolidatedData = {
-  period: 'Februari 2026',
-  totalRevenue: 4120000000,
-  totalTransactions: 12450,
-  avgTicketSize: 330884,
-  grossProfit: 1236000000,
-  netProfit: 824000000,
-  grossMargin: 30,
-  netMargin: 20,
-  totalBranches: 8,
-  activeBranches: 7,
-  totalEmployees: 127,
-  activeEmployees: 105,
-  stockValue: 4785000000,
-  lowStockAlerts: 65
-};
-
-const mockBranchPerformance: BranchPerformance[] = [
-  { branchId: '1', branchName: 'Cabang Pusat Jakarta', branchCode: 'HQ-001', revenue: 1250000000, transactions: 3890, avgTicket: 321337, profit: 250000000, margin: 20, growth: 8.5, rank: 1, target: 1200000000, achievement: 104 },
-  { branchId: '2', branchName: 'Cabang Bandung', branchCode: 'BR-002', revenue: 920000000, transactions: 2450, avgTicket: 375510, profit: 184000000, margin: 20, growth: 5.2, rank: 2, target: 900000000, achievement: 102 },
-  { branchId: '3', branchName: 'Cabang Surabaya', branchCode: 'BR-003', revenue: 780000000, transactions: 2180, avgTicket: 357798, profit: 156000000, margin: 20, growth: -2.1, rank: 3, target: 850000000, achievement: 92 },
-  { branchId: '4', branchName: 'Cabang Medan', branchCode: 'BR-004', revenue: 650000000, transactions: 1820, avgTicket: 357143, profit: 130000000, margin: 20, growth: 3.8, rank: 4, target: 600000000, achievement: 108 },
-  { branchId: '5', branchName: 'Cabang Yogyakarta', branchCode: 'BR-005', revenue: 520000000, transactions: 1560, avgTicket: 333333, profit: 104000000, margin: 20, growth: 6.5, rank: 5, target: 500000000, achievement: 104 }
-];
-
-const mockTrendData = [
-  { month: 'Sep', revenue: 3200, target: 3000, transactions: 9800 },
-  { month: 'Oct', revenue: 3450, target: 3200, transactions: 10200 },
-  { month: 'Nov', revenue: 3680, target: 3400, transactions: 10800 },
-  { month: 'Dec', revenue: 4200, target: 3800, transactions: 12500 },
-  { month: 'Jan', revenue: 3900, target: 3600, transactions: 11800 },
-  { month: 'Feb', revenue: 4120, target: 4000, transactions: 12450 }
-];
-
-const mockCategoryData = [
-  { name: 'Sembako', value: 35, revenue: 1442000000 },
-  { name: 'Minuman', value: 25, revenue: 1030000000 },
-  { name: 'Makanan Ringan', value: 20, revenue: 824000000 },
-  { name: 'Perawatan', value: 12, revenue: 494400000 },
-  { name: 'Lainnya', value: 8, revenue: 329600000 }
-];
-
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
 export default function ConsolidatedReport() {
@@ -125,6 +83,8 @@ export default function ConsolidatedReport() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ConsolidatedData | null>(null);
   const [branchPerformance, setBranchPerformance] = useState<BranchPerformance[]>([]);
+  const [trendData, setTrendData] = useState<any[]>([]);
+  const [categoryData, setCategoryData] = useState<any[]>([]);
   const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
 
   const fetchData = async () => {
@@ -134,15 +94,13 @@ export default function ConsolidatedReport() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        setData(payload.data || payload || mockConsolidatedData);
-        setBranchPerformance(payload.branches || mockBranchPerformance);
-      } else {
-        setData(mockConsolidatedData);
-        setBranchPerformance(mockBranchPerformance);
+        setData(payload.data || payload);
+        if (payload.branches) setBranchPerformance(payload.branches);
+        if (payload.trendData) setTrendData(payload.trendData);
+        if (payload.categoryData) setCategoryData(payload.categoryData);
       }
     } catch (error) {
-      setData(mockConsolidatedData);
-      setBranchPerformance(mockBranchPerformance);
+      console.error('Error fetching consolidated report:', error);
     } finally {
       setLoading(false);
     }
@@ -327,7 +285,7 @@ export default function ConsolidatedReport() {
             <h3 className="font-semibold text-gray-900 mb-4">Trend Revenue vs Target (Juta)</h3>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={mockTrendData}>
+                <ComposedChart data={trendData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
@@ -345,7 +303,7 @@ export default function ConsolidatedReport() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={mockCategoryData}
+                    data={categoryData}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -354,7 +312,7 @@ export default function ConsolidatedReport() {
                     dataKey="value"
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   >
-                    {mockCategoryData.map((entry, index) => (
+                    {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>

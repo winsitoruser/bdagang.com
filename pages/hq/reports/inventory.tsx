@@ -52,15 +52,6 @@ interface ProductStock {
   branches: { branchId: string; branchName: string; stock: number; minStock: number; status: string }[];
 }
 
-const mockStockData: StockData[] = [
-  { branchId: '1', branchName: 'Cabang Pusat Jakarta', branchCode: 'HQ-001', totalProducts: 156, totalStock: 12500, stockValue: 850000000, lowStockItems: 5, outOfStockItems: 0, overStockItems: 12, lastUpdated: '2026-02-22T06:00:00Z' },
-  { branchId: '2', branchName: 'Cabang Bandung', branchCode: 'BR-002', totalProducts: 142, totalStock: 8200, stockValue: 450000000, lowStockItems: 12, outOfStockItems: 3, overStockItems: 5, lastUpdated: '2026-02-22T05:45:00Z' },
-  { branchId: '3', branchName: 'Cabang Surabaya', branchCode: 'BR-003', totalProducts: 138, totalStock: 7500, stockValue: 380000000, lowStockItems: 8, outOfStockItems: 2, overStockItems: 8, lastUpdated: '2026-02-22T05:30:00Z' },
-  { branchId: '4', branchName: 'Cabang Medan', branchCode: 'BR-004', totalProducts: 125, totalStock: 5800, stockValue: 320000000, lowStockItems: 15, outOfStockItems: 5, overStockItems: 3, lastUpdated: '2026-02-22T04:00:00Z' },
-  { branchId: '5', branchName: 'Cabang Yogyakarta', branchCode: 'BR-005', totalProducts: 130, totalStock: 6200, stockValue: 280000000, lowStockItems: 3, outOfStockItems: 1, overStockItems: 6, lastUpdated: '2026-02-22T05:15:00Z' },
-  { branchId: '6', branchName: 'Gudang Pusat', branchCode: 'WH-001', totalProducts: 180, totalStock: 45000, stockValue: 2500000000, lowStockItems: 22, outOfStockItems: 0, overStockItems: 35, lastUpdated: '2026-02-22T06:00:00Z' }
-];
-
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 export default function InventoryReport() {
@@ -77,12 +68,10 @@ export default function InventoryReport() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        setStockData(payload.stockData || mockStockData);
-      } else {
-        setStockData(mockStockData);
+        if (payload.stockData) setStockData(payload.stockData);
       }
     } catch (error) {
-      setStockData(mockStockData);
+      console.error('Error fetching inventory report:', error);
     } finally {
       setLoading(false);
     }

@@ -50,23 +50,6 @@ interface FinanceData {
   digitalSales: number;
 }
 
-const mockFinanceData: FinanceData[] = [
-  { branchId: '1', branchName: 'Cabang Pusat Jakarta', branchCode: 'HQ-001', revenue: 1250000000, cogs: 875000000, grossProfit: 375000000, operatingExpenses: 125000000, netProfit: 250000000, grossMargin: 30, netMargin: 20, cashSales: 450000000, cardSales: 500000000, digitalSales: 300000000 },
-  { branchId: '2', branchName: 'Cabang Bandung', branchCode: 'BR-002', revenue: 920000000, cogs: 644000000, grossProfit: 276000000, operatingExpenses: 92000000, netProfit: 184000000, grossMargin: 30, netMargin: 20, cashSales: 350000000, cardSales: 320000000, digitalSales: 250000000 },
-  { branchId: '3', branchName: 'Cabang Surabaya', branchCode: 'BR-003', revenue: 780000000, cogs: 546000000, grossProfit: 234000000, operatingExpenses: 78000000, netProfit: 156000000, grossMargin: 30, netMargin: 20, cashSales: 300000000, cardSales: 280000000, digitalSales: 200000000 },
-  { branchId: '4', branchName: 'Cabang Medan', branchCode: 'BR-004', revenue: 650000000, cogs: 455000000, grossProfit: 195000000, operatingExpenses: 65000000, netProfit: 130000000, grossMargin: 30, netMargin: 20, cashSales: 280000000, cardSales: 220000000, digitalSales: 150000000 },
-  { branchId: '5', branchName: 'Cabang Yogyakarta', branchCode: 'BR-005', revenue: 520000000, cogs: 364000000, grossProfit: 156000000, operatingExpenses: 52000000, netProfit: 104000000, grossMargin: 30, netMargin: 20, cashSales: 200000000, cardSales: 180000000, digitalSales: 140000000 }
-];
-
-const mockMonthlyData = [
-  { month: 'Sep', revenue: 3200, profit: 640, expenses: 420 },
-  { month: 'Oct', revenue: 3450, profit: 690, expenses: 435 },
-  { month: 'Nov', revenue: 3680, profit: 736, expenses: 450 },
-  { month: 'Dec', revenue: 4200, profit: 840, expenses: 480 },
-  { month: 'Jan', revenue: 3900, profit: 780, expenses: 465 },
-  { month: 'Feb', revenue: 4120, profit: 824, expenses: 470 }
-];
-
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
 export default function FinanceReport() {
@@ -74,6 +57,7 @@ export default function FinanceReport() {
   const [financeData, setFinanceData] = useState<FinanceData[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
+  const [monthlyData, setMonthlyData] = useState<any[]>([]);
 
   const fetchFinanceData = async () => {
     setLoading(true);
@@ -82,12 +66,10 @@ export default function FinanceReport() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        setFinanceData(payload.financeData || mockFinanceData);
-      } else {
-        setFinanceData(mockFinanceData);
+        if (payload.financeData) setFinanceData(payload.financeData);
       }
     } catch (error) {
-      setFinanceData(mockFinanceData);
+      console.error('Error fetching finance report:', error);
     } finally {
       setLoading(false);
     }
@@ -253,7 +235,7 @@ export default function FinanceReport() {
             <h3 className="font-semibold text-gray-900 mb-4">Trend Revenue & Profit (Juta)</h3>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={mockMonthlyData}>
+                <AreaChart data={monthlyData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
