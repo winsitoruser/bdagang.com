@@ -162,8 +162,9 @@ export default function GlobalStockManagement() {
       
       const response = await fetch(`/api/hq/inventory/stock?${params.toString()}`);
       if (response.ok) {
-        const data = await response.json();
-        setProducts(data.products || mockProducts);
+        const json = await response.json();
+        const payload = json.data || json;
+        setProducts(payload.products || mockProducts);
       }
     } catch (error) {
       console.error('Error fetching stock:', error);

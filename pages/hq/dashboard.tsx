@@ -486,19 +486,20 @@ export default function HQDashboard() {
     try {
       const response = await fetch(`/api/hq/dashboard?period=${selectedPeriod}`);
       if (response.ok) {
-        const data = await response.json();
-        setBranches(data.branches || mockBranchesData);
-        setAlerts(data.alerts || mockAlertsData);
-        if (data.salesTrend) {
-          setSalesTrendData(data.salesTrend.map((t: SalesTrendData) => ({
+        const json = await response.json();
+        const payload = json.data || json;
+        setBranches(payload.branches || mockBranchesData);
+        setAlerts(payload.alerts || mockAlertsData);
+        if (payload.salesTrend) {
+          setSalesTrendData(payload.salesTrend.map((t: SalesTrendData) => ({
             ...t,
-            sales: t.sales / 1000000 // Convert to millions for chart
+            sales: t.sales / 1000000
           })));
         }
-        if (data.regionPerformance) {
-          setRegionData(data.regionPerformance.map((r: RegionData) => ({
+        if (payload.regionPerformance) {
+          setRegionData(payload.regionPerformance.map((r: RegionData) => ({
             ...r,
-            sales: r.sales / 1000000 // Convert to millions
+            sales: r.sales / 1000000
           })));
         }
       } else {

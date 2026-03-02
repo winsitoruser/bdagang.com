@@ -135,8 +135,9 @@ export default function BranchSettings() {
     try {
       const response = await fetch('/api/hq/branch-settings');
       if (response.ok) {
-        const data = await response.json();
-        setTemplates(data.templates || mockTemplates);
+        const json = await response.json();
+        const payload = json.data || json;
+        setTemplates(payload.templates || mockTemplates);
       } else {
         setTemplates(mockTemplates);
       }

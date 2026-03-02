@@ -121,8 +121,9 @@ export default function GoodsReceiptManagement() {
       
       const response = await fetch(`/api/hq/inventory/receipts?${params.toString()}`);
       if (response.ok) {
-        const data = await response.json();
-        setReceipts(data.receipts || mockReceipts);
+        const json = await response.json();
+        const payload = json.data || json;
+        setReceipts(payload.receipts || mockReceipts);
       }
     } catch (error) {
       console.error('Error fetching receipts:', error);

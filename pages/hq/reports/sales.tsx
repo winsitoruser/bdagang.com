@@ -135,8 +135,9 @@ export default function SalesReport() {
     try {
       const response = await fetch(`/api/admin/reports/consolidated?period=${period}`);
       if (response.ok) {
-        const data = await response.json();
-        processSalesData(data.data);
+        const json = await response.json();
+        const payload = json.data || json;
+        processSalesData(payload.data || payload);
       } else {
         loadMockData();
       }

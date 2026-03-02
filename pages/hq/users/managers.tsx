@@ -174,8 +174,9 @@ export default function ManagersPage() {
     try {
       const response = await fetch('/api/hq/managers');
       if (response.ok) {
-        const data = await response.json();
-        setManagers(data.managers || mockManagers);
+        const json = await response.json();
+        const payload = json.data || json;
+        setManagers(payload.managers || mockManagers);
       } else {
         setManagers(mockManagers);
       }

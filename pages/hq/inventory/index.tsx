@@ -186,8 +186,9 @@ export default function HQInventoryDashboard() {
       }
       
       if (branchesRes.ok) {
-        const branchData = await branchesRes.json();
-        setBranches(branchData.branches || []);
+        const branchJson = await branchesRes.json();
+        const branchPayload = branchJson.data || branchJson;
+        setBranches(branchPayload.branches || []);
       }
     } catch (error) {
       console.error('Error fetching inventory data:', error);

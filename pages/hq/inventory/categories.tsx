@@ -121,8 +121,9 @@ export default function InventoryCategories() {
     try {
       const response = await fetch('/api/hq/inventory/categories');
       if (response.ok) {
-        const data = await response.json();
-        setCategories(data.categories || mockCategories);
+        const json = await response.json();
+        const payload = json.data || json;
+        setCategories(payload.categories || mockCategories);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);

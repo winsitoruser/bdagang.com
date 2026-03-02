@@ -173,8 +173,9 @@ export default function UserRoles() {
     try {
       const response = await fetch('/api/hq/roles');
       if (response.ok) {
-        const data = await response.json();
-        setRoles(data.roles || mockRoles);
+        const json = await response.json();
+        const payload = json.data || json;
+        setRoles(payload.roles || mockRoles);
       } else {
         setRoles(mockRoles);
       }

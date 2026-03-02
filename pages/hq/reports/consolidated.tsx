@@ -132,9 +132,10 @@ export default function ConsolidatedReport() {
     try {
       const response = await fetch(`/api/admin/reports/consolidated?period=${period}`);
       if (response.ok) {
-        const result = await response.json();
-        setData(result.data || mockConsolidatedData);
-        setBranchPerformance(result.branches || mockBranchPerformance);
+        const json = await response.json();
+        const payload = json.data || json;
+        setData(payload.data || payload || mockConsolidatedData);
+        setBranchPerformance(payload.branches || mockBranchPerformance);
       } else {
         setData(mockConsolidatedData);
         setBranchPerformance(mockBranchPerformance);

@@ -170,9 +170,10 @@ export default function UserManagement() {
     try {
       const response = await fetch(`/api/hq/users?page=${page}&limit=${pageSize}`);
       if (response.ok) {
-        const data = await response.json();
-        setUsers(data.users || mockUsers);
-        setTotal(data.total || mockUsers.length);
+        const json = await response.json();
+        const payload = json.data || json;
+        setUsers(payload.users || mockUsers);
+        setTotal(payload.total || mockUsers.length);
       } else {
         setUsers(mockUsers);
         setTotal(mockUsers.length);

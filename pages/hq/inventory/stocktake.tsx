@@ -126,8 +126,9 @@ export default function StocktakeManagement() {
       
       const response = await fetch(`/api/hq/inventory/stocktake?${params.toString()}`);
       if (response.ok) {
-        const data = await response.json();
-        setStocktakes(data.stocktakes || mockStocktakes);
+        const json = await response.json();
+        const payload = json.data || json;
+        setStocktakes(payload.stocktakes || mockStocktakes);
       }
     } catch (error) {
       console.error('Error fetching stocktakes:', error);

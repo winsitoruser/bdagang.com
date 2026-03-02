@@ -185,15 +185,17 @@ export default function ProductPricing() {
       ]);
       
       if (tiersRes.ok) {
-        const data = await tiersRes.json();
-        setPriceTiers(data.tiers || mockPriceTiers);
+        const json1 = await tiersRes.json();
+        const p1 = json1.data || json1;
+        setPriceTiers(p1.tiers || mockPriceTiers);
       } else {
         setPriceTiers(mockPriceTiers);
       }
       
       if (pricesRes.ok) {
-        const data = await pricesRes.json();
-        setProductPrices(data.prices || mockProductPrices);
+        const json2 = await pricesRes.json();
+        const p2 = json2.data || json2;
+        setProductPrices(p2.prices || mockProductPrices);
       } else {
         setProductPrices(mockProductPrices);
       }

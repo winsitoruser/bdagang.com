@@ -248,8 +248,9 @@ export default function BranchPerformancePage() {
     try {
       const response = await fetch(`/api/hq/branches/performance?period=${period}`);
       if (response.ok) {
-        const data = await response.json();
-        setBranches(data.branches || mockBranchPerformance);
+        const json = await response.json();
+        const payload = json.data || json;
+        setBranches(payload.branches || mockBranchPerformance);
       } else {
         setBranches(mockBranchPerformance);
       }

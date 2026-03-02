@@ -205,9 +205,10 @@ export default function ProductManagement() {
     try {
       const response = await fetch(`/api/hq/products?page=${page}&limit=${pageSize}`);
       if (response.ok) {
-        const data = await response.json();
-        setProducts(data.products || mockProducts);
-        setTotal(data.total || mockProducts.length);
+        const json = await response.json();
+        const payload = json.data || json;
+        setProducts(payload.products || mockProducts);
+        setTotal(payload.total || mockProducts.length);
       } else {
         setProducts(mockProducts);
         setTotal(mockProducts.length);

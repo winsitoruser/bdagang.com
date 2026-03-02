@@ -117,9 +117,25 @@ export default function InventoryAlerts() {
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [showResolved, setShowResolved] = useState(false);
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/hq/inventory/alerts');
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.alerts) setAlerts(payload.alerts);
+      }
+    } catch (error) {
+      console.error('Error fetching alerts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
-    setLoading(false);
+    fetchData();
   }, []);
 
   if (!mounted) return null;

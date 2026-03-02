@@ -75,8 +75,9 @@ export default function InventoryReport() {
     try {
       const response = await fetch('/api/hq/reports/inventory');
       if (response.ok) {
-        const data = await response.json();
-        setStockData(data.stockData || mockStockData);
+        const json = await response.json();
+        const payload = json.data || json;
+        setStockData(payload.stockData || mockStockData);
       } else {
         setStockData(mockStockData);
       }

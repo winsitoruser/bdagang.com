@@ -133,13 +133,15 @@ export default function InventoryPricing() {
       ]);
       
       if (tiersRes.ok) {
-        const data = await tiersRes.json();
-        setPriceTiers(data.priceTiers || mockPriceTiers);
+        const json1 = await tiersRes.json();
+        const p1 = json1.data || json1;
+        setPriceTiers(p1.priceTiers || mockPriceTiers);
       }
       
       if (pricesRes.ok) {
-        const data = await pricesRes.json();
-        setProductPrices(data.productPrices || mockProductPrices);
+        const json2 = await pricesRes.json();
+        const p2 = json2.data || json2;
+        setProductPrices(p2.productPrices || mockProductPrices);
       }
     } catch (error) {
       console.error('Error fetching pricing data:', error);

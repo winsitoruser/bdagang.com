@@ -80,8 +80,9 @@ export default function FinanceReport() {
     try {
       const response = await fetch(`/api/hq/reports/finance?period=${period}`);
       if (response.ok) {
-        const data = await response.json();
-        setFinanceData(data.financeData || mockFinanceData);
+        const json = await response.json();
+        const payload = json.data || json;
+        setFinanceData(payload.financeData || mockFinanceData);
       } else {
         setFinanceData(mockFinanceData);
       }

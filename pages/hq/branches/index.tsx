@@ -192,9 +192,10 @@ export default function BranchManagement() {
     try {
       const response = await fetch(`/api/hq/branches?page=${page}&limit=${pageSize}`);
       if (response.ok) {
-        const data = await response.json();
-        setBranches(data.branches || mockBranches);
-        setTotal(data.total || mockBranches.length);
+        const json = await response.json();
+        const payload = json.data || json;
+        setBranches(payload.branches || mockBranches);
+        setTotal(payload.total || mockBranches.length);
       } else {
         setBranches(mockBranches);
         setTotal(mockBranches.length);

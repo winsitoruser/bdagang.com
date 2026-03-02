@@ -145,8 +145,9 @@ export default function ProductCategories() {
     try {
       const response = await fetch('/api/hq/categories');
       if (response.ok) {
-        const data = await response.json();
-        setCategories(data.categories || mockCategories);
+        const json = await response.json();
+        const payload = json.data || json;
+        setCategories(payload.categories || mockCategories);
       } else {
         setCategories(mockCategories);
       }
