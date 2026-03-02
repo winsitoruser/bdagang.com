@@ -50,91 +50,6 @@ interface BranchStockDetail {
   lastUpdated: string;
 }
 
-const mockProducts: ProductStock[] = [
-  {
-    id: '1', name: 'Beras Premium 5kg', sku: 'BRS-001', barcode: '8991234567001', category: 'Bahan Pokok', unit: 'pcs',
-    totalStock: 2500, minStock: 500, maxStock: 5000, avgCost: 75000, stockValue: 187500000, movement: 'fast',
-    branches: [
-      { branchId: '1', branchName: 'Gudang Pusat', branchCode: 'WH-001', stock: 1200, minStock: 200, maxStock: 2000, status: 'normal', lastUpdated: '2026-02-22T10:00:00' },
-      { branchId: '2', branchName: 'Cabang Jakarta', branchCode: 'HQ-001', stock: 450, minStock: 100, maxStock: 800, status: 'normal', lastUpdated: '2026-02-22T09:30:00' },
-      { branchId: '3', branchName: 'Cabang Bandung', branchCode: 'BR-002', stock: 320, minStock: 100, maxStock: 600, status: 'normal', lastUpdated: '2026-02-22T09:00:00' },
-      { branchId: '4', branchName: 'Cabang Surabaya', branchCode: 'BR-003', stock: 280, minStock: 100, maxStock: 600, status: 'normal', lastUpdated: '2026-02-22T08:30:00' },
-      { branchId: '5', branchName: 'Cabang Medan', branchCode: 'BR-004', stock: 150, minStock: 100, maxStock: 500, status: 'low', lastUpdated: '2026-02-22T08:00:00' },
-      { branchId: '6', branchName: 'Cabang Yogyakarta', branchCode: 'BR-005', stock: 100, minStock: 80, maxStock: 400, status: 'normal', lastUpdated: '2026-02-22T07:30:00' }
-    ]
-  },
-  {
-    id: '2', name: 'Minyak Goreng 2L', sku: 'MYK-001', barcode: '8991234567002', category: 'Bahan Pokok', unit: 'pcs',
-    totalStock: 1800, minStock: 400, maxStock: 3500, avgCost: 35000, stockValue: 63000000, movement: 'fast',
-    branches: [
-      { branchId: '1', branchName: 'Gudang Pusat', branchCode: 'WH-001', stock: 800, minStock: 150, maxStock: 1500, status: 'normal', lastUpdated: '2026-02-22T10:00:00' },
-      { branchId: '2', branchName: 'Cabang Jakarta', branchCode: 'HQ-001', stock: 350, minStock: 80, maxStock: 500, status: 'normal', lastUpdated: '2026-02-22T09:30:00' },
-      { branchId: '3', branchName: 'Cabang Bandung', branchCode: 'BR-002', stock: 250, minStock: 60, maxStock: 400, status: 'normal', lastUpdated: '2026-02-22T09:00:00' },
-      { branchId: '4', branchName: 'Cabang Surabaya', branchCode: 'BR-003', stock: 200, minStock: 60, maxStock: 400, status: 'normal', lastUpdated: '2026-02-22T08:30:00' },
-      { branchId: '5', branchName: 'Cabang Medan', branchCode: 'BR-004', stock: 120, minStock: 50, maxStock: 350, status: 'normal', lastUpdated: '2026-02-22T08:00:00' },
-      { branchId: '6', branchName: 'Cabang Yogyakarta', branchCode: 'BR-005', stock: 80, minStock: 50, maxStock: 350, status: 'normal', lastUpdated: '2026-02-22T07:30:00' }
-    ]
-  },
-  {
-    id: '3', name: 'Gula Pasir 1kg', sku: 'GLA-001', barcode: '8991234567003', category: 'Bahan Pokok', unit: 'pcs',
-    totalStock: 3200, minStock: 600, maxStock: 5000, avgCost: 16000, stockValue: 51200000, movement: 'medium',
-    branches: [
-      { branchId: '1', branchName: 'Gudang Pusat', branchCode: 'WH-001', stock: 1500, minStock: 250, maxStock: 2000, status: 'normal', lastUpdated: '2026-02-22T10:00:00' },
-      { branchId: '2', branchName: 'Cabang Jakarta', branchCode: 'HQ-001', stock: 500, minStock: 100, maxStock: 700, status: 'normal', lastUpdated: '2026-02-22T09:30:00' },
-      { branchId: '3', branchName: 'Cabang Bandung', branchCode: 'BR-002', stock: 400, minStock: 80, maxStock: 600, status: 'normal', lastUpdated: '2026-02-22T09:00:00' },
-      { branchId: '4', branchName: 'Cabang Surabaya', branchCode: 'BR-003', stock: 350, minStock: 70, maxStock: 550, status: 'normal', lastUpdated: '2026-02-22T08:30:00' },
-      { branchId: '5', branchName: 'Cabang Medan', branchCode: 'BR-004', stock: 250, minStock: 60, maxStock: 500, status: 'normal', lastUpdated: '2026-02-22T08:00:00' },
-      { branchId: '6', branchName: 'Cabang Yogyakarta', branchCode: 'BR-005', stock: 200, minStock: 50, maxStock: 450, status: 'normal', lastUpdated: '2026-02-22T07:30:00' }
-    ]
-  },
-  {
-    id: '4', name: 'Kopi Arabica 250g', sku: 'KPI-001', barcode: '8991234567004', category: 'Minuman', unit: 'pcs',
-    totalStock: 450, minStock: 150, maxStock: 800, avgCost: 85000, stockValue: 38250000, movement: 'medium',
-    branches: [
-      { branchId: '1', branchName: 'Gudang Pusat', branchCode: 'WH-001', stock: 200, minStock: 50, maxStock: 350, status: 'normal', lastUpdated: '2026-02-22T10:00:00' },
-      { branchId: '2', branchName: 'Cabang Jakarta', branchCode: 'HQ-001', stock: 80, minStock: 30, maxStock: 150, status: 'normal', lastUpdated: '2026-02-22T09:30:00' },
-      { branchId: '3', branchName: 'Cabang Bandung', branchCode: 'BR-002', stock: 60, minStock: 25, maxStock: 120, status: 'normal', lastUpdated: '2026-02-22T09:00:00' },
-      { branchId: '4', branchName: 'Cabang Surabaya', branchCode: 'BR-003', stock: 50, minStock: 20, maxStock: 100, status: 'normal', lastUpdated: '2026-02-22T08:30:00' },
-      { branchId: '5', branchName: 'Cabang Medan', branchCode: 'BR-004', stock: 35, minStock: 15, maxStock: 80, status: 'normal', lastUpdated: '2026-02-22T08:00:00' },
-      { branchId: '6', branchName: 'Cabang Yogyakarta', branchCode: 'BR-005', stock: 25, minStock: 15, maxStock: 70, status: 'normal', lastUpdated: '2026-02-22T07:30:00' }
-    ]
-  },
-  {
-    id: '5', name: 'Susu UHT 1L', sku: 'SSU-001', barcode: '8991234567005', category: 'Minuman', unit: 'pcs',
-    totalStock: 2100, minStock: 500, maxStock: 4000, avgCost: 18000, stockValue: 37800000, movement: 'fast',
-    branches: [
-      { branchId: '1', branchName: 'Gudang Pusat', branchCode: 'WH-001', stock: 900, minStock: 200, maxStock: 1600, status: 'normal', lastUpdated: '2026-02-22T10:00:00' },
-      { branchId: '2', branchName: 'Cabang Jakarta', branchCode: 'HQ-001', stock: 400, minStock: 100, maxStock: 600, status: 'normal', lastUpdated: '2026-02-22T09:30:00' },
-      { branchId: '3', branchName: 'Cabang Bandung', branchCode: 'BR-002', stock: 300, minStock: 80, maxStock: 500, status: 'normal', lastUpdated: '2026-02-22T09:00:00' },
-      { branchId: '4', branchName: 'Cabang Surabaya', branchCode: 'BR-003', stock: 250, minStock: 60, maxStock: 450, status: 'normal', lastUpdated: '2026-02-22T08:30:00' },
-      { branchId: '5', branchName: 'Cabang Medan', branchCode: 'BR-004', stock: 150, minStock: 40, maxStock: 400, status: 'normal', lastUpdated: '2026-02-22T08:00:00' },
-      { branchId: '6', branchName: 'Cabang Yogyakarta', branchCode: 'BR-005', stock: 100, minStock: 30, maxStock: 350, status: 'normal', lastUpdated: '2026-02-22T07:30:00' }
-    ]
-  },
-  {
-    id: '6', name: 'Tepung Terigu 1kg', sku: 'TPG-001', barcode: '8991234567006', category: 'Bahan Pokok', unit: 'pcs',
-    totalStock: 85, minStock: 300, maxStock: 2000, avgCost: 14000, stockValue: 1190000, movement: 'slow',
-    branches: [
-      { branchId: '1', branchName: 'Gudang Pusat', branchCode: 'WH-001', stock: 50, minStock: 100, maxStock: 800, status: 'low', lastUpdated: '2026-02-22T10:00:00' },
-      { branchId: '2', branchName: 'Cabang Jakarta', branchCode: 'HQ-001', stock: 15, minStock: 50, maxStock: 300, status: 'low', lastUpdated: '2026-02-22T09:30:00' },
-      { branchId: '3', branchName: 'Cabang Bandung', branchCode: 'BR-002', stock: 10, minStock: 40, maxStock: 250, status: 'low', lastUpdated: '2026-02-22T09:00:00' },
-      { branchId: '4', branchName: 'Cabang Surabaya', branchCode: 'BR-003', stock: 5, minStock: 35, maxStock: 220, status: 'low', lastUpdated: '2026-02-22T08:30:00' },
-      { branchId: '5', branchName: 'Cabang Medan', branchCode: 'BR-004', stock: 0, minStock: 30, maxStock: 200, status: 'out', lastUpdated: '2026-02-22T08:00:00' },
-      { branchId: '6', branchName: 'Cabang Yogyakarta', branchCode: 'BR-005', stock: 5, minStock: 25, maxStock: 180, status: 'low', lastUpdated: '2026-02-22T07:30:00' }
-    ]
-  }
-];
-
-const branches = [
-  { id: 'all', name: 'Semua Cabang', code: 'ALL' },
-  { id: '1', name: 'Gudang Pusat', code: 'WH-001' },
-  { id: '2', name: 'Cabang Jakarta', code: 'HQ-001' },
-  { id: '3', name: 'Cabang Bandung', code: 'BR-002' },
-  { id: '4', name: 'Cabang Surabaya', code: 'BR-003' },
-  { id: '5', name: 'Cabang Medan', code: 'BR-004' },
-  { id: '6', name: 'Cabang Yogyakarta', code: 'BR-005' }
-];
-
 const categories = ['Semua Kategori', 'Bahan Pokok', 'Minuman', 'Snack', 'Frozen', 'Non-Food'];
 
 export default function GlobalStockManagement() {
@@ -143,7 +58,8 @@ export default function GlobalStockManagement() {
   
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [products, setProducts] = useState<ProductStock[]>(mockProducts);
+  const [products, setProducts] = useState<ProductStock[]>([]);
+  const [branches, setBranches] = useState<{id: string, name: string, code: string}[]>([{id: 'all', name: 'Semua Cabang', code: 'ALL'}]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBranch, setSelectedBranch] = useState<string>(branch as string || 'all');
   const [selectedCategory, setSelectedCategory] = useState('Semua Kategori');
@@ -164,7 +80,7 @@ export default function GlobalStockManagement() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        setProducts(payload.products || mockProducts);
+        if (payload.products) setProducts(payload.products);
       }
     } catch (error) {
       console.error('Error fetching stock:', error);
