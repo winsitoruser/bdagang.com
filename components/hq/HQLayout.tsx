@@ -180,26 +180,27 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
     const isExpanded = expandedMenus.includes(item.id);
     const active = item.href ? isActive(item.href) : false;
     const Icon = item.icon;
+    const isChild = depth > 0;
 
     if (hasChildren) {
       return (
         <div key={item.id}>
           <button
             onClick={() => toggleMenu(item.id)}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 ${
-              isExpanded ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-100'
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-150 ${
+              isExpanded ? 'bg-blue-50/80 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
-            <div className="flex items-center gap-3">
-              <Icon className="w-5 h-5" />
-              {!sidebarCollapsed && <span className="text-sm font-medium">{item.name}</span>}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+              {!sidebarCollapsed && <span className="text-sm font-semibold truncate">{item.name}</span>}
             </div>
             {!sidebarCollapsed && (
-              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
             )}
           </button>
           {!sidebarCollapsed && isExpanded && (
-            <div className="ml-4 mt-1 space-y-1 border-l-2 border-gray-200 pl-3">
+            <div className="ml-[18px] mt-0.5 space-y-px border-l border-gray-200 pl-2.5">
               {item.children!.map(child => renderNavItem(child, depth + 1))}
             </div>
           )}
@@ -211,24 +212,34 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
       <Link
         key={item.id}
         href={item.href || '#'}
-        className={`group relative flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 ${
+        className={`group relative flex items-center justify-between rounded-md transition-all duration-150 ${
+          isChild ? 'px-2.5 py-[5px]' : 'px-3 py-2'
+        } ${
           active 
-            ? 'bg-blue-600 text-white shadow-md shadow-blue-200' 
-            : 'text-gray-600 hover:bg-gray-100'
+            ? isChild
+              ? 'bg-blue-600 text-white'
+              : 'bg-blue-600 text-white shadow-sm shadow-blue-200'
+            : isChild
+              ? 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+              : 'text-gray-600 hover:bg-gray-50'
         } ${sidebarCollapsed ? 'justify-center' : ''}`}
       >
-        <div className={`flex items-center gap-3 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-          <Icon className="w-5 h-5" />
-          {!sidebarCollapsed && <span className="text-sm font-medium">{item.name}</span>}
+        <div className={`flex items-center min-w-0 ${isChild ? 'gap-2' : 'gap-2.5'} ${sidebarCollapsed ? 'justify-center' : ''}`}>
+          <Icon className={`flex-shrink-0 ${isChild ? 'w-3.5 h-3.5' : 'w-[18px] h-[18px]'}`} />
+          {!sidebarCollapsed && (
+            <span className={`truncate ${isChild ? 'text-[13px] font-normal leading-tight' : 'text-sm font-semibold'}`}>
+              {item.name}
+            </span>
+          )}
         </div>
         {!sidebarCollapsed && item.badge !== undefined && (
-          <span className={`px-2 py-0.5 text-xs font-bold text-white rounded-full ${item.badgeColor || 'bg-blue-500'}`}>
+          <span className={`ml-auto flex-shrink-0 px-1.5 py-0.5 text-[10px] font-bold text-white rounded-full ${item.badgeColor || 'bg-blue-500'}`}>
             {item.badge}
           </span>
         )}
         {/* Collapsed tooltip */}
         {sidebarCollapsed && (
-          <div className="hidden lg:block absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+          <div className="hidden lg:block absolute left-full ml-2 px-2.5 py-1.5 bg-gray-900 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
             {item.name}
             <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
           </div>
@@ -237,16 +248,20 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
     );
   };
 
-  const renderMenuGroup = (group: MenuGroup) => (
-    <div key={group.id} className="mb-4">
+  const renderMenuGroup = (group: MenuGroup, idx: number) => (
+    <div key={group.id} className={idx > 0 ? 'mt-5' : ''}>
       {!sidebarCollapsed && (
-        <div className="px-3 mb-2">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        <div className="px-3 mb-1.5 flex items-center gap-2">
+          <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.06em] whitespace-nowrap">
             {group.title}
           </h3>
+          <div className="flex-1 h-px bg-gray-100" />
         </div>
       )}
-      <div className="space-y-1">
+      {sidebarCollapsed && idx > 0 && (
+        <div className="mx-3 mb-2 h-px bg-gray-100" />
+      )}
+      <div className="space-y-0.5">
         {group.items.map(item => renderNavItem(item))}
       </div>
     </div>
@@ -271,38 +286,41 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
         sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
       } w-64`}>
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
-          <Link href={filteredConfig.logo.href} className={`flex items-center gap-3 ${sidebarCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center flex-shrink-0">
-              <LogoIcon className="w-6 h-6 text-white" />
+        <div className="h-14 flex items-center justify-between px-4 border-b border-gray-100">
+          <Link href={filteredConfig.logo.href} className={`flex items-center gap-2.5 ${sidebarCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center flex-shrink-0">
+              <LogoIcon className="w-5 h-5 text-white" />
             </div>
             {!sidebarCollapsed && (
-              <div className="hidden lg:block">
-                <h1 className="font-bold text-gray-900">{filteredConfig.logo.title}</h1>
+              <div className={`${sidebarCollapsed ? 'hidden' : ''}`}>
+                <h1 className="text-sm font-bold text-gray-900 leading-tight">{filteredConfig.logo.title}</h1>
                 {filteredConfig.logo.subtitle && (
-                  <p className="text-xs text-gray-500">{filteredConfig.logo.subtitle}</p>
+                  <p className="text-[10px] text-gray-400 font-medium leading-tight">{filteredConfig.logo.subtitle}</p>
                 )}
               </div>
             )}
-            <div className="lg:hidden">
-              <h1 className="font-bold text-gray-900">{filteredConfig.logo.title}</h1>
-              {filteredConfig.logo.subtitle && (
-                <p className="text-xs text-gray-500">{filteredConfig.logo.subtitle}</p>
-              )}
-            </div>
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+            className="lg:hidden p-1.5 rounded-md hover:bg-gray-100 text-gray-400"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 overflow-y-auto h-[calc(100vh-8rem)]">
-          {filteredConfig.groups.map(group => renderMenuGroup(group))}
+        <nav className="px-3 py-3 overflow-y-auto h-[calc(100vh-8rem)] sidebar-scroll">
+          {filteredConfig.groups.map((group, idx) => renderMenuGroup(group, idx))}
         </nav>
+
+        {/* Scrollbar styling */}
+        <style jsx global>{`
+          .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+          .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+          .sidebar-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+          .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+          .sidebar-scroll { scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
+        `}</style>
       </aside>
 
       {/* Collapse Toggle Button - Desktop Only */}
