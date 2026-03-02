@@ -1,107 +1,94 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
-const mockAlerts = [
-  {
-    id: '1', type: 'out_of_stock', priority: 'critical',
-    product: { id: '6', name: 'Tepung Terigu 1kg', sku: 'TPG-001', category: 'Bahan Pokok' },
-    branch: { id: '5', name: 'Cabang Medan', code: 'BR-004' },
-    currentStock: 0, minStock: 30, maxStock: 200,
-    suggestedAction: 'Transfer dari Gudang Pusat atau buat PO ke supplier',
-    createdAt: '2026-02-22T08:00:00', isRead: false, isResolved: false
-  },
-  {
-    id: '2', type: 'low_stock', priority: 'high',
-    product: { id: '6', name: 'Tepung Terigu 1kg', sku: 'TPG-001', category: 'Bahan Pokok' },
-    branch: { id: '1', name: 'Gudang Pusat', code: 'WH-001' },
-    currentStock: 50, minStock: 100, maxStock: 800,
-    suggestedAction: 'Buat Purchase Order ke supplier utama',
-    createdAt: '2026-02-22T07:30:00', isRead: false, isResolved: false
-  },
-  {
-    id: '3', type: 'low_stock', priority: 'high',
-    product: { id: '6', name: 'Tepung Terigu 1kg', sku: 'TPG-001', category: 'Bahan Pokok' },
-    branch: { id: '2', name: 'Cabang Jakarta', code: 'HQ-001' },
-    currentStock: 15, minStock: 50, maxStock: 300,
-    suggestedAction: 'Transfer dari Gudang Pusat',
-    createdAt: '2026-02-22T07:00:00', isRead: true, isResolved: false
-  },
-  {
-    id: '4', type: 'low_stock', priority: 'medium',
-    product: { id: '1', name: 'Beras Premium 5kg', sku: 'BRS-001', category: 'Bahan Pokok' },
-    branch: { id: '5', name: 'Cabang Medan', code: 'BR-004' },
-    currentStock: 150, minStock: 100, maxStock: 500,
-    suggestedAction: 'Monitor atau transfer dari Gudang Pusat',
-    createdAt: '2026-02-22T06:00:00', isRead: true, isResolved: false
-  },
-  {
-    id: '5', type: 'overstock', priority: 'low',
-    product: { id: '3', name: 'Gula Pasir 1kg', sku: 'GLA-001', category: 'Bahan Pokok' },
-    branch: { id: '1', name: 'Gudang Pusat', code: 'WH-001' },
-    currentStock: 1500, minStock: 250, maxStock: 1200,
-    suggestedAction: 'Distribusikan ke cabang atau buat promo',
-    createdAt: '2026-02-21T14:00:00', isRead: true, isResolved: false
-  },
-  {
-    id: '6', type: 'expiring', priority: 'high',
-    product: { id: '5', name: 'Susu UHT 1L', sku: 'SSU-001', category: 'Minuman' },
-    branch: { id: '3', name: 'Cabang Bandung', code: 'BR-002' },
-    currentStock: 50, minStock: 80, maxStock: 500,
-    suggestedAction: 'Buat promo atau retur ke supplier (exp: 7 hari lagi)',
-    createdAt: '2026-02-21T10:00:00', isRead: false, isResolved: false
-  }
-];
+const sequelize = require('../../../../lib/sequelize');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method === 'GET') {
-    const { type, priority, branchId, includeResolved } = req.query;
-    
-    let filteredAlerts = mockAlerts;
-    
-    if (type && type !== 'all') {
-      filteredAlerts = filteredAlerts.filter(a => a.type === type);
+      const { type, priority, includeResolved } = req.query;
+      let where = 'WHERE 1=1';
+      const params: any = {};
+      if (type && type !== 'all') { where += ' AND a.alert_type=:type'; params.type = type; }
+      if (priority && priority !== 'all') { where += ' AND a.severity=:priority'; params.priority = priority; }
+      if (includeResolved !== 'true') where += ' AND a.is_resolved=false';
+
+      const [alerts] = await sequelize.query(`
+        SELECT a.*, p.name as product_name, p.sku, pc.name as category_name,
+          w.name as warehouse_name, w.code as warehouse_code
+        FROM stock_alerts a
+        LEFT JOIN products p ON p.id=a.product_id
+        LEFT JOIN product_categories pc ON pc.id=p.category_id
+        LEFT JOIN warehouses w ON w.id=a.warehouse_id
+        ${where} ORDER BY a.created_at DESC
+      `, { replacements: params });
+
+      const [statsRows] = await sequelize.query(`
+        SELECT 
+          COUNT(*) FILTER (WHERE is_resolved=false)::int as total,
+          COUNT(*) FILTER (WHERE severity='critical' AND is_resolved=false)::int as critical,
+          COUNT(*) FILTER (WHERE severity='high' AND is_resolved=false)::int as high,
+          COUNT(*) FILTER (WHERE severity='warning' AND is_resolved=false)::int as warning,
+          COUNT(*) FILTER (WHERE is_read=false AND is_resolved=false)::int as unread
+        FROM stock_alerts
+      `);
+      const st = statsRows[0] || {};
+
+      return res.status(HttpStatus.OK).json(successResponse({
+        alerts: alerts.map((a: any) => ({
+          id: String(a.id), type: a.alert_type, priority: a.severity,
+          product: { id: String(a.product_id || ''), name: a.product_name || '-', sku: a.sku || '', category: a.category_name || '-' },
+          branch: { id: String(a.warehouse_id || ''), name: a.warehouse_name || '-', code: a.warehouse_code || '' },
+          currentStock: parseFloat(a.current_stock) || 0, minStock: parseFloat(a.threshold) || 0, maxStock: 0,
+          title: a.title, message: a.message,
+          suggestedAction: a.alert_type === 'out_of_stock' ? 'Transfer atau buat PO ke supplier' : a.alert_type === 'low_stock' ? 'Buat Purchase Order' : 'Monitor stok',
+          createdAt: a.created_at, isRead: a.is_read, isResolved: a.is_resolved
+        })),
+        stats: { total: st.total || 0, critical: st.critical || 0, high: st.high || 0, unread: st.unread || 0 }
+      }));
     }
-    
-    if (priority && priority !== 'all') {
-      filteredAlerts = filteredAlerts.filter(a => a.priority === priority);
+
+    if (req.method === 'PATCH' || req.method === 'PUT') {
+      const { id, action: alertAction } = req.body;
+      if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Alert ID required'));
+
+      if (alertAction === 'resolve') {
+        await sequelize.query("UPDATE stock_alerts SET is_resolved=true, resolved_at=NOW(), updated_at=NOW() WHERE id=:id", { replacements: { id } });
+      } else if (alertAction === 'read') {
+        await sequelize.query("UPDATE stock_alerts SET is_read=true, updated_at=NOW() WHERE id=:id", { replacements: { id } });
+      }
+      return res.status(HttpStatus.OK).json(successResponse({ id, action: alertAction }, undefined, `Alert ${alertAction}`));
     }
-    
-    if (branchId) {
-      filteredAlerts = filteredAlerts.filter(a => a.branch.code === branchId);
+
+    if (req.method === 'POST') {
+      // Generate alerts from current stock levels
+      await sequelize.query(`
+        INSERT INTO stock_alerts (tenant_id, product_id, alert_type, severity, title, message, current_stock, threshold)
+        SELECT p.tenant_id, p.id, 'low_stock', 'warning', 'Stok Rendah: ' || p.name,
+          'Stok ' || p.name || ' hanya ' || COALESCE(SUM(s.quantity),0)::int || ' (min: ' || p.minimum_stock || ')',
+          COALESCE(SUM(s.quantity),0), p.minimum_stock
+        FROM products p LEFT JOIN inventory_stock s ON s.product_id=p.id
+        WHERE p.is_active=true GROUP BY p.id, p.name, p.tenant_id, p.minimum_stock
+        HAVING COALESCE(SUM(s.quantity),0) > 0 AND COALESCE(SUM(s.quantity),0) < p.minimum_stock
+        AND p.id NOT IN (SELECT product_id FROM stock_alerts WHERE alert_type='low_stock' AND is_resolved=false AND product_id IS NOT NULL)
+      `);
+      await sequelize.query(`
+        INSERT INTO stock_alerts (tenant_id, product_id, alert_type, severity, title, message, current_stock, threshold)
+        SELECT p.tenant_id, p.id, 'out_of_stock', 'critical', 'Stok Habis: ' || p.name,
+          p.name || ' sudah habis', 0, p.minimum_stock
+        FROM products p LEFT JOIN inventory_stock s ON s.product_id=p.id
+        WHERE p.is_active=true GROUP BY p.id, p.name, p.tenant_id, p.minimum_stock
+        HAVING COALESCE(SUM(s.quantity),0) = 0
+        AND p.id NOT IN (SELECT product_id FROM stock_alerts WHERE alert_type='out_of_stock' AND is_resolved=false AND product_id IS NOT NULL)
+      `);
+      const [count] = await sequelize.query("SELECT COUNT(*)::int as c FROM stock_alerts WHERE is_resolved=false");
+      return res.status(HttpStatus.OK).json(successResponse({ totalUnresolved: count[0].c }, undefined, 'Alerts generated'));
     }
-    
-    if (includeResolved !== 'true') {
-      filteredAlerts = filteredAlerts.filter(a => !a.isResolved);
-    }
-    
-    const stats = {
-      total: mockAlerts.filter(a => !a.isResolved).length,
-      critical: mockAlerts.filter(a => a.priority === 'critical' && !a.isResolved).length,
-      high: mockAlerts.filter(a => a.priority === 'high' && !a.isResolved).length,
-      unread: mockAlerts.filter(a => !a.isRead && !a.isResolved).length
-    };
-    
-    return res.status(HttpStatus.OK).json(
-      successResponse({ alerts: filteredAlerts, stats })
-    );
-  }
-  
-  if (req.method === 'PATCH') {
-    const { id, action } = req.body;
-    return res.status(HttpStatus.OK).json(
-      successResponse({ id, action }, undefined, `Alert ${id} ${action} successfully`)
-    );
-  }
-  
-  res.setHeader('Allow', ['GET', 'PATCH']);
-  return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
-    errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
-  );
-  } catch (error) {
-    console.error('Inventory Alerts API Error:', error);
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
-    );
+
+    res.setHeader('Allow', ['GET', 'PATCH', 'PUT', 'POST']);
+    return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`));
+  } catch (error: any) {
+    console.error('Inventory Alerts API Error:', error.message);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, error.message));
   }
 }

@@ -1,279 +1,99 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Op } from 'sequelize';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
-import { getPaginationParams, getPaginationMeta } from '../../../../lib/api/pagination';
 
-let Product: any, Stock: any, Branch: any;
-try {
-  const ProductModel = require('../../../../models/inventory/Product');
-  const StockModel = require('../../../../models/inventory/Stock');
-  const models = require('../../../../models');
-  
-  Product = ProductModel.default || ProductModel;
-  Stock = StockModel.default || StockModel;
-  Branch = models.Branch;
-} catch (e) {
-  console.warn('Inventory models not available:', e);
-}
+const sequelize = require('../../../../lib/sequelize');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
-      case 'GET':
-        return await getProducts(req, res);
-      case 'POST':
-        return await createProduct(req, res);
-      case 'PUT':
-        return await updateProduct(req, res);
-      case 'DELETE':
-        return await deleteProduct(req, res);
+      case 'GET': return await getProducts(req, res);
+      case 'POST': return await createProduct(req, res);
+      case 'PUT': return await updateProduct(req, res);
+      case 'DELETE': return await deleteProduct(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
-          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
-        );
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`));
     }
-  } catch (error) {
-    console.error('Inventory Products API Error:', error);
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
-    );
+  } catch (error: any) {
+    console.error('Inventory Products API Error:', error.message);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, error.message));
   }
 }
 
 async function getProducts(req: NextApiRequest, res: NextApiResponse) {
-  if (!Product) {
-    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Product model not available')
-    );
-  }
+  const { search, category, isActive, page = '1', limit = '25' } = req.query;
+  const pageNum = Math.max(1, parseInt(page as string));
+  const limitNum = Math.min(100, parseInt(limit as string));
+  const offset = (pageNum - 1) * limitNum;
 
-  const { search, category, isActive } = req.query;
-  const { limit, offset } = getPaginationParams(req.query);
+  let where = 'WHERE 1=1';
+  const params: any = {};
+  if (search) { where += ` AND (p.name ILIKE :search OR p.sku ILIKE :search OR p.barcode ILIKE :search)`; params.search = `%${search}%`; }
+  if (category && category !== 'all') { where += ` AND pc.name = :category`; params.category = category; }
+  if (isActive === 'true') where += ' AND p.is_active=true';
+  if (isActive === 'false') where += ' AND p.is_active=false';
 
-  try {
-    const where: any = {};
-    
-    if (search) {
-      where[Op.or] = [
-        { sku: { [Op.iLike]: `%${search}%` } },
-        { name: { [Op.iLike]: `%${search}%` } },
-        { barcode: { [Op.iLike]: `%${search}%` } }
-      ];
-    }
-    
-    if (category && category !== 'all') {
-      where.category = category;
-    }
-    
-    if (isActive !== undefined) {
-      where.isActive = isActive === 'true';
-    }
+  const [countResult] = await sequelize.query(`SELECT COUNT(*) as total FROM products p LEFT JOIN product_categories pc ON pc.id=p.category_id ${where}`, { replacements: params });
+  const total = parseInt(countResult[0].total);
 
-    const { count, rows } = await Product.findAndCountAll({
-      where,
-      order: [['name', 'ASC']],
-      limit,
-      offset
-    });
+  const [products] = await sequelize.query(`
+    SELECT p.*, pc.name as category_name, pc.code as category_code, pc.color as category_color,
+      sup.name as supplier_name, sup.code as supplier_code,
+      COALESCE(sa.total_stock, 0)::int as total_stock,
+      COALESCE(sa.total_value, 0)::numeric(15,0) as stock_value
+    FROM products p
+    LEFT JOIN product_categories pc ON pc.id=p.category_id
+    LEFT JOIN suppliers sup ON sup.id=p.supplier_id
+    LEFT JOIN (SELECT product_id, SUM(quantity) as total_stock, SUM(quantity*cost_price) as total_value FROM inventory_stock GROUP BY product_id) sa ON sa.product_id=p.id
+    ${where} ORDER BY p.name LIMIT :limit OFFSET :offset
+  `, { replacements: { ...params, limit: limitNum, offset } });
 
-    // Get stock levels for each product
-    if (Stock) {
-      const productsWithStock = await Promise.all(rows.map(async (product: any) => {
-        const stocks = await Stock.findAll({
-          where: { productId: product.id },
-          include: [{ model: Branch, as: 'branch', attributes: ['id', 'code', 'name'] }]
-        });
+  const [categories] = await sequelize.query("SELECT DISTINCT pc.name FROM product_categories pc WHERE pc.is_active=true ORDER BY pc.name");
 
-        const totalStock = stocks.reduce((sum: number, s: any) => sum + s.quantity, 0);
-        const totalValue = stocks.reduce((sum: number, s: any) => sum + parseFloat(s.totalValue), 0);
-
-        return {
-          ...product.toJSON(),
-          totalStock,
-          totalValue,
-          stockByBranch: stocks.map((s: any) => ({
-            branchId: s.branchId,
-            branchCode: s.branch?.code,
-            branchName: s.branch?.name,
-            quantity: s.quantity,
-            availableQuantity: s.availableQuantity,
-            status: s.status
-          }))
-        };
-      }));
-
-      return res.status(HttpStatus.OK).json(
-        successResponse(productsWithStock, getPaginationMeta(count, limit, offset))
-      );
-    }
-
-    return res.status(HttpStatus.OK).json(
-      successResponse(rows, getPaginationMeta(count, limit, offset))
-    );
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch products')
-    );
-  }
+  return res.status(HttpStatus.OK).json(successResponse(products.map((p: any) => ({
+    id: p.id, name: p.name, sku: p.sku, barcode: p.barcode, description: p.description,
+    unit: p.unit, buyPrice: parseFloat(p.buy_price), sellPrice: parseFloat(p.sell_price),
+    category: p.category_name || '-', categoryCode: p.category_code, categoryColor: p.category_color,
+    supplier: p.supplier_name || '-', supplierCode: p.supplier_code,
+    minStock: p.minimum_stock, maxStock: p.maximum_stock, reorderPoint: p.reorder_point,
+    isActive: p.is_active, isTrackable: p.is_trackable,
+    totalStock: p.total_stock, stockValue: parseFloat(p.stock_value),
+    imageUrl: p.image_url, tags: p.tags || []
+  })), { total, limit: limitNum, page: pageNum, totalPages: Math.ceil(total / limitNum), filters: { categories: categories.map((c: any) => c.name) } }));
 }
 
 async function createProduct(req: NextApiRequest, res: NextApiResponse) {
-  if (!Product) {
-    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Product model not available')
-    );
-  }
+  const { name, sku, barcode, categoryId, supplierId, unit, buyPrice, sellPrice, minStock, maxStock, reorderPoint, description } = req.body;
+  if (!name) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Product name is required'));
 
-  const {
-    tenantId,
-    sku,
-    name,
-    description,
-    category,
-    subCategory,
-    unit,
-    barcode,
-    costPrice,
-    sellingPrice,
-    taxRate,
-    minStockLevel,
-    maxStockLevel,
-    reorderPoint,
-    reorderQuantity,
-    createdBy
-  } = req.body;
+  const [result] = await sequelize.query(`
+    INSERT INTO products (tenant_id, name, sku, barcode, category_id, supplier_id, unit, buy_price, sell_price, minimum_stock, maximum_stock, reorder_point, description, is_active, is_trackable)
+    VALUES ((SELECT tenant_id FROM products LIMIT 1), :name, :sku, :barcode, :catId, :supId, :unit, :buy, :sell, :min, :max, :reorder, :desc, true, true) RETURNING id
+  `, { replacements: { name, sku: sku || null, barcode: barcode || null, catId: categoryId || null, supId: supplierId || null, unit: unit || 'pcs', buy: buyPrice || 0, sell: sellPrice || 0, min: minStock || 0, max: maxStock || 0, reorder: reorderPoint || 0, desc: description || null } });
 
-  if (!tenantId || !sku || !name || !category || !unit || !costPrice || !sellingPrice || !createdBy) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(
-        ErrorCodes.MISSING_REQUIRED_FIELDS,
-        'Missing required fields: tenantId, sku, name, category, unit, costPrice, sellingPrice, createdBy'
-      )
-    );
-  }
-
-  try {
-    const product = await Product.create({
-      tenantId,
-      sku,
-      name,
-      description,
-      category,
-      subCategory,
-      unit,
-      barcode,
-      costPrice: parseFloat(costPrice),
-      sellingPrice: parseFloat(sellingPrice),
-      taxRate: taxRate ? parseFloat(taxRate) : 0,
-      isActive: true,
-      trackInventory: true,
-      minStockLevel: minStockLevel ? parseInt(minStockLevel) : null,
-      maxStockLevel: maxStockLevel ? parseInt(maxStockLevel) : null,
-      reorderPoint: reorderPoint ? parseInt(reorderPoint) : null,
-      reorderQuantity: reorderQuantity ? parseInt(reorderQuantity) : null,
-      createdBy
-    });
-
-    return res.status(HttpStatus.CREATED).json(
-      successResponse(product, undefined, 'Product created successfully')
-    );
-  } catch (error: any) {
-    console.error('Error creating product:', error);
-    if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(HttpStatus.CONFLICT).json(
-        errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'SKU or barcode already exists')
-      );
-    }
-    if (error.name === 'SequelizeValidationError') {
-      return res.status(HttpStatus.BAD_REQUEST).json(
-        errorResponse(ErrorCodes.VALIDATION_ERROR, error.message)
-      );
-    }
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to create product')
-    );
-  }
+  return res.status(HttpStatus.CREATED).json(successResponse({ id: result[0].id }, undefined, 'Product created'));
 }
 
 async function updateProduct(req: NextApiRequest, res: NextApiResponse) {
-  if (!Product) {
-    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Product model not available')
-    );
-  }
-
   const { id } = req.query;
-  const updateData = req.body;
+  if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.VALIDATION_ERROR, 'Product ID required'));
 
-  if (!id) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Product ID is required')
-    );
+  const fields = req.body;
+  const sets: string[] = [];
+  const params: any = { id };
+  const map: Record<string, string> = { name: 'name', sku: 'sku', barcode: 'barcode', categoryId: 'category_id', supplierId: 'supplier_id', unit: 'unit', buyPrice: 'buy_price', sellPrice: 'sell_price', minStock: 'minimum_stock', maxStock: 'maximum_stock', reorderPoint: 'reorder_point', description: 'description', isActive: 'is_active' };
+  for (const [k, col] of Object.entries(map)) {
+    if (fields[k] !== undefined) { sets.push(`${col}=:${k}`); params[k] = fields[k]; }
   }
-
-  try {
-    const product = await Product.findByPk(id);
-    
-    if (!product) {
-      return res.status(HttpStatus.NOT_FOUND).json(
-        errorResponse(ErrorCodes.NOT_FOUND, 'Product not found')
-      );
-    }
-
-    await product.update(updateData);
-
-    return res.status(HttpStatus.OK).json(
-      successResponse(product, undefined, 'Product updated successfully')
-    );
-  } catch (error: any) {
-    console.error('Error updating product:', error);
-    if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(HttpStatus.CONFLICT).json(
-        errorResponse(ErrorCodes.DUPLICATE_ENTRY, 'SKU or barcode already exists')
-      );
-    }
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to update product')
-    );
-  }
+  if (sets.length === 0) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.INVALID_INPUT, 'No fields'));
+  sets.push("updated_at=NOW()");
+  await sequelize.query(`UPDATE products SET ${sets.join(', ')} WHERE id=:id`, { replacements: params });
+  return res.status(HttpStatus.OK).json(successResponse({ id }, undefined, 'Product updated'));
 }
 
 async function deleteProduct(req: NextApiRequest, res: NextApiResponse) {
-  if (!Product) {
-    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Product model not available')
-    );
-  }
-
   const { id } = req.query;
-
-  if (!id) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Product ID is required')
-    );
-  }
-
-  try {
-    const product = await Product.findByPk(id);
-    
-    if (!product) {
-      return res.status(HttpStatus.NOT_FOUND).json(
-        errorResponse(ErrorCodes.NOT_FOUND, 'Product not found')
-      );
-    }
-
-    // Soft delete by setting isActive to false
-    await product.update({ isActive: false });
-
-    return res.status(HttpStatus.OK).json(
-      successResponse(null, undefined, 'Product deactivated successfully')
-    );
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to delete product')
-    );
-  }
+  if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.VALIDATION_ERROR, 'Product ID required'));
+  await sequelize.query("UPDATE products SET is_active=false, updated_at=NOW() WHERE id=:id", { replacements: { id } });
+  return res.status(HttpStatus.OK).json(successResponse(null, undefined, 'Product deactivated'));
 }

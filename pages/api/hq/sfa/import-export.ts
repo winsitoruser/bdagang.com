@@ -329,7 +329,7 @@ async function getEntities(_req: NextApiRequest, res: NextApiResponse) {
 }
 
 // ════════════════════════════════════════════════════════════════
-// ██  GET TEMPLATE — generate CSV/Excel template for entity
+// ██  GET TEMPLATE — generate professional Excel template
 // ════════════════════════════════════════════════════════════════
 async function getTemplate(req: NextApiRequest, res: NextApiResponse) {
   const { entity, format } = req.query;
@@ -340,49 +340,247 @@ async function getTemplate(req: NextApiRequest, res: NextApiResponse) {
   const examples = ent.columns.map(c => c.example || '');
   const required = ent.columns.map(c => c.required ? 'WAJIB' : 'opsional');
   const types = ent.columns.map(c => {
-    if (c.type === 'select' && c.options) return `Pilihan: ${c.options.join(', ')}`;
+    if (c.type === 'select' && c.options) return `Pilihan: ${c.options.join(' | ')}`;
     if (c.type === 'number') return 'Angka';
-    if (c.type === 'date') return 'YYYY-MM-DD';
+    if (c.type === 'date') return 'Format: YYYY-MM-DD';
     if (c.type === 'boolean') return 'true / false';
     return 'Teks';
   });
 
   if (format === 'json') {
-    // Return template definition as JSON (for frontend preview/generation)
     return res.json({
       success: true,
-      data: {
-        entity: ent.id,
-        label: ent.label,
-        columns: ent.columns,
-        headers,
-        examples,
-        required,
-        types,
-        sampleRows: [examples, ent.columns.map(() => '')],
-      }
+      data: { entity: ent.id, label: ent.label, columns: ent.columns, headers, examples, required, types, sampleRows: [examples] }
     });
   }
 
-  // CSV template
-  const csvLines = [
-    headers.join(','),
-    `# ${required.join(',')}`,
-    `# ${types.join(',')}`,
-    examples.join(','),
-  ];
-  const csv = csvLines.join('\n');
+  // ── Generate professional Excel template with ExcelJS ──
+  const ExcelJS = require('exceljs');
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Bedagang ERP';
+  wb.created = new Date();
 
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename=template_${ent.id}.csv`);
-  return res.send('\uFEFF' + csv); // BOM for Excel UTF-8
+  // ╔══════════════════════════════════════╗
+  // ║  Sheet 1: DATA IMPORT               ║
+  // ╚══════════════════════════════════════╝
+  const ws = wb.addWorksheet('Data Import', {
+    properties: { defaultColWidth: 18, defaultRowHeight: 22 },
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+
+  // ── Style constants ──
+  const BLUE = '1E40AF';
+  const GREEN = '166534';
+  const GREEN_LIGHT = 'DCFCE7';
+  const AMBER_LIGHT = 'FEF3C7';
+  const GRAY = '6B7280';
+  const GRAY_LIGHT = 'F3F4F6';
+  const WHITE = 'FFFFFF';
+  const RED = 'DC2626';
+
+  const borderThin = { style: 'thin' as const, color: { argb: 'D1D5DB' } };
+  const allBorders = { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin };
+
+  // ── Row 1: Column Headers (professional dark header) ──
+  const headerRow = ws.getRow(1);
+  ent.columns.forEach((col, i) => {
+    const cell = headerRow.getCell(i + 1);
+    const label = col.required ? `${col.label} *` : col.label;
+    cell.value = label;
+    cell.font = { bold: true, size: 11, color: { argb: WHITE } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUE } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = allBorders;
+  });
+  headerRow.height = 32;
+
+  // ── Row 2: Field info (type + required indicator) ──
+  const infoRow = ws.getRow(2);
+  ent.columns.forEach((col, i) => {
+    const cell = infoRow.getCell(i + 1);
+    const typeLabel = col.type === 'select' && col.options ? col.options.join(', ') :
+      col.type === 'number' ? 'Angka' : col.type === 'date' ? 'YYYY-MM-DD' :
+      col.type === 'boolean' ? 'true / false' : 'Teks bebas';
+    cell.value = col.required ? `⬤ WAJIB — ${typeLabel}` : typeLabel;
+    cell.font = { size: 9, italic: true, color: { argb: col.required ? RED : GRAY } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: col.required ? AMBER_LIGHT : GRAY_LIGHT } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.border = allBorders;
+  });
+  infoRow.height = 28;
+
+  // ── Row 3-4: Example data rows ──
+  const ex1 = ws.getRow(3);
+  ent.columns.forEach((col, i) => {
+    const cell = ex1.getCell(i + 1);
+    cell.value = castExampleValue(col, col.example || '');
+    cell.font = { size: 10, color: { argb: '6B7280' }, italic: true };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN_LIGHT } };
+    cell.alignment = { vertical: 'middle' };
+    cell.border = allBorders;
+  });
+  ex1.height = 24;
+
+  const ex2 = ws.getRow(4);
+  ent.columns.forEach((col, i) => {
+    const cell = ex2.getCell(i + 1);
+    cell.value = castExampleValue(col, getExample2(col));
+    cell.font = { size: 10, color: { argb: '6B7280' }, italic: true };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN_LIGHT } };
+    cell.alignment = { vertical: 'middle' };
+    cell.border = allBorders;
+  });
+  ex2.height = 24;
+
+  // ── Rows 5-104: Empty data entry rows with alternating colors + borders ──
+  for (let r = 5; r <= 104; r++) {
+    const row = ws.getRow(r);
+    ent.columns.forEach((_col, i) => {
+      const cell = row.getCell(i + 1);
+      cell.border = allBorders;
+      if (r % 2 === 0) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F9FAFB' } };
+    });
+    row.height = 22;
+  }
+
+  // ── Data Validation (dropdown lists for select fields) ──
+  // Helper: convert 0-based column index to Excel letter (0=A, 25=Z, 26=AA, etc.)
+  const colToLetter = (idx: number): string => {
+    let s = '';
+    let n = idx;
+    while (n >= 0) { s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26) - 1; }
+    return s;
+  };
+
+  ent.columns.forEach((col, i) => {
+    const colLetter = colToLetter(i);
+    if (col.type === 'select' && col.options && col.options.length > 0) {
+      for (let r = 3; r <= 104; r++) {
+        ws.getCell(`${colLetter}${r}`).dataValidation = {
+          type: 'list',
+          allowBlank: !col.required,
+          formulae: [`"${col.options.join(',')}"`],
+          showErrorMessage: true,
+          errorTitle: 'Pilihan Tidak Valid',
+          error: `Pilih salah satu: ${col.options.join(', ')}`,
+        };
+      }
+    }
+    if (col.type === 'number') {
+      for (let r = 5; r <= 104; r++) {
+        ws.getCell(`${colLetter}${r}`).numFmt = '#,##0';
+      }
+    }
+  });
+
+  // ── Column widths (auto-sized based on header + options length) ──
+  ent.columns.forEach((col, i) => {
+    let w = Math.max(col.label.length + 2, 14);
+    if (col.type === 'select' && col.options) w = Math.max(w, Math.max(...col.options.map(o => o.length)) + 4);
+    if (col.key.includes('address') || col.key === 'description' || col.key === 'notes' || col.key === 'body') w = 30;
+    if (col.key.includes('email') || col.key === 'website') w = 24;
+    ws.getColumn(i + 1).width = Math.min(w, 40);
+  });
+
+  // ╔══════════════════════════════════════╗
+  // ║  Sheet 2: PETUNJUK PENGISIAN        ║
+  // ╚══════════════════════════════════════╝
+  const wsGuide = wb.addWorksheet('Petunjuk Pengisian', {
+    properties: { defaultColWidth: 20, defaultRowHeight: 20 },
+  });
+
+  // Title
+  wsGuide.mergeCells('A1:D1');
+  const gTitle = wsGuide.getCell('A1');
+  gTitle.value = `PETUNJUK PENGISIAN — ${ent.label}`;
+  gTitle.font = { bold: true, size: 14, color: { argb: BLUE } };
+  gTitle.alignment = { vertical: 'middle' };
+  wsGuide.getRow(1).height = 36;
+
+  // Instructions
+  const instructions = [
+    ['', '', '', ''],
+    ['CARA PENGGUNAAN:', '', '', ''],
+    ['1.', 'Isi data pada sheet "Data Import" mulai dari baris ke-5 (setelah contoh)', '', ''],
+    ['2.', 'Baris 3-4 (hijau) adalah contoh data — hapus/timpa saat mengisi data asli', '', ''],
+    ['3.', 'Kolom bertanda bintang (*) di header WAJIB diisi', '', ''],
+    ['4.', 'Kolom dengan dropdown otomatis — pilih dari daftar yang tersedia', '', ''],
+    ['5.', 'Format tanggal: YYYY-MM-DD (contoh: 2025-03-15)', '', ''],
+    ['6.', 'Upload file ini langsung tanpa perlu mengubah nama file', '', ''],
+    ['', '', '', ''],
+    ['DAFTAR KOLOM:', '', '', ''],
+    ['Kolom', 'Tipe Data', 'Wajib?', 'Keterangan'],
+  ];
+  instructions.forEach((row, ri) => {
+    const r = wsGuide.getRow(ri + 2);
+    row.forEach((v, ci) => { r.getCell(ci + 1).value = v; });
+    if (ri === 1) r.getCell(1).font = { bold: true, size: 12, color: { argb: GREEN } };
+    if (ri === 9) r.getCell(1).font = { bold: true, size: 12, color: { argb: GREEN } };
+    if (ri === 10) {
+      row.forEach((_v, ci) => {
+        const cell = r.getCell(ci + 1);
+        cell.font = { bold: true, size: 10, color: { argb: WHITE } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUE } };
+        cell.border = allBorders;
+      });
+    }
+  });
+
+  // Column detail rows
+  ent.columns.forEach((col, ci) => {
+    const r = wsGuide.getRow(ci + 13);
+    r.getCell(1).value = col.required ? `${col.label} *` : col.label;
+    r.getCell(1).font = { bold: col.required, size: 10, color: { argb: col.required ? RED : '111827' } };
+    r.getCell(2).value = col.type === 'select' ? 'Pilihan' : col.type === 'number' ? 'Angka' : col.type === 'date' ? 'Tanggal' : col.type === 'boolean' ? 'Boolean' : 'Teks';
+    r.getCell(3).value = col.required ? 'YA' : 'Tidak';
+    r.getCell(3).font = { bold: col.required, color: { argb: col.required ? RED : GRAY } };
+    r.getCell(4).value = col.type === 'select' && col.options ? col.options.join(', ') : col.example || '-';
+    [1,2,3,4].forEach(c => { r.getCell(c).border = allBorders; });
+    if (ci % 2 === 0) [1,2,3,4].forEach(c => { r.getCell(c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GRAY_LIGHT } }; });
+  });
+
+  wsGuide.getColumn(1).width = 22;
+  wsGuide.getColumn(2).width = 14;
+  wsGuide.getColumn(3).width = 10;
+  wsGuide.getColumn(4).width = 50;
+
+  // ── Write and send ──
+  const now = new Date().toISOString().slice(0, 10);
+  const buffer = await wb.xlsx.writeBuffer();
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename=template_${ent.id}_${now}.xlsx`);
+  return res.send(Buffer.from(buffer));
+}
+
+function castExampleValue(col: EntityColumn, val: string): string | number | boolean {
+  if (!val) return '';
+  if (col.type === 'number') { const n = Number(val); return isNaN(n) ? val : n; }
+  if (col.type === 'boolean') return val.toLowerCase() === 'true';
+  return val;
+}
+
+function getExample2(col: EntityColumn): string {
+  if (col.type === 'select' && col.options && col.options.length > 1) return col.options[1];
+  if (col.type === 'number') return String(Math.round(Number(col.example || 0) * 0.8) || '0');
+  if (col.type === 'date') return '2025-06-15';
+  if (col.type === 'boolean') return col.example === 'true' ? 'false' : 'true';
+  if (col.key === 'contact_name' || col.key === 'display_name') return 'Jane Smith';
+  if (col.key === 'company_name') return 'CV. Abadi Makmur';
+  if (col.key === 'contact_email' || col.key === 'email') return 'jane@example.com';
+  if (col.key === 'contact_phone' || col.key === 'phone' || col.key === 'mobile') return '08198765432';
+  if (col.key === 'title' || col.key === 'subject' || col.key === 'name') return 'Contoh Data Kedua';
+  if (col.key === 'first_name') return 'Sari';
+  if (col.key === 'last_name') return 'Dewi';
+  if (col.key === 'address' || col.key === 'customer_address') return 'Jl. Gatot Subroto No. 10';
+  if (col.key === 'city') return 'Surabaya';
+  return '';
 }
 
 // ════════════════════════════════════════════════════════════════
-// ██  EXPORT DATA — export entity data as JSON (frontend renders CSV/Excel)
+// ██  EXPORT DATA — generate professional Excel export directly
 // ════════════════════════════════════════════════════════════════
 async function exportData(req: NextApiRequest, res: NextApiResponse, tenantId: string) {
-  const { entity, format: _fmt } = req.query;
+  const { entity, format: fmt } = req.query;
   const ent = ENTITIES[String(entity)];
   if (!ent) return res.status(400).json({ success: false, error: 'Invalid entity' });
 
@@ -390,38 +588,83 @@ async function exportData(req: NextApiRequest, res: NextApiResponse, tenantId: s
   const rows = await q(query, { tid: tenantId });
 
   // Map DB columns to friendly headers
-  const headers = ent.columns.map(c => c.label);
-  const keys = ent.columns.map(c => c.dbColumn || c.key);
+  const allHeaders = ['No', ...ent.columns.map(c => c.label), 'Dibuat'];
 
-  const exportRows = rows.map(row => {
+  const exportRows = rows.map((row, idx) => {
     const mapped: Record<string, any> = {};
+    mapped['No'] = idx + 1;
     ent.columns.forEach(col => {
       const k = col.dbColumn || col.key;
       let val = row[k];
       if (val === null || val === undefined) val = '';
-      if (col.type === 'boolean') val = val ? 'true' : 'false';
+      if (col.type === 'boolean') val = val ? 'Ya' : 'Tidak';
       if (col.type === 'date' && val) val = String(val).slice(0, 10);
       mapped[col.label] = val;
     });
-    // Also add ID and system fields
-    mapped['ID'] = row.id || '';
     mapped['Dibuat'] = row.created_at ? String(row.created_at).slice(0, 19) : '';
-    if (row.customer_name) mapped['Customer (ref)'] = row.customer_name;
-    if (row.territory_name) mapped['Territory (ref)'] = row.territory_name;
     return mapped;
   });
 
-  return res.json({
-    success: true,
-    data: {
-      entity: ent.id,
-      label: ent.label,
-      totalRows: rows.length,
-      headers: ['ID', ...headers, 'Dibuat'],
-      rows: exportRows,
-      rawRows: rows,
-    }
+  // If format=json, return JSON (for backward compat)
+  if (fmt === 'json') {
+    return res.json({ success: true, data: { entity: ent.id, label: ent.label, totalRows: rows.length, headers: allHeaders, rows: exportRows } });
+  }
+
+  // Generate Excel export
+  const ExcelJS = require('exceljs');
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Bedagang ERP';
+  const ws = wb.addWorksheet(ent.label, {
+    properties: { defaultColWidth: 16 },
+    views: [{ state: 'frozen', ySplit: 1 }],
   });
+
+  const BLUE = '1E40AF';
+  const borderThin = { style: 'thin' as const, color: { argb: 'D1D5DB' } };
+  const allBorders = { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin };
+
+  // Header row
+  const hRow = ws.getRow(1);
+  allHeaders.forEach((h, i) => {
+    const cell = hRow.getCell(i + 1);
+    cell.value = h;
+    cell.font = { bold: true, size: 11, color: { argb: 'FFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BLUE } };
+    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.border = allBorders;
+  });
+  hRow.height = 30;
+
+  // Data rows
+  exportRows.forEach((rowData, ri) => {
+    const row = ws.getRow(ri + 2);
+    allHeaders.forEach((h, ci) => {
+      const cell = row.getCell(ci + 1);
+      cell.value = rowData[h] ?? '';
+      cell.border = allBorders;
+      cell.alignment = { vertical: 'middle' };
+      if (ri % 2 === 1) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F9FAFB' } };
+    });
+    row.height = 22;
+  });
+
+  // Auto column widths
+  ws.getColumn(1).width = 6; // No
+  ent.columns.forEach((col, i) => {
+    let w = Math.max(col.label.length + 2, 14);
+    if (col.key.includes('address') || col.key === 'description' || col.key === 'notes') w = 28;
+    ws.getColumn(i + 2).width = Math.min(w, 36);
+  });
+  ws.getColumn(allHeaders.length).width = 20; // Dibuat
+
+  // Auto-filter
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: allHeaders.length } };
+
+  const now = new Date().toISOString().slice(0, 10);
+  const buffer = await wb.xlsx.writeBuffer();
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename=export_${ent.id}_${now}.xlsx`);
+  return res.send(Buffer.from(buffer));
 }
 
 // ════════════════════════════════════════════════════════════════

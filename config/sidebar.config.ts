@@ -180,19 +180,20 @@ export const hqSidebarConfig: SidebarConfig = {
           ]
         },
         { 
-          id: 'inventory',
-          name: 'Inventory', 
+          id: 'warehouse-inventory',
+          name: 'Warehouse & Inventory', 
           icon: Package,
-          modules: ['inventory'],
+          modules: ['inventory', 'products'],
           children: [
-            { id: 'inv-dashboard', name: 'Dashboard', href: '/hq/inventory', icon: LayoutDashboard },
-            { id: 'inv-stock', name: 'Stok Global', href: '/hq/inventory/stock', icon: Package },
-            { id: 'inv-categories', name: 'Kategori Produk', href: '/hq/inventory/categories', icon: Layers },
-            { id: 'inv-pricing', name: 'Harga & Pricing', href: '/hq/inventory/pricing', icon: DollarSign },
-            { id: 'inv-transfers', name: 'Transfer Stok', href: '/hq/inventory/transfers', icon: ArrowRightLeft },
-            { id: 'inv-alerts', name: 'Alerts', href: '/hq/inventory/alerts', icon: AlertCircle },
-            { id: 'inv-stocktake', name: 'Stock Opname', href: '/hq/inventory/stocktake', icon: ClipboardList },
-            { id: 'inv-receipts', name: 'Penerimaan Barang', href: '/hq/inventory/receipts', icon: FileText },
+            { id: 'wh-dashboard', name: 'Dashboard', href: '/hq/inventory', icon: LayoutDashboard },
+            { id: 'wh-products', name: 'Master Produk', href: '/hq/products', icon: Package },
+            { id: 'wh-stock', name: 'Stok Global', href: '/hq/inventory/stock', icon: Package },
+            { id: 'wh-categories', name: 'Kategori Produk', href: '/hq/inventory/categories', icon: Layers },
+            { id: 'wh-pricing', name: 'Harga & Pricing', href: '/hq/inventory/pricing', icon: DollarSign },
+            { id: 'wh-transfers', name: 'Transfer Stok', href: '/hq/inventory/transfers', icon: ArrowRightLeft },
+            { id: 'wh-receipts', name: 'Penerimaan Barang', href: '/hq/inventory/receipts', icon: FileText },
+            { id: 'wh-stocktake', name: 'Stock Opname', href: '/hq/inventory/stocktake', icon: ClipboardList },
+            { id: 'wh-alerts', name: 'Alerts', href: '/hq/inventory/alerts', icon: AlertCircle },
           ]
         },
         { 
@@ -219,15 +220,6 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'fleet-fuel', name: 'Fuel Management', href: '/hq/fleet/fuel', icon: Fuel },
             { id: 'fleet-maintenance', name: 'Maintenance', href: '/hq/fleet/maintenance', icon: Wrench },
             { id: 'fleet-costs', name: 'Cost Reporting', href: '/hq/fleet/costs', icon: TrendingUp },
-          ]
-        },
-        { 
-          id: 'products',
-          name: 'Produk & Menu', 
-          icon: Package,
-          modules: ['products'],
-          children: [
-            { id: 'prod-master', name: 'Master Produk', href: '/hq/products', icon: Package },
           ]
         }
       ]

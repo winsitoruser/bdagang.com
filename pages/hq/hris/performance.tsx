@@ -29,53 +29,6 @@ interface PerformanceReview {
   status: 'draft' | 'submitted' | 'reviewed' | 'acknowledged';
 }
 
-const mockReviews: PerformanceReview[] = [
-  {
-    id: '1', employeeId: '1', employeeName: 'Ahmad Wijaya', position: 'Branch Manager', branchName: 'Cabang Pusat Jakarta', department: 'Operations',
-    reviewPeriod: 'Q4 2025', reviewDate: '2026-01-15', reviewer: 'Super Admin', overallRating: 4.8,
-    categories: [
-      { name: 'Kepemimpinan', rating: 5, weight: 25, comments: 'Excellent leadership skills' },
-      { name: 'Pencapaian Target', rating: 4.5, weight: 30, comments: 'Consistently exceeds targets' },
-      { name: 'Komunikasi', rating: 4.8, weight: 15, comments: 'Great communicator' },
-      { name: 'Problem Solving', rating: 4.7, weight: 15, comments: 'Quick problem resolution' },
-      { name: 'Teamwork', rating: 5, weight: 15, comments: 'Excellent team player' }
-    ],
-    strengths: ['Strategic thinking', 'Team motivation', 'Customer focus'],
-    areasForImprovement: ['Delegation skills', 'Work-life balance'],
-    goals: ['Expand branch revenue by 15%', 'Develop 2 future managers'],
-    status: 'acknowledged'
-  },
-  {
-    id: '2', employeeId: '2', employeeName: 'Siti Rahayu', position: 'Branch Manager', branchName: 'Cabang Bandung', department: 'Operations',
-    reviewPeriod: 'Q4 2025', reviewDate: '2026-01-18', reviewer: 'Super Admin', overallRating: 4.5,
-    categories: [
-      { name: 'Kepemimpinan', rating: 4.5, weight: 25, comments: 'Good leadership' },
-      { name: 'Pencapaian Target', rating: 4.5, weight: 30, comments: 'Meets targets consistently' },
-      { name: 'Komunikasi', rating: 4.5, weight: 15, comments: 'Effective communicator' },
-      { name: 'Problem Solving', rating: 4.3, weight: 15, comments: 'Good analytical skills' },
-      { name: 'Teamwork', rating: 4.7, weight: 15, comments: 'Strong team builder' }
-    ],
-    strengths: ['Process improvement', 'Team development', 'Customer service'],
-    areasForImprovement: ['Time management', 'Strategic planning'],
-    goals: ['Improve customer satisfaction to 95%', 'Reduce operational costs by 10%'],
-    status: 'reviewed'
-  },
-  {
-    id: '3', employeeId: '3', employeeName: 'Budi Santoso', position: 'Branch Manager', branchName: 'Cabang Surabaya', department: 'Operations',
-    reviewPeriod: 'Q4 2025', reviewDate: '2026-01-20', reviewer: 'Super Admin', overallRating: 3.8,
-    categories: [
-      { name: 'Kepemimpinan', rating: 3.5, weight: 25, comments: 'Needs improvement' },
-      { name: 'Pencapaian Target', rating: 3.8, weight: 30, comments: 'Below target' },
-      { name: 'Komunikasi', rating: 4.0, weight: 15, comments: 'Adequate' },
-      { name: 'Problem Solving', rating: 3.7, weight: 15, comments: 'Slow response' },
-      { name: 'Teamwork', rating: 4.2, weight: 15, comments: 'Good collaboration' }
-    ],
-    strengths: ['Technical knowledge', 'Product expertise'],
-    areasForImprovement: ['Sales management', 'Team motivation', 'Target achievement'],
-    goals: ['Achieve 100% sales target', 'Improve team productivity by 20%'],
-    status: 'submitted'
-  },
-];
 
 export default function PerformancePage() {
   const [mounted, setMounted] = useState(false);
@@ -90,13 +43,15 @@ export default function PerformancePage() {
     try {
       const response = await fetch('/api/hq/hris/performance');
       if (response.ok) {
-        const data = await response.json();
-        setReviews(data.reviews || mockReviews);
+        const json = await response.json();
+        const payload = json.data || json;
+        setReviews(payload.reviews || []);
       } else {
-        setReviews(mockReviews);
+        setReviews([]);
       }
     } catch (error) {
-      setReviews(mockReviews);
+      console.error('Failed to fetch performance reviews:', error);
+      setReviews([]);
     } finally {
       setLoading(false);
     }

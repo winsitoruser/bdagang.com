@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import HQLayout from '@/components/hq/HQLayout';
+import dynamic from 'next/dynamic';
 import {
   Search, Plus, X, MapPin, Users, TrendingUp, Target, BarChart3,
   Navigation, Loader2, DollarSign, ArrowRight, RefreshCw, UserPlus,
@@ -11,6 +12,8 @@ import {
   Download, Upload, FileUp, Table2, ArrowDownToLine, Filter,
   History, ArrowRightLeft, Link2, Brain, Cpu, Sparkles, Building2
 } from 'lucide-react';
+
+const TaskCalendarModule = dynamic(() => import('@/components/sfa/TaskCalendarModule'), { ssr: false, loading: () => <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-amber-500" /></div> });
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend
@@ -693,7 +696,8 @@ export default function SFAUnifiedPage() {
     if (r.success) setIeTemplate(r.data);
   };
   const ieDownloadTemplate = (entityId: string) => {
-    window.open(`/api/hq/sfa/import-export?action=template&entity=${entityId}&format=csv`, '_blank');
+    // Download professional Excel template directly
+    window.open(`/api/hq/sfa/import-export?action=template&entity=${entityId}`, '_blank');
   };
   const ieHandleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -702,31 +706,90 @@ export default function SFAUnifiedPage() {
     setIeFileInfo({ name: file.name, size: file.size, rows: 0 });
     setIeValidation(null); setIeImportResult(null);
 
-    if (ext === 'csv') {
-      const text = await file.text();
-      const lines = text.split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
-      if (lines.length < 2) { showToast('File CSV kosong atau hanya header'); return; }
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-      const rows = lines.slice(1).map(line => {
-        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
-        const obj: Record<string, string> = {};
-        headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
-        return obj;
-      });
-      setIeUploadedData(rows);
-      setIeFileInfo(prev => prev ? { ...prev, rows: rows.length } : null);
-    } else if (ext === 'xlsx' || ext === 'xls') {
+    if (ext === 'xlsx' || ext === 'xls') {
       try {
         const XLSX = (await import('xlsx')).default;
         const buf = await file.arrayBuffer();
         const wb = XLSX.read(buf, { type: 'array' });
+        // Always read from first sheet ("Data Import")
         const ws = wb.Sheets[wb.SheetNames[0]];
-        const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
-        setIeUploadedData(json);
-        setIeFileInfo(prev => prev ? { ...prev, rows: json.length } : null);
+        const allRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
+
+        // Smart filtering: skip metadata rows (row 2 = info/types, row 3-4 = examples)
+        // Template structure: Row 1=headers, Row 2=type info, Row 3-4=examples (italic/green), Row 5+=data
+        // sheet_to_json uses Row 1 as headers automatically, so allRows starts from Row 2
+        // We need to filter out info row and example rows that have italic/green styling
+        const headerKeys = Object.keys(allRows[0] || {});
+        const isMetaRow = (row: any): boolean => {
+          const firstVal = String(row[headerKeys[0]] || '').trim();
+          // Row 2 info pattern: "⬤ WAJIB" or type descriptions
+          if (/^(⬤|WAJIB|Teks|Angka|Pilihan|true|false|YYYY)/i.test(firstVal)) return true;
+          // Check if ALL non-empty values match example patterns (italic green rows)
+          const vals = headerKeys.map(k => String(row[k] || '').trim()).filter(Boolean);
+          if (vals.length === 0) return true; // empty row
+          return false;
+        };
+
+        // Filter: skip first row (type info) and keep only real data
+        // The first row in allRows is the type/info row (Row 2 in Excel)
+        const dataRows = allRows.filter((row, idx) => {
+          // Skip row index 0 (type info row from Row 2)
+          if (idx === 0) return false;
+          // Skip rows where first cell looks like metadata
+          const firstVal = String(row[headerKeys[0]] || '').trim();
+          if (/^(⬤|WAJIB|Teks|Angka|Pilihan|true \/ false|YYYY)/i.test(firstVal)) return false;
+          // Skip completely empty rows
+          const hasData = headerKeys.some(k => String(row[k] || '').trim() !== '');
+          return hasData;
+        });
+
+        // Clean header names: remove " *" suffix from required field headers
+        const cleanedRows = dataRows.map(row => {
+          const clean: Record<string, any> = {};
+          headerKeys.forEach(k => {
+            const cleanKey = k.replace(/\s*\*\s*$/, '').trim();
+            clean[cleanKey] = row[k];
+          });
+          return clean;
+        });
+
+        setIeUploadedData(cleanedRows);
+        setIeFileInfo(prev => prev ? { ...prev, rows: cleanedRows.length } : null);
+        if (cleanedRows.length === 0) showToast('File tidak berisi data. Isi data mulai baris ke-5 di sheet "Data Import"');
       } catch (err) { showToast('Gagal membaca file Excel'); }
+    } else if (ext === 'csv') {
+      const text = await file.text();
+      const allLines = text.split(/\r?\n/).filter(l => l.trim());
+      const metaPatterns = /^(TEMPLATE IMPORT|Tanggal:|WAJIB|opsional|Teks|Angka|Pilihan:|Format:|true \/ false|---)/i;
+      let headerIdx = 0;
+      for (let i = 0; i < Math.min(allLines.length, 10); i++) {
+        const firstCell = allLines[i].split(',')[0].replace(/^"|"$/g, '').trim();
+        if (!firstCell || metaPatterns.test(firstCell)) continue;
+        const cells = allLines[i].split(',').map(c => c.replace(/^"|"$/g, '').trim()).filter(Boolean);
+        if (cells.length >= 2) { headerIdx = i; break; }
+      }
+      const parseCSVLine = (line: string): string[] => {
+        const result: string[] = []; let cell = ''; let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (inQuotes) { if (ch === '"' && line[i+1] === '"') { cell += '"'; i++; } else if (ch === '"') inQuotes = false; else cell += ch; }
+          else { if (ch === '"') inQuotes = true; else if (ch === ',') { result.push(cell.trim()); cell = ''; } else cell += ch; }
+        }
+        result.push(cell.trim()); return result;
+      };
+      const lines = allLines.slice(headerIdx);
+      if (lines.length < 2) { showToast('File CSV kosong atau hanya header'); return; }
+      const headers = parseCSVLine(lines[0]).map(h => h.replace(/\s*\*\s*$/, '').trim());
+      const rows = lines.slice(1).map(line => {
+        const vals = parseCSVLine(line);
+        const obj: Record<string, string> = {};
+        headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+        return obj;
+      }).filter(row => Object.values(row).some(v => v.trim()) && !metaPatterns.test(Object.values(row)[0]));
+      setIeUploadedData(rows);
+      setIeFileInfo(prev => prev ? { ...prev, rows: rows.length } : null);
     } else {
-      showToast('Format file tidak didukung. Gunakan CSV atau Excel (.xlsx)');
+      showToast('Format file tidak didukung. Gunakan Excel (.xlsx)');
     }
     e.target.value = '';
   };
@@ -749,35 +812,11 @@ export default function SFAUnifiedPage() {
     } else showToast(r.error || 'Import gagal');
     setIeImporting(false);
   };
-  const ieDoExport = async (format: 'csv' | 'excel') => {
+  const ieDoExport = async () => {
     if (!ieSelectedEntity) return;
     setIeImporting(true);
-    const r = await apiIE('export', 'GET', undefined, `&entity=${ieSelectedEntity}`);
-    if (!r.success) { showToast('Export gagal'); setIeImporting(false); return; }
-    setIeExportData(r.data);
-    const rows = r.data.rows || [];
-    const headers = r.data.headers || [];
-    if (format === 'csv') {
-      const csvContent = [
-        headers.join(','),
-        ...rows.map((row: any) => headers.map((h: string) => {
-          let v = String(row[h] ?? '');
-          if (v.includes(',') || v.includes('"') || v.includes('\n')) v = `"${v.replace(/"/g, '""')}"`;
-          return v;
-        }).join(','))
-      ].join('\n');
-      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `export_${ieSelectedEntity}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-      URL.revokeObjectURL(url);
-    } else {
-      try {
-        const XLSX = (await import('xlsx')).default;
-        const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
-        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, r.data.label || 'Data');
-        XLSX.writeFile(wb, `export_${ieSelectedEntity}_${new Date().toISOString().slice(0,10)}.xlsx`);
-      } catch { showToast('Gagal export Excel'); }
-    }
+    // Direct Excel download from server
+    window.open(`/api/hq/sfa/import-export?action=export&entity=${ieSelectedEntity}`, '_blank');
     setIeImporting(false);
   };
 
@@ -2530,103 +2569,11 @@ export default function SFAUnifiedPage() {
           </>)}
 
           {/* ═══════════════════════════════════════════ */}
-          {/* CRM: TASKS & CALENDAR */}
+          {/* CRM: TASKS & CALENDAR — Professional Module */}
           {/* ═══════════════════════════════════════════ */}
-          {tab === 'tasks' && (<>
-            <SectionHeader title="Task & Kalender" subtitle={`${crmTasks.length} task | ${crmCalendar.length} event`}
-              action={<PrimaryBtn onClick={() => { setModal('crm-task'); setForm({ task_type: 'follow_up', priority: 'medium', status: 'open' }); }} icon={Plus}>Buat Task</PrimaryBtn>} />
-
-            {/* Task Summary Charts */}
-            {crmTaskSummary && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Card className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Status Task</h3>
-                  {(crmTaskSummary.byStatus || []).length > 0 ? (() => {
-                    const sColors: Record<string,string> = { open: '#3b82f6', in_progress: '#f59e0b', completed: '#10b981', cancelled: '#94a3b8', deferred: '#6b7280' };
-                    const data = (crmTaskSummary.byStatus||[]).map((d:any) => ({...d, count: parseInt(d.count), fill: sColors[d.status]||'#94a3b8'}));
-                    return (
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-32 h-32">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart><Pie data={data} dataKey="count" nameKey="status" cx="50%" cy="50%" innerRadius={30} outerRadius={52} paddingAngle={3} strokeWidth={0}>{data.map((d:any,i:number) => <Cell key={i} fill={d.fill} />)}</Pie><Tooltip content={<ChartTooltip />} /></PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                        <div className="space-y-1.5 w-full">{data.map((d:any,i:number) => (<div key={i} className="flex items-center justify-between text-xs"><div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full" style={{background:d.fill}} /><span className="text-gray-600 capitalize">{(d.status||'').replace('_',' ')}</span></div><span className="font-bold">{d.count}</span></div>))}</div>
-                      </div>
-                    );
-                  })() : <div className="text-center py-8 text-gray-300 text-sm">Belum ada task</div>}
-                </Card>
-                <Card className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Prioritas</h3>
-                  {(crmTaskSummary.byPriority || []).length > 0 ? (() => {
-                    const pColors: Record<string,string> = { urgent: '#dc2626', high: '#ef4444', medium: '#f59e0b', low: '#10b981' };
-                    return (
-                      <div className="space-y-3">
-                        {(crmTaskSummary.byPriority||[]).map((d:any,i:number) => (
-                          <div key={i} className="flex items-center gap-3">
-                            <span className="w-2 h-2 rounded-full shrink-0" style={{background:pColors[d.priority]||'#94a3b8'}} />
-                            <span className="text-xs text-gray-600 capitalize flex-1">{d.priority}</span>
-                            <span className="text-sm font-bold text-gray-900">{d.count}</span>
-                          </div>
-                        ))}
-                        {crmTaskSummary.overdue > 0 && <div className="pt-2 border-t border-gray-100 flex items-center justify-between"><span className="text-xs text-red-500 font-medium">Overdue</span><Badge color="red">{crmTaskSummary.overdue}</Badge></div>}
-                      </div>
-                    );
-                  })() : <div className="text-center py-8 text-gray-300 text-sm">Belum ada task</div>}
-                </Card>
-                <Card className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Upcoming Events</h3>
-                  {crmCalendar.length === 0 ? <div className="text-center py-8 text-gray-300 text-sm">Tidak ada event</div> :
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {crmCalendar.slice(0, 6).map((ev: any) => (
-                        <div key={ev.id} className="p-2.5 bg-gray-50 rounded-xl">
-                          <div className="flex items-center gap-2"><CalendarDays className="w-3.5 h-3.5 text-violet-500" /><span className="text-xs font-semibold text-gray-900 truncate">{ev.title}</span></div>
-                          <div className="text-[10px] text-gray-400 mt-1 pl-5">{ev.event_type} · {fmtDate(ev.start_time)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  }
-                </Card>
-              </div>
-            )}
-
-            {/* Task List */}
-            <div className="grid gap-3">
-              {crmTasks.length === 0 ? <Card><EmptyState icon={LayoutList} title="Belum ada task" subtitle="Buat task pertama" /></Card> :
-                crmTasks.slice(0, 30).map((t: any) => (
-                  <Card key={t.id} className="p-4 sm:px-5" hover>
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <button onClick={() => t.status !== 'completed' && handleCrmUpdate('update-task', {id:t.id,status:'completed'}, 'Task selesai')}
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${t.status==='completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400 hover:bg-emerald-50 hover:text-emerald-500'}`}>
-                          <CheckCircle className="w-4 h-4" />
-                        </button>
-                        <div className="min-w-0">
-                          <div className={`font-semibold truncate ${t.status==='completed'?'text-gray-400 line-through':'text-gray-900'}`}>{t.title}</div>
-                          <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
-                            <span>{t.task_number}</span>
-                            {t.customer_name && <><span>·</span><span>{t.customer_name}</span></>}
-                            {t.due_date && <><span>·</span><span className={new Date(t.due_date) < new Date() && t.status !== 'completed' ? 'text-red-500 font-medium' : ''}>{fmtDate(t.due_date)}</span></>}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge color={t.priority==='urgent'||t.priority==='high'?'red':t.priority==='medium'?'yellow':'green'}>{t.priority}</Badge>
-                        <button onClick={() => {
-                          const next: Record<string,string> = { open: 'in_progress', in_progress: 'completed', completed: 'open' };
-                          const nextStatus = next[t.status] || 'in_progress';
-                          handleCrmUpdate('update-task', { id: t.id, status: nextStatus }, `Status → ${nextStatus.replace('_',' ')}`);
-                        }} title="Klik untuk ubah status">
-                          <Badge color={t.status==='completed'?'green':t.status==='in_progress'?'blue':'gray'}>{(t.status||'').replace('_',' ')}</Badge>
-                        </button>
-                        {canDelete && <button onClick={() => handleCrmDelete('delete-task', t.id, 'Task')} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>}
-                      </div>
-                    </div>
-                  </Card>
-                ))
-              }
-            </div>
-          </>)}
+          {tab === 'tasks' && (
+            <TaskCalendarModule showToast={showToast} />
+          )}
 
           {/* ═══════════════════════════════════════════ */}
           {/* CRM: FORECASTING */}
@@ -3590,7 +3537,7 @@ export default function SFAUnifiedPage() {
                     <Card className="p-5">
                       <div className="flex items-center justify-between mb-4">
                         <div><h3 className="text-sm font-semibold text-gray-900">1. Unduh Template</h3><p className="text-xs text-gray-400 mt-0.5">Download template {ieTemplate?.label} lalu isi data Anda</p></div>
-                        <button onClick={() => ieDownloadTemplate(ieSelectedEntity)} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-colors"><Download className="w-3.5 h-3.5" /> Download CSV Template</button>
+                        <button onClick={() => ieDownloadTemplate(ieSelectedEntity)} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-colors"><Download className="w-3.5 h-3.5" /> Download Template Excel</button>
                       </div>
                       {ieTemplate && (
                         <div className="overflow-x-auto rounded-xl border border-gray-100">
@@ -3620,8 +3567,8 @@ export default function SFAUnifiedPage() {
                       <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition-all group">
                         <FileUp className="w-8 h-8 text-gray-300 group-hover:text-amber-400 transition-colors mb-2" />
                         <span className="text-sm text-gray-400 group-hover:text-amber-600 font-medium">Klik untuk upload atau drag & drop</span>
-                        <span className="text-[10px] text-gray-300 mt-1">CSV, XLS, XLSX — Max 10MB</span>
-                        <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={ieHandleFile} />
+                        <span className="text-[10px] text-gray-300 mt-1">Excel (.xlsx) — Max 10MB</span>
+                        <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={ieHandleFile} />
                       </label>
                       {ieFileInfo && (
                         <div className="mt-3 flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
@@ -3723,32 +3670,12 @@ export default function SFAUnifiedPage() {
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <h3 className="text-sm font-semibold text-gray-900">Export {ieTemplate?.label || ieSelectedEntity}</h3>
-                          <p className="text-xs text-gray-400 mt-0.5">Unduh semua data dalam format CSV atau Excel</p>
+                          <p className="text-xs text-gray-400 mt-0.5">Unduh semua data dalam format Excel (.xlsx)</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => ieDoExport('csv')} disabled={ieImporting} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"><Download className="w-3.5 h-3.5" /> CSV</button>
-                          <button onClick={() => ieDoExport('excel')} disabled={ieImporting} className="flex items-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"><Download className="w-3.5 h-3.5" /> Excel</button>
+                          <button onClick={() => ieDoExport()} disabled={ieImporting} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"><Download className="w-3.5 h-3.5" /> Download Excel</button>
                         </div>
                       </div>
-                      {ieImporting && <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-amber-500" /><span className="ml-3 text-sm text-gray-400">Mengambil data...</span></div>}
-                      {ieExportData && !ieImporting && (
-                        <div>
-                          <div className="flex items-center gap-2 mb-3 text-xs text-gray-500"><Table2 className="w-4 h-4" /> {ieExportData.totalRows} baris data tersedia</div>
-                          <div className="overflow-x-auto rounded-xl border border-gray-100 max-h-80">
-                            <table className="w-full text-xs">
-                              <thead className="sticky top-0"><tr className="bg-gray-50">{(ieExportData.headers||[]).slice(0,10).map((h: string, i: number) => (
-                                <th key={i} className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap">{h}</th>
-                              ))}{(ieExportData.headers||[]).length > 10 && <th className="px-3 py-2.5 text-gray-400">+{ieExportData.headers.length-10}</th>}</tr></thead>
-                              <tbody className="divide-y divide-gray-50">{(ieExportData.rows||[]).slice(0,30).map((row: any, ri: number) => (
-                                <tr key={ri} className="hover:bg-gray-50/50">{(ieExportData.headers||[]).slice(0,10).map((h: string, ci: number) => (
-                                  <td key={ci} className="px-3 py-2 text-gray-600 whitespace-nowrap max-w-[150px] truncate">{String(row[h] ?? '')}</td>
-                                ))}{(ieExportData.headers||[]).length > 10 && <td className="px-3 py-2 text-gray-300">...</td>}</tr>
-                              ))}</tbody>
-                            </table>
-                          </div>
-                          {ieExportData.totalRows > 30 && <p className="text-[10px] text-gray-400 mt-2 text-center">Preview 30 dari {ieExportData.totalRows} baris — file lengkap sudah didownload</p>}
-                        </div>
-                      )}
                     </Card>
                   </>)}
                 </div>

@@ -1,179 +1,172 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
-interface ProductStock {
-  id: string;
-  name: string;
-  sku: string;
-  barcode: string;
-  category: string;
-  unit: string;
-  totalStock: number;
-  minStock: number;
-  maxStock: number;
-  avgCost: number;
-  stockValue: number;
-  movement: 'fast' | 'medium' | 'slow';
-  branches: BranchStockDetail[];
-}
-
-interface BranchStockDetail {
-  branchId: string;
-  branchName: string;
-  branchCode: string;
-  stock: number;
-  minStock: number;
-  maxStock: number;
-  status: 'normal' | 'low' | 'out' | 'over';
-  lastUpdated: string;
-}
-
-const mockProducts: ProductStock[] = [
-  {
-    id: '1', name: 'Beras Premium 5kg', sku: 'BRS-001', barcode: '8991234567001', category: 'Bahan Pokok', unit: 'pcs',
-    totalStock: 2500, minStock: 500, maxStock: 5000, avgCost: 75000, stockValue: 187500000, movement: 'fast',
-    branches: [
-      { branchId: '1', branchName: 'Gudang Pusat', branchCode: 'WH-001', stock: 1200, minStock: 200, maxStock: 2000, status: 'normal', lastUpdated: '2026-02-22T10:00:00' },
-      { branchId: '2', branchName: 'Cabang Jakarta', branchCode: 'HQ-001', stock: 450, minStock: 100, maxStock: 800, status: 'normal', lastUpdated: '2026-02-22T09:30:00' },
-      { branchId: '3', branchName: 'Cabang Bandung', branchCode: 'BR-002', stock: 320, minStock: 100, maxStock: 600, status: 'normal', lastUpdated: '2026-02-22T09:00:00' },
-      { branchId: '4', branchName: 'Cabang Surabaya', branchCode: 'BR-003', stock: 280, minStock: 100, maxStock: 600, status: 'normal', lastUpdated: '2026-02-22T08:30:00' },
-      { branchId: '5', branchName: 'Cabang Medan', branchCode: 'BR-004', stock: 150, minStock: 100, maxStock: 500, status: 'low', lastUpdated: '2026-02-22T08:00:00' },
-      { branchId: '6', branchName: 'Cabang Yogyakarta', branchCode: 'BR-005', stock: 100, minStock: 80, maxStock: 400, status: 'normal', lastUpdated: '2026-02-22T07:30:00' }
-    ]
-  },
-  {
-    id: '2', name: 'Minyak Goreng 2L', sku: 'MYK-001', barcode: '8991234567002', category: 'Bahan Pokok', unit: 'pcs',
-    totalStock: 1800, minStock: 400, maxStock: 3500, avgCost: 35000, stockValue: 63000000, movement: 'fast',
-    branches: [
-      { branchId: '1', branchName: 'Gudang Pusat', branchCode: 'WH-001', stock: 800, minStock: 150, maxStock: 1500, status: 'normal', lastUpdated: '2026-02-22T10:00:00' },
-      { branchId: '2', branchName: 'Cabang Jakarta', branchCode: 'HQ-001', stock: 350, minStock: 80, maxStock: 500, status: 'normal', lastUpdated: '2026-02-22T09:30:00' },
-      { branchId: '3', branchName: 'Cabang Bandung', branchCode: 'BR-002', stock: 250, minStock: 60, maxStock: 400, status: 'normal', lastUpdated: '2026-02-22T09:00:00' }
-    ]
-  },
-  {
-    id: '3', name: 'Tepung Terigu 1kg', sku: 'TPG-001', barcode: '8991234567006', category: 'Bahan Pokok', unit: 'pcs',
-    totalStock: 85, minStock: 300, maxStock: 2000, avgCost: 14000, stockValue: 1190000, movement: 'slow',
-    branches: [
-      { branchId: '1', branchName: 'Gudang Pusat', branchCode: 'WH-001', stock: 50, minStock: 100, maxStock: 800, status: 'low', lastUpdated: '2026-02-22T10:00:00' },
-      { branchId: '2', branchName: 'Cabang Jakarta', branchCode: 'HQ-001', stock: 15, minStock: 50, maxStock: 300, status: 'low', lastUpdated: '2026-02-22T09:30:00' },
-      { branchId: '5', branchName: 'Cabang Medan', branchCode: 'BR-004', stock: 0, minStock: 30, maxStock: 200, status: 'out', lastUpdated: '2026-02-22T08:00:00' }
-    ]
-  }
-];
+const sequelize = require('../../../../lib/sequelize');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
-        return getStock(req, res);
+        return await getStock(req, res);
       case 'PUT':
-        return updateStock(req, res);
+        return await updateStock(req, res);
       case 'POST':
-        return transferStock(req, res);
+        return await transferStock(req, res);
       default:
         res.setHeader('Allow', ['GET', 'PUT', 'POST']);
         return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
           errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
         );
     }
-  } catch (error) {
-    console.error('Inventory Stock API Error:', error);
+  } catch (error: any) {
+    console.error('Inventory Stock API Error:', error.message);
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, error.message)
     );
   }
 }
 
-function getStock(req: NextApiRequest, res: NextApiResponse) {
+async function getStock(req: NextApiRequest, res: NextApiResponse) {
   const { search, category, branch, stockFilter, page = '1', limit = '20' } = req.query;
-  
-  let filtered = [...mockProducts];
-  
-  if (search) {
-    const searchStr = (search as string).toLowerCase();
-    filtered = filtered.filter(p => 
-      p.name.toLowerCase().includes(searchStr) ||
-      p.sku.toLowerCase().includes(searchStr) ||
-      p.barcode.includes(searchStr)
-    );
+  const pageNum = Math.max(1, parseInt(page as string));
+  const limitNum = Math.min(100, parseInt(limit as string));
+  const offset = (pageNum - 1) * limitNum;
+
+  let having = '';
+  if (stockFilter === 'low') having = 'HAVING SUM(s.quantity) > 0 AND SUM(s.quantity) < p.minimum_stock';
+  else if (stockFilter === 'out') having = 'HAVING COALESCE(SUM(s.quantity),0) = 0';
+  else if (stockFilter === 'over') having = 'HAVING SUM(s.quantity) > p.maximum_stock';
+  else if (stockFilter === 'normal') having = 'HAVING SUM(s.quantity) >= p.minimum_stock AND SUM(s.quantity) <= p.maximum_stock';
+
+  let where = 'WHERE p.is_active=true';
+  const params: any = {};
+  if (search) { where += ` AND (p.name ILIKE :search OR p.sku ILIKE :search OR p.barcode ILIKE :search)`; params.search = `%${search}%`; }
+  if (category && category !== 'Semua Kategori' && category !== 'all') { where += ` AND pc.name = :category`; params.category = category; }
+
+  // Count
+  const [countResult] = await sequelize.query(`
+    SELECT COUNT(*) as total FROM (
+      SELECT p.id FROM products p LEFT JOIN product_categories pc ON pc.id=p.category_id LEFT JOIN inventory_stock s ON s.product_id=p.id
+      ${where} GROUP BY p.id, p.minimum_stock, p.maximum_stock ${having}
+    ) sub
+  `, { replacements: params });
+  const total = parseInt(countResult[0].total);
+
+  // Products with aggregated stock
+  const [products] = await sequelize.query(`
+    SELECT p.id, p.name, p.sku, p.barcode, p.unit, p.buy_price, p.minimum_stock, p.maximum_stock,
+      pc.name as category, COALESCE(SUM(s.quantity),0)::int as total_stock,
+      COALESCE(AVG(s.cost_price),0)::numeric(15,0) as avg_cost,
+      COALESCE(SUM(s.quantity * s.cost_price),0)::numeric(15,0) as stock_value
+    FROM products p
+    LEFT JOIN product_categories pc ON pc.id=p.category_id
+    LEFT JOIN inventory_stock s ON s.product_id=p.id
+    ${where}
+    GROUP BY p.id, p.name, p.sku, p.barcode, p.unit, p.buy_price, p.minimum_stock, p.maximum_stock, pc.name
+    ${having}
+    ORDER BY p.name LIMIT :limit OFFSET :offset
+  `, { replacements: { ...params, limit: limitNum, offset } });
+
+  // Warehouse breakdown per product
+  const productIds = products.map((p: any) => p.id);
+  let warehouseBreakdown: any[] = [];
+  if (productIds.length > 0) {
+    [warehouseBreakdown] = await sequelize.query(`
+      SELECT s.product_id, w.id as warehouse_id, w.name as warehouse_name, w.code as warehouse_code,
+        SUM(s.quantity)::int as stock, MAX(s.updated_at) as last_updated
+      FROM inventory_stock s JOIN warehouses w ON w.id=s.warehouse_id
+      WHERE s.product_id IN (:ids) GROUP BY s.product_id, w.id, w.name, w.code ORDER BY w.name
+    `, { replacements: { ids: productIds } });
   }
-  
-  if (category && category !== 'Semua Kategori') {
-    filtered = filtered.filter(p => p.category === category);
-  }
-  
-  if (stockFilter && stockFilter !== 'all') {
-    filtered = filtered.filter(p => p.branches.some(b => b.status === stockFilter));
-  }
+
+  const result = products.map((p: any) => {
+    const branches = warehouseBreakdown.filter((b: any) => b.product_id === p.id).map((b: any) => ({
+      branchId: String(b.warehouse_id), branchName: b.warehouse_name, branchCode: b.warehouse_code,
+      stock: b.stock, minStock: p.minimum_stock, maxStock: p.maximum_stock,
+      status: b.stock === 0 ? 'out' : b.stock < p.minimum_stock ? 'low' : b.stock > p.maximum_stock ? 'over' : 'normal',
+      lastUpdated: b.last_updated || new Date().toISOString()
+    }));
+    return {
+      id: String(p.id), name: p.name, sku: p.sku, barcode: p.barcode || '', category: p.category || '-', unit: p.unit,
+      totalStock: p.total_stock, minStock: p.minimum_stock, maxStock: p.maximum_stock,
+      avgCost: parseFloat(p.avg_cost), stockValue: parseFloat(p.stock_value),
+      movement: p.total_stock > p.maximum_stock * 0.7 ? 'fast' as const : p.total_stock > p.minimum_stock ? 'medium' as const : 'slow' as const,
+      branches
+    };
+  });
 
   const stats = {
-    totalProducts: filtered.length,
-    totalStock: filtered.reduce((sum, p) => sum + p.totalStock, 0),
-    totalValue: filtered.reduce((sum, p) => sum + p.stockValue, 0),
-    lowStockCount: filtered.filter(p => p.branches.some(b => b.status === 'low')).length,
-    outOfStockCount: filtered.filter(p => p.branches.some(b => b.status === 'out')).length
+    totalProducts: total,
+    totalStock: result.reduce((s: number, p: any) => s + p.totalStock, 0),
+    totalValue: result.reduce((s: number, p: any) => s + p.stockValue, 0),
+    lowStockCount: result.filter((p: any) => p.branches.some((b: any) => b.status === 'low')).length,
+    outOfStockCount: result.filter((p: any) => p.branches.some((b: any) => b.status === 'out')).length
   };
-
-  const pageNum = parseInt(page as string);
-  const limitNum = parseInt(limit as string);
-  const startIdx = (pageNum - 1) * limitNum;
-  const paginatedProducts = filtered.slice(startIdx, startIdx + limitNum);
 
   return res.status(HttpStatus.OK).json(
     successResponse(
-      { products: paginatedProducts, stats },
-      {
-        pagination: {
-          page: pageNum,
-          limit: limitNum,
-          total: filtered.length,
-          totalPages: Math.ceil(filtered.length / limitNum)
-        }
-      }
+      { products: result, stats },
+      { pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) } }
     )
   );
 }
 
-function updateStock(req: NextApiRequest, res: NextApiResponse) {
+async function updateStock(req: NextApiRequest, res: NextApiResponse) {
   const { productId, branchId, adjustment, reason } = req.body;
-  
   if (!productId || !branchId || adjustment === undefined) {
     return res.status(HttpStatus.BAD_REQUEST).json(
       errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Product ID, Branch ID, and adjustment are required')
     );
   }
 
+  // Update inventory_stock
+  const [existing] = await sequelize.query(
+    "SELECT id, quantity FROM inventory_stock WHERE product_id=:pid AND warehouse_id=:whId LIMIT 1",
+    { replacements: { pid: productId, whId: branchId } }
+  );
+
+  if (existing.length > 0) {
+    const newQty = Math.max(0, parseFloat(existing[0].quantity) + parseFloat(adjustment));
+    await sequelize.query(
+      "UPDATE inventory_stock SET quantity=:qty, available_quantity=:qty, updated_at=NOW() WHERE id=:id",
+      { replacements: { qty: newQty, id: existing[0].id } }
+    );
+  }
+
+  // Record movement
+  await sequelize.query(`
+    INSERT INTO stock_movements (tenant_id, product_id, warehouse_id, movement_type, quantity, notes, performed_by_name, reference_type)
+    VALUES ((SELECT tenant_id FROM products WHERE id=:pid), :pid, :whId, 'adjustment', :qty, :reason, 'Admin', 'manual')
+  `, { replacements: { pid: productId, whId: branchId, qty: adjustment, reason: reason || 'Stock adjustment' } });
+
   return res.status(HttpStatus.OK).json(
-    successResponse(
-      { productId, branchId, adjustment, reason },
-      undefined,
-      `Stock adjusted by ${adjustment} for product ${productId} at branch ${branchId}`
-    )
+    successResponse({ productId, branchId, adjustment, reason }, undefined, `Stock adjusted by ${adjustment}`)
   );
 }
 
-function transferStock(req: NextApiRequest, res: NextApiResponse) {
+async function transferStock(req: NextApiRequest, res: NextApiResponse) {
   const { productId, fromBranch, toBranch, quantity, notes } = req.body;
-  
   if (!productId || !fromBranch || !toBranch || !quantity) {
     return res.status(HttpStatus.BAD_REQUEST).json(
       errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'All transfer fields are required')
     );
   }
 
-  const transfer = {
-    id: Date.now().toString(),
-    transferNumber: `TRF-${Date.now()}`,
-    productId,
-    fromBranch,
-    toBranch,
-    quantity,
-    notes,
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  };
+  const [seqResult] = await sequelize.query("SELECT COALESCE(MAX(id),0)+1 as next_id FROM stock_transfers");
+  const tfNum = `TF-2026-${String(seqResult[0].next_id).padStart(4, '0')}`;
+
+  const [result] = await sequelize.query(`
+    INSERT INTO stock_transfers (tenant_id, transfer_number, from_warehouse_id, to_warehouse_id, status, total_items, total_quantity, notes, requested_by_name)
+    VALUES ((SELECT tenant_id FROM warehouses LIMIT 1), :num, :from, :to, 'pending', 1, :qty, :notes, 'Admin')
+    RETURNING id
+  `, { replacements: { num: tfNum, from: fromBranch, to: toBranch, qty: quantity, notes: notes || null } });
+
+  await sequelize.query(`
+    INSERT INTO stock_transfer_items (transfer_id, product_id, requested_qty, unit_cost)
+    VALUES (:tfId, :pid, :qty, (SELECT buy_price FROM products WHERE id=:pid))
+  `, { replacements: { tfId: result[0].id, pid: productId, qty: quantity } });
 
   return res.status(HttpStatus.CREATED).json(
-    successResponse(transfer, undefined, 'Stock transfer created successfully')
+    successResponse({ id: result[0].id, transferNumber: tfNum, status: 'pending' }, undefined, 'Stock transfer created')
   );
 }

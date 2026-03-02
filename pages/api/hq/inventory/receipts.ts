@@ -1,199 +1,125 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 
-interface ReceiptItem {
-  productId: string;
-  productName: string;
-  sku: string;
-  orderedQty: number;
-  receivedQty: number;
-  unit: string;
-  unitPrice: number;
-  totalPrice: number;
-  status: 'pending' | 'partial' | 'complete' | 'rejected';
-  notes?: string;
-}
-
-interface GoodsReceipt {
-  id: string;
-  receiptNumber: string;
-  poNumber: string;
-  supplier: { id: string; name: string; code: string };
-  branch: { id: string; name: string; code: string };
-  status: 'pending' | 'partial' | 'complete' | 'cancelled';
-  receiptDate: string;
-  expectedDate: string;
-  items: ReceiptItem[];
-  totalItems: number;
-  totalValue: number;
-  receivedValue: number;
-  receivedBy?: string;
-  verifiedBy?: string;
-  notes?: string;
-}
-
-const mockReceipts: GoodsReceipt[] = [
-  {
-    id: '1', receiptNumber: 'GR-2026-0125', poNumber: 'PO-2026-0089',
-    supplier: { id: '1', name: 'PT Supplier Utama', code: 'SUP-001' },
-    branch: { id: '1', name: 'Gudang Pusat', code: 'WH-001' },
-    status: 'pending', receiptDate: '2026-02-22', expectedDate: '2026-02-22',
-    items: [
-      { productId: '1', productName: 'Beras Premium 5kg', sku: 'BRS-001', orderedQty: 500, receivedQty: 0, unit: 'pcs', unitPrice: 75000, totalPrice: 37500000, status: 'pending' },
-      { productId: '2', productName: 'Minyak Goreng 2L', sku: 'MYK-001', orderedQty: 300, receivedQty: 0, unit: 'pcs', unitPrice: 35000, totalPrice: 10500000, status: 'pending' }
-    ],
-    totalItems: 2, totalValue: 48000000, receivedValue: 0
-  },
-  {
-    id: '2', receiptNumber: 'GR-2026-0124', poNumber: 'PO-2026-0087',
-    supplier: { id: '2', name: 'CV Distributor Jaya', code: 'SUP-002' },
-    branch: { id: '1', name: 'Gudang Pusat', code: 'WH-001' },
-    status: 'partial', receiptDate: '2026-02-21', expectedDate: '2026-02-21',
-    items: [
-      { productId: '6', productName: 'Tepung Terigu 1kg', sku: 'TPG-001', orderedQty: 1000, receivedQty: 600, unit: 'pcs', unitPrice: 14000, totalPrice: 14000000, status: 'partial', notes: 'Sisa 400 akan dikirim besok' },
-      { productId: '3', productName: 'Gula Pasir 1kg', sku: 'GLA-001', orderedQty: 500, receivedQty: 500, unit: 'pcs', unitPrice: 16000, totalPrice: 8000000, status: 'complete' }
-    ],
-    totalItems: 2, totalValue: 22000000, receivedValue: 16400000,
-    receivedBy: 'Staff Gudang 1'
-  },
-  {
-    id: '3', receiptNumber: 'GR-2026-0123', poNumber: 'PO-2026-0085',
-    supplier: { id: '1', name: 'PT Supplier Utama', code: 'SUP-001' },
-    branch: { id: '1', name: 'Gudang Pusat', code: 'WH-001' },
-    status: 'complete', receiptDate: '2026-02-20', expectedDate: '2026-02-20',
-    items: [
-      { productId: '4', productName: 'Kopi Arabica 250g', sku: 'KPI-001', orderedQty: 200, receivedQty: 200, unit: 'pcs', unitPrice: 85000, totalPrice: 17000000, status: 'complete' }
-    ],
-    totalItems: 1, totalValue: 17000000, receivedValue: 17000000,
-    receivedBy: 'Staff Gudang 2', verifiedBy: 'Supervisor Gudang'
-  }
-];
+const sequelize = require('../../../../lib/sequelize');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
-      case 'GET':
-        return getReceipts(req, res);
-      case 'POST':
-        return createReceipt(req, res);
-      case 'PUT':
-        return updateReceipt(req, res);
+      case 'GET': return await getReceipts(req, res);
+      case 'POST': return await createReceipt(req, res);
+      case 'PUT': return await updateReceipt(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT']);
-        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
-          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
-        );
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`));
     }
-  } catch (error) {
-    console.error('Goods Receipt API Error:', error);
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
-    );
+  } catch (error: any) {
+    console.error('Goods Receipt API Error:', error.message);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, error.message));
   }
 }
 
-function getReceipts(req: NextApiRequest, res: NextApiResponse) {
-  const { status, supplierId, branchId, search } = req.query;
-  
-  let filtered = [...mockReceipts];
-  
-  if (status && status !== 'all') {
-    filtered = filtered.filter(r => r.status === status);
-  }
-  
-  if (supplierId) {
-    filtered = filtered.filter(r => r.supplier.id === supplierId);
-  }
-  
-  if (branchId) {
-    filtered = filtered.filter(r => r.branch.id === branchId || r.branch.code === branchId);
-  }
-  
+async function getReceipts(req: NextApiRequest, res: NextApiResponse) {
+  const { status, search } = req.query;
+  let where = '';
+  const params: any = {};
+  if (status && status !== 'all') { where = 'WHERE gr.status=:status'; params.status = status; }
   if (search) {
-    const searchStr = (search as string).toLowerCase();
-    filtered = filtered.filter(r => 
-      r.receiptNumber.toLowerCase().includes(searchStr) ||
-      r.poNumber.toLowerCase().includes(searchStr) ||
-      r.supplier.name.toLowerCase().includes(searchStr)
-    );
+    where += (where ? ' AND' : 'WHERE') + ' (gr.gr_number ILIKE :search OR s.name ILIKE :search OR po.po_number ILIKE :search)';
+    params.search = `%${search}%`;
   }
 
-  const stats = {
-    pending: mockReceipts.filter(r => r.status === 'pending').length,
-    partial: mockReceipts.filter(r => r.status === 'partial').length,
-    complete: mockReceipts.filter(r => r.status === 'complete').length,
-    totalValue: mockReceipts.reduce((sum, r) => sum + r.totalValue, 0),
-    receivedValue: mockReceipts.reduce((sum, r) => sum + r.receivedValue, 0)
-  };
+  const [receipts] = await sequelize.query(`
+    SELECT gr.*, s.name as supplier_name, s.code as supplier_code,
+      w.name as warehouse_name, w.code as warehouse_code,
+      po.po_number
+    FROM goods_receipts gr
+    LEFT JOIN suppliers s ON s.id=gr.supplier_id
+    LEFT JOIN warehouses w ON w.id=gr.warehouse_id
+    LEFT JOIN purchase_orders po ON po.id=gr.purchase_order_id
+    ${where} ORDER BY gr.created_at DESC
+  `, { replacements: params });
 
-  return res.status(HttpStatus.OK).json(
-    successResponse({ receipts: filtered, stats })
-  );
+  const grIds = receipts.map((r: any) => r.id);
+  let items: any[] = [];
+  if (grIds.length > 0) {
+    [items] = await sequelize.query(`
+      SELECT gri.*, p.name as product_name, p.sku, p.unit
+      FROM goods_receipt_items gri JOIN products p ON p.id=gri.product_id
+      WHERE gri.goods_receipt_id IN (:ids)
+    `, { replacements: { ids: grIds } });
+  }
+
+  const [statsRows] = await sequelize.query("SELECT status, COUNT(*)::int as count FROM goods_receipts GROUP BY status");
+  const stats: Record<string, any> = { pending: 0, partial: 0, completed: 0, draft: 0 };
+  statsRows.forEach((s: any) => { stats[s.status] = s.count; });
+
+  return res.status(HttpStatus.OK).json(successResponse({
+    receipts: receipts.map((r: any) => ({
+      id: String(r.id), receiptNumber: r.gr_number, poNumber: r.po_number || '-',
+      supplier: { id: String(r.supplier_id || ''), name: r.supplier_name || '-', code: r.supplier_code || '' },
+      branch: { id: String(r.warehouse_id || ''), name: r.warehouse_name || '-', code: r.warehouse_code || '' },
+      status: r.status === 'completed' ? 'complete' : r.status,
+      receiptDate: r.receipt_date, expectedDate: r.receipt_date,
+      items: items.filter((i: any) => i.goods_receipt_id === r.id).map((i: any) => ({
+        productId: String(i.product_id), productName: i.product_name, sku: i.sku,
+        orderedQty: parseFloat(i.ordered_qty), receivedQty: parseFloat(i.received_qty),
+        unit: i.unit || 'pcs', unitPrice: parseFloat(i.unit_cost), totalPrice: parseFloat(i.total_cost),
+        status: parseFloat(i.received_qty) >= parseFloat(i.ordered_qty) ? 'complete' : parseFloat(i.received_qty) > 0 ? 'partial' : 'pending'
+      })),
+      totalItems: parseInt(r.total_items) || 0, totalValue: parseFloat(r.total_value) || 0,
+      receivedValue: parseFloat(r.total_value) || 0,
+      receivedBy: r.received_by_name, notes: r.notes
+    })),
+    stats
+  }));
 }
 
-function createReceipt(req: NextApiRequest, res: NextApiResponse) {
-  const { poNumber, supplierId, supplierName, branchId, branchName, expectedDate, items } = req.body;
-  
-  if (!poNumber || !supplierId || !branchId) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'PO number, supplier, and branch are required')
-    );
+async function createReceipt(req: NextApiRequest, res: NextApiResponse) {
+  const { purchaseOrderId, warehouseId, items: reqItems, invoiceNumber, notes } = req.body;
+  if (!reqItems?.length) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Items required'));
+
+  const [seqResult] = await sequelize.query("SELECT COALESCE(MAX(id),0)+1 as nid FROM goods_receipts");
+  const grNum = `GR-2026-${String(seqResult[0].nid).padStart(4, '0')}`;
+  let supplierId = null;
+  if (purchaseOrderId) {
+    const [po] = await sequelize.query("SELECT supplier_id FROM purchase_orders WHERE id=:poId", { replacements: { poId: purchaseOrderId } });
+    if (po.length > 0) supplierId = po[0].supplier_id;
   }
 
-  const newReceipt: GoodsReceipt = {
-    id: Date.now().toString(),
-    receiptNumber: `GR-2026-${String(mockReceipts.length + 126).padStart(4, '0')}`,
-    poNumber,
-    supplier: { id: supplierId, name: supplierName || 'Unknown', code: `SUP-${supplierId}` },
-    branch: { id: branchId, name: branchName || 'Unknown', code: `BR-${branchId}` },
-    status: 'pending',
-    receiptDate: new Date().toISOString().split('T')[0],
-    expectedDate: expectedDate || new Date().toISOString().split('T')[0],
-    items: items || [],
-    totalItems: items?.length || 0,
-    totalValue: items?.reduce((sum: number, i: any) => sum + (i.totalPrice || 0), 0) || 0,
-    receivedValue: 0
-  };
+  let totalQty = 0, totalValue = 0;
+  for (const item of reqItems) { totalQty += item.receivedQty || 0; totalValue += (item.receivedQty || 0) * (item.unitCost || 0); }
 
-  return res.status(HttpStatus.CREATED).json(
-    successResponse(newReceipt, undefined, 'Goods receipt created successfully')
-  );
-}
+  const [result] = await sequelize.query(`
+    INSERT INTO goods_receipts (tenant_id, gr_number, purchase_order_id, supplier_id, warehouse_id, status, invoice_number, total_items, total_quantity, total_value, received_by_name, notes)
+    VALUES ((SELECT tenant_id FROM warehouses LIMIT 1), :num, :poId, :supId, :whId, 'completed', :inv, :items, :qty, :val, 'Admin', :notes) RETURNING id
+  `, { replacements: { num: grNum, poId: purchaseOrderId || null, supId: supplierId, whId: warehouseId || null, inv: invoiceNumber || null, items: reqItems.length, qty: totalQty, val: totalValue, notes: notes || null } });
 
-function updateReceipt(req: NextApiRequest, res: NextApiResponse) {
-  const { id, action, items, receivedBy, verifiedBy, notes } = req.body;
-  
-  if (!id) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Receipt ID is required')
-    );
-  }
-
-  const receipt = mockReceipts.find(r => r.id === id);
-  if (!receipt) {
-    return res.status(HttpStatus.NOT_FOUND).json(
-      errorResponse(ErrorCodes.NOT_FOUND, 'Receipt not found')
-    );
-  }
-
-  if (action === 'receive') {
-    if (items) {
-      receipt.items = items;
-      const allComplete = items.every((i: ReceiptItem) => i.receivedQty >= i.orderedQty);
-      const anyReceived = items.some((i: ReceiptItem) => i.receivedQty > 0);
-      receipt.status = allComplete ? 'complete' : (anyReceived ? 'partial' : 'pending');
-      receipt.receivedValue = items.reduce((sum: number, i: ReceiptItem) => sum + (i.receivedQty * i.unitPrice), 0);
+  const grId = result[0].id;
+  for (const item of reqItems) {
+    await sequelize.query(`INSERT INTO goods_receipt_items (goods_receipt_id, product_id, ordered_qty, received_qty, accepted_qty, unit_cost, total_cost, quality_status)
+      VALUES (:grId, :pid, :ordered, :received, :received, :cost, :total, 'passed')`,
+      { replacements: { grId, pid: item.productId, ordered: item.orderedQty || item.receivedQty, received: item.receivedQty, cost: item.unitCost || 0, total: (item.receivedQty || 0) * (item.unitCost || 0) } });
+    // Update stock
+    if (warehouseId) {
+      const [existing] = await sequelize.query("SELECT id FROM inventory_stock WHERE product_id=:pid AND warehouse_id=:whId LIMIT 1", { replacements: { pid: item.productId, whId: warehouseId } });
+      if (existing.length > 0) {
+        await sequelize.query("UPDATE inventory_stock SET quantity=quantity+:qty, available_quantity=available_quantity+:qty, updated_at=NOW() WHERE id=:sid", { replacements: { qty: item.receivedQty, sid: existing[0].id } });
+      } else {
+        await sequelize.query("INSERT INTO inventory_stock (product_id, warehouse_id, quantity, reserved_quantity, available_quantity, cost_price) VALUES (:pid, :whId, :qty, 0, :qty, :cost)", { replacements: { pid: item.productId, whId: warehouseId, qty: item.receivedQty, cost: item.unitCost || 0 } });
+      }
     }
-    if (receivedBy) receipt.receivedBy = receivedBy;
-  } else if (action === 'verify') {
-    if (verifiedBy) receipt.verifiedBy = verifiedBy;
-  } else if (action === 'cancel') {
-    receipt.status = 'cancelled';
   }
 
-  if (notes) receipt.notes = notes;
+  return res.status(HttpStatus.CREATED).json(successResponse({ id: grId, grNumber: grNum }, undefined, 'Goods receipt created'));
+}
 
-  return res.status(HttpStatus.OK).json(
-    successResponse(receipt, undefined, 'Receipt updated successfully')
-  );
+async function updateReceipt(req: NextApiRequest, res: NextApiResponse) {
+  const { id, action } = req.body;
+  if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Receipt ID required'));
+
+  if (action === 'cancel') {
+    await sequelize.query("UPDATE goods_receipts SET status='cancelled', updated_at=NOW() WHERE id=:id", { replacements: { id } });
+  }
+  return res.status(HttpStatus.OK).json(successResponse({ id }, undefined, 'Receipt updated'));
 }

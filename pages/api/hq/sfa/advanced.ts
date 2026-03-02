@@ -164,10 +164,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       case 'update-field-order-status': {
         if (req.method !== 'PUT') return err(res, 'PUT only', 405);
         const { id: foId, status: foStatus, rejected_reason } = b;
-        let extra = '';
-        if (foStatus === 'approved') extra = `, approved_by=${uid}, approved_at=NOW()`;
-        if (foStatus === 'rejected' && rejected_reason) extra = `, rejected_reason='${rejected_reason.replace(/'/g, "''")}'`;
-        await qExec(`UPDATE sfa_field_orders SET status=:status ${extra}, updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, { status: foStatus, uid, id: foId, tid });
+        if (!foId || !foStatus) return err(res, 'id & status wajib');
+        const validStatuses = ['draft', 'submitted', 'approved', 'rejected', 'processing', 'shipped', 'delivered', 'cancelled'];
+        if (!validStatuses.includes(foStatus)) return err(res, 'Status tidak valid');
+        let foSql = 'UPDATE sfa_field_orders SET status=:status, updated_by=:uid, updated_at=NOW()';
+        const foParams: any = { status: foStatus, uid, id: foId, tid };
+        if (foStatus === 'approved') { foSql += ', approved_by=:uid, approved_at=NOW()'; }
+        if (foStatus === 'rejected' && rejected_reason) { foSql += ', rejected_reason=:reason'; foParams.reason = rejected_reason; }
+        foSql += ' WHERE id=:id AND tenant_id=:tid';
+        await qExec(foSql, foParams);
         fireAudit(foStatus === 'approved' ? 'approve' : foStatus === 'rejected' ? 'reject' : 'status_change', 'sfa_field_order', foId, { status: foStatus });
         return ok(res, { message: `Order ${foStatus}` });
       }
