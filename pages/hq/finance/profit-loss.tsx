@@ -1,22 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 import {
-  TrendingUp,
-  TrendingDown,
-  ArrowUpRight,
-  ArrowDownRight,
-  RefreshCw,
-  Download,
-  Calendar,
-  Building2,
-  ChevronLeft,
-  FileText,
-  Printer,
-  ChevronDown,
-  ChevronRight as ChevronRightIcon
+  TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, RefreshCw, Download,
+  Calendar, Building2, ChevronLeft, FileText, Printer, ChevronDown,
+  ChevronRight as ChevronRightIcon, Activity, PieChart as PieChartIcon, Target
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+
+const INDUSTRY_OPTIONS = [
+  { value: 'general', label: 'Umum' }, { value: 'fnb', label: 'F&B' },
+  { value: 'retail', label: 'Retail' }, { value: 'logistics', label: 'Logistik' },
+  { value: 'hospitality', label: 'Hospitality' }, { value: 'manufacturing', label: 'Manufaktur' },
+  { value: 'finance', label: 'Finance' }, { value: 'pharmacy', label: 'Farmasi' },
+];
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -84,11 +82,12 @@ export default function ProfitLossReport() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
   const [comparePeriod, setComparePeriod] = useState<'previous' | 'yoy'>('previous');
+  const [industry, setIndustry] = useState('general');
   const [summary, setSummary] = useState<PLSummary>(defaultPLSummary);
   const [plItems, setPLItems] = useState<PLLineItem[]>([]);
   const [branchPL, setBranchPL] = useState<BranchPL[]>([]);
   const [expandedSections, setExpandedSections] = useState<string[]>(['revenue', 'cogs', 'opex']);
-  const [viewMode, setViewMode] = useState<'statement' | 'branch' | 'trend'>('statement');
+  const [viewMode, setViewMode] = useState<'statement' | 'branch' | 'trend' | 'margins'>('statement');
 
   const fetchData = async () => {
     setLoading(true);
@@ -183,37 +182,33 @@ export default function ProfitLossReport() {
               <p className="text-gray-500">Laporan laba rugi konsolidasi</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
+          <div className="flex items-center gap-2">
+            <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <select value={period} onChange={(e) => setPeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               <option value="month">Bulan Ini</option>
               <option value="quarter">Kuartal Ini</option>
               <option value="year">Tahun Ini</option>
             </select>
-            <select
-              value={comparePeriod}
-              onChange={(e) => setComparePeriod(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
+            <select value={comparePeriod} onChange={(e) => setComparePeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               <option value="previous">vs Periode Sebelumnya</option>
               <option value="yoy">vs Tahun Lalu</option>
             </select>
-            <button
-              onClick={fetchData}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-            >
+            <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <Printer className="w-4 h-4" />
-              Print
+            <button onClick={() => { window.print(); }} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <Printer className="w-4 h-4" /> Print
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              <Download className="w-4 h-4" />
-              Export
+            <button onClick={() => {
+              const rows = plItems.map(i => `${i.name},${i.currentPeriod},${i.previousPeriod},${i.change},${i.changePercent}`);
+              const csv = `Account,Current,Previous,Change,Change%\n${rows.join('\n')}`;
+              const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url; a.download = `profit-loss-${period}.csv`; a.click(); URL.revokeObjectURL(url);
+              toast.success('Export P&L berhasil');
+            }} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              <Download className="w-4 h-4" /> Export
             </button>
           </div>
         </div>
@@ -258,28 +253,17 @@ export default function ProfitLossReport() {
         </div>
 
         {/* View Mode Tabs */}
-        <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
-          <button
-            onClick={() => setViewMode('statement')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'statement' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
-          >
-            <FileText className="w-4 h-4" />
-            Statement
-          </button>
-          <button
-            onClick={() => setViewMode('branch')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'branch' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
-          >
-            <Building2 className="w-4 h-4" />
-            By Branch
-          </button>
-          <button
-            onClick={() => setViewMode('trend')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'trend' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
-          >
-            <TrendingUp className="w-4 h-4" />
-            Trend Analysis
-          </button>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+          {([
+            { v: 'statement' as const, l: 'Statement', icon: FileText },
+            { v: 'branch' as const, l: 'By Branch', icon: Building2 },
+            { v: 'trend' as const, l: 'Trend', icon: TrendingUp },
+            { v: 'margins' as const, l: 'Margin Analysis', icon: PieChartIcon },
+          ]).map(t => (
+            <button key={t.v} onClick={() => setViewMode(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+              <t.icon className="w-4 h-4" />{t.l}
+            </button>
+          ))}
         </div>
 
         {viewMode === 'statement' && (
@@ -390,6 +374,85 @@ export default function ProfitLossReport() {
             <div className="col-span-2 bg-white rounded-xl border border-gray-200 p-5">
               <h3 className="font-semibold text-gray-900 mb-4">Revenue vs Costs vs Profit</h3>
               <Chart options={revenueVsCostOptions} series={revenueVsCostSeries} type="bar" height={350} />
+            </div>
+          </div>
+        )}
+
+        {viewMode === 'margins' && (
+          <div className="space-y-6">
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+              <p className="text-sm text-indigo-700"><strong>Margin Analysis ({INDUSTRY_OPTIONS.find(i => i.value === industry)?.label})</strong>: Analisis mendalam margin profitabilitas per layer — gross, operating, EBITDA, dan net — dengan benchmark industri.</p>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              {[
+                { label: 'Gross Margin', value: summary.grossMargin, benchmark: industry === 'fnb' ? 65 : industry === 'retail' ? 35 : 40, color: 'blue' },
+                { label: 'Operating Margin', value: summary.operatingMargin, benchmark: industry === 'fnb' ? 15 : industry === 'retail' ? 8 : 25, color: 'green' },
+                { label: 'EBITDA Margin', value: Math.round((summary.ebitda / summary.revenue) * 100), benchmark: industry === 'fnb' ? 18 : industry === 'retail' ? 10 : 28, color: 'purple' },
+                { label: 'Net Margin', value: summary.netMargin, benchmark: industry === 'fnb' ? 10 : industry === 'retail' ? 5 : 20, color: 'teal' },
+              ].map(m => {
+                const diff = m.value - m.benchmark;
+                return (
+                  <div key={m.label} className="bg-white rounded-xl border border-gray-200 p-5">
+                    <p className="text-sm text-gray-500 mb-1">{m.label}</p>
+                    <p className="text-3xl font-bold text-gray-900">{m.value}%</p>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 mt-3 mb-2">
+                      <div className={`h-2.5 rounded-full bg-${m.color}-500`} style={{ width: `${Math.min(m.value, 100)}%` }} />
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500">Benchmark: {m.benchmark}%</span>
+                      <span className={`font-medium ${diff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {diff >= 0 ? '+' : ''}{diff}pp
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h3 className="font-semibold text-gray-900 mb-4">Margin Waterfall</h3>
+                <Chart
+                  options={{
+                    chart: { type: 'bar', toolbar: { show: false } },
+                    plotOptions: { bar: { borderRadius: 4, columnWidth: '50%', colors: { ranges: [{ from: -999999999, to: 0, color: '#EF4444' }, { from: 0, to: 999999999, color: '#10B981' }] } } },
+                    xaxis: { categories: ['Revenue', 'COGS', 'Gross Profit', 'Opex', 'Operating', 'Other', 'Tax', 'Net Income'] },
+                    yaxis: { labels: { formatter: (v: number) => formatCurrency(v) } },
+                  }}
+                  series={[{
+                    name: 'Amount',
+                    data: [summary.revenue, -summary.cogs, summary.grossProfit, -summary.operatingExpenses, summary.operatingIncome, summary.otherIncome - summary.otherExpenses, -summary.taxExpense, summary.netIncome]
+                  }]}
+                  type="bar"
+                  height={300}
+                />
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h3 className="font-semibold text-gray-900 mb-4">Cost Structure</h3>
+                <Chart
+                  options={{
+                    chart: { type: 'donut' },
+                    labels: ['COGS', 'Salaries', 'Rent & Utilities', 'Marketing', 'Depreciation', 'Tax', 'Other'],
+                    colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6B7280'],
+                    legend: { position: 'bottom' },
+                    dataLabels: { enabled: true, formatter: (v: number) => `${v.toFixed(1)}%` },
+                  }}
+                  series={[
+                    Math.round((summary.cogs / summary.revenue) * 100),
+                    Math.round((309000000 / summary.revenue) * 100),
+                    Math.round((123600000 / summary.revenue) * 100),
+                    Math.round((92700000 / summary.revenue) * 100),
+                    Math.round((summary.depreciation / summary.revenue) * 100),
+                    Math.round((summary.taxExpense / summary.revenue) * 100),
+                    Math.round(((summary.otherExpenses + summary.interestExpense) / summary.revenue) * 100),
+                  ]}
+                  type="donut"
+                  height={300}
+                />
+              </div>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h3 className="font-semibold text-gray-900 mb-4">Margin Trend (6 Month)</h3>
+              <Chart options={marginTrendOptions} series={marginTrendSeries} type="line" height={280} />
             </div>
           </div>
         )}

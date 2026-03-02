@@ -1,31 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import DataTable, { Column } from '../../../components/hq/ui/DataTable';
 import Modal, { ConfirmDialog } from '../../../components/hq/ui/Modal';
 import { StatusBadge } from '../../../components/hq/ui';
+import { toast } from 'react-hot-toast';
 import {
-  Building2,
-  Plus,
-  MapPin,
-  Phone,
-  Mail,
-  User,
-  Edit,
-  Trash2,
-  Eye,
-  MoreVertical,
-  Settings,
-  TrendingUp,
-  Package,
-  Users,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  ExternalLink,
-  Copy,
-  Power
+  Building2, Plus, MapPin, Phone, Mail, User, Edit, Trash2, Eye, Settings,
+  TrendingUp, Package, Users, Clock, CheckCircle, XCircle, AlertTriangle,
+  ExternalLink, Copy, Power, Download, Upload, RefreshCw, Search, Filter,
+  BarChart3, Heart, Activity, Shield, Globe, Wifi, WifiOff, FileSpreadsheet,
+  ArrowUpRight, ArrowDownRight, Gauge
 } from 'lucide-react';
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid
+} from 'recharts';
 
 interface Branch {
   id: string;
@@ -37,26 +25,57 @@ interface Branch {
   province: string;
   phone: string;
   email: string;
-  manager: {
-    id: string;
-    name: string;
-    email: string;
-  };
+  region?: string;
+  manager: { id: string; name: string; email: string } | null;
   isActive: boolean;
   priceTierId: string | null;
   priceTierName: string | null;
   createdAt: string;
   lastSync: string;
+  syncStatus?: string;
   status: 'online' | 'offline' | 'warning';
-  stats: {
-    todaySales: number;
-    monthSales: number;
-    employeeCount: number;
-    lowStockItems: number;
-  };
+  stats: { todaySales: number; monthSales: number; employeeCount: number; lowStockItems: number };
   setupStatus?: 'pending' | 'in_progress' | 'completed' | 'skipped' | null;
   setupProgress?: number;
+  healthScore?: number;
+  healthGrade?: string;
 }
+
+interface DashboardData {
+  total: number; active: number; inactive: number;
+  byType: Record<string, number>;
+  byCity: [string, number][];
+  byProvince: [string, number][];
+  avgHealthScore: number; criticalBranches: number;
+  syncStatus: { synced: number; pending: number; failed: number; never: number };
+}
+
+const INDUSTRY_OPTIONS = [
+  { value: 'general', label: 'Umum / Multi-Industri' },
+  { value: 'fnb', label: 'Food & Beverage' },
+  { value: 'retail', label: 'Retail' },
+  { value: 'logistics', label: 'Logistik & Distribusi' },
+  { value: 'hospitality', label: 'Hospitality' },
+  { value: 'manufacturing', label: 'Manufaktur' },
+  { value: 'it', label: 'IT & Technology' },
+  { value: 'finance', label: 'Bank & Finance' },
+  { value: 'workshop', label: 'Bengkel & Service' },
+  { value: 'distributor', label: 'Distributor' },
+  { value: 'pharmacy', label: 'Farmasi & Kesehatan' },
+  { value: 'rental', label: 'Rental & Penyewaan' },
+  { value: 'property', label: 'Property & Real Estate' },
+];
+
+const PIE_COLORS = ['#6366F1', '#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
+
+const emptyDashboard: DashboardData = {
+  total: 0, active: 0, inactive: 0,
+  byType: {},
+  byCity: [],
+  byProvince: [],
+  avgHealthScore: 0, criticalBranches: 0,
+  syncStatus: { synced: 0, pending: 0, failed: 0, never: 0 }
+};
 
 export default function BranchManagement() {
   const [mounted, setMounted] = useState(false);
@@ -65,7 +84,18 @@ export default function BranchManagement() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
-  
+  const [dashboard, setDashboard] = useState<DashboardData>(emptyDashboard);
+  const [industry, setIndustry] = useState('general');
+  const [viewMode, setViewMode] = useState<'table' | 'grid' | 'health'>('table');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [exporting, setExporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importPreview, setImportPreview] = useState<any>(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -77,27 +107,23 @@ export default function BranchManagement() {
   
   // Form
   const [formData, setFormData] = useState({
-    code: '',
-    name: '',
-    type: 'branch' as Branch['type'],
-    address: '',
-    city: '',
-    province: '',
-    phone: '',
-    email: '',
-    managerId: '',
-    priceTierId: ''
+    code: '', name: '', type: 'branch' as Branch['type'],
+    address: '', city: '', province: '', region: '',
+    phone: '', email: '', managerId: '', priceTierId: ''
   });
 
   const fetchBranches = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/hq/branches?page=${page}&limit=${pageSize}`);
+      const params = new URLSearchParams({ page: String(page), limit: String(pageSize) });
+      if (typeFilter !== 'all') params.set('type', typeFilter);
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      const response = await fetch(`/api/hq/branches?${params}`);
       if (response.ok) {
-        const json = await response.json();
-        const payload = json.data || json;
-        if (payload.branches) setBranches(payload.branches);
-        if (payload.total) setTotal(payload.total);
+        const data = await response.json();
+        const branchList = data.data?.branches || data.branches || [];
+        setBranches(branchList);
+        setTotal(data.data?.pagination?.total || data.total || branchList.length);
       }
     } catch (error) {
       console.error('Error fetching branches:', error);
@@ -106,14 +132,23 @@ export default function BranchManagement() {
     }
   };
 
+  const fetchDashboard = async () => {
+    try {
+      const res = await fetch('/api/hq/branches/enhanced?action=dashboard');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) setDashboard(json.data);
+      }
+    } catch { /* use mock */ }
+  };
+
   useEffect(() => {
     setMounted(true);
     fetchBranches();
-  }, [page, pageSize]);
+    fetchDashboard();
+  }, [page, pageSize, typeFilter, statusFilter]);
 
-  if (!mounted) {
-    return null;
-  }
+  if (!mounted) return null;
 
   const handleCreate = async () => {
     setActionLoading(true);
@@ -203,17 +238,71 @@ export default function BranchManagement() {
 
   const resetForm = () => {
     setFormData({
-      code: '',
-      name: '',
-      type: 'branch',
-      address: '',
-      city: '',
-      province: '',
-      phone: '',
-      email: '',
-      managerId: '',
-      priceTierId: ''
+      code: '', name: '', type: 'branch',
+      address: '', city: '', province: '', region: '',
+      phone: '', email: '', managerId: '', priceTierId: ''
     });
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch('/api/hq/branches/enhanced?action=export');
+      if (res.ok) {
+        const json = await res.json();
+        const rows = json.data?.rows || [];
+        if (rows.length === 0) { toast.error('Tidak ada data untuk di-export'); return; }
+        const headers = Object.keys(rows[0]);
+        const csv = [headers.join(','), ...rows.map((r: any) => headers.map(h => `"${(r[h] || '').toString().replace(/"/g, '""')}"`).join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `branches-export-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+        URL.revokeObjectURL(url);
+        toast.success(`${rows.length} cabang berhasil di-export`);
+      }
+    } catch { toast.error('Gagal export data'); } finally { setExporting(false); }
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) { toast.error('File kosong atau format salah'); return; }
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const rows = lines.slice(1).map(line => {
+        const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+        const obj: any = {};
+        headers.forEach((h, i) => { obj[h] = vals[i] || ''; });
+        return obj;
+      });
+      setImportData(rows);
+      setShowImportModal(true);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleImportExecute = async () => {
+    if (importData.length === 0) return;
+    setImporting(true);
+    try {
+      const res = await fetch('/api/hq/branches/enhanced?action=import-execute', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows: importData })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const d = json.data;
+        toast.success(`Import selesai: ${d?.created || 0} baru, ${d?.updated || 0} diperbarui, ${d?.errors || 0} error`);
+        setImportPreview(d);
+        setShowImportModal(false);
+        fetchBranches();
+        fetchDashboard();
+      }
+    } catch { toast.error('Gagal import data'); } finally { setImporting(false); }
   };
 
   const openEditModal = (branch: Branch) => {
@@ -225,9 +314,10 @@ export default function BranchManagement() {
       address: branch.address,
       city: branch.city,
       province: branch.province,
+      region: branch.region || '',
       phone: branch.phone,
       email: branch.email,
-      managerId: branch.manager.id,
+      managerId: branch.manager?.id || '',
       priceTierId: branch.priceTierId || ''
     });
     setShowEditModal(true);
@@ -312,8 +402,8 @@ export default function BranchManagement() {
             <User className="w-4 h-4 text-gray-600" />
           </div>
           <div>
-            <div className="text-sm font-medium text-gray-900">{branch.manager.name}</div>
-            <div className="text-xs text-gray-500">{branch.manager.email}</div>
+            <div className="text-sm font-medium text-gray-900">{branch.manager?.name || '-'}</div>
+            <div className="text-xs text-gray-500">{branch.manager?.email || ''}</div>
           </div>
         </div>
       )
@@ -419,6 +509,17 @@ export default function BranchManagement() {
     }
   ];
 
+  const getHealthColor = (score: number) => score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-red-600';
+  const getHealthBg = (score: number) => score >= 80 ? 'bg-green-100' : score >= 60 ? 'bg-yellow-100' : 'bg-red-100';
+
+  const typeChartData = Object.entries(dashboard.byType).map(([k, v]) => ({ name: getTypeLabel(k), value: v }));
+  const syncChartData = [
+    { name: 'Synced', value: dashboard.syncStatus.synced },
+    { name: 'Pending', value: dashboard.syncStatus.pending },
+    { name: 'Failed', value: dashboard.syncStatus.failed },
+    { name: 'Never', value: dashboard.syncStatus.never },
+  ].filter(d => d.value > 0);
+
   return (
     <HQLayout>
       <div className="space-y-6">
@@ -426,83 +527,207 @@ export default function BranchManagement() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Manajemen Cabang</h1>
-            <p className="text-gray-500">Kelola semua cabang, gudang, dan kiosk</p>
+            <p className="text-gray-500">Kelola cabang multi-industri — {INDUSTRY_OPTIONS.find(i => i.value === industry)?.label}</p>
           </div>
-          <button
-            onClick={() => { resetForm(); setShowCreateModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            Tambah Cabang
-          </button>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Cabang</p>
-                <p className="text-2xl font-bold text-gray-900">{branches.length}</p>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <Building2 className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Online</p>
-                <p className="text-2xl font-bold text-green-600">{branches.filter(b => b.status === 'online').length}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-xl">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Warning</p>
-                <p className="text-2xl font-bold text-yellow-600">{branches.filter(b => b.status === 'warning').length}</p>
-              </div>
-              <div className="p-3 bg-yellow-100 rounded-xl">
-                <AlertTriangle className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Offline</p>
-                <p className="text-2xl font-bold text-red-600">{branches.filter(b => b.status === 'offline').length}</p>
-              </div>
-              <div className="p-3 bg-red-100 rounded-xl">
-                <XCircle className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+              {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImportFile} className="hidden" />
+            <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <Upload className="w-4 h-4" /> Import
+            </button>
+            <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <Download className={`w-4 h-4 ${exporting ? 'animate-spin' : ''}`} /> Export CSV
+            </button>
+            <button onClick={() => { resetForm(); setShowCreateModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              <Plus className="w-4 h-4" /> Tambah Cabang
+            </button>
           </div>
         </div>
 
-        {/* Table */}
-        <DataTable
-          columns={columns}
-          data={branches}
-          loading={loading}
-          searchPlaceholder="Cari cabang..."
-          pagination={{
-            page,
-            pageSize,
-            total,
-            onPageChange: setPage,
-            onPageSizeChange: setPageSize
-          }}
-          actions={{
-            onRefresh: fetchBranches
-          }}
-          onRowClick={(branch) => { setSelectedBranch(branch); setShowViewModal(true); }}
-        />
+        {/* Enhanced Stats Row */}
+        <div className="grid grid-cols-6 gap-4">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl p-4 text-white">
+            <div className="flex items-center gap-2 mb-2"><Building2 className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Total</span></div>
+            <p className="text-2xl font-bold">{dashboard.total}</p>
+            <p className="text-xs opacity-70">{dashboard.active} aktif • {dashboard.inactive} nonaktif</p>
+          </div>
+          <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-4 text-white">
+            <div className="flex items-center gap-2 mb-2"><Wifi className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Online</span></div>
+            <p className="text-2xl font-bold">{branches.filter(b => b.status === 'online').length}</p>
+          </div>
+          <div className="bg-gradient-to-br from-yellow-500 to-yellow-700 rounded-xl p-4 text-white">
+            <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Warning</span></div>
+            <p className="text-2xl font-bold">{branches.filter(b => b.status === 'warning').length}</p>
+          </div>
+          <div className="bg-gradient-to-br from-red-500 to-red-700 rounded-xl p-4 text-white">
+            <div className="flex items-center gap-2 mb-2"><WifiOff className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Offline</span></div>
+            <p className="text-2xl font-bold">{branches.filter(b => b.status === 'offline').length}</p>
+          </div>
+          <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl p-4 text-white">
+            <div className="flex items-center gap-2 mb-2"><Heart className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Health Score</span></div>
+            <p className="text-2xl font-bold">{dashboard.avgHealthScore}/100</p>
+            <p className="text-xs opacity-70">{dashboard.criticalBranches} kritis</p>
+          </div>
+          <div className="bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl p-4 text-white">
+            <div className="flex items-center gap-2 mb-2"><Activity className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Sync Status</span></div>
+            <p className="text-2xl font-bold">{dashboard.syncStatus.synced}/{dashboard.total}</p>
+            <p className="text-xs opacity-70">{dashboard.syncStatus.failed} gagal</p>
+          </div>
+        </div>
+
+        {/* Mini Charts Row */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Distribusi Tipe Cabang</h3>
+            <div className="h-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart><Pie data={typeChartData} cx="50%" cy="50%" innerRadius={35} outerRadius={60} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+                  {typeChartData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                </Pie><Tooltip /></PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Distribusi Kota (Top {dashboard.byCity.length})</h3>
+            <div className="h-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dashboard.byCity.map(([city, count]) => ({ city, count }))} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" /><XAxis type="number" /><YAxis type="category" dataKey="city" width={100} tick={{ fontSize: 11 }} />
+                  <Tooltip /><Bar dataKey="count" fill="#6366F1" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter Bar & View Mode */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                {[{ v: 'all', l: 'Semua' }, { v: 'main', l: 'Pusat' }, { v: 'branch', l: 'Cabang' }, { v: 'warehouse', l: 'Gudang' }, { v: 'kiosk', l: 'Kiosk' }].map(f => (
+                  <button key={f.v} onClick={() => setTypeFilter(f.v)} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${typeFilter === f.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>{f.l}</button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                {[{ v: 'all', l: 'Status: Semua' }, { v: 'active', l: 'Aktif' }, { v: 'inactive', l: 'Nonaktif' }].map(f => (
+                  <button key={f.v} onClick={() => setStatusFilter(f.v)} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${statusFilter === f.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>{f.l}</button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                {[{ v: 'table' as const, icon: BarChart3 }, { v: 'grid' as const, icon: Building2 }, { v: 'health' as const, icon: Heart }].map(m => (
+                  <button key={m.v} onClick={() => setViewMode(m.v)} className={`p-2 rounded-md transition-colors ${viewMode === m.v ? 'bg-white shadow text-blue-600' : 'text-gray-400 hover:text-gray-600'}`} title={m.v}>
+                    <m.icon className="w-4 h-4" />
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => { fetchBranches(); fetchDashboard(); }} disabled={loading} className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content based on viewMode */}
+        {viewMode === 'table' && (
+          <DataTable
+            columns={columns}
+            data={branches}
+            loading={loading}
+            searchPlaceholder="Cari cabang..."
+            pagination={{ page, pageSize, total, onPageChange: setPage, onPageSizeChange: setPageSize }}
+            actions={{ onRefresh: fetchBranches }}
+            onRowClick={(branch) => { setSelectedBranch(branch); setShowViewModal(true); }}
+          />
+        )}
+
+        {viewMode === 'grid' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {loading ? (
+              <div className="col-span-3 flex justify-center py-12"><RefreshCw className="w-8 h-8 animate-spin text-blue-600" /></div>
+            ) : branches.map(branch => (
+              <div key={branch.id} onClick={() => { setSelectedBranch(branch); setShowViewModal(true); }} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${branch.status === 'online' ? 'bg-green-100' : branch.status === 'warning' ? 'bg-yellow-100' : 'bg-red-100'}`}>
+                      <Building2 className={`w-5 h-5 ${branch.status === 'online' ? 'text-green-600' : branch.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{branch.name}</h3>
+                      <p className="text-xs text-gray-500">{branch.code}</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(branch.type)}`}>{getTypeLabel(branch.type)}</span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2 text-gray-500"><MapPin className="w-3.5 h-3.5" />{branch.city}, {branch.province}</div>
+                  <div className="flex items-center gap-2 text-gray-500"><User className="w-3.5 h-3.5" />{branch.manager?.name || 'Belum ditugaskan'}</div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
+                  <div><p className="text-xs text-gray-400">Penjualan</p><p className="font-semibold text-sm">{formatCurrency(branch.stats?.todaySales || 0)}</p></div>
+                  <div><p className="text-xs text-gray-400">Karyawan</p><p className="font-semibold text-sm">{branch.stats?.employeeCount || 0}</p></div>
+                </div>
+                {branch.healthScore !== undefined && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Health Score</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${branch.healthScore >= 80 ? 'bg-green-500' : branch.healthScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${branch.healthScore}%` }} />
+                      </div>
+                      <span className={`text-xs font-bold ${getHealthColor(branch.healthScore)}`}>{branch.healthGrade}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {viewMode === 'health' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="p-4 border-b border-gray-200"><h3 className="font-semibold text-gray-900">Health Score Dashboard</h3></div>
+            <div className="divide-y divide-gray-100">
+              {loading ? (
+                <div className="flex justify-center py-12"><RefreshCw className="w-8 h-8 animate-spin text-blue-600" /></div>
+              ) : [...branches].sort((a, b) => (a.healthScore || 0) - (b.healthScore || 0)).map(branch => (
+                <div key={branch.id} className="p-4 hover:bg-gray-50 flex items-center justify-between cursor-pointer" onClick={() => { setSelectedBranch(branch); setShowViewModal(true); }}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${getHealthBg(branch.healthScore || 0)}`}>
+                      <span className={`text-lg font-bold ${getHealthColor(branch.healthScore || 0)}`}>{branch.healthGrade || '?'}</span>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-900">{branch.name}</h4>
+                      <p className="text-sm text-gray-500">{branch.code} • {branch.city} • {getTypeLabel(branch.type)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="text-right">
+                      <p className="text-sm text-gray-400">Sync</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${branch.syncStatus === 'synced' ? 'bg-green-100 text-green-700' : branch.syncStatus === 'failed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{branch.syncStatus || 'never'}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-400">Status</p>
+                      <StatusBadge status={branch.status} />
+                    </div>
+                    <div className="w-32">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-400">Score</span>
+                        <span className={`text-sm font-bold ${getHealthColor(branch.healthScore || 0)}`}>{branch.healthScore || 0}/100</span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${(branch.healthScore || 0) >= 80 ? 'bg-green-500' : (branch.healthScore || 0) >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${branch.healthScore || 0}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create/Edit Modal */}
@@ -593,24 +818,18 @@ export default function BranchManagement() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
+              <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
+              <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+              <input type="text" value={formData.region} onChange={(e) => setFormData({ ...formData, region: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Jawa Barat" />
             </div>
           </div>
         </div>
@@ -805,6 +1024,56 @@ export default function BranchManagement() {
         variant={selectedBranch?.isActive ? 'warning' : 'info'}
         loading={actionLoading}
       />
+
+      {/* Import Modal */}
+      <Modal
+        isOpen={showImportModal}
+        onClose={() => { setShowImportModal(false); setImportData([]); }}
+        title="Import Data Cabang"
+        subtitle={`${importData.length} baris ditemukan`}
+        size="xl"
+        footer={
+          <div className="flex justify-between">
+            <button onClick={() => { setShowImportModal(false); setImportData([]); }} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Batal</button>
+            <button onClick={handleImportExecute} disabled={importing || importData.length === 0} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              <Upload className="w-4 h-4" />{importing ? 'Mengimport...' : `Import ${importData.length} Cabang`}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+            <p className="font-medium">Format CSV yang didukung:</p>
+            <p className="mt-1">Kolom: code, name, type, address, city, province, phone, email, region</p>
+            <p className="mt-1">Cabang dengan kode yang sudah ada akan diperbarui, yang baru akan dibuat.</p>
+          </div>
+          {importData.length > 0 && (
+            <div className="overflow-x-auto max-h-80 border rounded-lg">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">#</th>
+                    {Object.keys(importData[0]).slice(0, 7).map(key => (
+                      <th key={key} className="px-3 py-2 text-left text-xs font-medium text-gray-500">{key}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {importData.slice(0, 50).map((row, i) => (
+                    <tr key={i} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 text-gray-400">{i + 1}</td>
+                      {Object.values(row).slice(0, 7).map((val: any, j) => (
+                        <td key={j} className="px-3 py-2 text-gray-700 max-w-[150px] truncate">{String(val || '')}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {importData.length > 50 && <p className="p-3 text-center text-sm text-gray-400">...dan {importData.length - 50} baris lainnya</p>}
+            </div>
+          )}
+        </div>
+      </Modal>
     </HQLayout>
   );
 }

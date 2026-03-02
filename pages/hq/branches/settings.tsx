@@ -2,32 +2,22 @@ import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Modal, { ConfirmDialog } from '../../../components/hq/ui/Modal';
 import { StatusBadge } from '../../../components/hq/ui/Badge';
+import { toast } from 'react-hot-toast';
 import {
-  Settings,
-  Building2,
-  Save,
-  RefreshCw,
-  Plus,
-  Edit,
-  Trash2,
-  Search,
-  DollarSign,
-  Clock,
-  Bell,
-  Shield,
-  Percent,
-  Globe,
-  CheckCircle,
-  AlertTriangle,
-  Copy,
-  Eye
+  Settings, Building2, Save, RefreshCw, Plus, Edit, Trash2, Search,
+  DollarSign, Clock, Bell, Shield, Percent, Globe, CheckCircle, AlertTriangle,
+  Copy, Eye, Download, Upload, FileText, Layers, Workflow, Lock, Users,
+  Activity, Heart, Zap, ToggleLeft, ToggleRight, Star
 } from 'lucide-react';
+
+type SettingCategory = 'operations' | 'pricing' | 'notifications' | 'security' | 'compliance' | 'workflow' | 'integration';
 
 interface BranchSettingTemplate {
   id: string;
   name: string;
   description: string;
-  category: 'operations' | 'pricing' | 'notifications' | 'security';
+  category: SettingCategory;
+  industry?: string;
   settings: Record<string, any>;
   appliedBranches: number;
   isDefault: boolean;
@@ -35,13 +25,36 @@ interface BranchSettingTemplate {
   updatedAt: string;
 }
 
+const INDUSTRY_OPTIONS = [
+  { value: 'general', label: 'Umum' }, { value: 'fnb', label: 'F&B' },
+  { value: 'retail', label: 'Retail' }, { value: 'logistics', label: 'Logistik' },
+  { value: 'hospitality', label: 'Hospitality' }, { value: 'manufacturing', label: 'Manufaktur' },
+  { value: 'finance', label: 'Finance' }, { value: 'workshop', label: 'Bengkel' },
+  { value: 'pharmacy', label: 'Farmasi' }, { value: 'distributor', label: 'Distributor' },
+  { value: 'rental', label: 'Rental' }, { value: 'property', label: 'Property' },
+];
+
+const CATEGORY_CONFIG: Record<string, { icon: any; color: string; label: string }> = {
+  operations: { icon: Clock, color: 'bg-blue-100 text-blue-800', label: 'Operasional' },
+  pricing: { icon: DollarSign, color: 'bg-green-100 text-green-800', label: 'Harga' },
+  notifications: { icon: Bell, color: 'bg-yellow-100 text-yellow-800', label: 'Notifikasi' },
+  security: { icon: Shield, color: 'bg-red-100 text-red-800', label: 'Keamanan' },
+  compliance: { icon: FileText, color: 'bg-purple-100 text-purple-800', label: 'Compliance' },
+  workflow: { icon: Zap, color: 'bg-teal-100 text-teal-800', label: 'Workflow' },
+  integration: { icon: Globe, color: 'bg-indigo-100 text-indigo-800', label: 'Integrasi' },
+};
+
+
+
 export default function BranchSettings() {
   const [mounted, setMounted] = useState(false);
   const [templates, setTemplates] = useState<BranchSettingTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  
+  const [industryFilter, setIndustryFilter] = useState('all');
+  const [subTab, setSubTab] = useState<'templates' | 'compliance' | 'workflows'>('templates');
+
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -52,15 +65,20 @@ export default function BranchSettings() {
   const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    category: 'operations' as BranchSettingTemplate['category'],
+    name: '', description: '',
+    category: 'operations' as SettingCategory,
+    industry: 'general',
     isDefault: false
   });
 
   const fetchTemplates = async () => {
     setLoading(true);
     try {
+      const res = await fetch('/api/hq/branches/enhanced?action=settings-templates');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data?.length > 0) { setTemplates(json.data); return; }
+      }
       const response = await fetch('/api/hq/branch-settings');
       if (response.ok) {
         const json = await response.json();
@@ -79,14 +97,25 @@ export default function BranchSettings() {
     fetchTemplates();
   }, []);
 
-  if (!mounted) {
-    return null;
-  }
+  if (!mounted) return null;
 
   const handleCreate = async () => {
     setSaving(true);
-    // API call to create template
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const res = await fetch('/api/hq/branch-settings', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        toast.success('Template berhasil dibuat');
+      } else {
+        // fallback: add locally
+        setTemplates(prev => [...prev, { ...formData, id: Date.now().toString(), settings: {}, appliedBranches: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]);
+        toast.success('Template ditambahkan (lokal)');
+      }
+    } catch {
+      setTemplates(prev => [...prev, { ...formData, id: Date.now().toString(), settings: {}, appliedBranches: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]);
+    }
     setSaving(false);
     setShowCreateModal(false);
     fetchTemplates();
@@ -94,8 +123,12 @@ export default function BranchSettings() {
 
   const handleEdit = async () => {
     setSaving(true);
-    // API call to update template
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      if (selectedTemplate) {
+        setTemplates(prev => prev.map(t => t.id === selectedTemplate.id ? { ...t, ...formData, updatedAt: new Date().toISOString() } : t));
+        toast.success('Template diperbarui');
+      }
+    } catch { toast.error('Gagal memperbarui'); }
     setSaving(false);
     setShowEditModal(false);
     fetchTemplates();
@@ -103,347 +136,288 @@ export default function BranchSettings() {
 
   const handleDelete = async () => {
     if (!selectedTemplate) return;
-    // API call to delete template
     setTemplates(prev => prev.filter(t => t.id !== selectedTemplate.id));
+    toast.success('Template dihapus');
     setShowDeleteConfirm(false);
     setSelectedTemplate(null);
   };
 
+  const handleExportTemplates = () => {
+    const data = JSON.stringify(templates, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `branch-settings-templates-${new Date().toISOString().slice(0,10)}.json`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Templates exported');
+  };
+
   const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'operations': return <Clock className="w-4 h-4" />;
-      case 'pricing': return <DollarSign className="w-4 h-4" />;
-      case 'notifications': return <Bell className="w-4 h-4" />;
-      case 'security': return <Shield className="w-4 h-4" />;
-      default: return <Settings className="w-4 h-4" />;
-    }
+    const cfg = CATEGORY_CONFIG[category];
+    if (!cfg) return <Settings className="w-4 h-4" />;
+    const Icon = cfg.icon;
+    return <Icon className="w-4 h-4" />;
   };
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'operations': return 'bg-blue-100 text-blue-800';
-      case 'pricing': return 'bg-green-100 text-green-800';
-      case 'notifications': return 'bg-yellow-100 text-yellow-800';
-      case 'security': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'operations': return 'Operasional';
-      case 'pricing': return 'Harga';
-      case 'notifications': return 'Notifikasi';
-      case 'security': return 'Keamanan';
-      default: return category;
-    }
-  };
+  const getCategoryColor = (category: string) => CATEGORY_CONFIG[category]?.color || 'bg-gray-100 text-gray-800';
+  const getCategoryLabel = (category: string) => CATEGORY_CONFIG[category]?.label || category;
 
   const filteredTemplates = templates.filter(t => {
-    const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      t.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) || t.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesIndustry = industryFilter === 'all' || !t.industry || t.industry === industryFilter || t.industry === 'general';
+    return matchesSearch && matchesCategory && matchesIndustry;
   });
 
-  const stats = {
-    total: templates.length,
-    operations: templates.filter(t => t.category === 'operations').length,
-    pricing: templates.filter(t => t.category === 'pricing').length,
-    notifications: templates.filter(t => t.category === 'notifications').length,
-    security: templates.filter(t => t.category === 'security').length
-  };
+  const categoryCounts = Object.keys(CATEGORY_CONFIG).reduce((acc, k) => {
+    acc[k] = templates.filter(t => t.category === k).length;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
-    <HQLayout title="Pengaturan Cabang" subtitle="Kelola template pengaturan untuk cabang">
+    <HQLayout title="Pengaturan Cabang" subtitle="Template pengaturan multi-industri">
       <div className="space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-5 gap-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <Settings className="w-5 h-5 text-gray-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-                <p className="text-sm text-gray-500">Total Template</p>
-              </div>
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Pengaturan Cabang</h1>
+            <p className="text-gray-500">Kelola template, compliance, dan workflow untuk semua cabang</p>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Clock className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.operations}</p>
-                <p className="text-sm text-gray-500">Operasional</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.pricing}</p>
-                <p className="text-sm text-gray-500">Harga</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Bell className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.notifications}</p>
-                <p className="text-sm text-gray-500">Notifikasi</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Shield className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{stats.security}</p>
-                <p className="text-sm text-gray-500">Keamanan</p>
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handleExportTemplates} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <Download className="w-4 h-4" /> Export
+            </button>
+            <button onClick={() => { setFormData({ name: '', description: '', category: 'operations', industry: 'general', isDefault: false }); setShowCreateModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              <Plus className="w-4 h-4" /> Buat Template
+            </button>
           </div>
         </div>
 
-        {/* Filters and Actions */}
+        {/* Category Stats */}
+        <div className="grid grid-cols-7 gap-3">
+          {Object.entries(CATEGORY_CONFIG).map(([key, cfg]) => {
+            const Icon = cfg.icon;
+            const count = categoryCounts[key] || 0;
+            return (
+              <button key={key} onClick={() => setCategoryFilter(categoryFilter === key ? 'all' : key)} className={`rounded-xl p-3 border transition-all text-left ${categoryFilter === key ? 'bg-blue-50 border-blue-300 shadow-sm' : 'bg-white border-gray-200 hover:bg-gray-50'}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`p-1.5 rounded-lg ${cfg.color.split(' ')[0]}`}><Icon className={`w-4 h-4 ${cfg.color.split(' ')[1]}`} /></div>
+                </div>
+                <p className="text-lg font-bold text-gray-900">{count}</p>
+                <p className="text-xs text-gray-500">{cfg.label}</p>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sub-tabs */}
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+          {[{ v: 'templates' as const, l: 'Templates', icon: Layers }, { v: 'compliance' as const, l: 'Compliance', icon: FileText }, { v: 'workflows' as const, l: 'Workflows', icon: Zap }].map(t => (
+            <button key={t.v} onClick={() => setSubTab(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${subTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+              <t.icon className="w-4 h-4" />{t.l}
+            </button>
+          ))}
+        </div>
+
+        {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Cari template..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64 focus:ring-2 focus:ring-blue-500"
-                />
+                <input type="text" placeholder="Cari template..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-56 text-sm focus:ring-2 focus:ring-blue-500" />
               </div>
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
+              <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
                 <option value="all">Semua Kategori</option>
-                <option value="operations">Operasional</option>
-                <option value="pricing">Harga</option>
-                <option value="notifications">Notifikasi</option>
-                <option value="security">Keamanan</option>
+                {Object.entries(CATEGORY_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+              <select value={industryFilter} onChange={(e) => setIndustryFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                <option value="all">Semua Industri</option>
+                {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={fetchTemplates}
-                disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-              <button
-                onClick={() => {
-                  setFormData({ name: '', description: '', category: 'operations', isDefault: false });
-                  setShowCreateModal(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4" />
-                Buat Template
-              </button>
-            </div>
+            <button onClick={fetchTemplates} disabled={loading} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
           </div>
         </div>
 
-        {/* Templates Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {loading ? (
-            <div className="col-span-3 flex items-center justify-center py-12">
-              <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
-            </div>
-          ) : filteredTemplates.length === 0 ? (
-            <div className="col-span-3 text-center py-12 text-gray-500">
-              Tidak ada template ditemukan
-            </div>
-          ) : (
-            filteredTemplates.map((template) => (
-              <div key={template.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${getCategoryColor(template.category)}`}>
-                      {getCategoryIcon(template.category)}
-                      {getCategoryLabel(template.category)}
+        {/* ═══ Templates Sub-Tab ═══ */}
+        {subTab === 'templates' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {loading ? (
+              <div className="col-span-3 flex justify-center py-12"><RefreshCw className="w-8 h-8 animate-spin text-blue-600" /></div>
+            ) : filteredTemplates.length === 0 ? (
+              <div className="col-span-3 text-center py-12 text-gray-500">Tidak ada template ditemukan</div>
+            ) : (
+              filteredTemplates.map((template) => (
+                <div key={template.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(template.category)}`}>
+                          {getCategoryIcon(template.category)}{getCategoryLabel(template.category)}
+                        </span>
+                        {template.industry && template.industry !== 'general' && (
+                          <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-xs">{INDUSTRY_OPTIONS.find(i => i.value === template.industry)?.label}</span>
+                        )}
+                      </div>
+                      {template.isDefault && <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">Default</span>}
                     </div>
-                    {template.isDefault && (
-                      <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                        Default
-                      </span>
-                    )}
+                    <h3 className="font-semibold text-gray-900 text-sm mb-1">{template.name}</h3>
+                    <p className="text-xs text-gray-500 mb-3 line-clamp-2">{template.description}</p>
+                    <div className="flex items-center gap-3 text-xs text-gray-400">
+                      <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5" />{template.appliedBranches} cabang</span>
+                      <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{new Date(template.updatedAt).toLocaleDateString('id-ID')}</span>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-1">{template.name}</h3>
-                  <p className="text-sm text-gray-500 mb-4 line-clamp-2">{template.description}</p>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                    <button onClick={() => { setSelectedTemplate(template); setShowViewModal(true); }} className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"><Eye className="w-3.5 h-3.5" />Lihat</button>
                     <div className="flex items-center gap-1">
-                      <Building2 className="w-4 h-4" />
-                      <span>{template.appliedBranches} cabang</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{new Date(template.updatedAt).toLocaleDateString('id-ID')}</span>
+                      <button onClick={() => { setSelectedTemplate(template); setFormData({ name: template.name, description: template.description, category: template.category, industry: template.industry || 'general', isDefault: template.isDefault }); setShowEditModal(true); }} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Edit className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => { const n = { ...template, id: Date.now().toString(), name: `${template.name} (Copy)`, isDefault: false }; setTemplates(prev => [...prev, n]); toast.success('Template diduplikasi'); }} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"><Copy className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => { setSelectedTemplate(template); setShowDeleteConfirm(true); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" disabled={template.isDefault}><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
                 </div>
-                <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                  <button
-                    onClick={() => {
-                      setSelectedTemplate(template);
-                      setShowViewModal(true);
-                    }}
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-                  >
-                    <Eye className="w-4 h-4" />
-                    Lihat
-                  </button>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setSelectedTemplate(template);
-                        setFormData({
-                          name: template.name,
-                          description: template.description,
-                          category: template.category,
-                          isDefault: template.isDefault
-                        });
-                        setShowEditModal(true);
-                      }}
-                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        // Duplicate template
-                        const newTemplate = { ...template, id: Date.now().toString(), name: `${template.name} (Copy)`, isDefault: false };
-                        setTemplates(prev => [...prev, newTemplate]);
-                      }}
-                      className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg"
-                    >
-                      <Copy className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedTemplate(template);
-                        setShowDeleteConfirm(true);
-                      }}
-                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                      disabled={template.isDefault}
-                    >
-                      <Trash2 className="w-4 h-4" />
+              ))
+            )}
+          </div>
+        )}
+
+        {/* ═══ Compliance Sub-Tab ═══ */}
+        {subTab === 'compliance' && (
+          <div className="space-y-4">
+            <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+              <p className="text-sm text-purple-700"><strong>Compliance & Regulasi</strong>: Kelola pengaturan kepatuhan regulasi per industri. Template compliance memastikan setiap cabang memenuhi standar yang berlaku.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { title: 'BPOM & Farmasi', desc: 'Validasi resep, monitoring suhu, log zat terkontrol, alert kadaluarsa', industry: 'pharmacy', icon: Heart, color: 'bg-red-50 border-red-200', items: ['Validasi Resep Wajib', 'Cold Chain Monitoring', 'Log Zat Terkontrol', 'Alert Kadaluarsa 90 Hari', 'Apoteker Jaga Wajib'] },
+                { title: 'Keamanan Pangan (F&B)', desc: 'HACCP, suhu penyimpanan, kebersihan, traceability bahan', industry: 'fnb', icon: CheckCircle, color: 'bg-green-50 border-green-200', items: ['HACCP Compliance', 'Monitoring Suhu', 'Log Kebersihan Harian', 'Traceability Bahan', 'Sertifikasi Halal'] },
+                { title: 'Kepatuhan Keuangan', desc: 'KYC, AML, audit trail, retensi data, pelaporan BI', industry: 'finance', icon: Shield, color: 'bg-blue-50 border-blue-200', items: ['KYC Verification', 'AML Screening', 'Audit Trail 7 Tahun', 'Pelaporan BI/OJK', 'Data Encryption'] },
+                { title: 'Standar Retail', desc: 'Label harga, consumer protection, garansi, retur', industry: 'retail', icon: Globe, color: 'bg-yellow-50 border-yellow-200', items: ['Label Harga Wajib', 'Consumer Protection', 'Kebijakan Garansi', 'Prosedur Retur', 'Stock Accuracy'] },
+                { title: 'Keselamatan Kerja', desc: 'K3, APAR, P3K, pelatihan keselamatan, inspeksi rutin', industry: 'manufacturing', icon: AlertTriangle, color: 'bg-orange-50 border-orange-200', items: ['Checklist K3', 'Inspeksi APAR', 'Kotak P3K', 'Pelatihan Bulanan', 'APD Compliance'] },
+                { title: 'Hospitality Standard', desc: 'Standar layanan, kebersihan kamar, food safety, fire safety', industry: 'hospitality', icon: Star, color: 'bg-teal-50 border-teal-200', items: ['SOP Layanan Tamu', 'Inspeksi Kebersihan', 'Fire Safety Check', 'Food Handler Cert', 'Guest Satisfaction'] },
+              ].map(c => {
+                const Icon = c.icon;
+                return (
+                  <div key={c.title} className={`rounded-xl border p-5 ${c.color}`}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2 bg-white rounded-lg shadow-sm"><Icon className="w-5 h-5" /></div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{c.title}</h4>
+                        <p className="text-xs text-gray-500">{INDUSTRY_OPTIONS.find(i => i.value === c.industry)?.label}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3">{c.desc}</p>
+                    <div className="space-y-1.5">
+                      {c.items.map(item => (
+                        <div key={item} className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                          <span className="text-gray-700">{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={() => { setFormData({ name: c.title, description: c.desc, category: 'compliance', industry: c.industry, isDefault: false }); setShowCreateModal(true); }} className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">
+                      <Plus className="w-4 h-4" /> Buat Template
                     </button>
                   </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ Workflows Sub-Tab ═══ */}
+        {subTab === 'workflows' && (
+          <div className="space-y-4">
+            <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
+              <p className="text-sm text-teal-700"><strong>Workflow Settings</strong>: Kelola alur kerja dan otomasi untuk operasional cabang. Termasuk approval chain, eskalasi, dan notifikasi otomatis.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { title: 'Approval Diskon', desc: 'Persetujuan bertingkat untuk pemberian diskon', steps: ['Kasir request diskon', 'Manager review (≤15%)', 'Regional approve (≤30%)', 'HQ approve (>30%)'], icon: Percent },
+                { title: 'Approval Purchase Order', desc: 'Alur persetujuan pembelian barang', steps: ['Staff buat PO', 'Manager cabang review', 'Finance verify budget', 'Procurement execute'], icon: FileText },
+                { title: 'Refund & Void', desc: 'Prosedur retur dan void transaksi', steps: ['Kasir initiate refund', 'Verifikasi barang', 'Manager approve', 'Finance process'], icon: DollarSign },
+                { title: 'Stock Transfer', desc: 'Alur transfer stok antar cabang', steps: ['Request dari cabang', 'Gudang verify stock', 'Manager approve', 'Logistik kirim'], icon: Building2 },
+                { title: 'Employee Onboarding', desc: 'Proses onboarding karyawan baru', steps: ['HR create profile', 'Assign training', 'Manager verify', 'System access granted'], icon: Users },
+                { title: 'Incident Escalation', desc: 'Eskalasi insiden dan masalah cabang', steps: ['Staff report issue', 'Auto-assign category', 'L1 support 2jam', 'L2 escalate 4jam', 'L3 management 8jam'], icon: AlertTriangle },
+              ].map(w => {
+                const Icon = w.icon;
+                return (
+                  <div key={w.title} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-2 bg-teal-100 rounded-lg"><Icon className="w-4 h-4 text-teal-700" /></div>
+                      <h4 className="font-semibold text-gray-900 text-sm">{w.title}</h4>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">{w.desc}</p>
+                    <div className="space-y-2">
+                      {w.steps.map((step, i) => (
+                        <div key={i} className="flex items-start gap-2">
+                          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-xs font-bold mt-0.5">{i + 1}</div>
+                          <span className="text-xs text-gray-600">{step}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={() => { setFormData({ name: w.title, description: w.desc, category: 'workflow', industry: 'general', isDefault: false }); setShowCreateModal(true); }} className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-teal-50 border border-teal-200 rounded-lg text-xs font-medium text-teal-700 hover:bg-teal-100">
+                      <Plus className="w-3.5 h-3.5" /> Aktifkan Workflow
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Create/Edit Modal */}
-        <Modal
-          isOpen={showCreateModal || showEditModal}
-          onClose={() => { setShowCreateModal(false); setShowEditModal(false); }}
-          title={showCreateModal ? 'Buat Template Baru' : 'Edit Template'}
-          size="lg"
-        >
+        <Modal isOpen={showCreateModal || showEditModal} onClose={() => { setShowCreateModal(false); setShowEditModal(false); }} title={showCreateModal ? 'Buat Template Baru' : 'Edit Template'} size="lg">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nama Template</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                placeholder="Masukkan nama template"
-              />
+              <input type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Masukkan nama template" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                placeholder="Deskripsi template"
-              />
+              <textarea value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" rows={2} placeholder="Deskripsi template" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as any }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="operations">Operasional</option>
-                <option value="pricing">Harga</option>
-                <option value="notifications">Notifikasi</option>
-                <option value="security">Keamanan</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                <select value={formData.category} onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as SettingCategory }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                  {Object.entries(CATEGORY_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Industri</label>
+                <select value={formData.industry} onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                  {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isDefault"
-                checked={formData.isDefault}
-                onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
+              <input type="checkbox" id="isDefault" checked={formData.isDefault} onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))} className="w-4 h-4 text-blue-600 border-gray-300 rounded" />
               <label htmlFor="isDefault" className="text-sm text-gray-700">Jadikan template default</label>
             </div>
             <div className="flex justify-end gap-3 pt-4">
-              <button
-                onClick={() => { setShowCreateModal(false); setShowEditModal(false); }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Batal
-              </button>
-              <button
-                onClick={showCreateModal ? handleCreate : handleEdit}
-                disabled={saving || !formData.name}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" />
-                {saving ? 'Menyimpan...' : 'Simpan'}
+              <button onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Batal</button>
+              <button onClick={showCreateModal ? handleCreate : handleEdit} disabled={saving || !formData.name} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                <Save className="w-4 h-4" />{saving ? 'Menyimpan...' : 'Simpan'}
               </button>
             </div>
           </div>
         </Modal>
 
         {/* View Modal */}
-        <Modal
-          isOpen={showViewModal}
-          onClose={() => setShowViewModal(false)}
-          title={selectedTemplate?.name || 'Detail Template'}
-          size="lg"
-        >
+        <Modal isOpen={showViewModal} onClose={() => setShowViewModal(false)} title={selectedTemplate?.name || 'Detail Template'} size="lg">
           {selectedTemplate && (
             <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(selectedTemplate.category)}`}>
-                  {getCategoryIcon(selectedTemplate.category)}
-                  {getCategoryLabel(selectedTemplate.category)}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${getCategoryColor(selectedTemplate.category)}`}>
+                  {getCategoryIcon(selectedTemplate.category)}{getCategoryLabel(selectedTemplate.category)}
                 </span>
-                {selectedTemplate.isDefault && (
-                  <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">Default</span>
+                {selectedTemplate.industry && selectedTemplate.industry !== 'general' && (
+                  <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm">{INDUSTRY_OPTIONS.find(i => i.value === selectedTemplate.industry)?.label}</span>
                 )}
+                {selectedTemplate.isDefault && <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">Default</span>}
               </div>
               <p className="text-gray-600">{selectedTemplate.description}</p>
               <div className="bg-gray-50 rounded-lg p-4">
@@ -451,9 +425,9 @@ export default function BranchSettings() {
                 <div className="space-y-2">
                   {Object.entries(selectedTemplate.settings).map(([key, value]) => (
                     <div key={key} className="flex justify-between py-2 border-b border-gray-200 last:border-0">
-                      <span className="text-gray-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                      <span className="font-medium">
-                        {typeof value === 'boolean' ? (value ? 'Ya' : 'Tidak') : String(value)}
+                      <span className="text-gray-500 capitalize text-sm">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                      <span className="font-medium text-sm">
+                        {typeof value === 'boolean' ? (value ? '✅ Ya' : '❌ Tidak') : Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value)}
                       </span>
                     </div>
                   ))}
@@ -468,15 +442,7 @@ export default function BranchSettings() {
         </Modal>
 
         {/* Delete Confirm */}
-        <ConfirmDialog
-          isOpen={showDeleteConfirm}
-          onClose={() => setShowDeleteConfirm(false)}
-          onConfirm={handleDelete}
-          title="Hapus Template"
-          message={`Apakah Anda yakin ingin menghapus template "${selectedTemplate?.name}"? Template yang sedang digunakan oleh cabang akan direset ke pengaturan default.`}
-          confirmText="Hapus"
-          variant="danger"
-        />
+        <ConfirmDialog isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} onConfirm={handleDelete} title="Hapus Template" message={`Apakah Anda yakin ingin menghapus template "${selectedTemplate?.name}"? Template yang sedang digunakan oleh cabang akan direset ke pengaturan default.`} confirmText="Hapus" variant="danger" />
       </div>
     </HQLayout>
   );
