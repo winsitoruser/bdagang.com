@@ -148,10 +148,11 @@ export default function AccountsManagement() {
     try {
       const response = await fetch('/api/hq/finance/accounts');
       if (response.ok) {
-        const data = await response.json();
-        setSummary(data.summary || mockSummary);
-        setReceivables(data.receivables || mockReceivables);
-        setPayables(data.payables || mockPayables);
+        const json = await response.json();
+        const payload = json.data || json;
+        setSummary(payload.summary || mockSummary);
+        setReceivables(payload.receivables || mockReceivables);
+        setPayables(payload.payables || mockPayables);
       }
     } catch (error) {
       console.error('Error fetching accounts data:', error);

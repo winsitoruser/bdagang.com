@@ -113,10 +113,28 @@ export default function TaxManagement() {
   });
   const [calcResult, setCalcResult] = useState<{ label: string; amount: number }[]>([]);
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/hq/finance/tax?year=${year}`);
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.summary) setSummary(payload.summary);
+        if (payload.obligations) setObligations(payload.obligations);
+        if (payload.reports) setReports(payload.reports);
+      }
+    } catch (error) {
+      console.error('Error fetching tax data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
-    setLoading(false);
-  }, []);
+    fetchData();
+  }, [year]);
 
   if (!mounted) return null;
 

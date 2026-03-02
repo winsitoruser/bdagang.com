@@ -108,10 +108,47 @@ export default function BudgetManagement() {
     notes: ''
   });
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/hq/finance/budget?period=${period}`);
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.summary) {
+          setSummary({
+            totalBudget: payload.summary.totalBudget || mockSummary.totalBudget,
+            totalSpent: payload.summary.totalActual || mockSummary.totalSpent,
+            totalRemaining: (payload.summary.totalBudget || 0) - (payload.summary.totalActual || 0),
+            utilizationRate: payload.summary.totalBudget > 0 ? Math.round((payload.summary.totalActual / payload.summary.totalBudget) * 100) : 0,
+            onTrackCategories: mockSummary.onTrackCategories,
+            overBudgetCategories: mockSummary.overBudgetCategories,
+            underBudgetCategories: mockSummary.underBudgetCategories
+          });
+        }
+        if (payload.budgets && payload.budgets.length > 0) {
+          const activeBudget = payload.budgets.find((b: any) => b.status === 'active') || payload.budgets[0];
+          if (activeBudget?.branches?.length > 0) {
+            setBranchBudgets(activeBudget.branches.map((b: any) => ({
+              id: b.branchId || b.id, name: b.branchName, code: b.branchCode,
+              totalBudget: b.totalBudget, spent: b.totalActual,
+              utilization: b.totalBudget > 0 ? Math.round((b.totalActual / b.totalBudget) * 100) : 0,
+              status: b.status || 'on_track'
+            })));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching budget data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
-    setLoading(false);
-  }, []);
+    fetchData();
+  }, [period]);
 
   if (!mounted) return null;
 

@@ -133,11 +133,12 @@ export default function CashFlowManagement() {
     try {
       const response = await fetch(`/api/hq/finance/cash-flow?period=${period}`);
       if (response.ok) {
-        const data = await response.json();
-        setSummary(data.summary || mockSummary);
-        setCashFlowItems(data.items || mockCashFlowItems);
-        setBankAccounts(data.accounts || mockBankAccounts);
-        setForecast(data.forecast || mockForecast);
+        const json = await response.json();
+        const payload = json.data || json;
+        setSummary(payload.summary || mockSummary);
+        setCashFlowItems(payload.items || mockCashFlowItems);
+        setBankAccounts(payload.accounts || mockBankAccounts);
+        setForecast(payload.forecast || mockForecast);
       }
     } catch (error) {
       console.error('Error fetching cash flow data:', error);

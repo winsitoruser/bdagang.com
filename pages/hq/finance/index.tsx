@@ -132,8 +132,9 @@ export default function HQFinanceDashboard() {
     try {
       const response = await fetch('/api/hq/branches?limit=100');
       if (response.ok) {
-        const data = await response.json();
-        setAllBranches(data.branches || []);
+        const json = await response.json();
+        const bp = json.data || json;
+        setAllBranches(bp.branches || []);
       }
     } catch (error) {
       console.error('Error fetching branches:', error);
@@ -146,10 +147,11 @@ export default function HQFinanceDashboard() {
       const branchParam = selectedBranch !== 'all' ? `&branchId=${selectedBranch}` : '';
       const response = await fetch(`/api/hq/finance/summary?period=${period}${branchParam}`);
       if (response.ok) {
-        const data = await response.json();
-        setSummary(data.summary || mockSummary);
-        setBranchFinance(data.branches || mockBranchFinance);
-        setTransactions(data.transactions || mockTransactions);
+        const json2 = await response.json();
+        const payload = json2.data || json2;
+        setSummary(payload.summary || mockSummary);
+        setBranchFinance(payload.branches || mockBranchFinance);
+        setTransactions(payload.transactions || mockTransactions);
       }
     } catch (error) {
       console.error('Error fetching finance data:', error);

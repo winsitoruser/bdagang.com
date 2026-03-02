@@ -153,10 +153,11 @@ export default function ProfitLossReport() {
     try {
       const response = await fetch(`/api/hq/finance/profit-loss?period=${period}`);
       if (response.ok) {
-        const data = await response.json();
-        setSummary(data.summary || mockPLSummary);
-        setPLItems(data.items || mockPLItems);
-        setBranchPL(data.branches || mockBranchPL);
+        const json = await response.json();
+        const payload = json.data || json;
+        setSummary(payload.summary || mockPLSummary);
+        setPLItems(payload.items || mockPLItems);
+        setBranchPL(payload.branches || mockBranchPL);
       }
     } catch (error) {
       console.error('Error fetching P&L data:', error);

@@ -216,9 +216,27 @@ export default function InvoiceManagement() {
     notes: ''
   });
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/hq/finance/invoices?status=${filterStatus}`);
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.summary) setSummary(payload.summary);
+        if (payload.invoices) setInvoices(payload.invoices);
+      }
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
-  }, []);
+    fetchData();
+  }, [filterStatus]);
 
   if (!mounted) return null;
 

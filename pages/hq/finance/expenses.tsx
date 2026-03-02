@@ -174,13 +174,15 @@ export default function ExpenseManagement() {
         ]);
         
         if (branchRes.ok) {
-          const branchData = await branchRes.json();
-          setBranches(branchData.branches || []);
+          const branchJson = await branchRes.json();
+          const branchPayload = branchJson.data || branchJson;
+          setBranches(branchPayload.branches || []);
         }
         
         if (accountRes.ok) {
-          const accountData = await accountRes.json();
-          setAccounts(accountData.accounts || []);
+          const accountJson = await accountRes.json();
+          const accountPayload = accountJson.data || accountJson;
+          setAccounts(accountPayload.accounts || []);
         }
       } catch (error) {
         console.error('Error fetching branches/accounts:', error);
