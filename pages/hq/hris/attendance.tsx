@@ -66,34 +66,6 @@ const CLOCK_METHOD_LABELS: Record<string, string> = {
   fingerprint: 'Fingerprint', qr_code: 'QR Code', nfc: 'NFC'
 };
 
-// ===== Mock Data =====
-const mockDaily: DailyRecord[] = [
-  { id: '1', employeeName: 'Ahmad Wijaya', employeeId: 'EMP001', position: 'Branch Manager', branchName: 'Cabang Pusat Jakarta', clockIn: '2026-02-26T07:55:00', clockOut: '2026-02-26T17:05:00', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 5, workHours: 8.17, source: 'fingerprint', isOutsideGeofence: false },
-  { id: '2', employeeName: 'Siti Rahayu', employeeId: 'EMP002', position: 'Kasir Senior', branchName: 'Cabang Pusat Jakarta', clockIn: '2026-02-26T08:22:00', clockOut: '2026-02-26T17:00:00', status: 'late', lateMinutes: 7, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 7.63, source: 'fingerprint', isOutsideGeofence: false },
-  { id: '3', employeeName: 'Budi Santoso', employeeId: 'EMP003', position: 'Staff Gudang', branchName: 'Cabang Pusat Jakarta', clockIn: '2026-02-26T08:45:00', clockOut: null, status: 'late', lateMinutes: 30, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 0, source: 'gps_mobile', isOutsideGeofence: false },
-  { id: '4', employeeName: 'Dewi Lestari', employeeId: 'EMP004', position: 'Supervisor', branchName: 'Cabang Bandung', clockIn: '2026-02-26T07:50:00', clockOut: '2026-02-26T16:30:00', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 30, overtimeMinutes: 0, workHours: 7.67, source: 'face_recognition', isOutsideGeofence: false },
-  { id: '5', employeeName: 'Eko Prasetyo', employeeId: 'EMP005', position: 'Driver', branchName: 'Cabang Pusat Jakarta', clockIn: '2026-02-26T08:02:00', clockOut: '2026-02-26T18:30:00', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 90, workHours: 9.47, source: 'gps_mobile', isOutsideGeofence: true },
-  { id: '6', employeeName: 'Fitri Handayani', employeeId: 'EMP006', position: 'Kasir', branchName: 'Cabang Bandung', clockIn: null, clockOut: null, status: 'absent', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 0, source: 'manual', isOutsideGeofence: false },
-  { id: '7', employeeName: 'Gunawan', employeeId: 'EMP007', position: 'Staff Gudang', branchName: 'Cabang Surabaya', clockIn: null, clockOut: null, status: 'leave', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 0, source: 'manual', isOutsideGeofence: false },
-  { id: '8', employeeName: 'Hendra Kusuma', employeeId: 'EMP008', position: 'Kasir', branchName: 'Cabang Surabaya', clockIn: '2026-02-26T07:58:00', clockOut: '2026-02-26T17:02:00', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 2, workHours: 8.07, source: 'fingerprint', isOutsideGeofence: false },
-];
-const mockMonthly: MonthlyRecord[] = [
-  { employeeId: '1', employeeName: 'Ahmad Wijaya', branchName: 'Cabang Pusat Jakarta', position: 'Branch Manager', present: 20, late: 1, absent: 0, leave: 1, workFromHome: 0, totalDays: 22, attendanceRate: 95.5 },
-  { employeeId: '2', employeeName: 'Siti Rahayu', branchName: 'Cabang Bandung', position: 'Branch Manager', present: 19, late: 2, absent: 0, leave: 1, workFromHome: 0, totalDays: 22, attendanceRate: 90.9 },
-  { employeeId: '3', employeeName: 'Budi Santoso', branchName: 'Cabang Surabaya', position: 'Branch Manager', present: 18, late: 3, absent: 1, leave: 0, workFromHome: 0, totalDays: 22, attendanceRate: 81.8 },
-  { employeeId: '4', employeeName: 'Dewi Lestari', branchName: 'Cabang Pusat Jakarta', position: 'Supervisor', present: 21, late: 0, absent: 0, leave: 1, workFromHome: 0, totalDays: 22, attendanceRate: 95.5 },
-  { employeeId: '5', employeeName: 'Eko Prasetyo', branchName: 'Cabang Pusat Jakarta', position: 'Kasir Senior', present: 22, late: 0, absent: 0, leave: 0, workFromHome: 0, totalDays: 22, attendanceRate: 100 },
-  { employeeId: '6', employeeName: 'Fitri Handayani', branchName: 'Cabang Bandung', position: 'Kasir', present: 20, late: 1, absent: 1, leave: 0, workFromHome: 0, totalDays: 22, attendanceRate: 90.9 },
-  { employeeId: '7', employeeName: 'Gunawan', branchName: 'Gudang Pusat', position: 'Staff Gudang', present: 19, late: 2, absent: 1, leave: 0, workFromHome: 0, totalDays: 22, attendanceRate: 86.4 },
-  { employeeId: '8', employeeName: 'Hendra Kusuma', branchName: 'Cabang Surabaya', position: 'Kasir', present: 15, late: 3, absent: 2, leave: 2, workFromHome: 0, totalDays: 22, attendanceRate: 68.2 },
-];
-const mockBranch: BranchSummary[] = [
-  { branchId: '1', branchName: 'Cabang Pusat Jakarta', totalEmployees: 25, avgAttendance: 96.5, onTimeRate: 94.2, lateRate: 4.5, absentRate: 1.3 },
-  { branchId: '2', branchName: 'Cabang Bandung', totalEmployees: 18, avgAttendance: 93.2, onTimeRate: 91.5, lateRate: 6.2, absentRate: 2.3 },
-  { branchId: '3', branchName: 'Cabang Surabaya', totalEmployees: 15, avgAttendance: 88.5, onTimeRate: 85.3, lateRate: 8.5, absentRate: 6.2 },
-  { branchId: '4', branchName: 'Cabang Medan', totalEmployees: 12, avgAttendance: 91.8, onTimeRate: 89.5, lateRate: 7.2, absentRate: 3.3 },
-  { branchId: '5', branchName: 'Cabang Yogyakarta', totalEmployees: 10, avgAttendance: 94.5, onTimeRate: 92.8, lateRate: 5.5, absentRate: 1.7 },
-];
 
 type TabKey = 'live' | 'daily' | 'monthly' | 'shifts' | 'geofence' | 'rotations' | 'settings';
 

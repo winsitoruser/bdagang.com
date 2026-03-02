@@ -24,16 +24,6 @@ interface DailyRecord {
   isOutsideGeofence: boolean;
 }
 
-const mockDaily: DailyRecord[] = [
-  { id: '1', employeeName: 'Ahmad Wijaya', employeeId: 'EMP001', position: 'Branch Manager', branchName: 'Cabang Pusat Jakarta', clockIn: '2026-02-26T07:55:00', clockOut: '2026-02-26T17:05:00', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 5, workHours: 8.17, source: 'fingerprint', isOutsideGeofence: false },
-  { id: '2', employeeName: 'Siti Rahayu', employeeId: 'EMP002', position: 'Kasir Senior', branchName: 'Cabang Pusat Jakarta', clockIn: '2026-02-26T08:22:00', clockOut: '2026-02-26T17:00:00', status: 'late', lateMinutes: 7, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 7.63, source: 'fingerprint', isOutsideGeofence: false },
-  { id: '3', employeeName: 'Budi Santoso', employeeId: 'EMP003', position: 'Staff Gudang', branchName: 'Cabang Pusat Jakarta', clockIn: '2026-02-26T08:45:00', clockOut: null, status: 'late', lateMinutes: 30, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 0, source: 'gps_mobile', isOutsideGeofence: false },
-  { id: '4', employeeName: 'Dewi Lestari', employeeId: 'EMP004', position: 'Supervisor', branchName: 'Cabang Bandung', clockIn: '2026-02-26T07:50:00', clockOut: '2026-02-26T16:30:00', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 30, overtimeMinutes: 0, workHours: 7.67, source: 'face_recognition', isOutsideGeofence: false },
-  { id: '5', employeeName: 'Eko Prasetyo', employeeId: 'EMP005', position: 'Driver', branchName: 'Cabang Pusat Jakarta', clockIn: '2026-02-26T08:02:00', clockOut: '2026-02-26T18:30:00', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 90, workHours: 9.47, source: 'gps_mobile', isOutsideGeofence: true },
-  { id: '6', employeeName: 'Fitri Handayani', employeeId: 'EMP006', position: 'Kasir', branchName: 'Cabang Bandung', clockIn: null, clockOut: null, status: 'absent', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 0, source: 'manual', isOutsideGeofence: false },
-  { id: '7', employeeName: 'Gunawan', employeeId: 'EMP007', position: 'Staff Gudang', branchName: 'Cabang Surabaya', clockIn: null, clockOut: null, status: 'leave', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 0, source: 'manual', isOutsideGeofence: false },
-  { id: '8', employeeName: 'Hendra Kusuma', employeeId: 'EMP008', position: 'Kasir', branchName: 'Cabang Surabaya', clockIn: '2026-02-26T07:58:00', clockOut: '2026-02-26T17:02:00', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 2, workHours: 8.07, source: 'fingerprint', isOutsideGeofence: false },
-];
 
 export default function DailyAttendancePage() {
   const [mounted, setMounted] = useState(false);
