@@ -61,7 +61,7 @@ export default function AttendanceSettingsPage() {
     try {
       const params = selectedBranch ? `?branchId=${selectedBranch}` : '';
       const res = await fetch(`/api/hq/hris/attendance/settings${params}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) { console.error('Fetch settings failed:', res.status); setLoading(false); return; }
       const json = await res.json();
       if (json.success && json.data) {
         setSettings({ ...defaultSettings, ...json.data });
@@ -88,7 +88,7 @@ export default function AttendanceSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...settings, branchId: selectedBranch || null })
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) { toast.error('Gagal menyimpan pengaturan'); setSaving(false); return; }
       const json = await res.json();
       if (json.success) {
         toast.success('Pengaturan berhasil disimpan');

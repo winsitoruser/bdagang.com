@@ -59,7 +59,7 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
     setMounted(true);
     
     // Auto-expand some menus and find active menu's parent
-    const activeItem = findActiveMenuItem(filteredConfig.groups, router.pathname);
+    const activeItem = findActiveMenuItem(filteredConfig.groups, router.pathname, router.query as Record<string, string | string[] | undefined>);
     if (activeItem) {
       const parent = getParentMenuItem(filteredConfig.groups, activeItem.id);
       if (parent) {
@@ -74,7 +74,7 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
     }
     
     fetchNotifications();
-  }, [router.pathname, filteredConfig.groups]);
+  }, [router.pathname, router.query, filteredConfig.groups]);
 
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -154,7 +154,20 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
 
   const isActive = (href?: string) => {
     if (!href) return false;
-    return router.pathname === href || router.pathname.startsWith(href + '/');
+    // Support query-param tabs like /hq/fms?tab=vehicles
+    if (href.includes('?')) {
+      const [path, qs] = href.split('?');
+      if (router.pathname !== path) return false;
+      const params = new URLSearchParams(qs);
+      for (const [k, v] of params.entries()) {
+        if (router.query[k] !== v) return false;
+      }
+      return true;
+    }
+    // Exact match or nested path, but NOT if there's a tab query (so parent dashboard doesn't highlight for all tabs)
+    if (router.pathname === href && !router.query.tab) return true;
+    if (router.pathname === href && !href.includes('?')) return false; // has tab query but href is base path
+    return router.pathname.startsWith(href + '/');
   };
 
   const handleLogout = async () => {

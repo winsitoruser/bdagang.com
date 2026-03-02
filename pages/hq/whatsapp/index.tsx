@@ -30,7 +30,7 @@ function WhatsAppDashboardContent() {
     setLoading(true);
     try {
       const res = await fetch('/api/hq/whatsapp');
-      if (!res.ok) throw new Error();
+      if (!res.ok) { console.error('WhatsApp fetch failed:', res.status); setLoading(false); return; }
       const json = await res.json();
       if (json.success) setData(json.data);
     } catch { /* fallback */ } finally { setLoading(false); }

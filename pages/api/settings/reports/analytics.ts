@@ -4,7 +4,7 @@ import { authOptions } from '../../auth/[...nextauth]';
 import { Op } from 'sequelize';
 
 // Use dynamic import for CommonJS module
-const getDb = () => require('../../../models');
+const getDb = () => require('../../../../models');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {

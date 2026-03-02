@@ -115,10 +115,18 @@ export default function ModuleManagement() {
     setLoading(true);
     try {
       const res = await fetch('/api/hq/modules');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        console.error('Failed to fetch modules: HTTP', res.status);
+        toast.error('Gagal memuat data modul');
+        setLoading(false);
+        return;
+      }
       const json = await res.json();
       if (json.success) {
         setData(json.data);
+      } else {
+        console.error('Modules API error:', json.error);
+        toast.error(json.error || 'Gagal memuat data modul');
       }
     } catch (error) {
       console.error('Failed to fetch modules:', error);
@@ -485,7 +493,7 @@ export default function ModuleManagement() {
         {/* Module Recommendations */}
         {showRecommendations && data && (
           <ModuleRecommendations
-            businessType={typeof businessType === 'object' && businessType?.code ? businessType.code : undefined}
+            businessType={businessType || undefined}
             currentModules={data.modules.filter(m => m.isEnabled).map(m => m.code)}
             onModuleClick={(moduleCode) => {
               const module = data.modules.find(m => m.code === moduleCode);

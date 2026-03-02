@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from 'next-auth/react';
-import KitchenOrderService from '../../../../../src/services/kitchen/KitchenOrderService';
+import KitchenOrderService from '../../../../../services/kitchen/KitchenOrderService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {

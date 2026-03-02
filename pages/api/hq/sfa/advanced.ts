@@ -14,6 +14,11 @@ const q = async (sql: string, r?: any) => {
   try { const [rows] = await sequelize.query(sql, { replacements: r }); return rows as any[]; }
   catch (e: any) { console.error('Advanced Q:', e.message); return []; }
 };
+const qOne = async (sql: string, r?: any) => {
+  if (!sequelize) return null;
+  try { const [rows] = await sequelize.query(sql, { replacements: r }); return (rows as any[])[0] || null; }
+  catch (e: any) { console.error('Advanced QOne:', e.message); return null; }
+};
 const qExec = async (sql: string, r?: any) => {
   if (!sequelize) return false;
   try { await sequelize.query(sql, { replacements: r }); return true; }
@@ -422,6 +427,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
 
       // ═══════════════════════════════════════
+      // INVENTORY PRODUCTS (for commission form)
+      // ═══════════════════════════════════════
+      case 'inventory-products': {
+        const { search: pSearch } = req.query;
+        let pw = ''; const pp: any = {};
+        if (pSearch) { pw = " WHERE name ILIKE :s OR sku ILIKE :s OR category ILIKE :s"; pp.s = `%${pSearch}%`; }
+        const rows = await q(`SELECT id, name, sku, category, price FROM products${pw} ORDER BY name LIMIT 100`, pp);
+        return ok(res, { data: rows });
+      }
+
+      // ═══════════════════════════════════════
       // PRODUCT COMMISSIONS
       // ═══════════════════════════════════════
       case 'product-commissions': {
@@ -444,6 +460,181 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         if (pcSets.length === 0) return err(res, 'Tidak ada perubahan');
         await qExec(`UPDATE sfa_product_commissions SET ${pcSets.join(',')}, updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, { ...pcF, id: pcId, uid, tid });
         return ok(res, { message: 'Product commission diperbarui' });
+      }
+
+      // ═══════════════════════════════════════
+      // COMMISSION GROUPS (Bundle/Cross-sell)
+      // ═══════════════════════════════════════
+      case 'commission-groups': {
+        const groups = await q(`SELECT g.*, (SELECT COUNT(*) FROM sfa_commission_group_products gp WHERE gp.group_id = g.id) as product_count FROM sfa_commission_groups g WHERE g.tenant_id = :tid ORDER BY g.priority DESC, g.name`, { tid });
+        for (const g of groups) {
+          (g as any).products = await q(`SELECT * FROM sfa_commission_group_products WHERE group_id = :gid ORDER BY sort_order`, { gid: (g as any).id });
+        }
+        return ok(res, { data: groups });
+      }
+      case 'create-commission-group': {
+        if (req.method !== 'POST') return err(res, 'POST only', 405);
+        const cg = b;
+        if (!cg.name) return err(res, 'name wajib');
+        if (!cg.products || cg.products.length < 2) return err(res, 'Minimal 2 produk dalam group');
+        const row = await qOne(`INSERT INTO sfa_commission_groups (tenant_id,code,name,description,group_type,calculation_method,bonus_amount,bonus_percentage,min_total_quantity,min_total_value,period_type,effective_from,effective_to,priority,notes,created_by) VALUES (:tid,:code,:name,:desc,:gt,:cm,:ba,:bp,:mtq,:mtv,:pt,:ef,:et,:pri,:notes,:uid) RETURNING *`,
+          { tid, code: cg.code || `CG-${Date.now().toString(36).toUpperCase()}`, name: cg.name, desc: cg.description, gt: cg.group_type || 'bundle', cm: cg.calculation_method || 'flat', ba: cg.bonus_amount || 0, bp: cg.bonus_percentage || 0, mtq: cg.min_total_quantity || 0, mtv: cg.min_total_value || 0, pt: cg.period_type || 'monthly', ef: cg.effective_from || null, et: cg.effective_to || null, pri: cg.priority || 0, notes: cg.notes, uid });
+        if (row) {
+          for (let i = 0; i < cg.products.length; i++) {
+            const p = cg.products[i];
+            await qExec(`INSERT INTO sfa_commission_group_products (group_id,product_id,product_name,product_sku,min_quantity,weight,sort_order) VALUES (:gid,:pid,:pname,:psku,:mq,:w,:so)`,
+              { gid: (row as any).id, pid: p.product_id, pname: p.product_name, psku: p.product_sku || '', mq: p.min_quantity || 1, w: p.weight || 1, so: i });
+          }
+        }
+        return ok(res, { data: row, message: 'Commission group dibuat' });
+      }
+      case 'update-commission-group': {
+        if (req.method !== 'PUT') return err(res, 'PUT only', 405);
+        const { id: cgId, products: cgProds, ...cgF } = b;
+        const cgAllowed = ['name', 'description', 'group_type', 'calculation_method', 'bonus_amount', 'bonus_percentage', 'min_total_quantity', 'min_total_value', 'period_type', 'effective_from', 'effective_to', 'is_active', 'priority', 'notes'];
+        const cgSets = Object.keys(cgF).filter(k => cgAllowed.includes(k)).map(k => `${k}=:${k}`);
+        if (cgSets.length > 0) {
+          await qExec(`UPDATE sfa_commission_groups SET ${cgSets.join(',')}, updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, { ...cgF, id: cgId, uid, tid });
+        }
+        if (cgProds && Array.isArray(cgProds)) {
+          await qExec(`DELETE FROM sfa_commission_group_products WHERE group_id=:gid`, { gid: cgId });
+          for (let i = 0; i < cgProds.length; i++) {
+            const p = cgProds[i];
+            await qExec(`INSERT INTO sfa_commission_group_products (group_id,product_id,product_name,product_sku,min_quantity,weight,sort_order) VALUES (:gid,:pid,:pname,:psku,:mq,:w,:so)`,
+              { gid: cgId, pid: p.product_id, pname: p.product_name, psku: p.product_sku || '', mq: p.min_quantity || 1, w: p.weight || 1, so: i });
+          }
+        }
+        return ok(res, { message: 'Commission group diperbarui' });
+      }
+      case 'delete-commission-group': {
+        if (req.method !== 'DELETE') return err(res, 'DELETE only', 405);
+        const dgId = req.query.id;
+        await qExec(`DELETE FROM sfa_commission_group_products WHERE group_id=:gid`, { gid: dgId });
+        await qExec(`DELETE FROM sfa_commission_groups WHERE id=:id AND tenant_id=:tid`, { id: dgId, tid });
+        return ok(res, { message: 'Commission group dihapus' });
+      }
+
+      // ═══════════════════════════════════════
+      // OUTLET TARGETS (Per-product customer/outlet targets)
+      // ═══════════════════════════════════════
+      case 'outlet-targets': {
+        const rows = await q(`SELECT * FROM sfa_outlet_targets WHERE tenant_id = :tid ORDER BY year DESC, period DESC, product_name`, { tid });
+        return ok(res, { data: rows });
+      }
+      case 'create-outlet-target': {
+        if (req.method !== 'POST') return err(res, 'POST only', 405);
+        const ot = b;
+        if (!ot.product_name || !ot.target_value) return err(res, 'product_name dan target_value wajib');
+        const row = await qOne(`INSERT INTO sfa_outlet_targets (tenant_id,code,name,product_id,product_name,product_sku,target_type,target_value,period_type,period,year,bronze_threshold_pct,silver_threshold_pct,gold_threshold_pct,platinum_threshold_pct,bronze_bonus,silver_bonus,gold_bonus,platinum_bonus,assigned_to,team_id,notes,created_by) VALUES (:tid,:code,:name,:pid,:pname,:psku,:tt,:tv,:pt,:per,:yr,:btp,:stp,:gtp,:ptp,:bb,:sb,:gb,:pb,:at,:tmid,:notes,:uid) RETURNING *`,
+          { tid, code: ot.code || `OT-${Date.now().toString(36).toUpperCase()}`, name: ot.name || `Target ${ot.product_name}`, pid: ot.product_id, pname: ot.product_name, psku: ot.product_sku || '', tt: ot.target_type || 'outlet_count', tv: ot.target_value, pt: ot.period_type || 'monthly', per: ot.period || new Date().toISOString().slice(5, 7), yr: ot.year || new Date().getFullYear(), btp: ot.bronze_threshold_pct || 60, stp: ot.silver_threshold_pct || 80, gtp: ot.gold_threshold_pct || 100, ptp: ot.platinum_threshold_pct || 120, bb: ot.bronze_bonus || 0, sb: ot.silver_bonus || 0, gb: ot.gold_bonus || 0, pb: ot.platinum_bonus || 0, at: ot.assigned_to || null, tmid: ot.team_id || null, notes: ot.notes, uid });
+        return ok(res, { data: row, message: 'Outlet target dibuat' });
+      }
+      case 'update-outlet-target': {
+        if (req.method !== 'PUT') return err(res, 'PUT only', 405);
+        const { id: otId, ...otF } = b;
+        const otAllowed = ['target_value', 'achieved_value', 'achievement_pct', 'bronze_threshold_pct', 'silver_threshold_pct', 'gold_threshold_pct', 'platinum_threshold_pct', 'bronze_bonus', 'silver_bonus', 'gold_bonus', 'platinum_bonus', 'is_active', 'notes'];
+        const otSets = Object.keys(otF).filter(k => otAllowed.includes(k)).map(k => `${k}=:${k}`);
+        if (otSets.length === 0) return err(res, 'Tidak ada perubahan');
+        await qExec(`UPDATE sfa_outlet_targets SET ${otSets.join(',')}, updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, { ...otF, id: otId, uid, tid });
+        return ok(res, { message: 'Outlet target diperbarui' });
+      }
+      case 'outlet-target-summary': {
+        const summary = await q(`SELECT target_type, COUNT(*) as count, COALESCE(AVG(achievement_pct),0) as avg_achievement, SUM(CASE WHEN achievement_pct >= gold_threshold_pct THEN 1 ELSE 0 END) as on_target, SUM(CASE WHEN achievement_pct < bronze_threshold_pct THEN 1 ELSE 0 END) as below_target FROM sfa_outlet_targets WHERE tenant_id = :tid AND is_active = true GROUP BY target_type`, { tid });
+        return ok(res, { data: summary });
+      }
+
+      // ═══════════════════════════════════════
+      // SALES STRATEGIES
+      // ═══════════════════════════════════════
+      case 'sales-strategies': {
+        const strategies = await q(`SELECT s.*, (SELECT COUNT(*) FROM sfa_strategy_kpis k WHERE k.strategy_id = s.id) as kpi_count FROM sfa_sales_strategies s WHERE s.tenant_id = :tid ORDER BY s.year DESC, s.status, s.name`, { tid });
+        return ok(res, { data: strategies });
+      }
+      case 'sales-strategy-detail': {
+        const sid = req.query.id;
+        const strat = await qOne(`SELECT * FROM sfa_sales_strategies WHERE id = :id AND tenant_id = :tid`, { id: sid, tid });
+        if (!strat) return err(res, 'Strategy tidak ditemukan');
+        (strat as any).kpis = await q(`SELECT * FROM sfa_strategy_kpis WHERE strategy_id = :sid AND tenant_id = :tid ORDER BY sort_order`, { sid, tid });
+        return ok(res, { data: strat });
+      }
+      case 'create-sales-strategy': {
+        if (req.method !== 'POST') return err(res, 'POST only', 405);
+        const ss = b;
+        if (!ss.name) return err(res, 'name wajib');
+        const sRow = await qOne(`INSERT INTO sfa_sales_strategies (tenant_id,code,name,description,strategy_type,period_type,period,year,status,overall_target,assigned_teams,assigned_users,notes,created_by) VALUES (:tid,:code,:name,:desc,:st,:pt,:per,:yr,'draft',:ot,:at,:au,:notes,:uid) RETURNING *`,
+          { tid, code: ss.code || `STR-${Date.now().toString(36).toUpperCase()}`, name: ss.name, desc: ss.description, st: ss.strategy_type || 'balanced', pt: ss.period_type || 'monthly', per: ss.period || new Date().toISOString().slice(5, 7), yr: ss.year || new Date().getFullYear(), ot: ss.overall_target || 0, at: JSON.stringify(ss.assigned_teams || []), au: JSON.stringify(ss.assigned_users || []), notes: ss.notes, uid });
+        if (sRow && ss.kpis && Array.isArray(ss.kpis)) {
+          for (let i = 0; i < ss.kpis.length; i++) {
+            const k = ss.kpis[i];
+            await qExec(`INSERT INTO sfa_strategy_kpis (strategy_id,tenant_id,kpi_code,kpi_name,description,kpi_type,target_value,unit,weight,scoring_method,threshold_bronze,threshold_silver,threshold_gold,threshold_platinum,multiplier_bronze,multiplier_silver,multiplier_gold,multiplier_platinum,sort_order) VALUES (:sid,:tid,:code,:name,:desc,:type,:tv,:unit,:w,:sm,:tb,:ts,:tg,:tp,:mb,:ms,:mg,:mp,:so)`,
+              { sid: (sRow as any).id, tid, code: k.kpi_code || `KPI-${i + 1}`, name: k.kpi_name, desc: k.description, type: k.kpi_type, tv: k.target_value || 0, unit: k.unit || '', w: k.weight || 0, sm: k.scoring_method || 'linear', tb: k.threshold_bronze || 60, ts: k.threshold_silver || 80, tg: k.threshold_gold || 100, tp: k.threshold_platinum || 120, mb: k.multiplier_bronze || 0.6, ms: k.multiplier_silver || 0.8, mg: k.multiplier_gold || 1.0, mp: k.multiplier_platinum || 1.5, so: i });
+          }
+          await qExec(`UPDATE sfa_sales_strategies SET kpi_count=:kc, total_weight=:tw WHERE id=:id AND tenant_id=:tid`, { kc: ss.kpis.length, tw: ss.kpis.reduce((s: number, k: any) => s + (parseFloat(k.weight) || 0), 0), id: (sRow as any).id, tid });
+        }
+        return ok(res, { data: sRow, message: 'Sales strategy dibuat' });
+      }
+      case 'update-sales-strategy': {
+        if (req.method !== 'PUT') return err(res, 'PUT only', 405);
+        const { id: ssId, kpis: ssKpis, ...ssF } = b;
+        const ssAllowed = ['name', 'description', 'strategy_type', 'status', 'overall_target', 'assigned_teams', 'assigned_users', 'notes'];
+        const ssSets = Object.keys(ssF).filter(k => ssAllowed.includes(k)).map(k => {
+          if (k === 'assigned_teams' || k === 'assigned_users') return `${k}=:${k}::jsonb`;
+          return `${k}=:${k}`;
+        });
+        if (ssSets.length > 0) {
+          const params: any = { ...ssF, id: ssId, uid, tid };
+          if (ssF.assigned_teams) params.assigned_teams = JSON.stringify(ssF.assigned_teams);
+          if (ssF.assigned_users) params.assigned_users = JSON.stringify(ssF.assigned_users);
+          await qExec(`UPDATE sfa_sales_strategies SET ${ssSets.join(',')}, updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, params);
+        }
+        if (ssKpis && Array.isArray(ssKpis)) {
+          await qExec(`DELETE FROM sfa_strategy_kpis WHERE strategy_id=:sid AND tenant_id=:tid`, { sid: ssId, tid });
+          for (let i = 0; i < ssKpis.length; i++) {
+            const k = ssKpis[i];
+            await qExec(`INSERT INTO sfa_strategy_kpis (strategy_id,tenant_id,kpi_code,kpi_name,description,kpi_type,target_value,achieved_value,achievement_pct,unit,weight,scoring_method,threshold_bronze,threshold_silver,threshold_gold,threshold_platinum,multiplier_bronze,multiplier_silver,multiplier_gold,multiplier_platinum,sort_order) VALUES (:sid,:tid,:code,:name,:desc,:type,:tv,:av,:ap,:unit,:w,:sm,:tb,:ts,:tg,:tp,:mb,:ms,:mg,:mp,:so)`,
+              { sid: ssId, tid, code: k.kpi_code || `KPI-${i + 1}`, name: k.kpi_name, desc: k.description, type: k.kpi_type, tv: k.target_value || 0, av: k.achieved_value || 0, ap: k.achievement_pct || 0, unit: k.unit || '', w: k.weight || 0, sm: k.scoring_method || 'linear', tb: k.threshold_bronze || 60, ts: k.threshold_silver || 80, tg: k.threshold_gold || 100, tp: k.threshold_platinum || 120, mb: k.multiplier_bronze || 0.6, ms: k.multiplier_silver || 0.8, mg: k.multiplier_gold || 1.0, mp: k.multiplier_platinum || 1.5, so: i });
+          }
+          await qExec(`UPDATE sfa_sales_strategies SET kpi_count=:kc, total_weight=:tw, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, { kc: ssKpis.length, tw: ssKpis.reduce((s: number, k: any) => s + (parseFloat(k.weight) || 0), 0), id: ssId, tid });
+        }
+        return ok(res, { message: 'Sales strategy diperbarui' });
+      }
+      case 'activate-strategy': {
+        if (req.method !== 'PUT') return err(res, 'PUT only', 405);
+        await qExec(`UPDATE sfa_sales_strategies SET status='active', updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, { id: b.id, uid, tid });
+        return ok(res, { message: 'Strategy diaktifkan' });
+      }
+      case 'strategy-scorecard': {
+        const sid = req.query.id || b.id;
+        const kpis = await q(`SELECT * FROM sfa_strategy_kpis WHERE strategy_id = :sid AND tenant_id = :tid ORDER BY sort_order`, { sid, tid });
+        let totalWeightedScore = 0;
+        let totalWeight = 0;
+        for (const k of kpis as any[]) {
+          const pct = k.target_value > 0 ? (k.achieved_value / k.target_value) * 100 : 0;
+          let multiplier = 0;
+          if (pct >= k.threshold_platinum) multiplier = parseFloat(k.multiplier_platinum);
+          else if (pct >= k.threshold_gold) multiplier = parseFloat(k.multiplier_gold);
+          else if (pct >= k.threshold_silver) multiplier = parseFloat(k.multiplier_silver);
+          else if (pct >= k.threshold_bronze) multiplier = parseFloat(k.multiplier_bronze);
+          k.achievement_pct = pct.toFixed(2);
+          k.multiplier = multiplier;
+          k.weighted_score = (parseFloat(k.weight) * multiplier).toFixed(2);
+          k.tier = pct >= k.threshold_platinum ? 'platinum' : pct >= k.threshold_gold ? 'gold' : pct >= k.threshold_silver ? 'silver' : pct >= k.threshold_bronze ? 'bronze' : 'below';
+          totalWeightedScore += parseFloat(k.weighted_score);
+          totalWeight += parseFloat(k.weight);
+        }
+        const overallScore = totalWeight > 0 ? (totalWeightedScore / totalWeight * 100) : 0;
+        return ok(res, { data: { kpis, overall_score: overallScore.toFixed(2), total_weighted_score: totalWeightedScore.toFixed(2) } });
+      }
+
+      // ═══════════════════════════════════════
+      // COMMISSION SUMMARY (aggregated view)
+      // ═══════════════════════════════════════
+      case 'commission-summary': {
+        const [prodComm] = await q(`SELECT COUNT(*) as total, SUM(CASE WHEN is_active THEN 1 ELSE 0 END) as active FROM sfa_product_commissions WHERE tenant_id = :tid`, { tid });
+        const [groupComm] = await q(`SELECT COUNT(*) as total, SUM(CASE WHEN is_active THEN 1 ELSE 0 END) as active FROM sfa_commission_groups WHERE tenant_id = :tid`, { tid });
+        const [outletTgt] = await q(`SELECT COUNT(*) as total, COALESCE(AVG(achievement_pct),0) as avg_achievement FROM sfa_outlet_targets WHERE tenant_id = :tid AND is_active = true`, { tid });
+        const [strategies] = await q(`SELECT COUNT(*) as total, SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active FROM sfa_sales_strategies WHERE tenant_id = :tid`, { tid });
+        return ok(res, { data: { product_commissions: prodComm, commission_groups: groupComm, outlet_targets: outletTgt, strategies } });
       }
 
       // ═══════════════════════════════════════

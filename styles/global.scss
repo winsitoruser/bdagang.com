@@ -620,3 +620,12 @@ $softPrimaryColor: #df7c6a;
 .animate-scaleIn {
   animation: scaleIn 0.3s ease-out forwards;
 }
+
+/* Hide scrollbar for horizontal nav */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

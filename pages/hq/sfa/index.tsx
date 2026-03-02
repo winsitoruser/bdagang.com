@@ -306,6 +306,12 @@ export default function SFAUnifiedPage() {
   const [targetGroups, setTargetGroups] = useState<any[]>([]);
   const [incentiveSchemes, setIncentiveSchemes] = useState<any[]>([]);
   const [commissions, setCommissions] = useState<any[]>([]);
+  const [inventoryProducts, setInventoryProducts] = useState<any[]>([]);
+  const [commissionGroups, setCommissionGroups] = useState<any[]>([]);
+  const [outletTargets, setOutletTargets] = useState<any[]>([]);
+  const [salesStrategies, setSalesStrategies] = useState<any[]>([]);
+  const [commSummary, setCommSummary] = useState<any>(null);
+  const [incSubTab, setIncSubTab] = useState<'overview'|'product'|'group'|'outlet'|'strategy'>('overview');
   // Intelligence
   const [displayAudits, setDisplayAudits] = useState<any[]>([]);
   const [competitors, setCompetitors] = useState<any[]>([]);
@@ -318,6 +324,14 @@ export default function SFAUnifiedPage() {
   const [geofences, setGeofences] = useState<any[]>([]);
   const [parameters, setParameters] = useState<any[]>([]);
   const [plafon, setPlafon] = useState<any[]>([]);
+  const [currencies, setCurrencies] = useState<any[]>([]);
+  const [exchangeRates, setExchangeRates] = useState<any[]>([]);
+  const [taxSettings, setTaxSettings] = useState<any[]>([]);
+  const [numberingFormats, setNumberingFormats] = useState<any[]>([]);
+  const [paymentTerms, setPaymentTerms] = useState<any[]>([]);
+  const [bizSettings, setBizSettings] = useState<any[]>([]);
+  const [settingsOverview, setSettingsOverview] = useState<any>(null);
+  const [settSubTab, setSettSubTab] = useState<'master'|'currency'|'tax'|'numbering'|'payment'|'business'>('master');
   // CRM
   const [crmCustomers, setCrmCustomers] = useState<any[]>([]);
   const [crmAnalytics, setCrmAnalytics] = useState<any>(null);
@@ -444,9 +458,14 @@ export default function SFAUnifiedPage() {
           break;
         }
         case 'incentives': {
-          const [r1, r2] = await Promise.all([apiEnh('incentive-schemes'), apiAdv('product-commissions')]);
+          const [r1, r2, r3, r4, r5, r6, r7] = await Promise.all([apiEnh('incentive-schemes'), apiAdv('product-commissions'), apiAdv('inventory-products'), apiAdv('commission-groups'), apiAdv('outlet-targets'), apiAdv('sales-strategies'), apiAdv('commission-summary')]);
           if (r1.success) setIncentiveSchemes(r1.data || []);
           if (r2.success) setCommissions(r2.data || []);
+          if (r3.success) setInventoryProducts(r3.data || []);
+          if (r4.success) setCommissionGroups(r4.data || []);
+          if (r5.success) setOutletTargets(r5.data || []);
+          if (r6.success) setSalesStrategies(r6.data || []);
+          if (r7.success) setCommSummary(r7.data || null);
           break;
         }
         case 'merchandising': {
@@ -474,11 +493,23 @@ export default function SFAUnifiedPage() {
         }
         case 'settings': {
           const apiLookup = async (a: string) => (await fetch(`/api/hq/sfa/lookup?action=${a}`)).json();
-          const [r1, r2, r3, r4] = await Promise.all([apiEnh('parameters'), apiAdv('geofences'), apiEnh('plafon-list'), apiLookup('all')]);
+          const [r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11] = await Promise.all([
+            apiEnh('parameters'), apiAdv('geofences'), apiEnh('plafon-list'), apiLookup('all'),
+            apiEnh('currencies'), apiEnh('exchange-rates'), apiEnh('tax-settings'),
+            apiEnh('numbering-formats'), apiEnh('payment-terms'), apiEnh('business-settings'),
+            apiEnh('settings-overview'),
+          ]);
           if (r1.success) setParameters(r1.data || []);
           if (r2.success) setGeofences(r2.data || []);
           if (r3.success) setPlafon(r3.data || []);
           if (r4.success) setLookupCategories(r4.data || {});
+          if (r5.success) setCurrencies(r5.data || []);
+          if (r6.success) setExchangeRates(r6.data || []);
+          if (r7.success) setTaxSettings(r7.data || []);
+          if (r8.success) setNumberingFormats(r8.data || []);
+          if (r9.success) setPaymentTerms(r9.data || []);
+          if (r10.success) setBizSettings(r10.data || []);
+          if (r11.success) setSettingsOverview(r11.data || null);
           break;
         }
         case 'customers': {
@@ -664,6 +695,27 @@ export default function SFAUnifiedPage() {
     e.preventDefault(); setSaving(true);
     const r = await apiAdv('create-product-commission', 'POST', form);
     if (r.success) { showToast('Komisi produk dibuat'); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || 'Gagal');
+    setSaving(false);
+  };
+  const handleCreateCommissionGroup = async (e: React.FormEvent) => {
+    e.preventDefault(); setSaving(true);
+    const r = await apiAdv('create-commission-group', 'POST', form);
+    if (r.success) { showToast('Commission group dibuat'); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || 'Gagal');
+    setSaving(false);
+  };
+  const handleCreateOutletTarget = async (e: React.FormEvent) => {
+    e.preventDefault(); setSaving(true);
+    const r = await apiAdv('create-outlet-target', 'POST', form);
+    if (r.success) { showToast('Outlet target dibuat'); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || 'Gagal');
+    setSaving(false);
+  };
+  const handleCreateSalesStrategy = async (e: React.FormEvent) => {
+    e.preventDefault(); setSaving(true);
+    const r = await apiAdv('create-sales-strategy', 'POST', form);
+    if (r.success) { showToast('Sales strategy dibuat'); setModal(null); setForm({}); fetchData(); }
     else showToast(r.error || 'Gagal');
     setSaving(false);
   };
@@ -1843,44 +1895,207 @@ export default function SFAUnifiedPage() {
           {/* INCENTIVES & COMMISSIONS (merged Enhanced incentives + Advanced commissions) */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'incentives' && (<>
-            <SectionHeader title="Insentif & Komisi Produk" />
-            <div className="grid sm:grid-cols-2 gap-4">
-              {incentiveSchemes.length === 0 ? <div className="col-span-2"><EmptyState icon={Award} title="Belum ada skema insentif" /></div> :
-                incentiveSchemes.map((s: any) => (
-                  <Card key={s.id} className="p-5" hover>
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shrink-0"><Award className="w-4 h-4" /></div>
-                        <div><h4 className="font-semibold text-sm text-gray-900">{s.name}</h4><p className="text-xs text-gray-400">{s.code} | {s.scheme_type}</p></div>
-                      </div>
-                      <Badge color={s.is_active ? 'green' : 'gray'}>{s.is_active ? 'Active' : 'Off'}</Badge>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-400 mt-3 pt-3 border-t border-gray-50">
-                      <span>{s.calculation_basis}</span><span>|</span><span>{s.tier_count || 0} tiers</span><span>|</span><span>{s.effective_from} → {s.effective_to || '∞'}</span>
-                    </div>
-                  </Card>
-                ))
-              }
+            {/* Sub-tab navigation */}
+            <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6">
+              {([['overview','📊 Overview'],['product','🏷️ Komisi Produk'],['group','📦 Komisi Group'],['outlet','🏪 Target Outlet'],['strategy','🎯 Sales Strategy']] as const).map(([k, label]) => (
+                <button key={k} onClick={() => setIncSubTab(k as any)} className={`flex-1 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${incSubTab === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{label}</button>
+              ))}
             </div>
-            <SectionHeader title="Komisi per Produk" action={<PrimaryBtn onClick={() => { setModal('commission'); setForm({ commission_type: 'percentage', commission_rate: 0 }); }} icon={Plus}>Tambah Komisi</PrimaryBtn>} />
-            <TableWrap>
-              <table className="w-full text-sm">
-                <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Produk</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">SKU</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipe</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Rate</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th></tr></thead>
-                <tbody className="divide-y divide-gray-50">
-                  {commissions.length === 0 ? <tr><td colSpan={5}><EmptyState icon={Award} title="Belum ada komisi" /></td></tr> :
-                    commissions.map((pc: any) => (
-                      <tr key={pc.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-5 py-3.5 font-semibold text-gray-900">{pc.product_name}</td>
-                        <td className="px-5 py-3.5 font-mono text-xs text-gray-400 hidden sm:table-cell">{pc.product_sku || '-'}</td>
-                        <td className="px-5 py-3.5 text-center"><Badge>{pc.commission_type}</Badge></td>
-                        <td className="px-5 py-3.5 text-right font-bold text-gray-900">{pc.commission_rate}%</td>
-                        <td className="px-5 py-3.5 text-center"><Badge color={pc.is_active ? 'green' : 'gray'}>{pc.is_active ? 'Active' : 'Off'}</Badge></td>
-                      </tr>
-                    ))
-                  }
-                </tbody>
-              </table>
-            </TableWrap>
+
+            {/* ── OVERVIEW ── */}
+            {incSubTab === 'overview' && (<>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                <Card className="p-4 text-center cursor-pointer hover:ring-2 ring-blue-200" onClick={() => setIncSubTab('product')} hover>
+                  <div className="text-2xl font-bold text-blue-600">{commSummary?.product_commissions?.active || 0}</div>
+                  <div className="text-xs text-gray-500 mt-1">Komisi Produk Aktif</div>
+                </Card>
+                <Card className="p-4 text-center cursor-pointer hover:ring-2 ring-purple-200" onClick={() => setIncSubTab('group')} hover>
+                  <div className="text-2xl font-bold text-purple-600">{commSummary?.commission_groups?.active || 0}</div>
+                  <div className="text-xs text-gray-500 mt-1">Komisi Group Aktif</div>
+                </Card>
+                <Card className="p-4 text-center cursor-pointer hover:ring-2 ring-amber-200" onClick={() => setIncSubTab('outlet')} hover>
+                  <div className="text-2xl font-bold text-amber-600">{commSummary?.outlet_targets?.total || 0}</div>
+                  <div className="text-xs text-gray-500 mt-1">Target Outlet</div>
+                </Card>
+                <Card className="p-4 text-center cursor-pointer hover:ring-2 ring-emerald-200" onClick={() => setIncSubTab('strategy')} hover>
+                  <div className="text-2xl font-bold text-emerald-600">{commSummary?.strategies?.active || 0}</div>
+                  <div className="text-xs text-gray-500 mt-1">Sales Strategy Aktif</div>
+                </Card>
+              </div>
+              <SectionHeader title="Skema Insentif" />
+              <div className="grid sm:grid-cols-2 gap-4">
+                {incentiveSchemes.length === 0 ? <div className="col-span-2"><EmptyState icon={Award} title="Belum ada skema insentif" /></div> :
+                  incentiveSchemes.map((s: any) => (
+                    <Card key={s.id} className="p-5" hover>
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white shrink-0"><Award className="w-4 h-4" /></div>
+                          <div><h4 className="font-semibold text-sm text-gray-900">{s.name}</h4><p className="text-xs text-gray-400">{s.code} | {s.scheme_type}</p></div>
+                        </div>
+                        <Badge color={s.is_active ? 'green' : 'gray'}>{s.is_active ? 'Active' : 'Off'}</Badge>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-gray-400 mt-3 pt-3 border-t border-gray-50">
+                        <span>{s.calculation_basis}</span><span>|</span><span>{s.tier_count || 0} tiers</span><span>|</span><span>{s.effective_from} → {s.effective_to || '∞'}</span>
+                      </div>
+                    </Card>
+                  ))
+                }
+              </div>
+            </>)}
+
+            {/* ── KOMISI PRODUK ── */}
+            {incSubTab === 'product' && (<>
+              <SectionHeader title="Komisi per Produk" action={<PrimaryBtn onClick={() => { setModal('commission'); setForm({ commission_type: 'percentage', commission_rate: 0 }); }} icon={Plus}>Tambah Komisi</PrimaryBtn>} />
+              <TableWrap>
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Produk</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">SKU</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipe</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Rate</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th></tr></thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {commissions.length === 0 ? <tr><td colSpan={5}><EmptyState icon={Award} title="Belum ada komisi produk" /></td></tr> :
+                      commissions.map((pc: any) => (
+                        <tr key={pc.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-5 py-3.5 font-semibold text-gray-900">{pc.product_name}</td>
+                          <td className="px-5 py-3.5 font-mono text-xs text-gray-400 hidden sm:table-cell">{pc.product_sku || '-'}</td>
+                          <td className="px-5 py-3.5 text-center"><Badge>{pc.commission_type}</Badge></td>
+                          <td className="px-5 py-3.5 text-right font-bold text-gray-900">{pc.commission_rate}%</td>
+                          <td className="px-5 py-3.5 text-center"><Badge color={pc.is_active ? 'green' : 'gray'}>{pc.is_active ? 'Active' : 'Off'}</Badge></td>
+                        </tr>
+                      ))
+                    }
+                  </tbody>
+                </table>
+              </TableWrap>
+            </>)}
+
+            {/* ── KOMISI GROUP (Bundle/Cross-sell) ── */}
+            {incSubTab === 'group' && (<>
+              <SectionHeader title="Komisi Group Produk (Bundle)" subtitle="Bonus tambahan jika menjual kombinasi produk tertentu" action={<PrimaryBtn onClick={() => { setModal('commission-group'); setForm({ group_type: 'bundle', calculation_method: 'flat', bonus_amount: 0, products: [] }); }} icon={Plus}>Tambah Group</PrimaryBtn>} />
+              {commissionGroups.length === 0 ? <EmptyState icon={Award} title="Belum ada komisi group" subtitle="Buat group produk untuk memberikan bonus bundle" /> :
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {commissionGroups.map((g: any) => (
+                    <Card key={g.id} className="p-5" hover>
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge color={g.group_type === 'bundle' ? 'blue' : g.group_type === 'cross_sell' ? 'purple' : 'amber'}>{g.group_type}</Badge>
+                            <span className="font-semibold text-sm text-gray-900">{g.name}</span>
+                          </div>
+                          <p className="text-xs text-gray-400">{g.code} | {g.period_type}</p>
+                        </div>
+                        <Badge color={g.is_active ? 'green' : 'gray'}>{g.is_active ? 'Active' : 'Off'}</Badge>
+                      </div>
+                      <div className="bg-gray-50 rounded-lg p-3 mb-3">
+                        <div className="text-xs font-medium text-gray-500 mb-2">Produk dalam Group:</div>
+                        <div className="space-y-1">
+                          {(g.products || []).map((p: any, pi: number) => (
+                            <div key={pi} className="flex justify-between text-xs">
+                              <span className="text-gray-700">{p.product_name} <span className="text-gray-400">({p.product_sku})</span></span>
+                              <span className="text-gray-500">min. {p.min_quantity} pcs</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500">Bonus:</span>
+                        <span className="font-bold text-emerald-600">
+                          {g.calculation_method === 'flat' ? `Rp ${Number(g.bonus_amount).toLocaleString('id-ID')}` : `${g.bonus_percentage}%`}
+                        </span>
+                      </div>
+                      {(Number(g.min_total_quantity) > 0 || Number(g.min_total_value) > 0) && (
+                        <div className="flex gap-3 text-xs text-gray-400 mt-2 pt-2 border-t border-gray-100">
+                          {Number(g.min_total_quantity) > 0 && <span>Min Qty: {g.min_total_quantity}</span>}
+                          {Number(g.min_total_value) > 0 && <span>Min Value: Rp {Number(g.min_total_value).toLocaleString('id-ID')}</span>}
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              }
+            </>)}
+
+            {/* ── TARGET OUTLET per Produk ── */}
+            {incSubTab === 'outlet' && (<>
+              <SectionHeader title="Target Outlet/Customer per Produk" subtitle="Target jumlah outlet/customer yang harus membeli setiap produk" action={<PrimaryBtn onClick={() => { setModal('outlet-target'); setForm({ target_type: 'outlet_count', period_type: 'monthly', bronze_threshold_pct: 60, silver_threshold_pct: 80, gold_threshold_pct: 100, platinum_threshold_pct: 120 }); }} icon={Plus}>Tambah Target</PrimaryBtn>} />
+              {outletTargets.length === 0 ? <EmptyState icon={Target} title="Belum ada target outlet" subtitle="Buat target per produk untuk mengukur penetrasi pasar" /> :
+                <div className="space-y-4">
+                  {outletTargets.map((ot: any) => {
+                    const pct = Number(ot.achievement_pct) || 0;
+                    const tier = pct >= Number(ot.platinum_threshold_pct) ? 'platinum' : pct >= Number(ot.gold_threshold_pct) ? 'gold' : pct >= Number(ot.silver_threshold_pct) ? 'silver' : pct >= Number(ot.bronze_threshold_pct) ? 'bronze' : 'below';
+                    const tierColor: Record<string, string> = { platinum: 'bg-purple-100 text-purple-700', gold: 'bg-amber-100 text-amber-700', silver: 'bg-gray-200 text-gray-700', bronze: 'bg-orange-100 text-orange-700', below: 'bg-red-100 text-red-700' };
+                    const barColor: Record<string, string> = { platinum: 'bg-purple-500', gold: 'bg-amber-500', silver: 'bg-gray-400', bronze: 'bg-orange-500', below: 'bg-red-400' };
+                    return (
+                      <Card key={ot.id} className="p-5" hover>
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h4 className="font-semibold text-sm text-gray-900">{ot.product_name}</h4>
+                            <p className="text-xs text-gray-400">{ot.code} | {ot.product_sku || '-'} | {ot.target_type.replace('_', ' ')}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${tierColor[tier]}`}>{tier.toUpperCase()}</span>
+                            <span className="text-xs text-gray-400">{ot.period}/{ot.year}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 mb-3">
+                          <div className="flex-1">
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="text-gray-500">Achieved: <strong>{ot.achieved_value || 0}</strong> / {ot.target_value} outlets</span>
+                              <span className="font-bold">{pct.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-100 rounded-full h-2.5">
+                              <div className={`h-2.5 rounded-full transition-all ${barColor[tier]}`} style={{ width: `${Math.min(pct, 150)}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-center">
+                          {(['bronze', 'silver', 'gold', 'platinum'] as const).map(t => (
+                            <div key={t} className={`rounded-lg p-2 ${tier === t ? 'ring-2 ring-offset-1 ring-blue-400' : 'bg-gray-50'}`}>
+                              <div className="text-[10px] text-gray-400 uppercase">{t}</div>
+                              <div className="text-xs font-bold text-gray-700">≥{ot[`${t}_threshold_pct`]}%</div>
+                              <div className="text-[10px] text-emerald-600 font-medium">Rp {Number(ot[`${t}_bonus`]).toLocaleString('id-ID')}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+              }
+            </>)}
+
+            {/* ── SALES STRATEGY ── */}
+            {incSubTab === 'strategy' && (<>
+              <SectionHeader title="Sales Strategy & KPI Management" subtitle="Strategi penjualan dengan KPI terukur dan scoring multi-level" action={<PrimaryBtn onClick={() => { setModal('sales-strategy'); setForm({ strategy_type: 'balanced', period_type: 'monthly', kpis: [{ kpi_name: '', kpi_type: 'revenue', target_value: 0, weight: 0, unit: '' }] }); }} icon={Plus}>Buat Strategy</PrimaryBtn>} />
+              {salesStrategies.length === 0 ? <EmptyState icon={Target} title="Belum ada sales strategy" subtitle="Buat strategi penjualan dengan KPI yang terukur" /> :
+                <div className="space-y-4">
+                  {salesStrategies.map((st: any) => (
+                    <Card key={st.id} className="p-5" hover>
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shrink-0"><Target className="w-5 h-5" /></div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{st.name}</h4>
+                            <p className="text-xs text-gray-400">{st.code} | {st.strategy_type} | {st.period_type} {st.period}/{st.year}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge color={st.status === 'active' ? 'green' : st.status === 'draft' ? 'amber' : 'gray'}>{st.status}</Badge>
+                          {st.status === 'draft' && (
+                            <button onClick={async () => { const r = await apiAdv('activate-strategy', 'PUT', { id: st.id }); if (r.success) { showToast('Strategy diaktifkan'); fetchData(); } }} className="text-xs text-blue-600 hover:underline">Aktifkan</button>
+                          )}
+                        </div>
+                      </div>
+                      {st.description && <p className="text-xs text-gray-500 mb-3">{st.description}</p>}
+                      <div className="flex items-center gap-4 text-xs text-gray-400">
+                        <span>{st.kpi_count || 0} KPIs</span>
+                        <span>|</span>
+                        <span>Total Bobot: {st.total_weight}%</span>
+                        <span>|</span>
+                        <span>Score: <strong className="text-gray-700">{Number(st.overall_score).toFixed(1)}%</strong></span>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              }
+            </>)}
           </>)}
 
           {/* ═══════════════════════════════════════════ */}
@@ -2130,7 +2345,253 @@ export default function SFAUnifiedPage() {
           {/* SETTINGS (merged Plafon + Geofence + Parameters) */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'settings' && (<>
-            <SectionHeader title="Pengaturan CRM & SFA" subtitle="Kelola data master dropdown, plafon, geofence, dan parameter sistem" />
+            <SectionHeader title="Pengaturan CRM & SFA" subtitle="Kelola multi-kurensi, pajak, format nomor, syarat pembayaran, dan data master" />
+
+            {/* Settings sub-tab navigation */}
+            <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 overflow-x-auto">
+              {([['master','Master Data'],['currency','Multi-Kurensi'],['tax','Pajak'],['numbering','Format Nomor'],['payment','Syarat Bayar'],['business','Pengaturan Bisnis']] as const).map(([k, label]) => (
+                <button key={k} onClick={() => setSettSubTab(k as any)} className={`whitespace-nowrap px-3 py-2 text-xs font-semibold rounded-lg transition-all ${settSubTab === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{label}</button>
+              ))}
+            </div>
+
+            {/* ── MULTI-CURRENCY ── */}
+            {settSubTab === 'currency' && (<>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+                <Card className="p-4 text-center" hover><div className="text-2xl font-bold text-blue-600">{settingsOverview?.currencies?.active || 0}</div><div className="text-xs text-gray-500 mt-1">Mata Uang Aktif</div></Card>
+                <Card className="p-4 text-center" hover><div className="text-2xl font-bold text-purple-600">{settingsOverview?.rates?.total || 0}</div><div className="text-xs text-gray-500 mt-1">Kurs Aktif</div></Card>
+                <Card className="p-4 text-center" hover><div className="text-lg font-bold text-emerald-600">{settingsOverview?.defaultCurrency?.code || 'IDR'}</div><div className="text-xs text-gray-500 mt-1">Default: {settingsOverview?.defaultCurrency?.symbol || 'Rp'}</div></Card>
+                <Card className="p-4 text-center" hover><div className="text-lg font-bold text-amber-600">{currencies.filter((c: any) => c.is_active).length}/{currencies.length}</div><div className="text-xs text-gray-500 mt-1">Aktif / Total</div></Card>
+              </div>
+
+              <SectionHeader title="Daftar Mata Uang" action={<PrimaryBtn onClick={() => { setModal('add-currency'); setForm({ decimal_places: 2, symbol_position: 'before', thousand_separator: '.', decimal_separator: ',' }); }} icon={Plus}>Tambah Currency</PrimaryBtn>} />
+              <TableWrap>
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Kode</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Nama</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Simbol</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Desimal</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Default</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Status</th></tr></thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {currencies.map((c: any) => (
+                      <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-5 py-3.5 font-mono font-bold text-blue-600">{c.code}</td>
+                        <td className="px-5 py-3.5 text-gray-900">{c.name}</td>
+                        <td className="px-5 py-3.5 text-center text-lg">{c.symbol}</td>
+                        <td className="px-5 py-3.5 text-center text-gray-500 hidden sm:table-cell">{c.decimal_places}</td>
+                        <td className="px-5 py-3.5 text-center">{c.is_default ? <Badge color="blue">Default</Badge> : <button onClick={async () => { await apiEnh('update-currency', 'PUT', { id: c.id, is_default: true }); fetchData(); }} className="text-xs text-gray-400 hover:text-blue-600">Set Default</button>}</td>
+                        <td className="px-5 py-3.5 text-center"><Badge color={c.is_active ? 'green' : 'gray'}>{c.is_active ? 'Aktif' : 'Off'}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableWrap>
+
+              <SectionHeader title="Kurs / Exchange Rate" subtitle="Rate konversi antar mata uang" action={<PrimaryBtn onClick={() => { setModal('add-rate'); setForm({ from_currency: 'USD', to_currency: 'IDR', source: 'manual' }); }} icon={Plus}>Tambah Kurs</PrimaryBtn>} />
+              <TableWrap>
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Dari</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">→</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Ke</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase">Rate</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Berlaku</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Sumber</th></tr></thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {exchangeRates.map((r: any) => (
+                      <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-5 py-3.5 font-mono font-bold text-gray-900">{r.from_currency}</td>
+                        <td className="px-5 py-3.5 text-center text-gray-300">→</td>
+                        <td className="px-5 py-3.5 font-mono font-bold text-gray-900">{r.to_currency}</td>
+                        <td className="px-5 py-3.5 text-right font-bold text-emerald-600">{Number(r.rate).toLocaleString('id-ID', { maximumFractionDigits: 2 })}</td>
+                        <td className="px-5 py-3.5 text-center text-xs text-gray-400 hidden sm:table-cell">{r.effective_date}</td>
+                        <td className="px-5 py-3.5 text-center hidden sm:table-cell"><Badge>{r.source}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableWrap>
+            </>)}
+
+            {/* ── TAX SETTINGS ── */}
+            {settSubTab === 'tax' && (<>
+              <SectionHeader title="Pengaturan Pajak" subtitle="Kelola tarif pajak yang digunakan dalam transaksi" action={<PrimaryBtn onClick={() => { setModal('add-tax'); setForm({ tax_type: 'vat', rate: 0, applies_to: 'all' }); }} icon={Plus}>Tambah Pajak</PrimaryBtn>} />
+              <TableWrap>
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Kode</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Nama</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Tipe</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase">Rate</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Inklusif</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Default</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Status</th></tr></thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {taxSettings.map((t: any) => (
+                      <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="px-5 py-3.5 font-mono font-bold text-amber-600">{t.code}</td>
+                        <td className="px-5 py-3.5 text-gray-900">{t.name}</td>
+                        <td className="px-5 py-3.5 text-center"><Badge color={t.tax_type === 'vat' ? 'blue' : t.tax_type === 'income' ? 'purple' : t.tax_type === 'withholding' ? 'amber' : 'gray'}>{t.tax_type}</Badge></td>
+                        <td className="px-5 py-3.5 text-right font-bold text-gray-900">{Number(t.rate)}%</td>
+                        <td className="px-5 py-3.5 text-center hidden sm:table-cell">{t.is_inclusive ? <span className="text-emerald-600 font-medium">Ya</span> : <span className="text-gray-400">Tidak</span>}</td>
+                        <td className="px-5 py-3.5 text-center">{t.is_default && <Badge color="blue">Default</Badge>}</td>
+                        <td className="px-5 py-3.5 text-center"><Badge color={t.is_active ? 'green' : 'gray'}>{t.is_active ? 'Aktif' : 'Off'}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableWrap>
+            </>)}
+
+            {/* ── NUMBERING FORMATS ── */}
+            {settSubTab === 'numbering' && (<>
+              <SectionHeader title="Format Penomoran Dokumen" subtitle="Atur format nomor otomatis untuk setiap tipe dokumen" />
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {numberingFormats.map((nf: any) => (
+                  <Card key={nf.id} className="p-5" hover>
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <Badge color="blue">{nf.entity_type.replace('_', ' ')}</Badge>
+                        <div className="mt-2 font-mono text-lg font-bold text-gray-900 tracking-wide">{nf.sample_output || '-'}</div>
+                      </div>
+                      <Badge color={nf.is_active ? 'green' : 'gray'}>{nf.is_active ? 'Aktif' : 'Off'}</Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mt-3 pt-3 border-t border-gray-100">
+                      <div className="text-gray-400">Prefix</div><div className="font-mono font-medium text-gray-700">{nf.prefix || '-'}</div>
+                      <div className="text-gray-400">Separator</div><div className="font-mono font-medium text-gray-700">{nf.separator || '-'}</div>
+                      <div className="text-gray-400">Format Tanggal</div><div className="font-mono font-medium text-gray-700">{nf.date_format || '-'}</div>
+                      <div className="text-gray-400">Digit Counter</div><div className="font-mono font-medium text-gray-700">{nf.counter_length}</div>
+                      <div className="text-gray-400">Reset</div><div className="font-medium text-gray-700">{nf.reset_period}</div>
+                      <div className="text-gray-400">Counter Saat Ini</div><div className="font-mono font-medium text-gray-700">{nf.current_counter}</div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </>)}
+
+            {/* ── PAYMENT TERMS ── */}
+            {settSubTab === 'payment' && (<>
+              <SectionHeader title="Syarat Pembayaran" subtitle="Kelola syarat pembayaran untuk transaksi penjualan" action={<PrimaryBtn onClick={() => { setModal('add-payment-term'); setForm({ late_fee_type: 'none' }); }} icon={Plus}>Tambah Syarat</PrimaryBtn>} />
+              <div className="space-y-3">
+                {paymentTerms.map((pt: any) => (
+                  <Card key={pt.id} className="p-5" hover>
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0">{pt.code}</div>
+                        <div>
+                          <h4 className="font-semibold text-sm text-gray-900">{pt.name}</h4>
+                          {pt.description && <p className="text-xs text-gray-400 mt-0.5">{pt.description}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {pt.is_default && <Badge color="blue">Default</Badge>}
+                        <Badge color={pt.is_active ? 'green' : 'gray'}>{pt.is_active ? 'Aktif' : 'Off'}</Badge>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3 pt-3 border-t border-gray-100">
+                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">Jatuh Tempo</div><div className="text-sm font-bold text-gray-900">{pt.days_due === 0 ? 'Langsung' : `${pt.days_due} hari`}</div></div>
+                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">Early Payment</div><div className="text-sm font-medium text-gray-700">{Number(pt.discount_percentage) > 0 ? `${pt.discount_percentage}% jika ${pt.discount_days} hari` : '-'}</div></div>
+                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">Denda Keterlambatan</div><div className="text-sm font-medium text-gray-700">{pt.late_fee_type === 'none' ? 'Tidak ada' : pt.late_fee_type === 'percentage' ? `${pt.late_fee_value}%` : `Rp ${Number(pt.late_fee_value).toLocaleString('id-ID')}`}</div></div>
+                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">Status</div><div className="text-sm"><Badge color={pt.is_active ? 'green' : 'gray'}>{pt.is_active ? 'Aktif' : 'Nonaktif'}</Badge></div></div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </>)}
+
+            {/* ── BUSINESS SETTINGS ── */}
+            {settSubTab === 'business' && (<>
+              <SectionHeader title="Pengaturan Bisnis" subtitle="Konfigurasi umum sistem CRM & SFA" />
+              {(() => {
+                const grouped: Record<string, any[]> = {};
+                bizSettings.forEach((s: any) => { if (!grouped[s.category]) grouped[s.category] = []; grouped[s.category].push(s); });
+                const catLabels: Record<string, string> = { general: 'Umum', sales: 'Penjualan', commission: 'Komisi', notification: 'Notifikasi', approval: 'Approval' };
+                const catIcons: Record<string, string> = { general: 'from-blue-500 to-blue-600', sales: 'from-emerald-500 to-emerald-600', commission: 'from-amber-500 to-orange-500', notification: 'from-purple-500 to-purple-600', approval: 'from-red-500 to-red-600' };
+                return Object.entries(grouped).map(([cat, items]) => (
+                  <Card key={cat} className="p-0 overflow-hidden mb-4">
+                    <div className={`px-5 py-3.5 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50`}>
+                      <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${catIcons[cat] || 'from-gray-400 to-gray-500'} flex items-center justify-center`}><Settings className="w-4 h-4 text-white" /></div>
+                      <div><h4 className="text-sm font-bold text-gray-900">{catLabels[cat] || cat}</h4><p className="text-[10px] text-gray-400">{items.length} pengaturan</p></div>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                      {items.map((s: any) => (
+                        <div key={s.id} className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
+                          <div className="flex-1 min-w-0 mr-4">
+                            <div className="text-sm font-medium text-gray-900">{s.label || s.setting_key}</div>
+                            <div className="text-[10px] font-mono text-gray-400">{s.setting_key}</div>
+                          </div>
+                          <div className="shrink-0 w-48">
+                            {s.setting_type === 'boolean' ? (
+                              <button onClick={async () => {
+                                const newVal = s.setting_value === 'true' ? 'false' : 'true';
+                                await apiEnh('update-business-setting', 'PUT', { id: s.id, setting_value: newVal });
+                                fetchData();
+                              }} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${s.setting_value === 'true' ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow ${s.setting_value === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
+                              </button>
+                            ) : s.setting_type === 'number' ? (
+                              <input type="number" className={`${inputCls} !py-1.5 !text-xs text-right`} value={s.setting_value || ''} onBlur={async (e) => {
+                                if (e.target.value !== s.setting_value) { await apiEnh('update-business-setting', 'PUT', { id: s.id, setting_value: e.target.value }); fetchData(); }
+                              }} onChange={(e) => { setBizSettings(prev => prev.map(x => x.id === s.id ? { ...x, setting_value: e.target.value } : x)); }} />
+                            ) : (
+                              <input className={`${inputCls} !py-1.5 !text-xs`} value={s.setting_value || ''} onBlur={async (e) => {
+                                if (e.target.value !== s.setting_value) { await apiEnh('update-business-setting', 'PUT', { id: s.id, setting_value: e.target.value }); fetchData(); }
+                              }} onChange={(e) => { setBizSettings(prev => prev.map(x => x.id === s.id ? { ...x, setting_value: e.target.value } : x)); }} />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                ));
+              })()}
+
+              {/* Plafon */}
+              <SectionHeader title="Plafon / Credit Limit" />
+              <TableWrap>
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Tipe</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Limit</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Used</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Available</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th></tr></thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {plafon.length === 0 ? <tr><td colSpan={6}><EmptyState icon={DollarSign} title="Belum ada plafon" /></td></tr> :
+                      plafon.map((p: any) => {
+                        const avail = parseFloat(p.plafon_amount || 0) - parseFloat(p.used_amount || 0);
+                        return (
+                          <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-5 py-3.5 font-semibold text-gray-900">{p.customer_name || p.entity_name || '-'}</td>
+                            <td className="px-5 py-3.5 text-gray-600 hidden sm:table-cell">{p.plafon_type || '-'}</td>
+                            <td className="px-5 py-3.5 text-right text-gray-600">{fmtCur(p.plafon_amount)}</td>
+                            <td className="px-5 py-3.5 text-right text-gray-600 hidden md:table-cell">{fmtCur(p.used_amount)}</td>
+                            <td className="px-5 py-3.5 text-right font-bold text-gray-900">{fmtCur(avail)}</td>
+                            <td className="px-5 py-3.5 text-center"><Badge color={p.status === 'active' ? 'green' : 'gray'}>{p.status}</Badge></td>
+                          </tr>
+                        );
+                      })
+                    }
+                  </tbody>
+                </table>
+              </TableWrap>
+
+              {/* Geofence */}
+              <SectionHeader title="Geofence Zones" action={<PrimaryBtn onClick={() => { setModal('geofence'); setForm({ fence_type: 'circle', radius_meters: 200 }); }} icon={Plus}>Tambah</PrimaryBtn>} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {geofences.length === 0 ? <div className="col-span-3"><EmptyState icon={Globe} title="Belum ada geofence" /></div> :
+                  geofences.map((gf: any) => (
+                    <Card key={gf.id} className="p-4" hover>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-amber-500" /><h4 className="font-semibold text-sm text-gray-900">{gf.name}</h4></div>
+                        <Badge color={gf.is_active ? 'green' : 'gray'}>{gf.is_active ? 'Active' : 'Off'}</Badge>
+                      </div>
+                      <div className="text-xs text-gray-400">{gf.fence_type} | {gf.radius_meters}m | ({gf.center_lat}, {gf.center_lng})</div>
+                    </Card>
+                  ))
+                }
+              </div>
+
+              {/* Parameter Sistem */}
+              {parameters.length > 0 && (<>
+                <SectionHeader title="Parameter Sistem SFA" />
+                <TableWrap>
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kode</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nama</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nilai</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Kategori</th></tr></thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {parameters.map((p: any) => (
+                        <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-5 py-3.5 font-mono text-xs text-amber-600 font-medium">{p.param_key || p.code}</td>
+                          <td className="px-5 py-3.5 text-gray-700">{p.param_name || p.name}</td>
+                          <td className="px-5 py-3.5 font-bold text-gray-900">{p.param_value || p.value}</td>
+                          <td className="px-5 py-3.5 text-gray-500 hidden sm:table-cell">{p.category || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </TableWrap>
+              </>)}
+            </>)}
+
+            {/* ── MASTER DATA (original lookup options) ── */}
+            {settSubTab === 'master' && (<>
 
             {/* ── Master Data Lookup Options ── */}
             <Card className="p-0 overflow-hidden mb-6">
@@ -2313,66 +2774,6 @@ export default function SFAUnifiedPage() {
                 </div>
               </div>
             </Card>
-
-            {/* ── Plafon / Credit Limit ── */}
-            <SectionHeader title="Plafon / Credit Limit" />
-            <TableWrap>
-              <table className="w-full text-sm">
-                <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Tipe</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Limit</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Used</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Available</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th></tr></thead>
-                <tbody className="divide-y divide-gray-50">
-                  {plafon.length === 0 ? <tr><td colSpan={6}><EmptyState icon={DollarSign} title="Belum ada plafon" /></td></tr> :
-                    plafon.map((p: any) => {
-                      const avail = parseFloat(p.plafon_amount || 0) - parseFloat(p.used_amount || 0);
-                      return (
-                        <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-5 py-3.5 font-semibold text-gray-900">{p.customer_name || p.entity_name || '-'}</td>
-                          <td className="px-5 py-3.5 text-gray-600 hidden sm:table-cell">{p.plafon_type || '-'}</td>
-                          <td className="px-5 py-3.5 text-right text-gray-600">{fmtCur(p.plafon_amount)}</td>
-                          <td className="px-5 py-3.5 text-right text-gray-600 hidden md:table-cell">{fmtCur(p.used_amount)}</td>
-                          <td className="px-5 py-3.5 text-right font-bold text-gray-900">{fmtCur(avail)}</td>
-                          <td className="px-5 py-3.5 text-center"><Badge color={p.status === 'active' ? 'green' : 'gray'}>{p.status}</Badge></td>
-                        </tr>
-                      );
-                    })
-                  }
-                </tbody>
-              </table>
-            </TableWrap>
-
-            {/* ── Geofence Zones ── */}
-            <SectionHeader title="Geofence Zones" action={<PrimaryBtn onClick={() => { setModal('geofence'); setForm({ fence_type: 'circle', radius_meters: 200 }); }} icon={Plus}>Tambah</PrimaryBtn>} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {geofences.length === 0 ? <div className="col-span-3"><EmptyState icon={Globe} title="Belum ada geofence" /></div> :
-                geofences.map((gf: any) => (
-                  <Card key={gf.id} className="p-4" hover>
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="flex items-center gap-2"><Globe className="w-4 h-4 text-amber-500" /><h4 className="font-semibold text-sm text-gray-900">{gf.name}</h4></div>
-                      <Badge color={gf.is_active ? 'green' : 'gray'}>{gf.is_active ? 'Active' : 'Off'}</Badge>
-                    </div>
-                    <div className="text-xs text-gray-400">{gf.fence_type} | {gf.radius_meters}m | ({gf.center_lat}, {gf.center_lng})</div>
-                  </Card>
-                ))
-              }
-            </div>
-
-            {/* ── Parameter Sistem ── */}
-            {parameters.length > 0 && (<>
-              <SectionHeader title="Parameter Sistem SFA" />
-              <TableWrap>
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kode</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nama</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nilai</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Kategori</th></tr></thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {parameters.map((p: any) => (
-                      <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-5 py-3.5 font-mono text-xs text-amber-600 font-medium">{p.param_key || p.code}</td>
-                        <td className="px-5 py-3.5 text-gray-700">{p.param_name || p.name}</td>
-                        <td className="px-5 py-3.5 font-bold text-gray-900">{p.param_value || p.value}</td>
-                        <td className="px-5 py-3.5 text-gray-500 hidden sm:table-cell">{p.category || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </TableWrap>
             </>)}
           </>)}
 
@@ -3701,6 +4102,9 @@ export default function SFAUnifiedPage() {
                   {modal === 'competitor' && 'Lapor Kompetitor'}
                   {modal === 'geofence' && 'Tambah Geofence'}
                   {modal === 'commission' && 'Tambah Komisi Produk'}
+                  {modal === 'commission-group' && 'Tambah Komisi Group (Bundle)'}
+                  {modal === 'outlet-target' && 'Tambah Target Outlet per Produk'}
+                  {modal === 'sales-strategy' && 'Buat Sales Strategy'}
                   {modal === 'crm-customer' && 'Tambah Customer'}
                   {modal === 'crm-comm' && 'Log Komunikasi'}
                   {modal === 'crm-task' && 'Buat Task Baru'}
@@ -3710,6 +4114,10 @@ export default function SFAUnifiedPage() {
                   {modal === 'create-team' && 'Buat Tim Baru'}
                   {modal === 'add-member' && `Tambah Anggota ke ${form.team_name || 'Tim'}`}
                   {modal === 'setup-ai-model' && 'Setup AI Model'}
+                  {modal === 'add-currency' && 'Tambah Mata Uang'}
+                  {modal === 'add-rate' && 'Tambah Kurs / Exchange Rate'}
+                  {modal === 'add-tax' && 'Tambah Pengaturan Pajak'}
+                  {modal === 'add-payment-term' && 'Tambah Syarat Pembayaran'}
                 </h3>
                 <p className="text-xs text-gray-400 mt-0.5">Isi form di bawah ini</p>
               </div>
@@ -3723,6 +4131,9 @@ export default function SFAUnifiedPage() {
               modal === 'competitor' ? handleCreateCompetitor :
               modal === 'geofence' ? handleCreateGeofence :
               modal === 'commission' ? handleCreateCommission :
+              modal === 'commission-group' ? handleCreateCommissionGroup :
+              modal === 'outlet-target' ? handleCreateOutletTarget :
+              modal === 'sales-strategy' ? handleCreateSalesStrategy :
               modal === 'crm-customer' ? (e: React.FormEvent) => handleCrmCreate('create-customer', e, 'Customer berhasil dibuat') :
               modal === 'crm-comm' ? (e: React.FormEvent) => handleCrmCreate('create-communication', e, 'Komunikasi dicatat') :
               modal === 'crm-task' ? (e: React.FormEvent) => handleCrmCreate('create-task', e, 'Task berhasil dibuat') :
@@ -3755,6 +4166,34 @@ export default function SFAUnifiedPage() {
                   body: JSON.stringify({ ...form, is_default: aiModels.length === 0 }),
                 })).json();
                 if (r.success) { showToast('Model dikonfigurasi'); setModal(null); fetchData(); }
+                else showToast(r.error || 'Gagal');
+                setSaving(false);
+              } :
+              modal === 'add-currency' ? async (e: React.FormEvent) => {
+                e.preventDefault(); setSaving(true);
+                const r = await apiEnh('create-currency', 'POST', form);
+                if (r.success) { showToast('Currency ditambahkan'); setModal(null); setForm({}); fetchData(); }
+                else showToast(r.error || 'Gagal');
+                setSaving(false);
+              } :
+              modal === 'add-rate' ? async (e: React.FormEvent) => {
+                e.preventDefault(); setSaving(true);
+                const r = await apiEnh('save-exchange-rate', 'POST', form);
+                if (r.success) { showToast('Kurs disimpan'); setModal(null); setForm({}); fetchData(); }
+                else showToast(r.error || 'Gagal');
+                setSaving(false);
+              } :
+              modal === 'add-tax' ? async (e: React.FormEvent) => {
+                e.preventDefault(); setSaving(true);
+                const r = await apiEnh('save-tax', 'POST', form);
+                if (r.success) { showToast('Pajak disimpan'); setModal(null); setForm({}); fetchData(); }
+                else showToast(r.error || 'Gagal');
+                setSaving(false);
+              } :
+              modal === 'add-payment-term' ? async (e: React.FormEvent) => {
+                e.preventDefault(); setSaving(true);
+                const r = await apiEnh('save-payment-term', 'POST', form);
+                if (r.success) { showToast('Syarat pembayaran disimpan'); setModal(null); setForm({}); fetchData(); }
                 else showToast(r.error || 'Gagal');
                 setSaving(false);
               } :
@@ -3814,10 +4253,136 @@ export default function SFAUnifiedPage() {
               </div>}
 
               {modal === 'commission' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FI label="Nama Produk" required><input required className={inputCls} value={form.product_name || ''} onChange={e => setForm({ ...form, product_name: e.target.value })} /></FI>
-                <FI label="SKU"><input className={inputCls} value={form.product_sku || ''} onChange={e => setForm({ ...form, product_sku: e.target.value })} /></FI>
+                <div className="sm:col-span-2">
+                  <FI label="Pilih Produk dari Inventory" required>
+                    <select required className={inputCls} value={form.product_id || ''} onChange={e => {
+                      const p = inventoryProducts.find((x: any) => String(x.id) === e.target.value);
+                      if (p) setForm({ ...form, product_id: p.id, product_name: p.name, product_sku: p.sku || '', category_name: p.category || '' });
+                      else setForm({ ...form, product_id: '', product_name: '', product_sku: '', category_name: '' });
+                    }}>
+                      <option value="">-- Pilih Produk --</option>
+                      {inventoryProducts.map((p: any) => <option key={p.id} value={p.id}>{p.name} {p.sku ? `(${p.sku})` : ''} — {p.category || 'Tanpa Kategori'}</option>)}
+                    </select>
+                  </FI>
+                </div>
+                {form.product_name && <div className="sm:col-span-2 bg-blue-50 rounded-lg px-4 py-2 text-sm text-blue-800 flex gap-4">
+                  <span><strong>Produk:</strong> {form.product_name}</span>
+                  <span><strong>SKU:</strong> {form.product_sku || '-'}</span>
+                  <span><strong>Kategori:</strong> {form.category_name || '-'}</span>
+                </div>}
                 <FI label="Tipe"><select className={inputCls} value={form.commission_type} onChange={e => setForm({ ...form, commission_type: e.target.value })}>{getLookupOpts('commission_type', [{value:'percentage',label:'Persentase'},{value:'flat',label:'Flat'},{value:'tiered',label:'Tiered'}]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></FI>
                 <FI label="Rate (%)"><input type="number" step="0.01" className={inputCls} value={form.commission_rate || 0} onChange={e => setForm({ ...form, commission_rate: parseFloat(e.target.value) })} /></FI>
+              </div>}
+
+              {modal === 'commission-group' && <div className="space-y-4">
+                <FI label="Nama Group" required><input required className={inputCls} value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Bundle Roti + Mentega" /></FI>
+                <div className="grid grid-cols-2 gap-3">
+                  <FI label="Tipe Group"><select className={inputCls} value={form.group_type || 'bundle'} onChange={e => setForm({ ...form, group_type: e.target.value })}><option value="bundle">Bundle</option><option value="cross_sell">Cross-sell</option><option value="upsell">Upsell</option><option value="volume_mix">Volume Mix</option></select></FI>
+                  <FI label="Metode Kalkulasi"><select className={inputCls} value={form.calculation_method || 'flat'} onChange={e => setForm({ ...form, calculation_method: e.target.value })}><option value="flat">Flat Amount</option><option value="percentage">Persentase</option></select></FI>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {form.calculation_method === 'percentage' ? <FI label="Bonus (%)"><input type="number" step="0.01" className={inputCls} value={form.bonus_percentage || 0} onChange={e => setForm({ ...form, bonus_percentage: parseFloat(e.target.value) })} /></FI>
+                    : <FI label="Bonus (Rp)"><input type="number" className={inputCls} value={form.bonus_amount || 0} onChange={e => setForm({ ...form, bonus_amount: parseFloat(e.target.value) })} /></FI>}
+                  <FI label="Min Total Qty"><input type="number" className={inputCls} value={form.min_total_quantity || 0} onChange={e => setForm({ ...form, min_total_quantity: parseInt(e.target.value) })} /></FI>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-600">Produk dalam Group (min. 2)</span>
+                    <button type="button" onClick={() => setForm({ ...form, products: [...(form.products || []), { product_id: '', product_name: '', product_sku: '', min_quantity: 1 }] })} className="text-xs text-blue-600 hover:underline">+ Tambah Produk</button>
+                  </div>
+                  {(form.products || []).map((p: any, pi: number) => (
+                    <div key={pi} className="flex gap-2 mb-2 items-end">
+                      <div className="flex-1">
+                        <select className={inputCls} value={p.product_id || ''} onChange={e => {
+                          const prod = inventoryProducts.find((x: any) => String(x.id) === e.target.value);
+                          const prods = [...form.products]; prods[pi] = { ...prods[pi], product_id: prod?.id || '', product_name: prod?.name || '', product_sku: prod?.sku || '' };
+                          setForm({ ...form, products: prods });
+                        }}>
+                          <option value="">-- Pilih Produk --</option>
+                          {inventoryProducts.map((ip: any) => <option key={ip.id} value={ip.id}>{ip.name} ({ip.sku || '-'})</option>)}
+                        </select>
+                      </div>
+                      <div className="w-20"><input type="number" min={1} placeholder="Min Qty" className={inputCls} value={p.min_quantity || 1} onChange={e => { const prods = [...form.products]; prods[pi] = { ...prods[pi], min_quantity: parseInt(e.target.value) }; setForm({ ...form, products: prods }); }} /></div>
+                      <button type="button" onClick={() => { const prods = form.products.filter((_: any, i: number) => i !== pi); setForm({ ...form, products: prods }); }} className="p-2 text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+                    </div>
+                  ))}
+                </div>
+                <FI label="Catatan"><textarea className={inputCls} rows={2} value={form.notes || ''} onChange={e => setForm({ ...form, notes: e.target.value })} /></FI>
+              </div>}
+
+              {modal === 'outlet-target' && <div className="space-y-4">
+                <div className="sm:col-span-2">
+                  <FI label="Pilih Produk" required>
+                    <select required className={inputCls} value={form.product_id || ''} onChange={e => {
+                      const p = inventoryProducts.find((x: any) => String(x.id) === e.target.value);
+                      if (p) setForm({ ...form, product_id: p.id, product_name: p.name, product_sku: p.sku || '' });
+                      else setForm({ ...form, product_id: '', product_name: '', product_sku: '' });
+                    }}>
+                      <option value="">-- Pilih Produk --</option>
+                      {inventoryProducts.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.sku || '-'})</option>)}
+                    </select>
+                  </FI>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FI label="Tipe Target"><select className={inputCls} value={form.target_type || 'outlet_count'} onChange={e => setForm({ ...form, target_type: e.target.value })}><option value="outlet_count">Jumlah Outlet</option><option value="new_outlet">Outlet Baru (NOO)</option><option value="active_outlet">Outlet Aktif</option><option value="customer_count">Jumlah Customer</option></select></FI>
+                  <FI label="Target Value" required><input required type="number" className={inputCls} value={form.target_value || ''} onChange={e => setForm({ ...form, target_value: parseInt(e.target.value) })} placeholder="e.g. 50" /></FI>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <FI label="Periode"><select className={inputCls} value={form.period_type || 'monthly'} onChange={e => setForm({ ...form, period_type: e.target.value })}><option value="monthly">Bulanan</option><option value="quarterly">Kuartalan</option></select></FI>
+                  <FI label="Tahun"><input type="number" className={inputCls} value={form.year || new Date().getFullYear()} onChange={e => setForm({ ...form, year: parseInt(e.target.value) })} /></FI>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="text-xs font-medium text-gray-600 mb-3">Tier Achievement & Bonus</div>
+                  <div className="grid grid-cols-4 gap-3">
+                    {(['bronze', 'silver', 'gold', 'platinum'] as const).map(t => (
+                      <div key={t} className="space-y-2">
+                        <div className="text-center text-xs font-bold text-gray-500 uppercase">{t}</div>
+                        <input type="number" step="1" className={inputCls + ' text-center text-xs'} value={form[`${t}_threshold_pct`] || ''} onChange={e => setForm({ ...form, [`${t}_threshold_pct`]: parseInt(e.target.value) })} placeholder="%" />
+                        <input type="number" className={inputCls + ' text-center text-xs'} value={form[`${t}_bonus`] || ''} onChange={e => setForm({ ...form, [`${t}_bonus`]: parseInt(e.target.value) })} placeholder="Rp" />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-4 gap-3 mt-1 text-[10px] text-gray-400 text-center"><span>Threshold %</span><span>Threshold %</span><span>Threshold %</span><span>Threshold %</span></div>
+                  <div className="grid grid-cols-4 gap-3 text-[10px] text-gray-400 text-center"><span>Bonus Rp</span><span>Bonus Rp</span><span>Bonus Rp</span><span>Bonus Rp</span></div>
+                </div>
+              </div>}
+
+              {modal === 'sales-strategy' && <div className="space-y-4">
+                <FI label="Nama Strategy" required><input required className={inputCls} value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Q1 2026 Revenue Push" /></FI>
+                <FI label="Deskripsi"><textarea className={inputCls} rows={2} value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} /></FI>
+                <div className="grid grid-cols-3 gap-3">
+                  <FI label="Tipe Strategy"><select className={inputCls} value={form.strategy_type || 'balanced'} onChange={e => setForm({ ...form, strategy_type: e.target.value })}><option value="balanced">Balanced</option><option value="revenue_focus">Revenue Focus</option><option value="volume_focus">Volume Focus</option><option value="coverage">Coverage</option><option value="penetration">Penetration</option><option value="retention">Retention</option></select></FI>
+                  <FI label="Periode"><select className={inputCls} value={form.period_type || 'monthly'} onChange={e => setForm({ ...form, period_type: e.target.value })}><option value="monthly">Bulanan</option><option value="quarterly">Kuartalan</option><option value="yearly">Tahunan</option></select></FI>
+                  <FI label="Tahun"><input type="number" className={inputCls} value={form.year || new Date().getFullYear()} onChange={e => setForm({ ...form, year: parseInt(e.target.value) })} /></FI>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-600">KPI Parameters</span>
+                    <button type="button" onClick={() => setForm({ ...form, kpis: [...(form.kpis || []), { kpi_name: '', kpi_type: 'revenue', target_value: 0, weight: 0, unit: '' }] })} className="text-xs text-blue-600 hover:underline">+ Tambah KPI</button>
+                  </div>
+                  <div className="space-y-3">
+                    {(form.kpis || []).map((k: any, ki: number) => (
+                      <div key={ki} className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs font-bold text-gray-500">KPI #{ki + 1}</span>
+                          {form.kpis.length > 1 && <button type="button" onClick={() => { const kpis = form.kpis.filter((_: any, i: number) => i !== ki); setForm({ ...form, kpis }); }} className="text-xs text-red-400 hover:text-red-600">Hapus</button>}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                          <input className={inputCls} placeholder="Nama KPI (e.g. Revenue)" value={k.kpi_name || ''} onChange={e => { const kpis = [...form.kpis]; kpis[ki] = { ...kpis[ki], kpi_name: e.target.value }; setForm({ ...form, kpis }); }} />
+                          <select className={inputCls} value={k.kpi_type || 'revenue'} onChange={e => { const kpis = [...form.kpis]; kpis[ki] = { ...kpis[ki], kpi_type: e.target.value }; setForm({ ...form, kpis }); }}>
+                            <option value="revenue">Revenue</option><option value="volume">Volume</option><option value="outlet_count">Outlet Count</option><option value="visit_count">Visit Count</option><option value="new_customer">New Customer</option><option value="effective_call">Effective Call</option><option value="product_mix">Product Mix</option><option value="collection">Collection</option>
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <input type="number" className={inputCls} placeholder="Target" value={k.target_value || ''} onChange={e => { const kpis = [...form.kpis]; kpis[ki] = { ...kpis[ki], target_value: parseFloat(e.target.value) }; setForm({ ...form, kpis }); }} />
+                          <input type="number" className={inputCls} placeholder="Bobot (%)" value={k.weight || ''} onChange={e => { const kpis = [...form.kpis]; kpis[ki] = { ...kpis[ki], weight: parseFloat(e.target.value) }; setForm({ ...form, kpis }); }} />
+                          <input className={inputCls} placeholder="Unit (Rp/pcs)" value={k.unit || ''} onChange={e => { const kpis = [...form.kpis]; kpis[ki] = { ...kpis[ki], unit: e.target.value }; setForm({ ...form, kpis }); }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {form.kpis?.length > 0 && <div className="text-xs text-gray-400 mt-1">Total Bobot: <strong>{(form.kpis || []).reduce((s: number, k: any) => s + (parseFloat(k.weight) || 0), 0)}%</strong> (harus 100%)</div>}
+                </div>
               </div>}
 
               {modal === 'crm-customer' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3943,6 +4508,53 @@ export default function SFAUnifiedPage() {
                   {aiModelCatalog.filter((m: any) => !form.provider || m.provider === form.provider).map((m: any) => <option key={m.model_id} value={m.model_id}>{m.name}</option>)}
                 </select></FI>
                 <FI label="API Key" span={2}><input className={inputCls} type="password" value={form.api_key_ref || ''} onChange={e => setForm({ ...form, api_key_ref: e.target.value })} placeholder="sk-... (opsional, bisa di env)" /></FI>
+              </div>}
+
+              {modal === 'add-currency' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FI label="Kode (3 huruf)" required><input required className={inputCls} maxLength={10} value={form.code || ''} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="USD" /></FI>
+                <FI label="Nama Mata Uang" required><input required className={inputCls} value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="US Dollar" /></FI>
+                <FI label="Simbol"><input className={inputCls} value={form.symbol || ''} onChange={e => setForm({ ...form, symbol: e.target.value })} placeholder="$" /></FI>
+                <FI label="Jumlah Desimal"><input type="number" className={inputCls} min={0} max={6} value={form.decimal_places ?? 2} onChange={e => setForm({ ...form, decimal_places: parseInt(e.target.value) })} /></FI>
+                <FI label="Pemisah Ribuan"><select className={inputCls} value={form.thousand_separator || '.'} onChange={e => setForm({ ...form, thousand_separator: e.target.value })}><option value=".">Titik (.)</option><option value=",">Koma (,)</option><option value=" ">Spasi</option></select></FI>
+                <FI label="Pemisah Desimal"><select className={inputCls} value={form.decimal_separator || ','} onChange={e => setForm({ ...form, decimal_separator: e.target.value })}><option value=",">Koma (,)</option><option value=".">Titik (.)</option></select></FI>
+                <FI label="Posisi Simbol"><select className={inputCls} value={form.symbol_position || 'before'} onChange={e => setForm({ ...form, symbol_position: e.target.value })}><option value="before">Sebelum (Rp 100)</option><option value="after">Sesudah (100 €)</option></select></FI>
+                <FI label="Jadikan Default"><label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.is_default || false} onChange={e => setForm({ ...form, is_default: e.target.checked })} className="rounded border-gray-300" /><span className="text-sm text-gray-700">Default Currency</span></label></FI>
+              </div>}
+
+              {modal === 'add-rate' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FI label="Dari Currency" required><select required className={inputCls} value={form.from_currency || ''} onChange={e => setForm({ ...form, from_currency: e.target.value })}><option value="">Pilih</option>{currencies.filter((c: any) => c.is_active).map((c: any) => <option key={c.code} value={c.code}>{c.code} - {c.name}</option>)}</select></FI>
+                <FI label="Ke Currency" required><select required className={inputCls} value={form.to_currency || ''} onChange={e => setForm({ ...form, to_currency: e.target.value })}><option value="">Pilih</option>{currencies.filter((c: any) => c.is_active).map((c: any) => <option key={c.code} value={c.code}>{c.code} - {c.name}</option>)}</select></FI>
+                <FI label="Rate" required><input required type="number" step="0.000001" className={inputCls} value={form.rate || ''} onChange={e => setForm({ ...form, rate: parseFloat(e.target.value) })} placeholder="16250.00" /></FI>
+                <FI label="Tanggal Berlaku"><input type="date" className={inputCls} value={form.effective_date || new Date().toISOString().slice(0, 10)} onChange={e => setForm({ ...form, effective_date: e.target.value })} /></FI>
+                <FI label="Tanggal Berakhir"><input type="date" className={inputCls} value={form.expiry_date || ''} onChange={e => setForm({ ...form, expiry_date: e.target.value })} /></FI>
+                <FI label="Sumber"><select className={inputCls} value={form.source || 'manual'} onChange={e => setForm({ ...form, source: e.target.value })}><option value="manual">Manual</option><option value="api">API</option><option value="bank">Bank</option></select></FI>
+                <FI label="Catatan" span={2}><input className={inputCls} value={form.notes || ''} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Catatan opsional" /></FI>
+              </div>}
+
+              {modal === 'add-tax' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FI label="Kode" required><input required className={inputCls} value={form.code || ''} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="PPN" /></FI>
+                <FI label="Nama Pajak" required><input required className={inputCls} value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="PPN 11%" /></FI>
+                <FI label="Tipe Pajak"><select className={inputCls} value={form.tax_type || 'vat'} onChange={e => setForm({ ...form, tax_type: e.target.value })}><option value="vat">VAT / PPN</option><option value="income">PPh (Income)</option><option value="withholding">Withholding</option><option value="service">Service Tax</option></select></FI>
+                <FI label="Tarif (%)" required><input required type="number" step="0.01" className={inputCls} value={form.rate ?? 0} onChange={e => setForm({ ...form, rate: parseFloat(e.target.value) })} placeholder="11" /></FI>
+                <FI label="Berlaku Untuk"><select className={inputCls} value={form.applies_to || 'all'} onChange={e => setForm({ ...form, applies_to: e.target.value })}><option value="all">Semua</option><option value="product">Produk</option><option value="service">Jasa</option></select></FI>
+                <FI label="Opsi"><div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.is_inclusive || false} onChange={e => setForm({ ...form, is_inclusive: e.target.checked })} className="rounded border-gray-300" /><span className="text-sm text-gray-700">Pajak Inklusif (sudah termasuk harga)</span></label>
+                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.is_default || false} onChange={e => setForm({ ...form, is_default: e.target.checked })} className="rounded border-gray-300" /><span className="text-sm text-gray-700">Jadikan Default</span></label>
+                </div></FI>
+              </div>}
+
+              {modal === 'add-payment-term' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FI label="Kode" required><input required className={inputCls} value={form.code || ''} onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="NET30" /></FI>
+                <FI label="Nama" required><input required className={inputCls} value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Net 30 Hari" /></FI>
+                <FI label="Deskripsi" span={2}><input className={inputCls} value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Jatuh tempo 30 hari setelah invoice" /></FI>
+                <FI label="Jatuh Tempo (hari)"><input type="number" className={inputCls} min={0} value={form.days_due ?? 0} onChange={e => setForm({ ...form, days_due: parseInt(e.target.value) })} /></FI>
+                <FI label="Diskon Early Payment (%)"><input type="number" step="0.01" className={inputCls} min={0} value={form.discount_percentage ?? 0} onChange={e => setForm({ ...form, discount_percentage: parseFloat(e.target.value) })} /></FI>
+                <FI label="Bayar Dalam (hari) untuk Diskon"><input type="number" className={inputCls} min={0} value={form.discount_days ?? 0} onChange={e => setForm({ ...form, discount_days: parseInt(e.target.value) })} /></FI>
+                <FI label="Tipe Denda Keterlambatan"><select className={inputCls} value={form.late_fee_type || 'none'} onChange={e => setForm({ ...form, late_fee_type: e.target.value })}><option value="none">Tidak Ada</option><option value="percentage">Persentase (%)</option><option value="flat">Nominal Tetap (Rp)</option></select></FI>
+                {form.late_fee_type && form.late_fee_type !== 'none' && (
+                  <FI label={form.late_fee_type === 'percentage' ? 'Denda (%)' : 'Denda (Rp)'}><input type="number" step="0.01" className={inputCls} min={0} value={form.late_fee_value ?? 0} onChange={e => setForm({ ...form, late_fee_value: parseFloat(e.target.value) })} /></FI>
+                )}
+                <FI label="Opsi"><label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={form.is_default || false} onChange={e => setForm({ ...form, is_default: e.target.checked })} className="rounded border-gray-300" /><span className="text-sm text-gray-700">Jadikan Default</span></label></FI>
               </div>}
 
               <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">

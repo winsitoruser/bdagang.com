@@ -579,6 +579,178 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         return ok(res, { data: { summary, topAchievers, teamPerformance } });
       }
 
+      // ═══════════════════════════════════════
+      // MULTI-CURRENCY
+      // ═══════════════════════════════════════
+      case 'currencies': {
+        const rows = await q(`SELECT * FROM sfa_currencies WHERE tenant_id = :tid ORDER BY sort_order, code`, { tid });
+        return ok(res, { data: rows });
+      }
+      case 'create-currency': {
+        if (req.method !== 'POST') return err(res, 'POST only', 405);
+        const cc = b;
+        if (!cc.code || !cc.name) return err(res, 'code dan name wajib');
+        await qExec(`INSERT INTO sfa_currencies (id,tenant_id,code,name,symbol,decimal_places,thousand_separator,decimal_separator,symbol_position,is_default,sort_order,created_by) VALUES (gen_random_uuid(),:tid,:code,:name,:sym,:dp,:ts,:ds,:sp,:def,:so,:uid)`,
+          { tid, code: cc.code.toUpperCase(), name: cc.name, sym: cc.symbol || '', dp: cc.decimal_places ?? 2, ts: cc.thousand_separator || '.', ds: cc.decimal_separator || ',', sp: cc.symbol_position || 'before', def: cc.is_default || false, so: cc.sort_order || 99, uid });
+        if (cc.is_default) await qExec(`UPDATE sfa_currencies SET is_default = false WHERE tenant_id = :tid AND code != :code`, { tid, code: cc.code.toUpperCase() });
+        return ok(res, { message: 'Currency ditambahkan' });
+      }
+      case 'update-currency': {
+        if (req.method !== 'PUT') return err(res, 'PUT only', 405);
+        const { id: curId, ...curF } = b;
+        const curAllowed = ['name', 'symbol', 'decimal_places', 'thousand_separator', 'decimal_separator', 'symbol_position', 'is_default', 'is_active', 'sort_order'];
+        const curSets = Object.keys(curF).filter(k => curAllowed.includes(k)).map(k => `${k}=:${k}`);
+        if (curSets.length === 0) return err(res, 'Tidak ada perubahan');
+        await qExec(`UPDATE sfa_currencies SET ${curSets.join(',')}, updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, { ...curF, id: curId, uid, tid });
+        if (curF.is_default) await qExec(`UPDATE sfa_currencies SET is_default = false WHERE tenant_id = :tid AND id != :id`, { tid, id: curId });
+        return ok(res, { message: 'Currency diperbarui' });
+      }
+      case 'delete-currency': {
+        if (req.method !== 'DELETE') return err(res, 'DELETE only', 405);
+        await qExec(`DELETE FROM sfa_currencies WHERE id = :id AND tenant_id = :tid AND is_default = false`, { id: req.query.id, tid });
+        return ok(res, { message: 'Currency dihapus' });
+      }
+
+      // ── Exchange Rates ──
+      case 'exchange-rates': {
+        const rows = await q(`SELECT * FROM sfa_exchange_rates WHERE tenant_id = :tid AND is_active = true ORDER BY from_currency, to_currency, effective_date DESC`, { tid });
+        return ok(res, { data: rows });
+      }
+      case 'save-exchange-rate': {
+        if (req.method !== 'POST') return err(res, 'POST only', 405);
+        const er = b;
+        if (!er.from_currency || !er.to_currency || !er.rate) return err(res, 'from_currency, to_currency, dan rate wajib');
+        if (er.id) {
+          await qExec(`UPDATE sfa_exchange_rates SET rate=:rate, effective_date=:ed, expiry_date=:exp, source=:src, notes=:notes, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`,
+            { rate: er.rate, ed: er.effective_date || new Date().toISOString().slice(0, 10), exp: er.expiry_date || null, src: er.source || 'manual', notes: er.notes, id: er.id, tid });
+        } else {
+          await qExec(`INSERT INTO sfa_exchange_rates (id,tenant_id,from_currency,to_currency,rate,effective_date,expiry_date,source,notes,created_by) VALUES (gen_random_uuid(),:tid,:from,:to,:rate,:ed,:exp,:src,:notes,:uid)`,
+            { tid, from: er.from_currency, to: er.to_currency, rate: er.rate, ed: er.effective_date || new Date().toISOString().slice(0, 10), exp: er.expiry_date || null, src: er.source || 'manual', notes: er.notes, uid });
+        }
+        return ok(res, { message: 'Exchange rate disimpan' });
+      }
+      case 'delete-exchange-rate': {
+        if (req.method !== 'DELETE') return err(res, 'DELETE only', 405);
+        await qExec(`DELETE FROM sfa_exchange_rates WHERE id = :id AND tenant_id = :tid`, { id: req.query.id, tid });
+        return ok(res, { message: 'Exchange rate dihapus' });
+      }
+
+      // ═══════════════════════════════════════
+      // TAX SETTINGS
+      // ═══════════════════════════════════════
+      case 'tax-settings': {
+        const rows = await q(`SELECT * FROM sfa_tax_settings WHERE tenant_id = :tid ORDER BY sort_order, code`, { tid });
+        return ok(res, { data: rows });
+      }
+      case 'save-tax': {
+        if (req.method !== 'POST') return err(res, 'POST only', 405);
+        const tx = b;
+        if (!tx.code || !tx.name) return err(res, 'code dan name wajib');
+        if (tx.id) {
+          const txAllowed = ['name', 'tax_type', 'rate', 'is_inclusive', 'is_compound', 'applies_to', 'effective_from', 'effective_to', 'is_default', 'is_active', 'sort_order'];
+          const txSets = Object.keys(tx).filter(k => txAllowed.includes(k)).map(k => `${k}=:${k}`);
+          if (txSets.length > 0) await qExec(`UPDATE sfa_tax_settings SET ${txSets.join(',')}, updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, { ...tx, uid, tid });
+        } else {
+          await qExec(`INSERT INTO sfa_tax_settings (id,tenant_id,code,name,tax_type,rate,is_inclusive,is_compound,applies_to,is_default,sort_order,created_by) VALUES (gen_random_uuid(),:tid,:code,:name,:tt,:rate,:incl,:comp,:ap,:def,:so,:uid)`,
+            { tid, code: tx.code, name: tx.name, tt: tx.tax_type || 'vat', rate: tx.rate || 0, incl: tx.is_inclusive || false, comp: tx.is_compound || false, ap: tx.applies_to || 'all', def: tx.is_default || false, so: tx.sort_order || 99, uid });
+        }
+        return ok(res, { message: 'Tax setting disimpan' });
+      }
+      case 'delete-tax': {
+        if (req.method !== 'DELETE') return err(res, 'DELETE only', 405);
+        await qExec(`DELETE FROM sfa_tax_settings WHERE id = :id AND tenant_id = :tid`, { id: req.query.id, tid });
+        return ok(res, { message: 'Tax setting dihapus' });
+      }
+
+      // ═══════════════════════════════════════
+      // NUMBERING FORMATS
+      // ═══════════════════════════════════════
+      case 'numbering-formats': {
+        const rows = await q(`SELECT * FROM sfa_numbering_formats WHERE tenant_id = :tid ORDER BY entity_type`, { tid });
+        return ok(res, { data: rows });
+      }
+      case 'save-numbering-format': {
+        if (req.method !== 'POST') return err(res, 'POST only', 405);
+        const nf = b;
+        if (!nf.entity_type) return err(res, 'entity_type wajib');
+        const sample = `${nf.prefix || ''}${nf.separator || '-'}${nf.date_format === 'YYYYMM' ? '202603' : nf.date_format === 'YYMM' ? '2603' : nf.date_format === 'YYYY' ? '2026' : ''}${nf.separator || '-'}${'0'.repeat(Math.max(0, (nf.counter_length || 4) - 1))}1`;
+        if (nf.id) {
+          await qExec(`UPDATE sfa_numbering_formats SET prefix=:prefix, suffix=:suffix, separator=:sep, date_format=:df, counter_length=:cl, reset_period=:rp, sample_output=:sample, updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`,
+            { prefix: nf.prefix || '', suffix: nf.suffix || '', sep: nf.separator || '-', df: nf.date_format || 'YYYYMM', cl: nf.counter_length || 4, rp: nf.reset_period || 'monthly', sample, id: nf.id, uid, tid });
+        } else {
+          await qExec(`INSERT INTO sfa_numbering_formats (id,tenant_id,entity_type,prefix,suffix,separator,date_format,counter_length,reset_period,sample_output,created_by) VALUES (gen_random_uuid(),:tid,:et,:prefix,:suffix,:sep,:df,:cl,:rp,:sample,:uid)`,
+            { tid, et: nf.entity_type, prefix: nf.prefix || '', suffix: nf.suffix || '', sep: nf.separator || '-', df: nf.date_format || 'YYYYMM', cl: nf.counter_length || 4, rp: nf.reset_period || 'monthly', sample, uid });
+        }
+        return ok(res, { message: 'Format nomor disimpan' });
+      }
+
+      // ═══════════════════════════════════════
+      // PAYMENT TERMS
+      // ═══════════════════════════════════════
+      case 'payment-terms': {
+        const rows = await q(`SELECT * FROM sfa_payment_terms WHERE tenant_id = :tid ORDER BY sort_order, code`, { tid });
+        return ok(res, { data: rows });
+      }
+      case 'save-payment-term': {
+        if (req.method !== 'POST') return err(res, 'POST only', 405);
+        const pt = b;
+        if (!pt.code || !pt.name) return err(res, 'code dan name wajib');
+        if (pt.id) {
+          const ptAllowed = ['name', 'description', 'days_due', 'discount_days', 'discount_percentage', 'late_fee_type', 'late_fee_value', 'is_default', 'is_active', 'sort_order'];
+          const ptSets = Object.keys(pt).filter(k => ptAllowed.includes(k)).map(k => `${k}=:${k}`);
+          if (ptSets.length > 0) await qExec(`UPDATE sfa_payment_terms SET ${ptSets.join(',')}, updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, { ...pt, uid, tid });
+        } else {
+          await qExec(`INSERT INTO sfa_payment_terms (id,tenant_id,code,name,description,days_due,discount_days,discount_percentage,late_fee_type,late_fee_value,is_default,sort_order,created_by) VALUES (gen_random_uuid(),:tid,:code,:name,:desc,:dd,:disc_d,:disc_p,:lft,:lfv,:def,:so,:uid)`,
+            { tid, code: pt.code, name: pt.name, desc: pt.description || '', dd: pt.days_due || 0, disc_d: pt.discount_days || 0, disc_p: pt.discount_percentage || 0, lft: pt.late_fee_type || 'none', lfv: pt.late_fee_value || 0, def: pt.is_default || false, so: pt.sort_order || 99, uid });
+        }
+        if (pt.is_default) await qExec(`UPDATE sfa_payment_terms SET is_default = false WHERE tenant_id = :tid AND id != :id`, { tid, id: pt.id || 'none' });
+        return ok(res, { message: 'Payment term disimpan' });
+      }
+      case 'delete-payment-term': {
+        if (req.method !== 'DELETE') return err(res, 'DELETE only', 405);
+        await qExec(`DELETE FROM sfa_payment_terms WHERE id = :id AND tenant_id = :tid AND is_default = false`, { id: req.query.id, tid });
+        return ok(res, { message: 'Payment term dihapus' });
+      }
+
+      // ═══════════════════════════════════════
+      // BUSINESS SETTINGS (key-value)
+      // ═══════════════════════════════════════
+      case 'business-settings': {
+        const rows = await q(`SELECT * FROM sfa_business_settings WHERE tenant_id = :tid ORDER BY category, setting_key`, { tid });
+        return ok(res, { data: rows });
+      }
+      case 'update-business-setting': {
+        if (req.method !== 'PUT') return err(res, 'PUT only', 405);
+        const { id: bsId, setting_value: bsVal } = b;
+        if (!bsId) return err(res, 'id wajib');
+        await qExec(`UPDATE sfa_business_settings SET setting_value=:val, updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, { val: bsVal, id: bsId, uid, tid });
+        return ok(res, { message: 'Setting diperbarui' });
+      }
+      case 'bulk-update-business-settings': {
+        if (req.method !== 'PUT') return err(res, 'PUT only', 405);
+        const settings = b.settings || [];
+        for (const s of settings) {
+          if (s.id && s.setting_value !== undefined) {
+            await qExec(`UPDATE sfa_business_settings SET setting_value=:val, updated_by=:uid, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`, { val: String(s.setting_value), id: s.id, uid, tid });
+          }
+        }
+        return ok(res, { message: `${settings.length} setting diperbarui` });
+      }
+
+      // ═══════════════════════════════════════
+      // SETTINGS OVERVIEW
+      // ═══════════════════════════════════════
+      case 'settings-overview': {
+        const [currencies] = await q(`SELECT COUNT(*) as total, SUM(CASE WHEN is_active THEN 1 ELSE 0 END) as active FROM sfa_currencies WHERE tenant_id = :tid`, { tid });
+        const [rates] = await q(`SELECT COUNT(*) as total FROM sfa_exchange_rates WHERE tenant_id = :tid AND is_active = true`, { tid });
+        const [taxes] = await q(`SELECT COUNT(*) as total FROM sfa_tax_settings WHERE tenant_id = :tid AND is_active = true`, { tid });
+        const [numFmt] = await q(`SELECT COUNT(*) as total FROM sfa_numbering_formats WHERE tenant_id = :tid AND is_active = true`, { tid });
+        const [payTerms] = await q(`SELECT COUNT(*) as total FROM sfa_payment_terms WHERE tenant_id = :tid AND is_active = true`, { tid });
+        const [bizSettings] = await q(`SELECT COUNT(*) as total FROM sfa_business_settings WHERE tenant_id = :tid`, { tid });
+        const defCurrency = await q(`SELECT code, symbol, name FROM sfa_currencies WHERE tenant_id = :tid AND is_default = true LIMIT 1`, { tid });
+        return ok(res, { data: { currencies, rates, taxes, numFmt, payTerms, bizSettings, defaultCurrency: defCurrency[0] || null } });
+      }
+
       default:
         return err(res, `Unknown action: ${action}`);
     }

@@ -170,6 +170,11 @@ db.SfaApprovalStep = require('./SfaApprovalStep')(sequelize);
 db.SfaApprovalRequest = require('./SfaApprovalRequest')(sequelize);
 db.SfaGeofence = require('./SfaGeofence')(sequelize);
 db.SfaProductCommission = require('./SfaProductCommission')(sequelize);
+db.SfaCommissionGroup = require('./SfaCommissionGroup')(sequelize);
+db.SfaCommissionGroupProduct = require('./SfaCommissionGroupProduct')(sequelize);
+db.SfaOutletTarget = require('./SfaOutletTarget')(sequelize);
+db.SfaSalesStrategy = require('./SfaSalesStrategy')(sequelize);
+db.SfaStrategyKpi = require('./SfaStrategyKpi')(sequelize);
 
 // Marketing Models
 db.MktCampaign = require('./MktCampaign')(sequelize);

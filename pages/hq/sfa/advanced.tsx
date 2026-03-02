@@ -53,6 +53,7 @@ export default function SFAAdvancedPage() {
   const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
   const [geofences, setGeofences] = useState<any[]>([]);
   const [commissions, setCommissions] = useState<any[]>([]);
+  const [inventoryProducts, setInventoryProducts] = useState<any[]>([]);
 
   // Form states
   const [foForm, setFoForm] = useState<any>({ customer_name: '', items: [] });
@@ -96,8 +97,9 @@ export default function SFAAdvancedPage() {
         const r = await api('geofences');
         if (r.success) setGeofences(r.data);
       } else if (tab === 'commission') {
-        const r = await api('product-commissions');
+        const [r, rp] = await Promise.all([api('product-commissions'), api('inventory-products')]);
         if (r.success) setCommissions(r.data);
+        if (rp.success) setInventoryProducts(rp.data || []);
       }
     } catch (e) { console.error(e); }
     setLoading(false);
@@ -613,10 +615,22 @@ export default function SFAAdvancedPage() {
                 {/* Commission Modal */}
                 {modal === 'commission' && (
                   <form onSubmit={handleCreateCommission} className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><label className="text-xs font-medium text-gray-600">Nama Produk *</label><input className="w-full border rounded-lg px-3 py-2 text-sm" value={comForm.product_name} onChange={e => setComForm({ ...comForm, product_name: e.target.value })} required /></div>
-                      <div><label className="text-xs font-medium text-gray-600">SKU</label><input className="w-full border rounded-lg px-3 py-2 text-sm" value={comForm.product_sku || ''} onChange={e => setComForm({ ...comForm, product_sku: e.target.value })} /></div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-600">Pilih Produk dari Inventory *</label>
+                      <select className="w-full border rounded-lg px-3 py-2 text-sm" required value={comForm.product_id || ''} onChange={e => {
+                        const p = inventoryProducts.find((x: any) => String(x.id) === e.target.value);
+                        if (p) setComForm({ ...comForm, product_id: p.id, product_name: p.name, product_sku: p.sku || '', category_name: p.category || '' });
+                        else setComForm({ ...comForm, product_id: '', product_name: '', product_sku: '', category_name: '' });
+                      }}>
+                        <option value="">-- Pilih Produk --</option>
+                        {inventoryProducts.map((p: any) => <option key={p.id} value={p.id}>{p.name} {p.sku ? `(${p.sku})` : ''} — {p.category || 'Tanpa Kategori'}</option>)}
+                      </select>
                     </div>
+                    {comForm.product_name && <div className="bg-blue-50 rounded-lg px-3 py-2 text-xs text-blue-800 flex gap-3">
+                      <span><strong>Produk:</strong> {comForm.product_name}</span>
+                      <span><strong>SKU:</strong> {comForm.product_sku || '-'}</span>
+                      <span><strong>Kategori:</strong> {comForm.category_name || '-'}</span>
+                    </div>}
                     <div className="grid grid-cols-3 gap-3">
                       <div><label className="text-xs font-medium text-gray-600">Tipe Komisi</label><select className="w-full border rounded-lg px-3 py-2 text-sm" value={comForm.commission_type} onChange={e => setComForm({ ...comForm, commission_type: e.target.value })}><option value="percentage">Persentase</option><option value="flat">Flat Amount</option><option value="tiered">Tiered</option></select></div>
                       <div><label className="text-xs font-medium text-gray-600">Rate (%)</label><input type="number" step="0.01" className="w-full border rounded-lg px-3 py-2 text-sm" value={comForm.commission_rate} onChange={e => setComForm({ ...comForm, commission_rate: parseFloat(e.target.value) })} /></div>

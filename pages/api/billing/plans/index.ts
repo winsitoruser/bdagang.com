@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
-const db = require('../../../models');
+const db = require('../../../../models');
 
 /**
  * API endpoint for plan management

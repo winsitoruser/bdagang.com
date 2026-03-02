@@ -628,6 +628,127 @@ export class ModuleRegistry {
         { name: 'MarketingPage', path: '/pages/hq/marketing/index', type: 'page' }
       ]
     });
+
+    // ─── Fleet Management System (FMS) ───
+    this.registerModule({
+      id: 'fms',
+      code: 'FMS',
+      name: 'Fleet Management System',
+      description: 'Manajemen armada kendaraan, driver, maintenance, BBM, rental, inspeksi, biaya operasional, dan dokumen',
+      category: 'addon',
+      version: '1.0.0',
+      dependencies: [],
+      optionalDependencies: ['HRIS', 'TMS'],
+      businessTypeConfig: {
+        logistics: { isRequired: true, isRecommended: true, isOptional: false, features: ['vehicles', 'drivers', 'maintenance', 'fuel', 'inspections', 'costs', 'gps_tracking'], defaultConfig: {} },
+        distribution: { isRequired: true, isRecommended: true, isOptional: false, features: ['vehicles', 'drivers', 'maintenance', 'fuel', 'costs'], defaultConfig: {} },
+        rental_bus: { isRequired: true, isRecommended: true, isOptional: false, features: ['vehicles', 'drivers', 'maintenance', 'fuel', 'rentals', 'inspections', 'costs', 'documents'], defaultConfig: {} },
+        rental_truck: { isRequired: true, isRecommended: true, isOptional: false, features: ['vehicles', 'drivers', 'maintenance', 'fuel', 'rentals', 'inspections', 'costs', 'documents'], defaultConfig: {} },
+        rental_car: { isRequired: true, isRecommended: true, isOptional: false, features: ['vehicles', 'drivers', 'rentals', 'maintenance', 'fuel', 'inspections', 'costs', 'documents'], defaultConfig: {} },
+        rental_heavy_equipment: { isRequired: true, isRecommended: true, isOptional: false, features: ['vehicles', 'drivers', 'maintenance', 'fuel', 'rentals', 'inspections', 'costs', 'incidents', 'tires'], defaultConfig: {} },
+        retail: { isRequired: false, isRecommended: false, isOptional: true, features: ['vehicles', 'maintenance', 'fuel'], defaultConfig: {} },
+        manufacturing: { isRequired: false, isRecommended: true, isOptional: true, features: ['vehicles', 'drivers', 'maintenance', 'fuel', 'costs'], defaultConfig: {} },
+        services: { isRequired: false, isRecommended: false, isOptional: true, features: ['vehicles', 'fuel', 'costs'], defaultConfig: {} }
+      },
+      integrationPoints: {
+        provides: [
+          { name: 'fms.vehicle.available', type: 'data', description: 'Available vehicles for assignment', schema: {} },
+          { name: 'fms.driver.available', type: 'data', description: 'Available drivers for assignment', schema: {} },
+          { name: 'fms.vehicle.status_changed', type: 'event', description: 'Vehicle status change event', schema: {} },
+          { name: 'fms.maintenance.due', type: 'event', description: 'Maintenance due alert', schema: {} },
+          { name: 'fms.document.expiring', type: 'event', description: 'Document expiry alert', schema: {} },
+          { name: 'fms.rental.created', type: 'event', description: 'New rental contract created', schema: {} }
+        ],
+        consumes: [
+          { name: 'hris.employee.data', type: 'data', description: 'Employee data for driver linking', schema: {} },
+          { name: 'tms.trip.completed', type: 'event', description: 'Trip completion for vehicle/driver stats update', schema: {} }
+        ]
+      },
+      features: [
+        { code: 'vehicles', name: 'Vehicle Management', description: 'Master data kendaraan, tracking status, assignment', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'drivers', name: 'Driver Management', description: 'Master data driver, SIM, performa, availability', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'maintenance', name: 'Maintenance & Work Orders', description: 'Preventive & corrective maintenance, scheduling, work orders', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'fuel', name: 'Fuel Management', description: 'Pencatatan BBM, analisis konsumsi per kendaraan', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'rentals', name: 'Rental Management', description: 'Kontrak sewa kendaraan (sewa masuk & keluar), pembayaran', isDefault: false, businessTypes: ['rental_bus', 'rental_truck', 'rental_car', 'rental_heavy_equipment'], config: {} },
+        { code: 'inspections', name: 'Vehicle Inspections', description: 'Pre-trip/post-trip inspections, checklist, KIR', isDefault: false, businessTypes: ['logistics', 'rental_bus', 'rental_truck', 'rental_heavy_equipment'], config: {} },
+        { code: 'incidents', name: 'Incident Management', description: 'Pencatatan kecelakaan, klaim asuransi, tindak lanjut', isDefault: false, businessTypes: ['all'], config: {} },
+        { code: 'costs', name: 'Cost Analysis', description: 'Analisis biaya operasional per kendaraan & kategori', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'documents', name: 'Document Management', description: 'Tracking STNK, BPKB, KIR, SIM, asuransi, expired alert', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'tires', name: 'Tire Management', description: 'Tracking ban, rotasi, retread, disposal', isDefault: false, businessTypes: ['logistics', 'rental_truck', 'rental_heavy_equipment'], config: {} },
+        { code: 'gps_tracking', name: 'GPS Tracking', description: 'Real-time GPS tracking, geofence, speed alerts', isDefault: false, businessTypes: ['logistics', 'distribution'], config: {} }
+      ],
+      routes: [
+        { path: '/api/hq/fms', method: 'ALL', handler: 'fmsHandler' }
+      ],
+      models: [
+        'FmsVehicle', 'FmsDriver', 'FmsMaintenanceSchedule', 'FmsMaintenanceRecord',
+        'FmsFuelRecord', 'FmsInspection', 'FmsRental', 'FmsRentalPayment',
+        'FmsDocument', 'FmsIncident', 'FmsTire', 'FmsCostRecord',
+        'FmsGpsTracking', 'FmsVehicleAssignment', 'FmsSettings'
+      ],
+      components: [
+        { name: 'FMSPage', path: '/pages/hq/fms/index', type: 'page' }
+      ]
+    });
+
+    // ─── Transportation Management System (TMS) ───
+    this.registerModule({
+      id: 'tms',
+      code: 'TMS',
+      name: 'Transportation Management System',
+      description: 'Manajemen pengiriman, trip, carrier, rute, tarif, billing, gudang, dan proof of delivery',
+      category: 'addon',
+      version: '1.0.0',
+      dependencies: [],
+      optionalDependencies: ['FMS', 'INVENTORY_CORE', 'SFA'],
+      businessTypeConfig: {
+        logistics: { isRequired: true, isRecommended: true, isOptional: false, features: ['shipments', 'trips', 'carriers', 'routes', 'billing', 'zones', 'rate_cards', 'warehouses', 'pod'], defaultConfig: {} },
+        distribution: { isRequired: true, isRecommended: true, isOptional: false, features: ['shipments', 'trips', 'routes', 'billing', 'warehouses', 'pod'], defaultConfig: {} },
+        rental_bus: { isRequired: false, isRecommended: false, isOptional: true, features: ['trips', 'routes'], defaultConfig: {} },
+        rental_truck: { isRequired: false, isRecommended: true, isOptional: true, features: ['shipments', 'trips', 'routes', 'billing'], defaultConfig: {} },
+        retail: { isRequired: false, isRecommended: false, isOptional: true, features: ['shipments', 'routes'], defaultConfig: {} },
+        manufacturing: { isRequired: false, isRecommended: true, isOptional: true, features: ['shipments', 'trips', 'carriers', 'routes', 'billing', 'warehouses'], defaultConfig: {} },
+        services: { isRequired: false, isRecommended: false, isOptional: true, features: ['shipments'], defaultConfig: {} }
+      },
+      integrationPoints: {
+        provides: [
+          { name: 'tms.shipment.created', type: 'event', description: 'New shipment order created', schema: {} },
+          { name: 'tms.shipment.delivered', type: 'event', description: 'Shipment successfully delivered', schema: {} },
+          { name: 'tms.trip.completed', type: 'event', description: 'Trip completed with delivery stats', schema: {} },
+          { name: 'tms.pod.confirmed', type: 'event', description: 'Proof of delivery confirmed', schema: {} },
+          { name: 'tms.freight_bill.created', type: 'event', description: 'Freight bill generated', schema: {} }
+        ],
+        consumes: [
+          { name: 'fms.vehicle.available', type: 'data', description: 'Get available vehicles for trip assignment', schema: {} },
+          { name: 'fms.driver.available', type: 'data', description: 'Get available drivers for trip assignment', schema: {} },
+          { name: 'inventory.stock.data', type: 'data', description: 'Stock data for shipment items', schema: {} },
+          { name: 'sfa.order.created', type: 'event', description: 'Sales order for auto-shipment creation', schema: {} }
+        ]
+      },
+      features: [
+        { code: 'shipments', name: 'Shipment Management', description: 'Order pengiriman, tracking, status lifecycle', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'trips', name: 'Trip Management', description: 'Perjalanan delivery, multi-drop, expense tracking', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'carriers', name: 'Carrier Management', description: 'Manajemen transporter, rating, rate cards', isDefault: false, businessTypes: ['logistics', 'distribution', 'manufacturing'], config: {} },
+        { code: 'routes', name: 'Route Management', description: 'Definisi rute, jarak, estimasi waktu & biaya', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'billing', name: 'Freight Billing', description: 'Tagihan pengiriman, invoice customer & carrier', isDefault: true, businessTypes: ['logistics', 'distribution'], config: {} },
+        { code: 'zones', name: 'Zone Management', description: 'Zona pengiriman untuk kalkulasi tarif', isDefault: false, businessTypes: ['logistics', 'distribution'], config: {} },
+        { code: 'rate_cards', name: 'Rate Cards', description: 'Tarif pengiriman per zona, service, & kendaraan', isDefault: false, businessTypes: ['logistics', 'distribution'], config: {} },
+        { code: 'warehouses', name: 'Warehouse/Depot', description: 'Hub, depot, cross-dock management', isDefault: false, businessTypes: ['logistics', 'distribution', 'manufacturing'], config: {} },
+        { code: 'pod', name: 'Proof of Delivery', description: 'Bukti pengiriman digital, tanda tangan, foto', isDefault: true, businessTypes: ['all'], config: {} }
+      ],
+      routes: [
+        { path: '/api/hq/tms', method: 'ALL', handler: 'tmsHandler' }
+      ],
+      models: [
+        'TmsCarrier', 'TmsCarrierRate', 'TmsRoute', 'TmsShipment', 'TmsShipmentItem',
+        'TmsTrip', 'TmsTripShipment', 'TmsTripEvent', 'TmsProofOfDelivery',
+        'TmsFreightBill', 'TmsFreightBillItem', 'TmsZone', 'TmsRateCard',
+        'TmsWarehouse', 'TmsSettings'
+      ],
+      components: [
+        { name: 'TMSPage', path: '/pages/hq/tms/index', type: 'page' }
+      ]
+    });
   }
 }
 

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-const db = require('../../../models');
-const MidtransService = require('../../../services/payment/MidtransService');
+const db = require('../../../../models');
+const MidtransService = require('../../../../services/payment/MidtransService');
 
 /**
  * Midtrans Webhook Handler

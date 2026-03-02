@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../../../auth/[...nextauth]';
+import { authOptions } from '../../../../auth/[...nextauth]';
 
-const PrinterConfig = require('../../../../../models/PrinterConfig');
+const PrinterConfig = require('../../../../../../models/PrinterConfig');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

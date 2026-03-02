@@ -134,7 +134,7 @@ export default function LeaveManagementPage() {
     setLoading(true);
     try {
       const res = await fetch('/api/hq/hris/leave-management');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) { console.error('Fetch leave data failed:', res.status); setLoading(false); return; }
       const json = await res.json();
       if (json.success) {
         setRequests(json.requests || []);

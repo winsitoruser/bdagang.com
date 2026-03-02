@@ -48,11 +48,22 @@ import {
   Network,
   Heart,
   Clock,
+  KeyRound,
   Plane,
   Briefcase,
   Megaphone,
   Gift,
   UserPlus,
+  Crosshair,
+  Zap,
+  Disc,
+  Activity,
+  AlertTriangle,
+  Send,
+  Star,
+  Timer,
+  Warehouse,
+  Gauge,
   type LucideIcon
 } from 'lucide-react';
 
@@ -99,7 +110,9 @@ export type ModuleCode =
   | 'marketplace_integration'
   | 'crm'
   | 'sfa'
-  | 'marketing';
+  | 'marketing'
+  | 'tms'
+  | 'fms';
 
 export type LayoutType = 'hq' | 'branch' | 'admin';
 
@@ -208,18 +221,58 @@ export const hqSidebarConfig: SidebarConfig = {
           ]
         },
         { 
-          id: 'fleet',
+          id: 'fms',
           name: 'Fleet Management', 
           icon: Truck,
-          modules: ['fleet'],
+          modules: ['fms'],
           children: [
-            { id: 'fleet-overview', name: 'Fleet Overview', href: '/hq/fleet', icon: Truck },
-            { id: 'fleet-kpi', name: 'KPI Dashboard', href: '/hq/fleet/kpi', icon: BarChart3 },
-            { id: 'fleet-routes', name: 'Route Management', href: '/hq/fleet/routes', icon: MapPin },
-            { id: 'fleet-tracking', name: 'GPS Tracking', href: '/hq/fleet/tracking', icon: Navigation },
-            { id: 'fleet-fuel', name: 'Fuel Management', href: '/hq/fleet/fuel', icon: Fuel },
-            { id: 'fleet-maintenance', name: 'Maintenance', href: '/hq/fleet/maintenance', icon: Wrench },
-            { id: 'fleet-costs', name: 'Cost Reporting', href: '/hq/fleet/costs', icon: TrendingUp },
+            // Utama
+            { id: 'fms-dashboard', name: 'Dashboard FMS', href: '/hq/fms', icon: LayoutDashboard },
+            { id: 'fms-vehicles', name: 'Kendaraan', href: '/hq/fms?tab=vehicles', icon: Truck },
+            { id: 'fms-drivers', name: 'Driver', href: '/hq/fms?tab=drivers', icon: Users },
+            // Operasional
+            { id: 'fms-maintenance', name: 'Maintenance', href: '/hq/fms?tab=maintenance', icon: Wrench },
+            { id: 'fms-fuel', name: 'BBM', href: '/hq/fms?tab=fuel', icon: Fuel },
+            { id: 'fms-rentals', name: 'Rental', href: '/hq/fms?tab=rentals', icon: KeyRound },
+            { id: 'fms-inspections', name: 'Inspeksi', href: '/hq/fms?tab=inspections', icon: ClipboardList },
+            { id: 'fms-incidents', name: 'Insiden', href: '/hq/fms?tab=incidents', icon: AlertTriangle },
+            // Tracking
+            { id: 'fms-gps', name: 'GPS Live', href: '/hq/fms?tab=gps', icon: Navigation },
+            { id: 'fms-geofences', name: 'Geofence', href: '/hq/fms?tab=geofences', icon: Crosshair },
+            { id: 'fms-violations', name: 'Pelanggaran', href: '/hq/fms?tab=violations', icon: Zap },
+            // Analitik
+            { id: 'fms-analytics', name: 'Fleet Analytics', href: '/hq/fms?tab=analytics', icon: BarChart3 },
+            { id: 'fms-tires', name: 'Manajemen Ban', href: '/hq/fms?tab=tires', icon: Disc },
+            { id: 'fms-costs', name: 'Biaya', href: '/hq/fms?tab=costs', icon: DollarSign },
+            // Admin
+            { id: 'fms-documents', name: 'Dokumen', href: '/hq/fms?tab=documents', icon: FileText },
+            { id: 'fms-reminders', name: 'Reminder', href: '/hq/fms?tab=reminders', icon: Bell },
+          ]
+        },
+        { 
+          id: 'tms',
+          name: 'Transportation Management', 
+          icon: Send,
+          modules: ['tms'],
+          children: [
+            // Utama
+            { id: 'tms-dashboard', name: 'Dashboard TMS', href: '/hq/tms', icon: LayoutDashboard },
+            { id: 'tms-shipments', name: 'Shipment', href: '/hq/tms?tab=shipments', icon: Package },
+            { id: 'tms-trips', name: 'Trip', href: '/hq/tms?tab=trips', icon: Navigation },
+            // Operasional
+            { id: 'tms-dispatch', name: 'Dispatch', href: '/hq/tms?tab=dispatch', icon: Send },
+            { id: 'tms-tracking', name: 'Tracking', href: '/hq/tms?tab=tracking', icon: Activity },
+            { id: 'tms-carriers', name: 'Carrier', href: '/hq/tms?tab=carriers', icon: Building2 },
+            { id: 'tms-routes', name: 'Rute', href: '/hq/tms?tab=routes', icon: MapPin },
+            // Analitik
+            { id: 'tms-kpi', name: 'Logistics KPI', href: '/hq/tms?tab=logistics-analytics', icon: BarChart3 },
+            { id: 'tms-carrier-scores', name: 'Carrier Score', href: '/hq/tms?tab=carrier-scores', icon: Star },
+            { id: 'tms-sla', name: 'Delivery SLA', href: '/hq/tms?tab=delivery-sla', icon: Timer },
+            // Admin
+            { id: 'tms-billing', name: 'Billing', href: '/hq/tms?tab=billing', icon: Receipt },
+            { id: 'tms-zones', name: 'Zona', href: '/hq/tms?tab=zones', icon: Globe },
+            { id: 'tms-rate-cards', name: 'Tarif', href: '/hq/tms?tab=rate-cards', icon: CreditCard },
+            { id: 'tms-warehouses', name: 'Gudang', href: '/hq/tms?tab=warehouses', icon: Warehouse },
           ]
         }
       ]
@@ -652,10 +705,26 @@ export function flattenMenuItems(groups: MenuGroup[]): MenuItem[] {
   return items;
 }
 
-export function findActiveMenuItem(groups: MenuGroup[], pathname: string): MenuItem | undefined {
+export function findActiveMenuItem(groups: MenuGroup[], pathname: string, query?: Record<string, string | string[] | undefined>): MenuItem | undefined {
   const allItems = flattenMenuItems(groups);
+  // First try exact match including query params
+  if (query) {
+    const qMatch = allItems.find(item => {
+      if (!item.href || !item.href.includes('?')) return false;
+      const [path, qs] = item.href.split('?');
+      if (pathname !== path) return false;
+      const params = new URLSearchParams(qs);
+      for (const [k, v] of params.entries()) {
+        if (query[k] !== v) return false;
+      }
+      return true;
+    });
+    if (qMatch) return qMatch;
+  }
+  // Fallback to pathname-only match (no tab query active)
   return allItems.find(item => {
     if (!item.href) return false;
+    if (item.href.includes('?')) return false; // skip query-based items for pathname-only match
     return pathname === item.href || pathname.startsWith(item.href + '/');
   });
 }

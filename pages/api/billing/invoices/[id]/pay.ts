@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
-const db = require('../../../../models');
-const MidtransService = require('../../../../services/payment/MidtransService');
+const db = require('../../../../../models');
+const MidtransService = require('../../../../../services/payment/MidtransService');
 
 /**
  * API endpoint for invoice payment

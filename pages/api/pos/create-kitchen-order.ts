@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getSession } from 'next-auth/react';
-import db from '../../../../models';
+import db from '../../../models';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
