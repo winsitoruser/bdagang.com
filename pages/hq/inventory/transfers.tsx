@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import HQLayout from '../../../components/hq/HQLayout';
+import { toast } from 'react-hot-toast';
 import {
   ArrowRightLeft,
   RefreshCw,
@@ -190,6 +191,7 @@ export default function TransferManagement() {
       t.id === transfer.id ? { ...t, status: 'approved' as const, approvedDate: new Date().toISOString(), approvedBy: 'Admin HQ' } : t
     ));
     setShowDetailModal(false);
+    toast.success(`Transfer ${transfer.transferNumber} approved`);
   };
 
   const handleReject = (transfer: Transfer) => {
@@ -197,6 +199,7 @@ export default function TransferManagement() {
       t.id === transfer.id ? { ...t, status: 'rejected' as const } : t
     ));
     setShowDetailModal(false);
+    toast.error(`Transfer ${transfer.transferNumber} rejected`);
   };
 
   const handleShip = (transfer: Transfer) => {
@@ -204,6 +207,7 @@ export default function TransferManagement() {
       t.id === transfer.id ? { ...t, status: 'shipped' as const, shippedDate: new Date().toISOString() } : t
     ));
     setShowDetailModal(false);
+    toast.success(`Transfer ${transfer.transferNumber} shipped`);
   };
 
   const handleReceive = (transfer: Transfer) => {
@@ -211,6 +215,7 @@ export default function TransferManagement() {
       t.id === transfer.id ? { ...t, status: 'received' as const, receivedDate: new Date().toISOString() } : t
     ));
     setShowDetailModal(false);
+    toast.success(`Transfer ${transfer.transferNumber} received`);
   };
 
   return (
@@ -227,17 +232,18 @@ export default function TransferManagement() {
               <p className="text-gray-500">Kelola transfer stok antar cabang</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <Download className="w-4 h-4" />
-              Export
+          <div className="flex items-center gap-2">
+            <button onClick={() => {
+              const rows = filteredTransfers.map(t => `${t.transferNumber},${t.fromBranch.name},${t.toBranch.name},${t.totalItems},${t.totalQuantity},${t.status},${t.priority},${t.requestDate}`);
+              const csv = `TransferNo,From,To,Items,Qty,Status,Priority,Date\n${rows.join('\n')}`;
+              const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url; a.download = 'transfers-report.csv'; a.click(); URL.revokeObjectURL(url);
+              toast.success('Export transfer berhasil');
+            }} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <Download className="w-4 h-4" /> Export
             </button>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              Buat Transfer
+            <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              <Plus className="w-4 h-4" /> Buat Transfer
             </button>
           </div>
         </div>

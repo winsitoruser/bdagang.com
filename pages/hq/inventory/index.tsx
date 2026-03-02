@@ -2,35 +2,21 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import HQLayout from '../../../components/hq/HQLayout';
 import ProductFormModal from '../../../components/hq/inventory/ProductFormModal';
+import { toast } from 'react-hot-toast';
 import {
-  Package,
-  RefreshCw,
-  Download,
-  Search,
-  AlertTriangle,
-  TrendingUp,
-  TrendingDown,
-  Building2,
-  Box,
-  BarChart3,
-  ArrowUpRight,
-  ArrowDownRight,
-  Warehouse,
-  ArrowRightLeft,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Filter,
-  Eye,
-  Plus,
-  Bell,
-  ShoppingCart,
-  Truck,
-  FileText,
-  Settings,
-  ChevronRight
+  Package, RefreshCw, Download, Search, AlertTriangle, TrendingUp, TrendingDown,
+  Building2, Box, BarChart3, ArrowUpRight, ArrowDownRight, Warehouse, ArrowRightLeft,
+  Clock, CheckCircle, XCircle, Filter, Eye, Plus, Bell, ShoppingCart, Truck, FileText,
+  Settings, ChevronRight, Target, Activity, Layers, Zap, Thermometer, RotateCcw
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+
+const INDUSTRY_OPTIONS = [
+  { value: 'general', label: 'Umum' }, { value: 'fnb', label: 'F&B' },
+  { value: 'retail', label: 'Retail' }, { value: 'logistics', label: 'Logistik' },
+  { value: 'hospitality', label: 'Hospitality' }, { value: 'manufacturing', label: 'Manufaktur' },
+  { value: 'pharmacy', label: 'Farmasi' }, { value: 'distributor', label: 'Distributor' },
+];
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -126,13 +112,21 @@ export default function HQInventoryDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [showAddModal, setShowAddModal] = useState(false);
   const [branches, setBranches] = useState([]);
+  const [industry, setIndustry] = useState('general');
+  const [subTab, setSubTab] = useState<'overview' | 'kpis' | 'forecast' | 'abc'>('overview');
+  const [industryKpis, setIndustryKpis] = useState<any[]>([]);
+  const [forecast, setForecast] = useState<any[]>([]);
+  const [abcAnalysis, setAbcAnalysis] = useState<any>(null);
+  const [enhancedData, setEnhancedData] = useState<any>(null);
+  const [exporting, setExporting] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [productsRes, branchesRes] = await Promise.all([
+      const [productsRes, branchesRes, enhancedRes] = await Promise.all([
         fetch('/api/hq/inventory/products?limit=100&offset=0'),
-        fetch('/api/hq/branches?limit=100')
+        fetch('/api/hq/branches?limit=100'),
+        fetch(`/api/hq/inventory/enhanced?action=dashboard&industry=${industry}`)
       ]);
       
       if (productsRes.ok) {
@@ -189,6 +183,11 @@ export default function HQInventoryDashboard() {
         const branchData = await branchesRes.json();
         setBranches(branchData.branches || []);
       }
+
+      if (enhancedRes.ok) {
+        const eData = await enhancedRes.json();
+        setEnhancedData(eData.data || null);
+      }
     } catch (error) {
       console.error('Error fetching inventory data:', error);
       setSummary(mockSummary);
@@ -197,11 +196,56 @@ export default function HQInventoryDashboard() {
       setLoading(false);
     }
   };
+
+  const fetchKPIs = async () => {
+    try {
+      const res = await fetch(`/api/hq/inventory/enhanced?action=kpis&industry=${industry}`);
+      if (res.ok) { const d = await res.json(); setIndustryKpis(d.data?.kpis || []); }
+    } catch (e) { console.error('Error fetching KPIs:', e); }
+  };
+
+  const fetchForecast = async () => {
+    try {
+      const res = await fetch('/api/hq/inventory/enhanced?action=forecast');
+      if (res.ok) { const d = await res.json(); setForecast(d.data?.forecast || []); }
+    } catch (e) { console.error('Error fetching forecast:', e); }
+  };
+
+  const fetchABC = async () => {
+    try {
+      const res = await fetch('/api/hq/inventory/enhanced?action=abc-analysis');
+      if (res.ok) { const d = await res.json(); setAbcAnalysis(d.data || null); }
+    } catch (e) { console.error('Error fetching ABC:', e); }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const rows = branchStock.map(b => `${b.name},${b.code},${b.totalProducts},${b.totalStock},${b.stockValue},${b.lowStock},${b.outOfStock}`);
+      const csv = `Branch,Code,Products,Stock,Value,LowStock,OutOfStock\n${rows.join('\n')}`;
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `inventory-${selectedPeriod}.csv`; a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Export inventory berhasil');
+    } catch { toast.error('Export gagal'); }
+    setExporting(false);
+  };
   
   useEffect(() => {
     setMounted(true);
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (mounted) fetchData();
+  }, [industry]);
+
+  useEffect(() => {
+    if (subTab === 'kpis') fetchKPIs();
+    else if (subTab === 'forecast') fetchForecast();
+    else if (subTab === 'abc') fetchABC();
+  }, [subTab, industry]);
 
   if (!mounted) return null;
 
@@ -288,23 +332,20 @@ export default function HQInventoryDashboard() {
             <h1 className="text-2xl font-bold text-gray-900">Global Inventory Management</h1>
             <p className="text-gray-500">Monitoring dan pengelolaan stok seluruh cabang</p>
           </div>
-          <div className="flex items-center gap-3">
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            >
+          <div className="flex items-center gap-2">
+            <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               <option value="day">Hari Ini</option>
               <option value="week">Minggu Ini</option>
               <option value="month">Bulan Ini</option>
             </select>
-            <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <RefreshCw className="w-4 h-4" />
-              Sync All
+            <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Sync
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              <Download className="w-4 h-4" />
-              Export
+            <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50">
+              <Download className="w-4 h-4" /> {exporting ? 'Exporting...' : 'Export'}
             </button>
           </div>
         </div>
@@ -321,6 +362,21 @@ export default function HQInventoryDashboard() {
           ))}
         </div>
 
+        {/* Sub-Tabs */}
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+          {([
+            { v: 'overview' as const, l: 'Overview', icon: BarChart3 },
+            { v: 'kpis' as const, l: 'Industry KPIs', icon: Target },
+            { v: 'forecast' as const, l: 'Forecast & Reorder', icon: Activity },
+            { v: 'abc' as const, l: 'ABC Analysis', icon: Layers },
+          ]).map(t => (
+            <button key={t.v} onClick={() => setSubTab(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${subTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+              <t.icon className="w-4 h-4" />{t.l}
+            </button>
+          ))}
+        </div>
+
+        {subTab === 'overview' && (<>
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -566,6 +622,283 @@ export default function HQInventoryDashboard() {
             </div>
           </Link>
         </div>
+
+        {/* Enhanced KPI Cards from Enhanced API */}
+        {enhancedData?.summary && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex items-center gap-2 mb-2"><RotateCcw className="w-4 h-4 text-blue-600" /><span className="text-xs text-gray-500">Inventory Turnover</span></div>
+              <p className="text-xl font-bold text-gray-900">{enhancedData.summary.inventoryTurnover}x</p>
+              <p className="text-xs text-gray-400">per year</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex items-center gap-2 mb-2"><Clock className="w-4 h-4 text-green-600" /><span className="text-xs text-gray-500">Days on Hand</span></div>
+              <p className="text-xl font-bold text-gray-900">{enhancedData.summary.daysOnHand} hari</p>
+              <p className="text-xs text-gray-400">avg holding period</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex items-center gap-2 mb-2"><Zap className="w-4 h-4 text-purple-600" /><span className="text-xs text-gray-500">Fill Rate</span></div>
+              <p className="text-xl font-bold text-gray-900">{enhancedData.summary.fillRate}%</p>
+              <p className="text-xs text-gray-400">order fulfillment</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-4 h-4 text-red-600" /><span className="text-xs text-gray-500">Dead Stock</span></div>
+              <p className="text-xl font-bold text-gray-900">{formatCurrency(enhancedData.summary.deadStockValue)}</p>
+              <p className="text-xs text-gray-400">stok tidak bergerak</p>
+            </div>
+          </div>
+        )}
+
+        {/* Warehouse Health */}
+        {enhancedData?.warehouseHealth && (
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Thermometer className="w-5 h-5 text-blue-600" />Warehouse Health Monitor</h3>
+            <div className="grid grid-cols-3 gap-4">
+              {enhancedData.warehouseHealth.map((wh: any) => (
+                <div key={wh.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="font-medium text-gray-900">{wh.name}</p>
+                      <p className="text-xs text-gray-500">{wh.code}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${wh.score >= 90 ? 'bg-green-100 text-green-700' : wh.score >= 75 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                      Score: {wh.score}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs"><span className="text-gray-500">Capacity</span><span className="font-medium">{wh.capacity}%</span></div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5"><div className={`h-1.5 rounded-full ${wh.capacity > 90 ? 'bg-red-500' : wh.capacity > 75 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${wh.capacity}%` }} /></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-500">Temp</span><span className="font-medium">{wh.temperature}°C</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-500">Humidity</span><span className="font-medium">{wh.humidity}%</span></div>
+                    {wh.issues > 0 && <p className="text-xs text-red-600 font-medium">{wh.issues} issue(s) detected</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Reorder Suggestions */}
+        {enhancedData?.reorderSuggestions && enhancedData.reorderSuggestions.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200">
+            <div className="p-5 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-orange-600" />AI Reorder Suggestions</h3>
+              <span className="text-xs text-gray-500">{enhancedData.reorderSuggestions.length} items need reorder</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Current</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Reorder Point</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Suggested Qty</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supplier</th>
+                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Lead Time</th>
+                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Urgency</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {enhancedData.reorderSuggestions.map((item: any) => (
+                    <tr key={item.productId} className="hover:bg-gray-50">
+                      <td className="px-5 py-3"><p className="font-medium text-gray-900">{item.name}</p><p className="text-xs text-gray-500">{item.sku}</p></td>
+                      <td className="px-5 py-3 text-right font-medium text-red-600">{formatNumber(item.currentStock)}</td>
+                      <td className="px-5 py-3 text-right text-gray-600">{formatNumber(item.reorderPoint)}</td>
+                      <td className="px-5 py-3 text-right font-bold text-blue-600">{formatNumber(item.suggestedQty)}</td>
+                      <td className="px-5 py-3 text-gray-600 text-sm">{item.supplier}</td>
+                      <td className="px-5 py-3 text-center text-sm">{item.leadTimeDays}d</td>
+                      <td className="px-5 py-3 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.urgency === 'high' ? 'bg-red-100 text-red-700' : item.urgency === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+                          {item.urgency}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        </>)}
+
+        {/* ─── Industry KPIs Tab ─── */}
+        {subTab === 'kpis' && (
+          <div className="space-y-6">
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+              <p className="text-sm text-indigo-700"><strong>Industry KPIs ({INDUSTRY_OPTIONS.find(i => i.value === industry)?.label})</strong>: KPI inventori spesifik industri dengan target benchmark dan tren perubahan.</p>
+            </div>
+            {industryKpis.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {industryKpis.map((kpi: any) => {
+                  const isLowerBetter = kpi.key?.includes('waste') || kpi.key?.includes('shrinkage') || kpi.key?.includes('scrap') || kpi.key?.includes('expiry') || kpi.key?.includes('damage') || kpi.key?.includes('dead') || kpi.key?.includes('backorder') || kpi.key?.includes('return');
+                  const isGood = isLowerBetter ? kpi.actual <= kpi.target : kpi.actual >= kpi.target;
+                  return (
+                    <div key={kpi.key} className="bg-white rounded-xl border border-gray-200 p-5">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-sm text-gray-500">{kpi.label}</p>
+                        <span className={`text-xs font-medium flex items-center gap-1 ${kpi.trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {kpi.trend >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                          {Math.abs(kpi.trend)}%
+                        </span>
+                      </div>
+                      <p className="text-3xl font-bold text-gray-900">{kpi.actual}{kpi.unit === '%' || kpi.unit === 'x' ? kpi.unit : ''}</p>
+                      {kpi.unit !== '%' && kpi.unit !== 'x' && <p className="text-xs text-gray-400">{kpi.unit}</p>}
+                      <div className="mt-3 flex items-center justify-between text-xs">
+                        <span className="text-gray-500">Target: {kpi.target}{kpi.unit === '%' || kpi.unit === 'x' ? kpi.unit : ` ${kpi.unit}`}</span>
+                        <span className={`font-medium px-2 py-0.5 rounded-full ${isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {isGood ? 'On Target' : 'Below Target'}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                        <div className={`h-1.5 rounded-full ${isGood ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${Math.min((kpi.actual / kpi.target) * 100, 100)}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">Loading KPIs...</div>
+            )}
+          </div>
+        )}
+
+        {/* ─── Forecast & Reorder Tab ─── */}
+        {subTab === 'forecast' && (
+          <div className="space-y-6">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p className="text-sm text-amber-700"><strong>Stock Forecast & Reorder</strong>: Proyeksi stok 8 minggu ke depan dengan estimasi tanggal reorder otomatis berdasarkan rata-rata penjualan harian.</p>
+            </div>
+            {forecast.length > 0 ? (
+              <>
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                  <h3 className="font-semibold text-gray-900 mb-4">Stock Depletion Forecast</h3>
+                  <Chart
+                    options={{
+                      chart: { type: 'line', toolbar: { show: false } },
+                      stroke: { curve: 'smooth', width: 2 },
+                      colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
+                      xaxis: { categories: forecast[0]?.projectedWeekly?.map((w: any) => w.week) || [] },
+                      yaxis: { labels: { formatter: (v: number) => formatNumber(v) } },
+                      legend: { position: 'top' },
+                    }}
+                    series={forecast.map((p: any) => ({
+                      name: p.name,
+                      data: p.projectedWeekly?.map((w: any) => w.projected) || [],
+                    }))}
+                    type="line"
+                    height={350}
+                  />
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div className="p-5 border-b border-gray-200">
+                    <h3 className="font-semibold text-gray-900">Reorder Schedule</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                          <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Current Stock</th>
+                          <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Daily Sales</th>
+                          <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Days Until Stockout</th>
+                          <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Reorder Date</th>
+                          <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {forecast.map((p: any, i: number) => (
+                          <tr key={i} className="hover:bg-gray-50">
+                            <td className="px-5 py-3"><p className="font-medium text-gray-900">{p.name}</p><p className="text-xs text-gray-500">{p.sku}</p></td>
+                            <td className="px-5 py-3 text-right font-medium">{formatNumber(p.currentStock)}</td>
+                            <td className="px-5 py-3 text-right text-gray-600">{p.avgDailySales}/day</td>
+                            <td className="px-5 py-3 text-right">
+                              <span className={`font-bold ${p.daysUntilStockout < 7 ? 'text-red-600' : p.daysUntilStockout < 14 ? 'text-yellow-600' : 'text-green-600'}`}>
+                                {p.daysUntilStockout} days
+                              </span>
+                            </td>
+                            <td className="px-5 py-3 text-center text-sm">{p.reorderDate}</td>
+                            <td className="px-5 py-3 text-center">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${p.status === 'critical' ? 'bg-red-100 text-red-700' : p.status === 'warning' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
+                                {p.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">Loading forecast data...</div>
+            )}
+          </div>
+        )}
+
+        {/* ─── ABC Analysis Tab ─── */}
+        {subTab === 'abc' && (
+          <div className="space-y-6">
+            <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
+              <p className="text-sm text-teal-700"><strong>ABC Analysis</strong>: Klasifikasi produk berdasarkan nilai stok — A (high value, 70%), B (moderate, 20%), C (low value, 10%). Fokuskan kontrol ketat pada item kelas A.</p>
+            </div>
+            {abcAnalysis ? (
+              <>
+                <div className="grid grid-cols-3 gap-4">
+                  {abcAnalysis.categories?.map((cat: any) => (
+                    <div key={cat.class} className={`rounded-xl border-2 p-5 ${cat.class === 'A' ? 'border-blue-300 bg-blue-50' : cat.class === 'B' ? 'border-yellow-300 bg-yellow-50' : 'border-gray-300 bg-gray-50'}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className={`text-4xl font-black ${cat.class === 'A' ? 'text-blue-600' : cat.class === 'B' ? 'text-yellow-600' : 'text-gray-600'}`}>
+                          {cat.class}
+                        </span>
+                        <span className="text-xs text-gray-500">{cat.valuePct}% of total value</span>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-900">{formatNumber(cat.items)} items</p>
+                      <p className="text-sm text-gray-600 mt-1">{formatCurrency(cat.stockValue)}</p>
+                      <p className="text-xs text-gray-500 mt-2">Avg Turnover: {cat.avgTurnover}x</p>
+                      <p className="text-xs text-gray-400 mt-1">{cat.description}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <h3 className="font-semibold text-gray-900 mb-4">Value Distribution</h3>
+                    <Chart
+                      options={{
+                        chart: { type: 'donut' },
+                        labels: ['Class A (70%)', 'Class B (20%)', 'Class C (10%)'],
+                        colors: ['#3B82F6', '#F59E0B', '#9CA3AF'],
+                        legend: { position: 'bottom' },
+                        dataLabels: { enabled: true, formatter: (v: number) => `${v.toFixed(0)}%` },
+                      }}
+                      series={[70, 20, 10]}
+                      type="donut"
+                      height={300}
+                    />
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <h3 className="font-semibold text-gray-900 mb-4">Items Distribution</h3>
+                    <Chart
+                      options={{
+                        chart: { type: 'bar', toolbar: { show: false } },
+                        plotOptions: { bar: { borderRadius: 4, columnWidth: '50%', distributed: true } },
+                        colors: ['#3B82F6', '#F59E0B', '#9CA3AF'],
+                        xaxis: { categories: ['Class A', 'Class B', 'Class C'] },
+                        yaxis: { labels: { formatter: (v: number) => formatNumber(v) } },
+                        legend: { show: false },
+                        dataLabels: { enabled: true },
+                      }}
+                      series={[{ name: 'Items', data: abcAnalysis.categories?.map((c: any) => c.items) || [] }]}
+                      type="bar"
+                      height={300}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">Loading ABC analysis...</div>
+            )}
+          </div>
+        )}
       </div>
     </HQLayout>
   );

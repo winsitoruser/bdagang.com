@@ -2,27 +2,11 @@ import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Modal, { ConfirmDialog } from '../../../components/hq/ui/Modal';
 import { StatusBadge } from '../../../components/hq/ui/Badge';
+import { toast } from 'react-hot-toast';
 import {
-  Truck,
-  Save,
-  RefreshCw,
-  Plus,
-  Edit,
-  Trash2,
-  Search,
-  Eye,
-  Phone,
-  Mail,
-  MapPin,
-  Building2,
-  DollarSign,
-  Package,
-  Star,
-  Calendar,
-  FileText,
-  CheckCircle,
-  AlertTriangle,
-  Clock
+  Truck, Save, RefreshCw, Plus, Edit, Trash2, Search, Eye, Phone, Mail, MapPin,
+  Building2, DollarSign, Package, Star, Calendar, FileText, CheckCircle, AlertTriangle,
+  Clock, Download
 } from 'lucide-react';
 
 interface Supplier {
@@ -230,6 +214,7 @@ export default function Suppliers() {
     setSuppliers(prev => [...prev, newSupplier]);
     setSaving(false);
     setShowCreateModal(false);
+    toast.success(`Supplier ${formData.name} berhasil ditambahkan`);
   };
 
   const handleEdit = async () => {
@@ -241,19 +226,31 @@ export default function Suppliers() {
     ));
     setSaving(false);
     setShowEditModal(false);
+    toast.success(`Supplier ${formData.name} berhasil diupdate`);
   };
 
   const handleDelete = async () => {
     if (!selectedSupplier) return;
+    const name = selectedSupplier.name;
     setSuppliers(prev => prev.filter(s => s.id !== selectedSupplier?.id));
     setShowDeleteConfirm(false);
     setSelectedSupplier(null);
+    toast.success(`Supplier ${name} berhasil dihapus`);
   };
 
   const handleToggleActive = (supplier: Supplier) => {
     setSuppliers(prev => prev.map(s => 
       s.id === supplier.id ? { ...s, isActive: !s.isActive } : s
     ));
+    toast.success(`Supplier ${supplier.name} ${supplier.isActive ? 'dinonaktifkan' : 'diaktifkan'}`);
+  };
+
+  const handleExportSuppliers = () => {
+    const rows = filteredSuppliers.map(s => `${s.code},${s.name},${s.contactPerson},${s.phone},${s.email},${s.city},${s.province},"${s.categories.join(';')}",${s.rating},${s.totalPO},${s.totalValue},${s.paymentTerms},${s.leadTimeDays},${s.isActive}`);
+    const csv = `Code,Name,Contact,Phone,Email,City,Province,Categories,Rating,TotalPO,TotalValue,PaymentTerms,LeadTime,Active\n${rows.join('\n')}`;
+    const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'suppliers.csv'; a.click(); URL.revokeObjectURL(url);
+    toast.success('Export supplier berhasil');
   };
 
   const formatCurrency = (value: number) => {
@@ -391,14 +388,12 @@ export default function Suppliers() {
                   <option value="inactive">Tidak Aktif</option>
                 </select>
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={fetchSuppliers}
-                  disabled={loading}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
+              <div className="flex items-center gap-2">
+                <button onClick={fetchSuppliers} disabled={loading} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+                </button>
+                <button onClick={handleExportSuppliers} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+                  <Download className="w-4 h-4" /> Export
                 </button>
                 <button
                   onClick={() => {

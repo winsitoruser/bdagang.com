@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import HQLayout from '../../../components/hq/HQLayout';
+import { toast } from 'react-hot-toast';
 import {
   Package,
   RefreshCw,
@@ -246,14 +247,18 @@ export default function GlobalStockManagement() {
               <p className="text-gray-500">Monitoring stok produk di seluruh cabang</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <RefreshCw className="w-4 h-4" />
-              Sync
+          <div className="flex items-center gap-2">
+            <button onClick={() => { fetchStock(); toast.success('Sync stok berhasil'); }} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Sync
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              <Download className="w-4 h-4" />
-              Export
+            <button onClick={() => {
+              const rows = filteredProducts.map(p => `${p.name},${p.sku},${p.barcode},${p.category},${p.unit},${p.totalStock},${p.minStock},${p.maxStock},${p.avgCost},${p.stockValue},${p.movement}`);
+              const csv = `Name,SKU,Barcode,Category,Unit,Stock,Min,Max,AvgCost,Value,Movement\n${rows.join('\n')}`;
+              const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url; a.download = 'stock-report.csv'; a.click(); URL.revokeObjectURL(url);
+              toast.success('Export stok berhasil');
+            }} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              <Download className="w-4 h-4" /> Export
             </button>
           </div>
         </div>

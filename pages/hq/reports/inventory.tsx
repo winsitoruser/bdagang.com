@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { toast } from 'react-hot-toast';
 import { StatusBadge } from '../../../components/hq/ui/Badge';
 import {
   Package,
@@ -93,7 +94,13 @@ export default function InventoryReport() {
   }, []);
 
   if (!mounted) {
-    return null;
+    return (
+      <HQLayout title="Laporan Inventori" subtitle="Pantau stok di seluruh cabang">
+        <div className="flex items-center justify-center py-24">
+          <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
+        </div>
+      </HQLayout>
+    );
   }
 
   const formatCurrency = (value: number) => {
@@ -114,6 +121,8 @@ export default function InventoryReport() {
     a.href = url;
     a.download = `inventory-report-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Export laporan inventori berhasil');
   };
 
   const totalStats = {

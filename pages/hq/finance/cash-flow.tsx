@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -277,19 +278,20 @@ export default function CashFlowManagement() {
               <option value="quarter">Kuartal Ini</option>
               <option value="year">Tahun Ini</option>
             </select>
-            <button
-              onClick={fetchData}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-            >
+            <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              <Plus className="w-4 h-4" />
-              New Transaction
+            <button className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              <Plus className="w-4 h-4" /> New Transaction
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <Download className="w-4 h-4" />
-              Export
+            <button onClick={() => {
+              const rows = cashFlowItems.map(i => `${i.date},${i.description},${i.category},${i.type},${i.amount},${i.status},${i.reference}`);
+              const csv = `Date,Description,Category,Type,Amount,Status,Reference\n${rows.join('\n')}`;
+              const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url; a.download = `cash-flow-${period}.csv`; a.click(); URL.revokeObjectURL(url);
+              toast.success('Export cash flow berhasil');
+            }} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <Download className="w-4 h-4" /> Export
             </button>
           </div>
         </div>
@@ -385,7 +387,7 @@ export default function CashFlowManagement() {
         </div>
 
         {/* View Mode Tabs */}
-        <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
           {[
             { key: 'overview', label: 'Overview', icon: TrendingUp },
             { key: 'transactions', label: 'Transactions', icon: ArrowRightLeft },
@@ -395,7 +397,7 @@ export default function CashFlowManagement() {
             <button
               key={tab.key}
               onClick={() => setViewMode(tab.key as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === tab.key ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === tab.key ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
             >
               <tab.icon className="w-4 h-4" />
               {tab.label}

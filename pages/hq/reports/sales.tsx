@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { toast } from 'react-hot-toast';
 import { StatsCard } from '../../../components/hq/ui';
 import {
   BarChart3,
@@ -154,7 +155,13 @@ export default function SalesReport() {
   }, [period, branchFilter]);
 
   if (!mounted) {
-    return null;
+    return (
+      <HQLayout>
+        <div className="flex items-center justify-center py-24">
+          <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
+        </div>
+      </HQLayout>
+    );
   }
 
   const handleExport = (format: 'csv' | 'pdf') => {
@@ -179,6 +186,8 @@ export default function SalesReport() {
       a.href = url;
       a.download = `sales-report-${period}-${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Export laporan penjualan berhasil');
     }
   };
 
@@ -238,15 +247,10 @@ export default function SalesReport() {
               <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <div className="relative">
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <button onClick={() => handleExport('csv')} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
                 <Download className="w-4 h-4" />
-                Export
-                <ChevronDown className="w-4 h-4" />
+                Export CSV
               </button>
-              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg hidden group-hover:block">
-                <button onClick={() => handleExport('csv')} className="w-full px-4 py-2 text-left hover:bg-gray-50">Export CSV</button>
-                <button onClick={() => handleExport('pdf')} className="w-full px-4 py-2 text-left hover:bg-gray-50">Export PDF</button>
-              </div>
             </div>
           </div>
         </div>

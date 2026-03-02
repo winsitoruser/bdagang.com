@@ -1,37 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 import {
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  Building2,
-  CreditCard,
-  Wallet,
-  PieChart as PieChartIcon,
-  BarChart3,
-  Calendar,
-  ArrowUpRight,
-  ArrowDownRight,
-  RefreshCw,
-  Download,
-  FileText,
-  Receipt,
-  Banknote,
-  CircleDollarSign,
-  ArrowRightLeft,
-  Calculator,
-  Target,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  ChevronRight,
-  Filter,
-  Search
+  DollarSign, TrendingUp, TrendingDown, Building2, CreditCard, Wallet,
+  PieChart as PieChartIcon, BarChart3, Calendar, ArrowUpRight, ArrowDownRight,
+  RefreshCw, Download, FileText, Receipt, Banknote, CircleDollarSign,
+  ArrowRightLeft, Calculator, Target, AlertTriangle, CheckCircle, Clock,
+  ChevronRight, Filter, Search, Activity, Heart, Layers, Zap, Shield,
+  Globe, Star
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
+
+const INDUSTRY_OPTIONS = [
+  { value: 'general', label: 'Umum' }, { value: 'fnb', label: 'F&B' },
+  { value: 'retail', label: 'Retail' }, { value: 'logistics', label: 'Logistik' },
+  { value: 'hospitality', label: 'Hospitality' }, { value: 'manufacturing', label: 'Manufaktur' },
+  { value: 'finance', label: 'Finance' }, { value: 'workshop', label: 'Bengkel' },
+  { value: 'pharmacy', label: 'Farmasi' }, { value: 'distributor', label: 'Distributor' },
+  { value: 'rental', label: 'Rental' }, { value: 'property', label: 'Property' },
+];
 
 interface FinanceSummary {
   totalRevenue: number;
@@ -40,6 +30,8 @@ interface FinanceSummary {
   netProfit: number;
   grossMargin: number;
   netMargin: number;
+  ebitda?: number;
+  ebitdaMargin?: number;
   cashOnHand: number;
   accountsReceivable: number;
   accountsPayable: number;
@@ -47,6 +39,30 @@ interface FinanceSummary {
   overdueInvoices: number;
   monthlyGrowth: number;
   yearlyGrowth: number;
+  operatingCashFlow?: number;
+  freeCashFlow?: number;
+  workingCapital?: number;
+  currentRatio?: number;
+  quickRatio?: number;
+  debtToEquity?: number;
+  returnOnEquity?: number;
+  returnOnAssets?: number;
+}
+
+interface FinancialHealth {
+  score: number;
+  grade: string;
+  factors: { name: string; score: number; max: number; detail: string }[];
+}
+
+interface IndustryKPI {
+  key: string;
+  label: string;
+  unit: string;
+  target: number;
+  actual: number;
+  previousPeriod: number;
+  trend: number;
 }
 
 interface BranchFinance {
@@ -123,10 +139,16 @@ export default function HQFinanceDashboard() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'quarter' | 'year'>('month');
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
+  const [industry, setIndustry] = useState('general');
+  const [subTab, setSubTab] = useState<'overview' | 'ratios' | 'comparison' | 'forecast'>('overview');
   const [summary, setSummary] = useState<FinanceSummary>(mockSummary);
   const [branchFinance, setBranchFinance] = useState<BranchFinance[]>(mockBranchFinance);
   const [transactions, setTransactions] = useState<RecentTransaction[]>(mockTransactions);
   const [allBranches, setAllBranches] = useState<{id: string, name: string, code: string}[]>([]);
+  const [health, setHealth] = useState<FinancialHealth | null>(null);
+  const [industryKpis, setIndustryKpis] = useState<IndustryKPI[]>([]);
+  const [forecast, setForecast] = useState<any[]>([]);
+  const [exporting, setExporting] = useState(false);
 
   const fetchBranches = async () => {
     try {
@@ -144,6 +166,30 @@ export default function HQFinanceDashboard() {
     setLoading(true);
     try {
       const branchParam = selectedBranch !== 'all' ? `&branchId=${selectedBranch}` : '';
+      // Try enhanced API first
+      const enhRes = await fetch(`/api/hq/finance/enhanced?action=dashboard&period=${period}&industry=${industry}${branchParam}`);
+      if (enhRes.ok) {
+        const json = await enhRes.json();
+        if (json.success && json.data) {
+          setSummary(json.data.summary || mockSummary);
+          setBranchFinance(json.data.branches || mockBranchFinance);
+          setTransactions(json.data.transactions || mockTransactions);
+          setHealth(json.data.health || null);
+          // Also fetch ratios
+          try {
+            const ratRes = await fetch(`/api/hq/finance/enhanced?action=ratios&industry=${industry}`);
+            if (ratRes.ok) { const rj = await ratRes.json(); if (rj.success) setIndustryKpis(rj.data.ratios || []); }
+          } catch {}
+          // Also fetch forecast
+          try {
+            const fcRes = await fetch(`/api/hq/finance/enhanced?action=forecast`);
+            if (fcRes.ok) { const fj = await fcRes.json(); if (fj.success) setForecast(fj.data.forecast || []); }
+          } catch {}
+          setLoading(false);
+          return;
+        }
+      }
+      // Fallback to original API
       const response = await fetch(`/api/hq/finance/summary?period=${period}${branchParam}`);
       if (response.ok) {
         const data = await response.json();
@@ -158,6 +204,24 @@ export default function HQFinanceDashboard() {
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/hq/finance/enhanced?action=export&period=${period}&industry=${industry}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data?.csv) {
+          const blob = new Blob([json.data.csv], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href = url; a.download = json.data.filename || 'finance-export.csv'; a.click();
+          URL.revokeObjectURL(url);
+          toast.success('Export berhasil');
+        }
+      }
+    } catch { toast.error('Export gagal'); }
+    setExporting(false);
+  };
+
   useEffect(() => {
     setMounted(true);
     fetchBranches();
@@ -167,9 +231,12 @@ export default function HQFinanceDashboard() {
     if (mounted) {
       fetchData();
     }
-  }, [period, selectedBranch]);
+  }, [period, selectedBranch, industry]);
 
   if (!mounted) return null;
+
+  const getHealthColor = (score: number) => score >= 85 ? 'text-green-600' : score >= 70 ? 'text-blue-600' : score >= 55 ? 'text-yellow-600' : 'text-red-600';
+  const getHealthBg = (score: number) => score >= 85 ? 'bg-green-100' : score >= 70 ? 'bg-blue-100' : score >= 55 ? 'bg-yellow-100' : 'bg-red-100';
 
   const revenueChartOptions: ApexCharts.ApexOptions = {
     chart: { type: 'area', toolbar: { show: false }, sparkline: { enabled: false } },
@@ -262,57 +329,53 @@ export default function HQFinanceDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Finance Dashboard</h1>
-            <p className="text-gray-500">Overview keuangan global perusahaan</p>
+            <p className="text-gray-500">Overview keuangan multi-industri dengan KPI & rasio</p>
           </div>
-          <div className="flex items-center gap-3">
-            <select
-              value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Semua Cabang</option>
-              {allBranches.length > 0 ? (
-                allBranches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>{branch.name}</option>
-                ))
-              ) : (
-                branchFinance.map((branch) => (
-                  <option key={branch.id} value={branch.id}>{branch.name}</option>
-                ))
-              )}
+          <div className="flex items-center gap-2">
+            <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-            >
+            <select value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <option value="all">Semua Cabang</option>
+              {(allBranches.length > 0 ? allBranches : branchFinance).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+            <select value={period} onChange={(e) => setPeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               <option value="day">Hari Ini</option>
               <option value="week">Minggu Ini</option>
               <option value="month">Bulan Ini</option>
               <option value="quarter">Kuartal Ini</option>
               <option value="year">Tahun Ini</option>
             </select>
-            <button
-              onClick={fetchData}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-            >
+            <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              <Download className="w-4 h-4" />
-              Export
+            <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50">
+              <Download className="w-4 h-4" /> Export
             </button>
           </div>
+        </div>
+
+        {/* Sub-tabs */}
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+          {([
+            { v: 'overview' as const, l: 'Overview', icon: Layers },
+            { v: 'ratios' as const, l: 'Industry KPIs', icon: Activity },
+            { v: 'comparison' as const, l: 'Branch Comparison', icon: Building2 },
+            { v: 'forecast' as const, l: 'Forecast', icon: Target },
+          ]).map(t => (
+            <button key={t.v} onClick={() => setSubTab(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${subTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+              <t.icon className="w-4 h-4" />{t.l}
+            </button>
+          ))}
         </div>
 
         {/* Quick Links */}
         <div className="grid grid-cols-8 gap-3">
           {quickLinks.map((link, idx) => (
             <Link key={idx} href={link.href}>
-              <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer group">
-                <div className={`w-10 h-10 ${link.color} rounded-lg flex items-center justify-center mb-2`}>
-                  <link.icon className="w-5 h-5 text-white" />
+              <div className="bg-white rounded-xl p-3 border border-gray-200 hover:shadow-md transition-shadow cursor-pointer group">
+                <div className={`w-9 h-9 ${link.color} rounded-lg flex items-center justify-center mb-1.5`}>
+                  <link.icon className="w-4 h-4 text-white" />
                 </div>
                 <p className="text-xs font-medium text-gray-700 group-hover:text-blue-600">{link.label}</p>
               </div>
@@ -320,283 +383,348 @@ export default function HQFinanceDashboard() {
           ))}
         </div>
 
+        {/* ═══ OVERVIEW SUB-TAB ═══ */}
+        {subTab === 'overview' && (<>
         {/* Main Metrics */}
-        <div className="grid grid-cols-4 gap-4">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
-            <div className="flex items-center justify-between mb-3">
-              <DollarSign className="w-8 h-8 opacity-80" />
-              <span className="flex items-center text-sm bg-white/20 px-2 py-1 rounded-full">
-                <ArrowUpRight className="w-3 h-3 mr-1" />
-                {summary.monthlyGrowth}%
-              </span>
+        <div className="grid grid-cols-5 gap-4">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white">
+            <div className="flex items-center justify-between mb-2">
+              <DollarSign className="w-7 h-7 opacity-80" />
+              <span className="flex items-center text-xs bg-white/20 px-2 py-0.5 rounded-full"><ArrowUpRight className="w-3 h-3 mr-0.5" />{summary.monthlyGrowth}%</span>
             </div>
-            <p className="text-blue-100 text-sm">Total Revenue</p>
-            <p className="text-2xl font-bold">{formatCurrency(summary.totalRevenue)}</p>
-            <p className="text-blue-200 text-xs mt-1">YoY: +{summary.yearlyGrowth}%</p>
+            <p className="text-blue-100 text-xs">Total Revenue</p>
+            <p className="text-xl font-bold">{formatCurrency(summary.totalRevenue)}</p>
+            <p className="text-blue-200 text-[10px] mt-0.5">YoY: +{summary.yearlyGrowth}%</p>
           </div>
-
-          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
-            <div className="flex items-center justify-between mb-3">
-              <TrendingUp className="w-8 h-8 opacity-80" />
-              <span className="text-sm bg-white/20 px-2 py-1 rounded-full">{summary.netMargin}%</span>
+          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white">
+            <div className="flex items-center justify-between mb-2">
+              <TrendingUp className="w-7 h-7 opacity-80" />
+              <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{summary.netMargin}%</span>
             </div>
-            <p className="text-green-100 text-sm">Net Profit</p>
-            <p className="text-2xl font-bold">{formatCurrency(summary.netProfit)}</p>
-            <p className="text-green-200 text-xs mt-1">Gross: {formatCurrency(summary.grossProfit)}</p>
+            <p className="text-green-100 text-xs">Net Profit</p>
+            <p className="text-xl font-bold">{formatCurrency(summary.netProfit)}</p>
+            <p className="text-green-200 text-[10px] mt-0.5">Gross: {formatCurrency(summary.grossProfit)}</p>
           </div>
-
-          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white">
-            <div className="flex items-center justify-between mb-3">
-              <Wallet className="w-8 h-8 opacity-80" />
-              <CheckCircle className="w-5 h-5 opacity-80" />
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white">
+            <div className="flex items-center justify-between mb-2">
+              <Wallet className="w-7 h-7 opacity-80" />
+              <CheckCircle className="w-4 h-4 opacity-80" />
             </div>
-            <p className="text-purple-100 text-sm">Cash on Hand</p>
-            <p className="text-2xl font-bold">{formatCurrency(summary.cashOnHand)}</p>
-            <p className="text-purple-200 text-xs mt-1">Available balance</p>
+            <p className="text-purple-100 text-xs">Cash on Hand</p>
+            <p className="text-xl font-bold">{formatCurrency(summary.cashOnHand)}</p>
+            <p className="text-purple-200 text-[10px] mt-0.5">FCF: {formatCurrency(summary.freeCashFlow || 0)}</p>
           </div>
-
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-5 text-white">
-            <div className="flex items-center justify-between mb-3">
-              <Receipt className="w-8 h-8 opacity-80" />
-              {summary.overdueInvoices > 0 && (
-                <span className="flex items-center text-sm bg-red-500 px-2 py-1 rounded-full">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
-                  {summary.overdueInvoices}
-                </span>
-              )}
+          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 text-white">
+            <div className="flex items-center justify-between mb-2">
+              <Receipt className="w-7 h-7 opacity-80" />
+              {summary.overdueInvoices > 0 && <span className="flex items-center text-xs bg-red-500 px-2 py-0.5 rounded-full"><AlertTriangle className="w-3 h-3 mr-0.5" />{summary.overdueInvoices}</span>}
             </div>
-            <p className="text-orange-100 text-sm">Pending Invoices</p>
-            <p className="text-2xl font-bold">{summary.pendingInvoices}</p>
-            <p className="text-orange-200 text-xs mt-1">{summary.overdueInvoices} overdue</p>
+            <p className="text-orange-100 text-xs">Pending Invoices</p>
+            <p className="text-xl font-bold">{summary.pendingInvoices}</p>
+            <p className="text-orange-200 text-[10px] mt-0.5">{summary.overdueInvoices} overdue</p>
           </div>
+          {health && (
+            <div className={`rounded-xl p-4 border-2 ${health.score >= 85 ? 'border-green-300 bg-green-50' : health.score >= 70 ? 'border-blue-300 bg-blue-50' : health.score >= 55 ? 'border-yellow-300 bg-yellow-50' : 'border-red-300 bg-red-50'}`}>
+              <div className="flex items-center justify-between mb-2">
+                <Heart className={`w-7 h-7 ${getHealthColor(health.score)}`} />
+                <span className={`text-2xl font-black ${getHealthColor(health.score)}`}>{health.grade}</span>
+              </div>
+              <p className="text-xs text-gray-500">Financial Health</p>
+              <p className={`text-xl font-bold ${getHealthColor(health.score)}`}>{health.score}/100</p>
+              <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                <div className={`h-1.5 rounded-full ${health.score >= 85 ? 'bg-green-500' : health.score >= 70 ? 'bg-blue-500' : health.score >= 55 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${health.score}%` }} />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Secondary Metrics */}
-        <div className="grid grid-cols-6 gap-4">
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                <TrendingDown className="w-5 h-5 text-red-600" />
+        <div className="grid grid-cols-8 gap-3">
+          {[
+            { label: 'Expenses', value: formatCurrency(summary.totalExpenses), icon: TrendingDown, bg: 'bg-red-100', ic: 'text-red-600' },
+            { label: 'A/R (Piutang)', value: formatCurrency(summary.accountsReceivable), icon: ArrowUpRight, bg: 'bg-green-100', ic: 'text-green-600' },
+            { label: 'A/P (Hutang)', value: formatCurrency(summary.accountsPayable), icon: ArrowDownRight, bg: 'bg-red-100', ic: 'text-red-600' },
+            { label: 'Gross Margin', value: `${summary.grossMargin}%`, icon: PieChartIcon, bg: 'bg-blue-100', ic: 'text-blue-600' },
+            { label: 'Net Margin', value: `${summary.netMargin}%`, icon: BarChart3, bg: 'bg-purple-100', ic: 'text-purple-600' },
+            { label: 'EBITDA', value: formatCurrency(summary.ebitda || 0), icon: Zap, bg: 'bg-teal-100', ic: 'text-teal-600' },
+            { label: 'Current Ratio', value: `${summary.currentRatio || 0}x`, icon: Shield, bg: 'bg-indigo-100', ic: 'text-indigo-600' },
+            { label: 'ROE', value: `${summary.returnOnEquity || 0}%`, icon: Star, bg: 'bg-yellow-100', ic: 'text-yellow-600' },
+          ].map((m, i) => {
+            const Icon = m.icon;
+            return (
+              <div key={i} className="bg-white rounded-xl p-3 border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 ${m.bg} rounded-lg flex items-center justify-center`}><Icon className={`w-4 h-4 ${m.ic}`} /></div>
+                  <div>
+                    <p className="text-[10px] text-gray-500">{m.label}</p>
+                    <p className="text-sm font-bold text-gray-900">{m.value}</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-gray-500">Total Expenses</p>
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.totalExpenses)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <ArrowUpRight className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">A/R (Piutang)</p>
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.accountsReceivable)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                <ArrowDownRight className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">A/P (Hutang)</p>
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(summary.accountsPayable)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <PieChartIcon className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Gross Margin</p>
-                <p className="text-lg font-bold text-gray-900">{summary.grossMargin}%</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Net Margin</p>
-                <p className="text-lg font-bold text-gray-900">{summary.netMargin}%</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Active Branches</p>
-                <p className="text-lg font-bold text-gray-900">{branchFinance.length}</p>
-              </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
 
-        {/* Charts Row */}
+        {/* Charts */}
         <div className="grid grid-cols-2 gap-6">
-          {/* Revenue & Profit Trend */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Revenue & Profit Trend</h3>
-              <Link href="/hq/finance/revenue" className="text-sm text-blue-600 hover:underline flex items-center">
-                Detail <ChevronRight className="w-4 h-4" />
-              </Link>
+              <Link href="/hq/finance/revenue" className="text-sm text-blue-600 hover:underline flex items-center">Detail <ChevronRight className="w-4 h-4" /></Link>
             </div>
-            <Chart options={revenueChartOptions} series={revenueChartSeries} type="area" height={280} />
+            <Chart options={revenueChartOptions} series={revenueChartSeries} type="area" height={260} />
           </div>
-
-          {/* Expense Breakdown */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Expense Breakdown</h3>
-              <Link href="/hq/finance/expenses" className="text-sm text-blue-600 hover:underline flex items-center">
-                Detail <ChevronRight className="w-4 h-4" />
-              </Link>
+              <Link href="/hq/finance/expenses" className="text-sm text-blue-600 hover:underline flex items-center">Detail <ChevronRight className="w-4 h-4" /></Link>
             </div>
-            <Chart options={expenseChartOptions} series={expenseChartSeries} type="donut" height={280} />
+            <Chart options={expenseChartOptions} series={expenseChartSeries} type="donut" height={260} />
           </div>
         </div>
-
-        {/* Charts Row 2 */}
         <div className="grid grid-cols-2 gap-6">
-          {/* Branch Performance */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Revenue by Branch</h3>
-              <Link href="/hq/branches" className="text-sm text-blue-600 hover:underline flex items-center">
-                All Branches <ChevronRight className="w-4 h-4" />
-              </Link>
+              <Link href="/hq/branches" className="text-sm text-blue-600 hover:underline flex items-center">All Branches <ChevronRight className="w-4 h-4" /></Link>
             </div>
-            <Chart options={branchChartOptions} series={branchChartSeries} type="bar" height={280} />
+            <Chart options={branchChartOptions} series={branchChartSeries} type="bar" height={260} />
           </div>
-
-          {/* Cash Flow */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">Weekly Cash Flow</h3>
-              <Link href="/hq/finance/cash-flow" className="text-sm text-blue-600 hover:underline flex items-center">
-                Detail <ChevronRight className="w-4 h-4" />
-              </Link>
+              <Link href="/hq/finance/cash-flow" className="text-sm text-blue-600 hover:underline flex items-center">Detail <ChevronRight className="w-4 h-4" /></Link>
             </div>
-            <Chart options={cashFlowOptions} series={cashFlowSeries} type="bar" height={280} />
+            <Chart options={cashFlowOptions} series={cashFlowSeries} type="bar" height={260} />
           </div>
         </div>
 
-        {/* Branch Finance Table */}
-        <div className="bg-white rounded-xl border border-gray-200">
-          <div className="p-5 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Branch Financial Performance</h3>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search branch..."
-                    className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                  />
+        {/* Health Score Breakdown */}
+        {health && (
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h3 className="font-semibold text-gray-900 mb-4">Financial Health Score Breakdown</h3>
+            <div className="grid grid-cols-5 gap-4">
+              {health.factors.map(f => (
+                <div key={f.name} className="text-center">
+                  <div className="relative w-16 h-16 mx-auto mb-2">
+                    <svg className="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
+                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#e5e7eb" strokeWidth="3" />
+                      <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={f.score / f.max >= 0.7 ? '#10B981' : f.score / f.max >= 0.5 ? '#F59E0B' : '#EF4444'} strokeWidth="3" strokeDasharray={`${(f.score / f.max) * 100}, 100`} />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center text-sm font-bold">{f.score}/{f.max}</div>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">{f.name}</p>
+                  <p className="text-xs text-gray-500">{f.detail}</p>
                 </div>
-                <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                  <Filter className="w-4 h-4" />
-                  Filter
-                </button>
-              </div>
+              ))}
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                  <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
-                  <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Expenses</th>
-                  <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Profit</th>
-                  <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Margin</th>
-                  <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Growth</th>
-                  <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {branchFinance.map((branch) => (
-                  <tr key={branch.id} className="hover:bg-gray-50">
-                    <td className="px-5 py-4">
-                      <div>
-                        <p className="font-medium text-gray-900">{branch.name}</p>
-                        <p className="text-xs text-gray-500">{branch.code}</p>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-right font-medium text-gray-900">{formatCurrency(branch.revenue)}</td>
-                    <td className="px-5 py-4 text-right text-red-600">{formatCurrency(branch.expenses)}</td>
-                    <td className="px-5 py-4 text-right font-medium text-green-600">{formatCurrency(branch.profit)}</td>
-                    <td className="px-5 py-4 text-center">{branch.margin}%</td>
-                    <td className="px-5 py-4 text-center">
-                      <span className={`flex items-center justify-center gap-1 ${branch.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {branch.growth >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                        {Math.abs(branch.growth)}%
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-center">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(branch.status)}`}>
-                        {branch.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        )}
 
         {/* Recent Transactions */}
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="p-5 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-gray-900">Recent Transactions</h3>
-              <Link href="/hq/finance/transactions" className="text-sm text-blue-600 hover:underline flex items-center">
-                View All <ChevronRight className="w-4 h-4" />
-              </Link>
+              <Link href="/hq/finance/transactions" className="text-sm text-blue-600 hover:underline flex items-center">View All <ChevronRight className="w-4 h-4" /></Link>
             </div>
           </div>
           <div className="divide-y divide-gray-200">
-            {transactions.map((tx) => (
-              <div key={tx.id} className="px-5 py-4 flex items-center justify-between hover:bg-gray-50">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${getTypeColor(tx.type)}`}>
-                    {tx.type === 'income' && <ArrowUpRight className="w-5 h-5" />}
-                    {tx.type === 'expense' && <ArrowDownRight className="w-5 h-5" />}
-                    {tx.type === 'transfer' && <ArrowRightLeft className="w-5 h-5" />}
+            {transactions.slice(0, 6).map((tx) => (
+              <div key={tx.id} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${getTypeColor(tx.type)}`}>
+                    {tx.type === 'income' && <ArrowUpRight className="w-4 h-4" />}
+                    {tx.type === 'expense' && <ArrowDownRight className="w-4 h-4" />}
+                    {tx.type === 'transfer' && <ArrowRightLeft className="w-4 h-4" />}
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{tx.description}</p>
-                    <p className="text-xs text-gray-500">{tx.date} • {tx.branch} • {tx.category}</p>
+                    <p className="text-sm font-medium text-gray-900">{tx.description}</p>
+                    <p className="text-xs text-gray-500">{tx.date} · {tx.branch} · {tx.category}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={`font-medium ${tx.type === 'expense' ? 'text-red-600' : tx.type === 'income' ? 'text-green-600' : 'text-blue-600'}`}>
+                  <p className={`text-sm font-medium ${tx.type === 'expense' ? 'text-red-600' : tx.type === 'income' ? 'text-green-600' : 'text-blue-600'}`}>
                     {tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : ''}{formatCurrency(tx.amount)}
                   </p>
-                  <p className={`text-xs ${tx.status === 'completed' ? 'text-green-500' : tx.status === 'pending' ? 'text-yellow-500' : 'text-red-500'}`}>
-                    {tx.status}
-                  </p>
+                  <p className={`text-xs ${tx.status === 'completed' ? 'text-green-500' : tx.status === 'pending' ? 'text-yellow-500' : 'text-red-500'}`}>{tx.status}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
+        </>)}
+
+        {/* ═══ INDUSTRY KPIs SUB-TAB ═══ */}
+        {subTab === 'ratios' && (
+          <div className="space-y-6">
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
+              <p className="text-sm text-indigo-700"><strong>Industry KPIs ({INDUSTRY_OPTIONS.find(i => i.value === industry)?.label})</strong>: Rasio dan indikator keuangan spesifik industri untuk mengukur kinerja operasional dan finansial.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              {industryKpis.map(kpi => {
+                const pct = Math.min(100, Math.max(0, (kpi.actual / kpi.target) * 100));
+                const isGood = kpi.key.includes('Cost') || kpi.key.includes('shrinkage') || kpi.key.includes('npl') || kpi.key.includes('claim') || kpi.key.includes('comeback') || kpi.key.includes('default') || kpi.key.includes('Expiry')
+                  ? kpi.actual <= kpi.target
+                  : kpi.actual >= kpi.target;
+                return (
+                  <div key={kpi.key} className="bg-white rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-medium text-gray-900">{kpi.label}</h4>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {isGood ? 'On Target' : 'Below Target'}
+                      </span>
+                    </div>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-2xl font-bold text-gray-900">{kpi.actual}{kpi.unit === '%' ? '%' : kpi.unit === 'x' ? 'x' : kpi.unit === 'days' ? ' hari' : ''}</span>
+                      {kpi.unit === 'Rp' && <span className="text-lg font-bold text-gray-900">{formatCurrency(kpi.actual)}</span>}
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                      <div className={`h-2 rounded-full ${isGood ? 'bg-green-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>Target: {kpi.target}{kpi.unit === '%' ? '%' : kpi.unit === 'x' ? 'x' : ''}</span>
+                      <span className={`flex items-center gap-0.5 ${kpi.trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {kpi.trend >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                        {Math.abs(kpi.trend)}% vs prev
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ═══ BRANCH COMPARISON SUB-TAB ═══ */}
+        {subTab === 'comparison' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl border border-gray-200">
+              <div className="p-5 border-b border-gray-200">
+                <h3 className="font-semibold text-gray-900">Branch Financial Comparison</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Expenses</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Profit</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Margin</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Growth</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Health</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {branchFinance.map((branch) => (
+                      <tr key={branch.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3"><p className="font-medium text-gray-900 text-sm">{branch.name}</p><p className="text-xs text-gray-500">{branch.code}</p></td>
+                        <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">{formatCurrency(branch.revenue)}</td>
+                        <td className="px-4 py-3 text-right text-sm text-red-600">{formatCurrency(branch.expenses)}</td>
+                        <td className="px-4 py-3 text-right text-sm font-medium text-green-600">{formatCurrency(branch.profit)}</td>
+                        <td className="px-4 py-3 text-center text-sm">{branch.margin}%</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`flex items-center justify-center gap-0.5 text-sm ${branch.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {branch.growth >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}{Math.abs(branch.growth)}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {(branch as any).healthScore && (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getHealthBg((branch as any).healthScore)} ${getHealthColor((branch as any).healthScore)}`}>
+                              {(branch as any).healthScore}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-center"><span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(branch.status)}`}>{branch.status}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {/* Branch Revenue Comparison Chart */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h3 className="font-semibold text-gray-900 mb-4">Branch Revenue Comparison</h3>
+              <Chart options={branchChartOptions} series={branchChartSeries} type="bar" height={300} />
+            </div>
+          </div>
+        )}
+
+        {/* ═══ FORECAST SUB-TAB ═══ */}
+        {subTab === 'forecast' && (
+          <div className="space-y-6">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <p className="text-sm text-amber-700"><strong>Financial Forecast</strong>: Proyeksi revenue, expenses, dan profit berdasarkan tren historis dan data aktual.</p>
+            </div>
+            {forecast.length > 0 ? (
+              <>
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                  <h3 className="font-semibold text-gray-900 mb-4">Revenue Forecast vs Actual</h3>
+                  <Chart
+                    options={{
+                      chart: { type: 'area', toolbar: { show: false } },
+                      stroke: { curve: 'smooth', width: [2, 2], dashArray: [0, 5] },
+                      colors: ['#3B82F6', '#93C5FD'],
+                      fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.05 } },
+                      xaxis: { categories: forecast.map(f => f.month) },
+                      yaxis: { labels: { formatter: (v: number) => formatCurrency(v) } },
+                      tooltip: { y: { formatter: (v: number) => formatFullCurrency(v) } },
+                      legend: { position: 'top' },
+                    }}
+                    series={[
+                      { name: 'Actual', data: forecast.map(f => f.actualRevenue || 0) },
+                      { name: 'Projected', data: forecast.map(f => f.projectedRevenue) },
+                    ]}
+                    type="area"
+                    height={300}
+                  />
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200">
+                  <div className="p-5 border-b border-gray-200">
+                    <h3 className="font-semibold text-gray-900">Monthly Forecast Table</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Month</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Proj. Revenue</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actual Revenue</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Proj. Profit</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actual Profit</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Type</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {forecast.map((f, i) => (
+                          <tr key={i} className={`hover:bg-gray-50 ${f.isForecast ? 'bg-amber-50/50' : ''}`}>
+                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{f.month}</td>
+                            <td className="px-4 py-3 text-right text-sm text-gray-700">{formatCurrency(f.projectedRevenue)}</td>
+                            <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">{f.actualRevenue ? formatCurrency(f.actualRevenue) : '-'}</td>
+                            <td className="px-4 py-3 text-right text-sm text-gray-700">{formatCurrency(f.projectedProfit)}</td>
+                            <td className="px-4 py-3 text-right text-sm font-medium text-green-600">{f.actualProfit ? formatCurrency(f.actualProfit) : '-'}</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${f.isForecast ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                {f.isForecast ? 'Forecast' : 'Actual'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
+                <Target className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p>Loading forecast data...</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </HQLayout>
   );
