@@ -64,65 +64,7 @@ interface BranchPL {
   margin: number;
 }
 
-const mockPLSummary: PLSummary = {
-  revenue: 4120000000,
-  cogs: 2472000000,
-  grossProfit: 1648000000,
-  grossMargin: 40,
-  operatingExpenses: 618000000,
-  operatingIncome: 1030000000,
-  operatingMargin: 25,
-  otherIncome: 45000000,
-  otherExpenses: 25000000,
-  ebitda: 1050000000,
-  depreciation: 85000000,
-  interestExpense: 35000000,
-  taxExpense: 206000000,
-  netIncome: 824000000,
-  netMargin: 20,
-  previousNetIncome: 735000000,
-  growth: 12.1
-};
-
-const mockPLItems: PLLineItem[] = [
-  { id: '1', name: 'Revenue', currentPeriod: 4120000000, previousPeriod: 3665000000, change: 455000000, changePercent: 12.4, isSubtotal: true },
-  { id: '2', name: 'Sales - Dine In', currentPeriod: 2060000000, previousPeriod: 1832500000, change: 227500000, changePercent: 12.4, indent: 1 },
-  { id: '3', name: 'Sales - Takeaway', currentPeriod: 1236000000, previousPeriod: 1099500000, change: 136500000, changePercent: 12.4, indent: 1 },
-  { id: '4', name: 'Sales - Delivery', currentPeriod: 824000000, previousPeriod: 733000000, change: 91000000, changePercent: 12.4, indent: 1 },
-  
-  { id: '5', name: 'Cost of Goods Sold', currentPeriod: 2472000000, previousPeriod: 2199000000, change: 273000000, changePercent: 12.4, isSubtotal: true },
-  { id: '6', name: 'Raw Materials', currentPeriod: 1854000000, previousPeriod: 1649250000, change: 204750000, changePercent: 12.4, indent: 1 },
-  { id: '7', name: 'Packaging', currentPeriod: 247200000, previousPeriod: 219900000, change: 27300000, changePercent: 12.4, indent: 1 },
-  { id: '8', name: 'Direct Labor', currentPeriod: 370800000, previousPeriod: 329850000, change: 40950000, changePercent: 12.4, indent: 1 },
-  
-  { id: '9', name: 'Gross Profit', currentPeriod: 1648000000, previousPeriod: 1466000000, change: 182000000, changePercent: 12.4, isTotal: true },
-  
-  { id: '10', name: 'Operating Expenses', currentPeriod: 618000000, previousPeriod: 550000000, change: 68000000, changePercent: 12.4, isSubtotal: true },
-  { id: '11', name: 'Salaries & Wages', currentPeriod: 309000000, previousPeriod: 275000000, change: 34000000, changePercent: 12.4, indent: 1 },
-  { id: '12', name: 'Rent & Utilities', currentPeriod: 123600000, previousPeriod: 110000000, change: 13600000, changePercent: 12.4, indent: 1 },
-  { id: '13', name: 'Marketing', currentPeriod: 92700000, previousPeriod: 82500000, change: 10200000, changePercent: 12.4, indent: 1 },
-  { id: '14', name: 'Depreciation', currentPeriod: 61800000, previousPeriod: 55000000, change: 6800000, changePercent: 12.4, indent: 1 },
-  { id: '15', name: 'Other Operating', currentPeriod: 30900000, previousPeriod: 27500000, change: 3400000, changePercent: 12.4, indent: 1 },
-  
-  { id: '16', name: 'Operating Income', currentPeriod: 1030000000, previousPeriod: 916000000, change: 114000000, changePercent: 12.4, isTotal: true },
-  
-  { id: '17', name: 'Other Income', currentPeriod: 45000000, previousPeriod: 40000000, change: 5000000, changePercent: 12.5, indent: 0 },
-  { id: '18', name: 'Other Expenses', currentPeriod: 25000000, previousPeriod: 22000000, change: 3000000, changePercent: 13.6, indent: 0 },
-  { id: '19', name: 'Interest Expense', currentPeriod: 35000000, previousPeriod: 38000000, change: -3000000, changePercent: -7.9, indent: 0 },
-  
-  { id: '20', name: 'Income Before Tax', currentPeriod: 1015000000, previousPeriod: 896000000, change: 119000000, changePercent: 13.3, isSubtotal: true },
-  { id: '21', name: 'Tax Expense (25%)', currentPeriod: 253750000, previousPeriod: 224000000, change: 29750000, changePercent: 13.3, indent: 1 },
-  
-  { id: '22', name: 'Net Income', currentPeriod: 761250000, previousPeriod: 672000000, change: 89250000, changePercent: 13.3, isTotal: true }
-];
-
-const mockBranchPL: BranchPL[] = [
-  { id: '1', name: 'Cabang Pusat Jakarta', code: 'HQ-001', revenue: 1250000000, cogs: 750000000, grossProfit: 500000000, opex: 187500000, netIncome: 250000000, margin: 20 },
-  { id: '2', name: 'Cabang Bandung', code: 'BR-002', revenue: 920000000, cogs: 552000000, grossProfit: 368000000, opex: 138000000, netIncome: 184000000, margin: 20 },
-  { id: '3', name: 'Cabang Surabaya', code: 'BR-003', revenue: 780000000, cogs: 468000000, grossProfit: 312000000, opex: 117000000, netIncome: 156000000, margin: 20 },
-  { id: '4', name: 'Cabang Medan', code: 'BR-004', revenue: 650000000, cogs: 390000000, grossProfit: 260000000, opex: 97500000, netIncome: 130000000, margin: 20 },
-  { id: '5', name: 'Cabang Yogyakarta', code: 'BR-005', revenue: 520000000, cogs: 312000000, grossProfit: 208000000, opex: 78000000, netIncome: 104000000, margin: 20 }
-];
+const defaultPLSummary: PLSummary = { revenue: 0, cogs: 0, grossProfit: 0, grossMargin: 0, operatingExpenses: 0, operatingIncome: 0, operatingMargin: 0, otherIncome: 0, otherExpenses: 0, ebitda: 0, depreciation: 0, interestExpense: 0, taxExpense: 0, netIncome: 0, netMargin: 0, previousNetIncome: 0, growth: 0 };
 
 const formatCurrency = (value: number) => {
   if (Math.abs(value) >= 1000000000) {
@@ -142,9 +84,9 @@ export default function ProfitLossReport() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
   const [comparePeriod, setComparePeriod] = useState<'previous' | 'yoy'>('previous');
-  const [summary, setSummary] = useState<PLSummary>(mockPLSummary);
-  const [plItems, setPLItems] = useState<PLLineItem[]>(mockPLItems);
-  const [branchPL, setBranchPL] = useState<BranchPL[]>(mockBranchPL);
+  const [summary, setSummary] = useState<PLSummary>(defaultPLSummary);
+  const [plItems, setPLItems] = useState<PLLineItem[]>([]);
+  const [branchPL, setBranchPL] = useState<BranchPL[]>([]);
   const [expandedSections, setExpandedSections] = useState<string[]>(['revenue', 'cogs', 'opex']);
   const [viewMode, setViewMode] = useState<'statement' | 'branch' | 'trend'>('statement');
 
@@ -155,9 +97,9 @@ export default function ProfitLossReport() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        setSummary(payload.summary || mockPLSummary);
-        setPLItems(payload.items || mockPLItems);
-        setBranchPL(payload.branches || mockBranchPL);
+        if (payload.summary) setSummary(payload.summary);
+        if (payload.items) setPLItems(payload.items);
+        if (payload.branches) setBranchPL(payload.branches);
       }
     } catch (error) {
       console.error('Error fetching P&L data:', error);

@@ -68,55 +68,7 @@ interface HourlyRevenue {
   transactions: number;
 }
 
-const mockRevenueData: RevenueData = {
-  totalRevenue: 4120000000,
-  previousRevenue: 3665000000,
-  growth: 12.4,
-  avgDailyRevenue: 137333333,
-  avgTicketSize: 185000,
-  totalTransactions: 22270,
-  cashSales: 1580000000,
-  cardSales: 1520000000,
-  digitalSales: 1020000000,
-  onlineSales: 1450000000,
-  offlineSales: 2670000000
-};
-
-const mockBranchRevenue: BranchRevenue[] = [
-  { id: '1', name: 'Cabang Pusat Jakarta', code: 'HQ-001', revenue: 1250000000, transactions: 6757, avgTicket: 185000, growth: 15.2, contribution: 30.3 },
-  { id: '2', name: 'Cabang Bandung', code: 'BR-002', revenue: 920000000, transactions: 4973, avgTicket: 185000, growth: 12.8, contribution: 22.3 },
-  { id: '3', name: 'Cabang Surabaya', code: 'BR-003', revenue: 780000000, transactions: 4216, avgTicket: 185000, growth: 8.5, contribution: 18.9 },
-  { id: '4', name: 'Cabang Medan', code: 'BR-004', revenue: 650000000, transactions: 3514, avgTicket: 185000, growth: 5.2, contribution: 15.8 },
-  { id: '5', name: 'Cabang Yogyakarta', code: 'BR-005', revenue: 520000000, transactions: 2811, avgTicket: 185000, growth: -2.3, contribution: 12.6 }
-];
-
-const mockProductRevenue: ProductRevenue[] = [
-  { id: '1', name: 'Nasi Goreng Special', category: 'Main Course', revenue: 450000000, quantity: 12500, avgPrice: 36000, growth: 18.5 },
-  { id: '2', name: 'Ayam Bakar Madu', category: 'Main Course', revenue: 380000000, quantity: 9500, avgPrice: 40000, growth: 12.3 },
-  { id: '3', name: 'Es Teh Manis', category: 'Beverages', revenue: 320000000, quantity: 32000, avgPrice: 10000, growth: 8.7 },
-  { id: '4', name: 'Sate Ayam', category: 'Appetizer', revenue: 280000000, quantity: 7000, avgPrice: 40000, growth: 15.2 },
-  { id: '5', name: 'Mie Goreng Seafood', category: 'Main Course', revenue: 250000000, quantity: 6250, avgPrice: 40000, growth: 10.1 },
-  { id: '6', name: 'Jus Alpukat', category: 'Beverages', revenue: 220000000, quantity: 11000, avgPrice: 20000, growth: 22.5 },
-  { id: '7', name: 'Gado-Gado', category: 'Main Course', revenue: 180000000, quantity: 6000, avgPrice: 30000, growth: 5.8 },
-  { id: '8', name: 'Es Kopi Susu', category: 'Beverages', revenue: 165000000, quantity: 8250, avgPrice: 20000, growth: 28.3 }
-];
-
-const mockHourlyRevenue: HourlyRevenue[] = [
-  { hour: '08:00', revenue: 85000000, transactions: 459 },
-  { hour: '09:00', revenue: 120000000, transactions: 649 },
-  { hour: '10:00', revenue: 180000000, transactions: 973 },
-  { hour: '11:00', revenue: 320000000, transactions: 1730 },
-  { hour: '12:00', revenue: 520000000, transactions: 2811 },
-  { hour: '13:00', revenue: 480000000, transactions: 2595 },
-  { hour: '14:00', revenue: 280000000, transactions: 1514 },
-  { hour: '15:00', revenue: 200000000, transactions: 1081 },
-  { hour: '16:00', revenue: 220000000, transactions: 1189 },
-  { hour: '17:00', revenue: 350000000, transactions: 1892 },
-  { hour: '18:00', revenue: 520000000, transactions: 2811 },
-  { hour: '19:00', revenue: 480000000, transactions: 2595 },
-  { hour: '20:00', revenue: 320000000, transactions: 1730 },
-  { hour: '21:00', revenue: 180000000, transactions: 973 }
-];
+const defaultRevData: RevenueData = { totalRevenue: 0, previousRevenue: 0, growth: 0, avgDailyRevenue: 0, avgTicketSize: 0, totalTransactions: 0, cashSales: 0, cardSales: 0, digitalSales: 0, onlineSales: 0, offlineSales: 0 };
 
 const formatCurrency = (value: number) => {
   if (value >= 1000000000) {
@@ -136,10 +88,10 @@ export default function RevenueAnalysis() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'quarter' | 'year'>('month');
   const [dateRange, setDateRange] = useState({ start: '2026-02-01', end: '2026-02-22' });
-  const [revenueData, setRevenueData] = useState<RevenueData>(mockRevenueData);
-  const [branchRevenue, setBranchRevenue] = useState<BranchRevenue[]>(mockBranchRevenue);
-  const [productRevenue, setProductRevenue] = useState<ProductRevenue[]>(mockProductRevenue);
-  const [hourlyRevenue, setHourlyRevenue] = useState<HourlyRevenue[]>(mockHourlyRevenue);
+  const [revenueData, setRevenueData] = useState<RevenueData>(defaultRevData);
+  const [branchRevenue, setBranchRevenue] = useState<BranchRevenue[]>([]);
+  const [productRevenue, setProductRevenue] = useState<ProductRevenue[]>([]);
+  const [hourlyRevenue, setHourlyRevenue] = useState<HourlyRevenue[]>([]);
   const [viewMode, setViewMode] = useState<'branch' | 'product' | 'time'>('branch');
   const [showAddModal, setShowAddModal] = useState(false);
   const [branches, setBranches] = useState([]);
@@ -219,7 +171,7 @@ export default function RevenueAnalysis() {
         }));
         
         setRevenueData({
-          ...mockRevenueData,
+          ...defaultRevData,
           totalRevenue,
           avgTicketSize,
           totalTransactions,
@@ -228,15 +180,10 @@ export default function RevenueAnalysis() {
           digitalSales: categoryMap['Digital Sales'] || 0
         });
         
-        setBranchRevenue(mappedBranches.length > 0 ? mappedBranches : mockBranchRevenue);
-      } else {
-        setRevenueData(mockRevenueData);
-        setBranchRevenue(mockBranchRevenue);
+        if (mappedBranches.length > 0) setBranchRevenue(mappedBranches);
       }
     } catch (error) {
       console.error('Error fetching revenue data:', error);
-      setRevenueData(mockRevenueData);
-      setBranchRevenue(mockBranchRevenue);
     } finally {
       setLoading(false);
     }

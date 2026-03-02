@@ -55,35 +55,7 @@ interface TaxReport {
   amount: number;
 }
 
-const mockSummary: TaxSummary = {
-  totalTaxLiability: 459750000,
-  paidTaxes: 253750000,
-  pendingTaxes: 206000000,
-  vatCollected: 412000000,
-  vatPaid: 288400000,
-  netVat: 123600000,
-  incomeTax: 253750000,
-  withholdingTax: 82400000,
-  nextDueDate: '2026-03-15',
-  nextDueAmount: 123600000
-};
-
-const mockObligations: TaxObligation[] = [
-  { id: '1', type: 'PPN (VAT)', period: 'Februari 2026', dueDate: '2026-03-15', amount: 123600000, status: 'pending' },
-  { id: '2', type: 'PPh 21', period: 'Februari 2026', dueDate: '2026-03-10', amount: 82400000, status: 'pending' },
-  { id: '3', type: 'PPh 25', period: 'Februari 2026', dueDate: '2026-03-15', amount: 63437500, status: 'pending' },
-  { id: '4', type: 'PPN (VAT)', period: 'Januari 2026', dueDate: '2026-02-15', amount: 115200000, status: 'paid', paidDate: '2026-02-12', reference: 'NTPN-20260212-001' },
-  { id: '5', type: 'PPh 21', period: 'Januari 2026', dueDate: '2026-02-10', amount: 78500000, status: 'paid', paidDate: '2026-02-08', reference: 'NTPN-20260208-001' },
-  { id: '6', type: 'PPh 25', period: 'Januari 2026', dueDate: '2026-02-15', amount: 60050000, status: 'paid', paidDate: '2026-02-12', reference: 'NTPN-20260212-002' }
-];
-
-const mockReports: TaxReport[] = [
-  { id: '1', name: 'SPT Masa PPN', period: 'Februari 2026', type: 'VAT', status: 'draft', amount: 123600000 },
-  { id: '2', name: 'SPT Masa PPh 21', period: 'Februari 2026', type: 'WHT', status: 'draft', amount: 82400000 },
-  { id: '3', name: 'SPT Masa PPN', period: 'Januari 2026', type: 'VAT', status: 'filed', filedDate: '2026-02-12', amount: 115200000 },
-  { id: '4', name: 'SPT Masa PPh 21', period: 'Januari 2026', type: 'WHT', status: 'filed', filedDate: '2026-02-08', amount: 78500000 },
-  { id: '5', name: 'SPT Tahunan PPh Badan', period: '2025', type: 'Corporate', status: 'pending', amount: 850000000 }
-];
+const defaultTaxSummary: TaxSummary = { totalTaxLiability: 0, paidTaxes: 0, pendingTaxes: 0, vatCollected: 0, vatPaid: 0, netVat: 0, incomeTax: 0, withholdingTax: 0, nextDueDate: '', nextDueAmount: 0 };
 
 const formatCurrency = (value: number) => {
   if (Math.abs(value) >= 1000000000) {
@@ -97,9 +69,9 @@ const formatCurrency = (value: number) => {
 export default function TaxManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<TaxSummary>(mockSummary);
-  const [obligations, setObligations] = useState<TaxObligation[]>(mockObligations);
-  const [reports, setReports] = useState<TaxReport[]>(mockReports);
+  const [summary, setSummary] = useState<TaxSummary>(defaultTaxSummary);
+  const [obligations, setObligations] = useState<TaxObligation[]>([]);
+  const [reports, setReports] = useState<TaxReport[]>([]);
   const [viewMode, setViewMode] = useState<'obligations' | 'reports' | 'summary'>('obligations');
   const [year, setYear] = useState('2026');
   const [showCalcModal, setShowCalcModal] = useState(false);
