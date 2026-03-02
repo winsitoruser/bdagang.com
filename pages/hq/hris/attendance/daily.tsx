@@ -51,12 +51,13 @@ export default function DailyAttendancePage() {
       const res = await fetch(`/api/hq/hris/attendance?period=${selectedDate}&view=daily`);
       if (res.ok) {
         const json = await res.json();
-        setRecords(json.dailyRecords || mockDaily);
+        const payload = json.data || json;
+        setRecords(payload.dailyRecords || payload.attendance || []);
       } else {
-        setRecords(mockDaily);
+        setRecords([]);
       }
     } catch {
-      setRecords(mockDaily);
+      setRecords([]);
     } finally {
       setLoading(false);
     }

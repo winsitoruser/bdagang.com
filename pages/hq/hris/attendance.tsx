@@ -158,20 +158,24 @@ export default function AttendancePage() {
   const fetchDailyData = async () => {
     try {
       const res = await fetch(`/api/hq/hris/attendance?period=${selectedDate}&view=daily`);
-      if (res.ok) { const json = await res.json(); setDailyRecords(json.dailyRecords || mockDaily); }
-      else setDailyRecords(mockDaily);
-    } catch { setDailyRecords(mockDaily); }
+      if (res.ok) {
+        const json = await res.json();
+        const payload = json.data || json;
+        setDailyRecords(payload.dailyRecords || payload.attendance || []);
+      } else setDailyRecords([]);
+    } catch { setDailyRecords([]); }
   };
 
   const fetchMonthlyData = async () => {
     try {
       const res = await fetch(`/api/hq/hris/attendance?period=${selectedMonth}`);
       if (res.ok) {
-        const data = await res.json();
-        setMonthlyRecords(data.attendance || mockMonthly);
-        setBranchSummary(data.branchSummary || mockBranch);
-      } else { setMonthlyRecords(mockMonthly); setBranchSummary(mockBranch); }
-    } catch { setMonthlyRecords(mockMonthly); setBranchSummary(mockBranch); }
+        const json = await res.json();
+        const payload = json.data || json;
+        setMonthlyRecords(payload.attendance || []);
+        setBranchSummary(payload.branchSummary || []);
+      } else { setMonthlyRecords([]); setBranchSummary([]); }
+    } catch { setMonthlyRecords([]); setBranchSummary([]); }
   };
 
   useEffect(() => {
