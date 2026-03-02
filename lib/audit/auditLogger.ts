@@ -39,13 +39,14 @@ export async function logAudit(params: AuditParams): Promise<boolean> {
     };
 
     await sequelize.query(`
-      INSERT INTO audit_logs (tenant_id, user_id, action, entity_type, entity_id,
+      INSERT INTO audit_logs (tenant_id, user_id, user_name, action, entity_type, entity_id,
         old_values, new_values, ip_address, user_agent, metadata, created_at)
-      VALUES (:tid, :uid, :action, :et, :eid, :old, :new, :ip, :ua, :meta, NOW())
+      VALUES (:tid, :uid, :uname, :action, :et, :eid, :old, :new, :ip, :ua, :meta, NOW())
     `, {
       replacements: {
         tid: params.tenantId,
         uid: params.userId,
+        uname: params.userName || 'System',
         action: params.action,
         et: params.entityType,
         eid: params.entityId || null,

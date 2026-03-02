@@ -69,60 +69,6 @@ interface NotificationTemplate {
   isActive: boolean;
 }
 
-const mockMessagingConfigs: MessagingConfig[] = [
-  {
-    id: 'msg-001',
-    providerId: 'msg-001',
-    providerCode: 'whatsapp_cloud',
-    providerName: 'WhatsApp Business Cloud API',
-    type: 'whatsapp',
-    branchId: null,
-    branchName: 'HQ (Semua Cabang)',
-    name: 'WhatsApp Notifikasi',
-    status: 'active',
-    phoneNumber: '+62 812-3456-7890',
-    features: ['Template Messages', 'Session Messages', 'Media Messages'],
-    stats: {
-      messagesSent: 12580,
-      messagesReceived: 3420,
-      deliveryRate: 98.5
-    },
-    lastTestedAt: '2026-02-22T10:00:00Z',
-    lastTestResult: { success: true },
-    createdAt: '2026-02-01T00:00:00Z'
-  },
-  {
-    id: 'msg-002',
-    providerId: 'msg-003',
-    providerCode: 'telegram_bot',
-    providerName: 'Telegram Bot API',
-    type: 'telegram',
-    branchId: null,
-    branchName: 'HQ (Semua Cabang)',
-    name: 'Telegram Alert Bot',
-    status: 'active',
-    botUsername: '@BedagangAlertBot',
-    features: ['Text Messages', 'Inline Keyboards', 'Groups'],
-    stats: {
-      messagesSent: 4520,
-      messagesReceived: 890,
-      deliveryRate: 99.8
-    },
-    lastTestedAt: '2026-02-22T09:00:00Z',
-    lastTestResult: { success: true },
-    createdAt: '2026-02-05T00:00:00Z'
-  }
-];
-
-const mockTemplates: NotificationTemplate[] = [
-  { id: '1', name: 'Konfirmasi Pesanan', type: 'order_confirmation', channel: 'whatsapp', description: 'Dikirim saat pesanan berhasil dibuat', isActive: true },
-  { id: '2', name: 'Struk Digital', type: 'digital_receipt', channel: 'whatsapp', description: 'Struk pembelian dikirim ke pelanggan', isActive: true },
-  { id: '3', name: 'Promo & Diskon', type: 'promotion', channel: 'whatsapp', description: 'Notifikasi promo untuk pelanggan loyal', isActive: false },
-  { id: '4', name: 'Alert Stok Rendah', type: 'low_stock_alert', channel: 'telegram', description: 'Alert ke grup manager saat stok rendah', isActive: true },
-  { id: '5', name: 'Laporan Harian', type: 'daily_report', channel: 'telegram', description: 'Ringkasan penjualan harian', isActive: true },
-  { id: '6', name: 'Alert Transaksi Besar', type: 'large_transaction', channel: 'telegram', description: 'Notifikasi transaksi di atas threshold', isActive: true }
-];
-
 const channelIcons: Record<string, any> = {
   whatsapp: MessageCircle,
   telegram: Send,
@@ -139,16 +85,28 @@ const channelColors: Record<string, string> = {
 
 export default function MessagingSettingsPage() {
   const [mounted, setMounted] = useState(false);
-  const [configs, setConfigs] = useState<MessagingConfig[]>(mockMessagingConfigs);
-  const [templates, setTemplates] = useState<NotificationTemplate[]>(mockTemplates);
+  const [configs, setConfigs] = useState<MessagingConfig[]>([]);
+  const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'channels' | 'templates' | 'logs'>('channels');
   const [testNumber, setTestNumber] = useState('');
   const [showTestModal, setShowTestModal] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<MessagingConfig | null>(null);
 
+  const fetchData = async () => {
+    try {
+      const response = await fetch('/api/hq/integrations/configs?category=messaging');
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.configs) setConfigs(payload.configs);
+      }
+    } catch { }
+  };
+
   useEffect(() => {
     setMounted(true);
+    fetchData();
   }, []);
 
   const totalMessagesSent = configs.reduce((sum, c) => sum + c.stats.messagesSent, 0);

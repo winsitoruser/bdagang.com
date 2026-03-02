@@ -52,58 +52,12 @@ interface Stocktake {
   notes?: string;
 }
 
-const mockStocktakes: Stocktake[] = [
-  {
-    id: '1', stocktakeNumber: 'SO-2026-0015',
-    branch: { id: '1', name: 'Gudang Pusat', code: 'WH-001' },
-    type: 'full', status: 'in_progress',
-    scheduledDate: '2026-02-22', startedAt: '2026-02-22T08:00:00',
-    totalItems: 1250, countedItems: 856, varianceCount: 23, varianceValue: -2450000,
-    assignedTo: ['Staff Gudang 1', 'Staff Gudang 2', 'Supervisor'],
-    createdBy: 'Admin HQ'
-  },
-  {
-    id: '2', stocktakeNumber: 'SO-2026-0014',
-    branch: { id: '3', name: 'Cabang Bandung', code: 'BR-002' },
-    type: 'partial', status: 'completed',
-    scheduledDate: '2026-02-21', startedAt: '2026-02-21T09:00:00', completedAt: '2026-02-21T14:00:00',
-    totalItems: 350, countedItems: 350, varianceCount: 8, varianceValue: -850000,
-    assignedTo: ['Manager Bandung', 'Staff 1'],
-    createdBy: 'Manager Bandung', notes: 'Stock opname kategori Bahan Pokok'
-  },
-  {
-    id: '3', stocktakeNumber: 'SO-2026-0013',
-    branch: { id: '4', name: 'Cabang Surabaya', code: 'BR-003' },
-    type: 'cycle', status: 'scheduled',
-    scheduledDate: '2026-02-25',
-    totalItems: 200, countedItems: 0, varianceCount: 0, varianceValue: 0,
-    assignedTo: ['Staff Surabaya'],
-    createdBy: 'Admin HQ', notes: 'Cycle count mingguan'
-  },
-  {
-    id: '4', stocktakeNumber: 'SO-2026-0012',
-    branch: { id: '2', name: 'Cabang Jakarta', code: 'HQ-001' },
-    type: 'full', status: 'completed',
-    scheduledDate: '2026-02-18', startedAt: '2026-02-18T08:00:00', completedAt: '2026-02-18T17:00:00',
-    totalItems: 856, countedItems: 856, varianceCount: 15, varianceValue: -1250000,
-    assignedTo: ['Manager Jakarta', 'Staff 1', 'Staff 2'],
-    createdBy: 'Admin HQ'
-  }
-];
-
-const branches = [
-  { id: '1', name: 'Gudang Pusat', code: 'WH-001' },
-  { id: '2', name: 'Cabang Jakarta', code: 'HQ-001' },
-  { id: '3', name: 'Cabang Bandung', code: 'BR-002' },
-  { id: '4', name: 'Cabang Surabaya', code: 'BR-003' },
-  { id: '5', name: 'Cabang Medan', code: 'BR-004' },
-  { id: '6', name: 'Cabang Yogyakarta', code: 'BR-005' }
-];
 
 export default function StocktakeManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [stocktakes, setStocktakes] = useState<Stocktake[]>(mockStocktakes);
+  const [stocktakes, setStocktakes] = useState<Stocktake[]>([]);
+  const [branches, setBranches] = useState<{id: string, name: string, code: string}[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -126,8 +80,9 @@ export default function StocktakeManagement() {
       
       const response = await fetch(`/api/hq/inventory/stocktake?${params.toString()}`);
       if (response.ok) {
-        const data = await response.json();
-        setStocktakes(data.stocktakes || mockStocktakes);
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.stocktakes) setStocktakes(payload.stocktakes);
       }
     } catch (error) {
       console.error('Error fetching stocktakes:', error);

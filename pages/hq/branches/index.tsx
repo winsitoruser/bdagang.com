@@ -9,10 +9,12 @@ import {
   TrendingUp, Package, Users, Clock, CheckCircle, XCircle, AlertTriangle,
   ExternalLink, Copy, Power, Download, Upload, RefreshCw, Search, Filter,
   BarChart3, Heart, Activity, Shield, Globe, Wifi, WifiOff, FileSpreadsheet,
-  ArrowUpRight, ArrowDownRight, Gauge
+  ArrowUpRight, ArrowDownRight, Gauge, Award, Zap, Bell, ChevronRight,
+  Target, Calendar, Store, DollarSign, Layers
 } from 'lucide-react';
 import {
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, Legend
 } from 'recharts';
 
 interface Branch {
@@ -68,21 +70,13 @@ const INDUSTRY_OPTIONS = [
 
 const PIE_COLORS = ['#6366F1', '#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
 
-const mockBranches: Branch[] = [
-  { id: '1', code: 'HQ-001', name: 'Cabang Pusat Jakarta', type: 'main', address: 'Jl. Sudirman No. 123', city: 'Jakarta Selatan', province: 'DKI Jakarta', phone: '021-1234567', email: 'pusat@bedagang.com', manager: { id: '1', name: 'Ahmad Wijaya', email: 'ahmad@bedagang.com' }, isActive: true, priceTierId: null, priceTierName: 'Harga Standar', createdAt: '2024-01-01', lastSync: new Date().toISOString(), syncStatus: 'synced', status: 'online', stats: { todaySales: 45000000, monthSales: 1250000000, employeeCount: 25, lowStockItems: 5 }, healthScore: 95, healthGrade: 'A' },
-  { id: '2', code: 'BR-002', name: 'Cabang Bandung', type: 'branch', address: 'Jl. Asia Afrika No. 45', city: 'Bandung', province: 'Jawa Barat', phone: '022-7654321', email: 'bandung@bedagang.com', manager: { id: '2', name: 'Siti Rahayu', email: 'siti@bedagang.com' }, isActive: true, priceTierId: '1', priceTierName: 'Harga Mall', createdAt: '2024-03-15', lastSync: new Date(Date.now() - 300000).toISOString(), syncStatus: 'synced', status: 'online', stats: { todaySales: 32000000, monthSales: 920000000, employeeCount: 18, lowStockItems: 12 }, healthScore: 82, healthGrade: 'B' },
-  { id: '3', code: 'BR-003', name: 'Cabang Surabaya', type: 'branch', address: 'Jl. Tunjungan No. 78', city: 'Surabaya', province: 'Jawa Timur', phone: '031-8765432', email: 'surabaya@bedagang.com', manager: { id: '3', name: 'Budi Santoso', email: 'budi@bedagang.com' }, isActive: true, priceTierId: null, priceTierName: 'Harga Standar', createdAt: '2024-05-20', lastSync: new Date(Date.now() - 3600000).toISOString(), syncStatus: 'pending', status: 'warning', stats: { todaySales: 28500000, monthSales: 850000000, employeeCount: 15, lowStockItems: 8 }, healthScore: 68, healthGrade: 'C' },
-  { id: '4', code: 'WH-001', name: 'Gudang Pusat Cikarang', type: 'warehouse', address: 'Kawasan Industri Jababeka Blok A5', city: 'Cikarang', province: 'Jawa Barat', phone: '021-89123456', email: 'gudang@bedagang.com', manager: { id: '4', name: 'Rudi Hermawan', email: 'rudi@bedagang.com' }, isActive: true, priceTierId: null, priceTierName: null, createdAt: '2024-01-01', lastSync: new Date().toISOString(), syncStatus: 'synced', status: 'online', stats: { todaySales: 0, monthSales: 0, employeeCount: 12, lowStockItems: 3 }, healthScore: 88, healthGrade: 'B' },
-  { id: '5', code: 'KS-001', name: 'Kiosk Mall Taman Anggrek', type: 'kiosk', address: 'Mall Taman Anggrek Lt. 3', city: 'Jakarta Barat', province: 'DKI Jakarta', phone: '021-56781234', email: 'kiosk.ta@bedagang.com', manager: { id: '5', name: 'Dewi Kusuma', email: 'dewi@bedagang.com' }, isActive: true, priceTierId: '2', priceTierName: 'Harga Mall Premium', createdAt: '2024-08-01', lastSync: new Date(Date.now() - 7200000).toISOString(), syncStatus: 'failed', status: 'offline', stats: { todaySales: 8500000, monthSales: 280000000, employeeCount: 5, lowStockItems: 2 }, healthScore: 45, healthGrade: 'D' },
-];
-
-const mockDashboard: DashboardData = {
-  total: 5, active: 4, inactive: 1,
-  byType: { main: 1, branch: 2, warehouse: 1, kiosk: 1 },
-  byCity: [['Jakarta Selatan', 1], ['Bandung', 1], ['Surabaya', 1], ['Cikarang', 1], ['Jakarta Barat', 1]],
-  byProvince: [['DKI Jakarta', 2], ['Jawa Barat', 2], ['Jawa Timur', 1]],
-  avgHealthScore: 76, criticalBranches: 1,
-  syncStatus: { synced: 3, pending: 1, failed: 1, never: 0 }
+const emptyDashboard: DashboardData = {
+  total: 0, active: 0, inactive: 0,
+  byType: {},
+  byCity: [],
+  byProvince: [],
+  avgHealthScore: 0, criticalBranches: 0,
+  syncStatus: { synced: 0, pending: 0, failed: 0, never: 0 }
 };
 
 export default function BranchManagement() {
@@ -92,7 +86,7 @@ export default function BranchManagement() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
-  const [dashboard, setDashboard] = useState<DashboardData>(mockDashboard);
+  const [dashboard, setDashboard] = useState<DashboardData>(emptyDashboard);
   const [industry, setIndustry] = useState('general');
   const [viewMode, setViewMode] = useState<'table' | 'grid' | 'health'>('table');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -129,16 +123,12 @@ export default function BranchManagement() {
       const response = await fetch(`/api/hq/branches?${params}`);
       if (response.ok) {
         const data = await response.json();
-        const branchList = data.data?.branches || data.branches || mockBranches;
+        const branchList = data.data?.branches || data.branches || [];
         setBranches(branchList);
         setTotal(data.data?.pagination?.total || data.total || branchList.length);
-      } else {
-        setBranches(mockBranches);
-        setTotal(mockBranches.length);
       }
     } catch (error) {
-      setBranches(mockBranches);
-      setTotal(mockBranches.length);
+      console.error('Error fetching branches:', error);
     } finally {
       setLoading(false);
     }
@@ -535,80 +525,160 @@ export default function BranchManagement() {
   return (
     <HQLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Manajemen Cabang</h1>
-            <p className="text-gray-500">Kelola cabang multi-industri — {INDUSTRY_OPTIONS.find(i => i.value === industry)?.label}</p>
+        {/* Header with Nav & Actions */}
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Building2 className="w-7 h-7 text-blue-600" />
+                Manajemen Cabang
+              </h1>
+              <p className="text-sm text-gray-500 mt-0.5">{INDUSTRY_OPTIONS.find(i => i.value === industry)?.label} — {dashboard.total} cabang terdaftar</p>
+            </div>
+            <div className="hidden md:flex items-center gap-1 ml-4 bg-gray-100 rounded-lg p-1">
+              <button onClick={() => window.location.href='/hq/branches'} className="px-3 py-1.5 bg-white shadow rounded-md text-sm font-medium text-blue-600">Daftar</button>
+              <button onClick={() => window.location.href='/hq/branches/performance'} className="px-3 py-1.5 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700">Performa</button>
+              <button onClick={() => window.location.href='/hq/branches/settings'} className="px-3 py-1.5 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700">Pengaturan</button>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+            <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
               {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImportFile} className="hidden" />
-            <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+            <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-600">
               <Upload className="w-4 h-4" /> Import
             </button>
-            <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              <Download className={`w-4 h-4 ${exporting ? 'animate-spin' : ''}`} /> Export CSV
+            <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-600">
+              <Download className={`w-4 h-4 ${exporting ? 'animate-spin' : ''}`} /> Export
             </button>
-            <button onClick={() => { resetForm(); setShowCreateModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+            <button onClick={() => { resetForm(); setShowCreateModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium shadow-sm">
               <Plus className="w-4 h-4" /> Tambah Cabang
             </button>
           </div>
         </div>
 
-        {/* Enhanced Stats Row */}
-        <div className="grid grid-cols-6 gap-4">
-          <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><Building2 className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Total</span></div>
-            <p className="text-2xl font-bold">{dashboard.total}</p>
-            <p className="text-xs opacity-70">{dashboard.active} aktif • {dashboard.inactive} nonaktif</p>
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-blue-100 rounded-lg"><Building2 className="w-5 h-5 text-blue-600" /></div>
+              <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{dashboard.active} aktif</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{dashboard.total}</p>
+            <p className="text-xs text-gray-500 mt-1">Total Cabang</p>
           </div>
-          <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><Wifi className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Online</span></div>
-            <p className="text-2xl font-bold">{branches.filter(b => b.status === 'online').length}</p>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-green-100 rounded-lg"><Wifi className="w-5 h-5 text-green-600" /></div>
+              {branches.length > 0 && <span className="text-xs font-medium text-green-600">{Math.round(branches.filter(b => b.status === 'online').length / branches.length * 100)}%</span>}
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{branches.filter(b => b.status === 'online').length}</p>
+            <p className="text-xs text-gray-500 mt-1">Online</p>
           </div>
-          <div className="bg-gradient-to-br from-yellow-500 to-yellow-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Warning</span></div>
-            <p className="text-2xl font-bold">{branches.filter(b => b.status === 'warning').length}</p>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-yellow-100 rounded-lg"><AlertTriangle className="w-5 h-5 text-yellow-600" /></div>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{branches.filter(b => b.status === 'warning').length + branches.filter(b => b.status === 'offline').length}</p>
+            <p className="text-xs text-gray-500 mt-1">Perlu Perhatian</p>
           </div>
-          <div className="bg-gradient-to-br from-red-500 to-red-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><WifiOff className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Offline</span></div>
-            <p className="text-2xl font-bold">{branches.filter(b => b.status === 'offline').length}</p>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-purple-100 rounded-lg"><Heart className="w-5 h-5 text-purple-600" /></div>
+              {dashboard.criticalBranches > 0 && <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">{dashboard.criticalBranches} kritis</span>}
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{dashboard.avgHealthScore}<span className="text-sm font-normal text-gray-400">/100</span></p>
+            <p className="text-xs text-gray-500 mt-1">Rata-rata Health</p>
           </div>
-          <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><Heart className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Health Score</span></div>
-            <p className="text-2xl font-bold">{dashboard.avgHealthScore}/100</p>
-            <p className="text-xs opacity-70">{dashboard.criticalBranches} kritis</p>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-teal-100 rounded-lg"><Activity className="w-5 h-5 text-teal-600" /></div>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{dashboard.syncStatus.synced}<span className="text-sm font-normal text-gray-400">/{dashboard.total}</span></p>
+            <p className="text-xs text-gray-500 mt-1">Tersinkronisasi</p>
           </div>
-          <div className="bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><Activity className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Sync Status</span></div>
-            <p className="text-2xl font-bold">{dashboard.syncStatus.synced}/{dashboard.total}</p>
-            <p className="text-xs opacity-70">{dashboard.syncStatus.failed} gagal</p>
+          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-orange-100 rounded-lg"><DollarSign className="w-5 h-5 text-orange-600" /></div>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(branches.reduce((s, b) => s + (b.stats?.todaySales || 0), 0))}</p>
+            <p className="text-xs text-gray-500 mt-1">Total Penjualan Hari Ini</p>
           </div>
         </div>
 
-        {/* Mini Charts Row */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Distribusi Tipe Cabang</h3>
-            <div className="h-40">
+        {/* Alerts: Branches Needing Attention */}
+        {(() => {
+          const needsAttention = branches.filter(b => b.status === 'offline' || b.status === 'warning' || (b.healthScore !== undefined && b.healthScore < 60));
+          if (needsAttention.length === 0) return null;
+          return (
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <Bell className="w-5 h-5 text-red-500" />
+                <h3 className="font-semibold text-red-900">Perlu Perhatian ({needsAttention.length} cabang)</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {needsAttention.slice(0, 6).map(b => (
+                  <div key={b.id} onClick={() => window.location.href = `/hq/branches/${b.id}`} className="flex items-center gap-3 bg-white rounded-lg p-3 border border-red-100 cursor-pointer hover:shadow-sm transition-shadow">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${b.status === 'offline' ? 'bg-red-100' : b.status === 'warning' ? 'bg-yellow-100' : 'bg-orange-100'}`}>
+                      {b.status === 'offline' ? <WifiOff className="w-5 h-5 text-red-500" /> : b.status === 'warning' ? <AlertTriangle className="w-5 h-5 text-yellow-500" /> : <Heart className="w-5 h-5 text-orange-500" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{b.name}</p>
+                      <p className="text-xs text-gray-500">{b.code} • {b.city}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <StatusBadge status={b.status} />
+                      {b.healthScore !== undefined && b.healthScore < 60 && (
+                        <p className="text-xs text-red-600 font-bold mt-0.5">Health: {b.healthScore}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Distribusi Tipe</h3>
+              <Layers className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart><Pie data={typeChartData} cx="50%" cy="50%" innerRadius={35} outerRadius={60} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+                <PieChart><Pie data={typeChartData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
                   {typeChartData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie><Tooltip /></PieChart>
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Distribusi Kota (Top {dashboard.byCity.length})</h3>
-            <div className="h-40">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Distribusi Kota</h3>
+              <MapPin className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dashboard.byCity.map(([city, count]) => ({ city, count }))} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" /><XAxis type="number" /><YAxis type="category" dataKey="city" width={100} tick={{ fontSize: 11 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis type="number" tick={{ fontSize: 11 }} /><YAxis type="category" dataKey="city" width={100} tick={{ fontSize: 11 }} />
                   <Tooltip /><Bar dataKey="count" fill="#6366F1" radius={[0, 4, 4, 0]} />
                 </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Status Sync</h3>
+              <Activity className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart><Pie data={syncChartData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+                  {syncChartData.map((_, i) => <Cell key={i} fill={['#10B981', '#F59E0B', '#EF4444', '#9CA3AF'][i]} />)}
+                </Pie><Tooltip /></PieChart>
               </ResponsiveContainer>
             </div>
           </div>
@@ -658,51 +728,115 @@ export default function BranchManagement() {
         )}
 
         {viewMode === 'grid' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {loading ? (
               <div className="col-span-3 flex justify-center py-12"><RefreshCw className="w-8 h-8 animate-spin text-blue-600" /></div>
             ) : branches.map(branch => (
-              <div key={branch.id} onClick={() => { setSelectedBranch(branch); setShowViewModal(true); }} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${branch.status === 'online' ? 'bg-green-100' : branch.status === 'warning' ? 'bg-yellow-100' : 'bg-red-100'}`}>
-                      <Building2 className={`w-5 h-5 ${branch.status === 'online' ? 'text-green-600' : branch.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`} />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{branch.name}</h3>
-                      <p className="text-xs text-gray-500">{branch.code}</p>
-                    </div>
-                  </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(branch.type)}`}>{getTypeLabel(branch.type)}</span>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-gray-500"><MapPin className="w-3.5 h-3.5" />{branch.city}, {branch.province}</div>
-                  <div className="flex items-center gap-2 text-gray-500"><User className="w-3.5 h-3.5" />{branch.manager?.name || 'Belum ditugaskan'}</div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
-                  <div><p className="text-xs text-gray-400">Penjualan</p><p className="font-semibold text-sm">{formatCurrency(branch.stats?.todaySales || 0)}</p></div>
-                  <div><p className="text-xs text-gray-400">Karyawan</p><p className="font-semibold text-sm">{branch.stats?.employeeCount || 0}</p></div>
-                </div>
-                {branch.healthScore !== undefined && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                    <span className="text-xs text-gray-400">Health Score</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${branch.healthScore >= 80 ? 'bg-green-500' : branch.healthScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${branch.healthScore}%` }} />
+              <div key={branch.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all group">
+                {/* Card Header with Status Strip */}
+                <div className={`h-1.5 ${branch.status === 'online' ? 'bg-green-500' : branch.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${branch.status === 'online' ? 'bg-green-50 ring-2 ring-green-200' : branch.status === 'warning' ? 'bg-yellow-50 ring-2 ring-yellow-200' : 'bg-red-50 ring-2 ring-red-200'}`}>
+                        <Building2 className={`w-5 h-5 ${branch.status === 'online' ? 'text-green-600' : branch.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`} />
                       </div>
-                      <span className={`text-xs font-bold ${getHealthColor(branch.healthScore)}`}>{branch.healthGrade}</span>
+                      <div>
+                        <h3 className="font-bold text-gray-900 text-[15px] leading-tight">{branch.name}</h3>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-gray-400 font-mono">{branch.code}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${getTypeColor(branch.type)}`}>{getTypeLabel(branch.type)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <StatusBadge status={branch.status} />
+                  </div>
+                  <div className="space-y-1.5 text-sm mb-4">
+                    <div className="flex items-center gap-2 text-gray-500"><MapPin className="w-3.5 h-3.5 flex-shrink-0" /><span className="truncate">{branch.city}, {branch.province}</span></div>
+                    <div className="flex items-center gap-2 text-gray-500"><User className="w-3.5 h-3.5 flex-shrink-0" /><span className="truncate">{branch.manager?.name || 'Belum ditugaskan'}</span></div>
+                  </div>
+                  {/* KPI Grid */}
+                  <div className="grid grid-cols-3 gap-3 py-3 border-y border-gray-100">
+                    <div className="text-center">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Penjualan</p>
+                      <p className="font-bold text-sm text-gray-900 mt-0.5">{formatCurrency(branch.stats?.todaySales || 0)}</p>
+                    </div>
+                    <div className="text-center border-x border-gray-100">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Karyawan</p>
+                      <p className="font-bold text-sm text-gray-900 mt-0.5">{branch.stats?.employeeCount || 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">Stok Alert</p>
+                      <p className={`font-bold text-sm mt-0.5 ${(branch.stats?.lowStockItems || 0) > 5 ? 'text-red-600' : 'text-gray-900'}`}>{branch.stats?.lowStockItems || 0}</p>
                     </div>
                   </div>
-                )}
+                  {/* Health Bar */}
+                  {branch.healthScore !== undefined && (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs text-gray-500 font-medium">Health Score</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${getHealthBg(branch.healthScore)} ${getHealthColor(branch.healthScore)}`}>{branch.healthGrade} ({branch.healthScore})</span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${branch.healthScore >= 80 ? 'bg-green-500' : branch.healthScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${branch.healthScore}%` }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Card Footer */}
+                <div className="px-5 py-2.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                  <button onClick={() => { setSelectedBranch(branch); setShowViewModal(true); }} className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"><Eye className="w-3.5 h-3.5" />Detail</button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => window.location.href = `/hq/branches/${branch.id}`} className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg" title="Monitor"><TrendingUp className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => openEditModal(branch)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Edit"><Edit className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => { setSelectedBranch(branch); setShowToggleConfirm(true); }} className="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg" title="Toggle"><Power className="w-3.5 h-3.5" /></button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         )}
 
         {viewMode === 'health' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-4 border-b border-gray-200"><h3 className="font-semibold text-gray-900">Health Score Dashboard</h3></div>
-            <div className="divide-y divide-gray-100">
+          <div className="space-y-4">
+            {/* Health Summary Cards */}
+            <div className="grid grid-cols-4 gap-4">
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-green-100 rounded-lg"><CheckCircle className="w-5 h-5 text-green-600" /></div>
+                  <span className="text-sm font-medium text-gray-500">Sehat (80+)</span>
+                </div>
+                <p className="text-3xl font-bold text-green-600">{branches.filter(b => (b.healthScore || 0) >= 80).length}</p>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-yellow-100 rounded-lg"><AlertTriangle className="w-5 h-5 text-yellow-600" /></div>
+                  <span className="text-sm font-medium text-gray-500">Perlu Monitor (60-79)</span>
+                </div>
+                <p className="text-3xl font-bold text-yellow-600">{branches.filter(b => (b.healthScore || 0) >= 60 && (b.healthScore || 0) < 80).length}</p>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-red-100 rounded-lg"><XCircle className="w-5 h-5 text-red-600" /></div>
+                  <span className="text-sm font-medium text-gray-500">Kritis (&lt;60)</span>
+                </div>
+                <p className="text-3xl font-bold text-red-600">{branches.filter(b => (b.healthScore || 0) < 60).length}</p>
+              </div>
+              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-blue-100 rounded-lg"><Gauge className="w-5 h-5 text-blue-600" /></div>
+                  <span className="text-sm font-medium text-gray-500">Rata-rata Score</span>
+                </div>
+                <p className="text-3xl font-bold text-blue-600">{branches.length > 0 ? Math.round(branches.reduce((s, b) => s + (b.healthScore || 0), 0) / branches.length) : 0}</p>
+              </div>
+            </div>
+            {/* Health Table */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2"><Heart className="w-5 h-5 text-red-500" /> Health Score Dashboard</h3>
+                <span className="text-xs text-gray-400">Diurutkan dari terendah</span>
+              </div>
+              <div className="divide-y divide-gray-100">
               {loading ? (
                 <div className="flex justify-center py-12"><RefreshCw className="w-8 h-8 animate-spin text-blue-600" /></div>
               ) : [...branches].sort((a, b) => (a.healthScore || 0) - (b.healthScore || 0)).map(branch => (
@@ -712,31 +846,36 @@ export default function BranchManagement() {
                       <span className={`text-lg font-bold ${getHealthColor(branch.healthScore || 0)}`}>{branch.healthGrade || '?'}</span>
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">{branch.name}</h4>
+                      <h4 className="font-semibold text-gray-900">{branch.name}</h4>
                       <p className="text-sm text-gray-500">{branch.code} • {branch.city} • {getTypeLabel(branch.type)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-6">
                     <div className="text-right">
-                      <p className="text-sm text-gray-400">Sync</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${branch.syncStatus === 'synced' ? 'bg-green-100 text-green-700' : branch.syncStatus === 'failed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{branch.syncStatus || 'never'}</span>
+                      <p className="text-xs text-gray-400 mb-0.5">Penjualan</p>
+                      <p className="text-sm font-semibold">{formatCurrency(branch.stats?.todaySales || 0)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-400">Status</p>
+                      <p className="text-xs text-gray-400 mb-0.5">Sync</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${branch.syncStatus === 'synced' ? 'bg-green-100 text-green-700' : branch.syncStatus === 'failed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{branch.syncStatus || 'never'}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400 mb-0.5">Status</p>
                       <StatusBadge status={branch.status} />
                     </div>
-                    <div className="w-32">
+                    <div className="w-36">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-gray-400">Score</span>
                         <span className={`text-sm font-bold ${getHealthColor(branch.healthScore || 0)}`}>{branch.healthScore || 0}/100</span>
                       </div>
-                      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full transition-all ${(branch.healthScore || 0) >= 80 ? 'bg-green-500' : (branch.healthScore || 0) >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${branch.healthScore || 0}%` }} />
                       </div>
                     </div>
                   </div>
                 </div>
               ))}
+              </div>
             </div>
           </div>
         )}
@@ -856,153 +995,114 @@ export default function BranchManagement() {
         size="xl"
         footer={
           <div className="flex justify-between">
-            <button
-              onClick={() => setShowViewModal(false)}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Tutup
-            </button>
+            <button onClick={() => setShowViewModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium">Tutup</button>
             <div className="flex gap-2">
-              <button
-                onClick={() => window.open(`/hq/branches/${selectedBranch?.id}`, '_blank')}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Halaman Detail
+              <button onClick={() => window.open(`/hq/branches/${selectedBranch?.id}`, '_blank')} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium">
+                <ExternalLink className="w-4 h-4" /> Monitor Realtime
               </button>
-              <button
-                onClick={() => { setShowViewModal(false); openEditModal(selectedBranch!); }}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Edit className="w-4 h-4" />
-                Edit
+              <button onClick={() => { setShowViewModal(false); openEditModal(selectedBranch!); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+                <Edit className="w-4 h-4" /> Edit
               </button>
             </div>
           </div>
         }
       >
         {selectedBranch && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h4 className="font-medium text-gray-900">Informasi Umum</h4>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Alamat</p>
-                      <p className="font-medium">{selectedBranch.address}, {selectedBranch.city}, {selectedBranch.province}</p>
-                    </div>
+          <div className="space-y-5">
+            {/* Branch Header Banner */}
+            <div className={`rounded-xl p-5 ${selectedBranch.status === 'online' ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200' : selectedBranch.status === 'warning' ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200' : 'bg-gradient-to-r from-red-50 to-orange-50 border border-red-200'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${selectedBranch.status === 'online' ? 'bg-green-100' : selectedBranch.status === 'warning' ? 'bg-yellow-100' : 'bg-red-100'}`}>
+                    <Building2 className={`w-7 h-7 ${selectedBranch.status === 'online' ? 'text-green-600' : selectedBranch.status === 'warning' ? 'text-yellow-600' : 'text-red-600'}`} />
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Telepon</p>
-                      <p className="font-medium">{selectedBranch.phone}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Email</p>
-                      <p className="font-medium">{selectedBranch.email}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <User className="w-5 h-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm text-gray-500">Manager</p>
-                      <p className="font-medium">{selectedBranch.manager?.name || '-'}</p>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">{selectedBranch.name}</h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-sm text-gray-500 font-mono">{selectedBranch.code}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getTypeColor(selectedBranch.type)}`}>{getTypeLabel(selectedBranch.type)}</span>
+                      <StatusBadge status={selectedBranch.status} />
                     </div>
                   </div>
                 </div>
+                {selectedBranch.healthScore !== undefined && (
+                  <div className="text-center">
+                    <div className={`w-16 h-16 rounded-full flex items-center justify-center ${getHealthBg(selectedBranch.healthScore)} ring-4 ${selectedBranch.healthScore >= 80 ? 'ring-green-200' : selectedBranch.healthScore >= 60 ? 'ring-yellow-200' : 'ring-red-200'}`}>
+                      <div>
+                        <p className={`text-xl font-bold ${getHealthColor(selectedBranch.healthScore)}`}>{selectedBranch.healthGrade}</p>
+                        <p className="text-[10px] text-gray-500">{selectedBranch.healthScore}/100</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="space-y-4">
-                <h4 className="font-medium text-gray-900">Status & Konfigurasi</h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span className="text-gray-500">Status</span>
-                    <StatusBadge status={selectedBranch.status} />
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span className="text-gray-500">Tipe</span>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getTypeColor(selectedBranch.type)}`}>
-                      {getTypeLabel(selectedBranch.type)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span className="text-gray-500">Price Tier</span>
-                    <span className="font-medium">{selectedBranch.priceTierName || 'Harga Standar'}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <span className="text-gray-500">Sync Terakhir</span>
-                    <span className="text-sm">{new Date(selectedBranch.lastSync).toLocaleString('id-ID')}</span>
-                  </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-blue-50 rounded-xl p-4 text-center">
+                <DollarSign className="w-5 h-5 text-blue-500 mx-auto mb-1" />
+                <p className="text-lg font-bold text-blue-900">{formatCurrency(selectedBranch.stats?.todaySales || 0)}</p>
+                <p className="text-[11px] text-blue-600 font-medium">Penjualan Hari Ini</p>
+              </div>
+              <div className="bg-green-50 rounded-xl p-4 text-center">
+                <TrendingUp className="w-5 h-5 text-green-500 mx-auto mb-1" />
+                <p className="text-lg font-bold text-green-900">{formatCurrency(selectedBranch.stats?.monthSales || 0)}</p>
+                <p className="text-[11px] text-green-600 font-medium">Penjualan Bulan Ini</p>
+              </div>
+              <div className="bg-purple-50 rounded-xl p-4 text-center">
+                <Users className="w-5 h-5 text-purple-500 mx-auto mb-1" />
+                <p className="text-lg font-bold text-purple-900">{selectedBranch.stats?.employeeCount || 0}</p>
+                <p className="text-[11px] text-purple-600 font-medium">Jumlah Karyawan</p>
+              </div>
+              <div className={`rounded-xl p-4 text-center ${(selectedBranch.stats?.lowStockItems || 0) > 5 ? 'bg-red-50' : 'bg-orange-50'}`}>
+                <Package className={`w-5 h-5 mx-auto mb-1 ${(selectedBranch.stats?.lowStockItems || 0) > 5 ? 'text-red-500' : 'text-orange-500'}`} />
+                <p className={`text-lg font-bold ${(selectedBranch.stats?.lowStockItems || 0) > 5 ? 'text-red-900' : 'text-orange-900'}`}>{selectedBranch.stats?.lowStockItems || 0}</p>
+                <p className={`text-[11px] font-medium ${(selectedBranch.stats?.lowStockItems || 0) > 5 ? 'text-red-600' : 'text-orange-600'}`}>Stok Rendah</p>
+              </div>
+            </div>
+
+            {/* Info Columns */}
+            <div className="grid grid-cols-2 gap-5">
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2"><MapPin className="w-4 h-4 text-blue-500" /> Informasi Lokasi</h4>
+                <div className="space-y-2.5">
+                  <div className="flex items-start gap-3"><span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Alamat</span><p className="text-sm font-medium text-gray-700">{selectedBranch.address}</p></div>
+                  <div className="flex items-start gap-3"><span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Kota</span><p className="text-sm font-medium text-gray-700">{selectedBranch.city}, {selectedBranch.province}</p></div>
+                  <div className="flex items-start gap-3"><span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Telepon</span><p className="text-sm font-medium text-gray-700">{selectedBranch.phone}</p></div>
+                  <div className="flex items-start gap-3"><span className="text-xs text-gray-400 w-16 flex-shrink-0 pt-0.5">Email</span><p className="text-sm font-medium text-gray-700">{selectedBranch.email}</p></div>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2"><Settings className="w-4 h-4 text-gray-500" /> Konfigurasi</h4>
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between"><span className="text-xs text-gray-400">Manager</span><span className="text-sm font-medium text-gray-700">{selectedBranch.manager?.name || '-'}</span></div>
+                  <div className="flex items-center justify-between"><span className="text-xs text-gray-400">Price Tier</span><span className="text-sm font-medium text-gray-700">{selectedBranch.priceTierName || 'Standar'}</span></div>
+                  <div className="flex items-center justify-between"><span className="text-xs text-gray-400">Sync Terakhir</span><span className="text-sm font-medium text-gray-700">{new Date(selectedBranch.lastSync).toLocaleString('id-ID')}</span></div>
+                  <div className="flex items-center justify-between"><span className="text-xs text-gray-400">Sync Status</span><span className={`text-xs px-2 py-0.5 rounded-full font-medium ${selectedBranch.syncStatus === 'synced' ? 'bg-green-100 text-green-700' : selectedBranch.syncStatus === 'failed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{selectedBranch.syncStatus || 'never'}</span></div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-4">
-              <div className="bg-blue-50 rounded-xl p-4">
-                <p className="text-sm text-blue-600">Penjualan Hari Ini</p>
-                <p className="text-xl font-bold text-blue-900">{formatCurrency(selectedBranch.stats?.todaySales || 0)}</p>
-              </div>
-              <div className="bg-green-50 rounded-xl p-4">
-                <p className="text-sm text-green-600">Penjualan Bulan Ini</p>
-                <p className="text-xl font-bold text-green-900">{formatCurrency(selectedBranch.stats?.monthSales || 0)}</p>
-              </div>
-              <div className="bg-purple-50 rounded-xl p-4">
-                <p className="text-sm text-purple-600">Jumlah Karyawan</p>
-                <p className="text-xl font-bold text-purple-900">{selectedBranch.stats?.employeeCount || 0}</p>
-              </div>
-              <div className="bg-orange-50 rounded-xl p-4">
-                <p className="text-sm text-orange-600">Stok Rendah</p>
-                <p className="text-xl font-bold text-orange-900">{selectedBranch.stats?.lowStockItems || 0}</p>
-              </div>
-            </div>
-
+            {/* Quick Actions */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">Aksi Cepat</h4>
-              <div className="flex flex-wrap gap-2">
-                <button 
-                  onClick={() => {
-                    setShowViewModal(false);
-                    window.location.href = `/hq/reports/sales?branch=${selectedBranch?.id}`;
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm cursor-pointer"
-                >
-                  <TrendingUp className="w-4 h-4" />
-                  Lihat Laporan
+              <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-2"><Zap className="w-4 h-4 text-yellow-500" /> Aksi Cepat</h4>
+              <div className="grid grid-cols-4 gap-2">
+                <button onClick={() => { setShowViewModal(false); window.location.href = `/hq/branches/${selectedBranch?.id}`; }} className="flex flex-col items-center gap-1.5 p-3 bg-purple-50 hover:bg-purple-100 rounded-xl text-center transition-colors">
+                  <Activity className="w-5 h-5 text-purple-600" />
+                  <span className="text-xs font-medium text-purple-700">Monitor</span>
                 </button>
-                <button 
-                  onClick={() => {
-                    setShowViewModal(false);
-                    window.location.href = `/hq/reports/inventory?branch=${selectedBranch?.id}`;
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm cursor-pointer"
-                >
-                  <Package className="w-4 h-4" />
-                  Kelola Stok
+                <button onClick={() => { setShowViewModal(false); window.location.href = `/hq/reports/sales?branch=${selectedBranch?.id}`; }} className="flex flex-col items-center gap-1.5 p-3 bg-blue-50 hover:bg-blue-100 rounded-xl text-center transition-colors">
+                  <TrendingUp className="w-5 h-5 text-blue-600" />
+                  <span className="text-xs font-medium text-blue-700">Laporan</span>
                 </button>
-                <button 
-                  onClick={() => {
-                    setShowViewModal(false);
-                    window.location.href = `/hq/users?branch=${selectedBranch?.id}`;
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm cursor-pointer"
-                >
-                  <Users className="w-4 h-4" />
-                  Kelola Karyawan
+                <button onClick={() => { setShowViewModal(false); window.location.href = `/hq/reports/inventory?branch=${selectedBranch?.id}`; }} className="flex flex-col items-center gap-1.5 p-3 bg-green-50 hover:bg-green-100 rounded-xl text-center transition-colors">
+                  <Package className="w-5 h-5 text-green-600" />
+                  <span className="text-xs font-medium text-green-700">Stok</span>
                 </button>
-                <button 
-                  onClick={() => {
-                    setShowViewModal(false);
-                    window.location.href = `/hq/branches/settings?branch=${selectedBranch?.id}`;
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm cursor-pointer"
-                >
-                  <Settings className="w-4 h-4" />
-                  Pengaturan
+                <button onClick={() => { setShowViewModal(false); window.location.href = `/hq/users?branch=${selectedBranch?.id}`; }} className="flex flex-col items-center gap-1.5 p-3 bg-orange-50 hover:bg-orange-100 rounded-xl text-center transition-colors">
+                  <Users className="w-5 h-5 text-orange-600" />
+                  <span className="text-xs font-medium text-orange-700">Karyawan</span>
                 </button>
               </div>
             </div>

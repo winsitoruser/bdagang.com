@@ -69,45 +69,7 @@ interface CashForecast {
   variance?: number;
 }
 
-const mockSummary: CashFlowSummary = {
-  openingBalance: 980000000,
-  closingBalance: 1250000000,
-  netChange: 270000000,
-  cashInflow: 4350000000,
-  cashOutflow: 4080000000,
-  operatingCashFlow: 850000000,
-  investingCashFlow: -150000000,
-  financingCashFlow: -430000000,
-  freeCashFlow: 700000000
-};
-
-const mockCashFlowItems: CashFlowItem[] = [
-  { id: '1', date: '2026-02-22', description: 'Penjualan Harian - All Branches', category: 'Operating', type: 'inflow', source: 'Sales', destination: 'BCA Main', amount: 185000000, status: 'completed', reference: 'TRX-20260222-001' },
-  { id: '2', date: '2026-02-22', description: 'Pembayaran Supplier PT Sukses', category: 'Operating', type: 'outflow', source: 'BCA Main', destination: 'PT Sukses Makmur', amount: 75000000, status: 'completed', reference: 'PAY-20260222-001' },
-  { id: '3', date: '2026-02-22', description: 'Transfer ke Cabang Bandung', category: 'Internal', type: 'transfer', source: 'BCA Main', destination: 'BCA Bandung', amount: 50000000, status: 'pending', reference: 'TRF-20260222-001' },
-  { id: '4', date: '2026-02-21', description: 'Pembayaran Gaji Karyawan', category: 'Operating', type: 'outflow', source: 'Mandiri Payroll', destination: 'Employees', amount: 150000000, status: 'completed', reference: 'PAY-20260221-001' },
-  { id: '5', date: '2026-02-21', description: 'Penerimaan Piutang Customer', category: 'Operating', type: 'inflow', source: 'PT ABC Corp', destination: 'BCA Main', amount: 45000000, status: 'completed', reference: 'RCV-20260221-001' },
-  { id: '6', date: '2026-02-20', description: 'Pembayaran Cicilan Bank', category: 'Financing', type: 'outflow', source: 'BCA Main', destination: 'Bank Mandiri Loan', amount: 35000000, status: 'completed', reference: 'PAY-20260220-001' },
-  { id: '7', date: '2026-02-20', description: 'Pembelian Equipment Kitchen', category: 'Investing', type: 'outflow', source: 'BCA Main', destination: 'CV Peralatan Dapur', amount: 25000000, status: 'completed', reference: 'PAY-20260220-002' },
-  { id: '8', date: '2026-02-25', description: 'Scheduled: Tagihan Listrik', category: 'Operating', type: 'outflow', source: 'BCA Main', destination: 'PLN', amount: 45000000, status: 'scheduled', reference: 'SCH-20260225-001' }
-];
-
-const mockBankAccounts: BankAccount[] = [
-  { id: '1', name: 'BCA Main Account', bank: 'BCA', accountNumber: '123-456-7890', type: 'checking', balance: 850000000, currency: 'IDR' },
-  { id: '2', name: 'Mandiri Payroll', bank: 'Mandiri', accountNumber: '987-654-3210', type: 'checking', balance: 250000000, currency: 'IDR' },
-  { id: '3', name: 'BCA Savings', bank: 'BCA', accountNumber: '111-222-3333', type: 'savings', balance: 120000000, currency: 'IDR' },
-  { id: '4', name: 'Petty Cash HQ', bank: '-', accountNumber: '-', type: 'petty_cash', balance: 15000000, currency: 'IDR' },
-  { id: '5', name: 'Petty Cash Branches', bank: '-', accountNumber: '-', type: 'petty_cash', balance: 15000000, currency: 'IDR' }
-];
-
-const mockForecast: CashForecast[] = [
-  { date: 'Week 1', projected: 1100000000, actual: 1120000000, variance: 20000000 },
-  { date: 'Week 2', projected: 1150000000, actual: 1180000000, variance: 30000000 },
-  { date: 'Week 3', projected: 1200000000, actual: 1210000000, variance: 10000000 },
-  { date: 'Week 4', projected: 1250000000, actual: 1250000000, variance: 0 },
-  { date: 'Week 5', projected: 1300000000 },
-  { date: 'Week 6', projected: 1350000000 }
-];
+const defaultCFSummary: CashFlowSummary = { openingBalance: 0, closingBalance: 0, netChange: 0, cashInflow: 0, cashOutflow: 0, operatingCashFlow: 0, investingCashFlow: 0, financingCashFlow: 0, freeCashFlow: 0 };
 
 const formatCurrency = (value: number) => {
   if (Math.abs(value) >= 1000000000) {
@@ -122,10 +84,10 @@ export default function CashFlowManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
-  const [summary, setSummary] = useState<CashFlowSummary>(mockSummary);
-  const [cashFlowItems, setCashFlowItems] = useState<CashFlowItem[]>(mockCashFlowItems);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(mockBankAccounts);
-  const [forecast, setForecast] = useState<CashForecast[]>(mockForecast);
+  const [summary, setSummary] = useState<CashFlowSummary>(defaultCFSummary);
+  const [cashFlowItems, setCashFlowItems] = useState<CashFlowItem[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [forecast, setForecast] = useState<CashForecast[]>([]);
   const [viewMode, setViewMode] = useState<'overview' | 'transactions' | 'accounts' | 'forecast'>('overview');
   const [filterType, setFilterType] = useState<'all' | 'inflow' | 'outflow' | 'transfer'>('all');
 
@@ -134,11 +96,12 @@ export default function CashFlowManagement() {
     try {
       const response = await fetch(`/api/hq/finance/cash-flow?period=${period}`);
       if (response.ok) {
-        const data = await response.json();
-        setSummary(data.summary || mockSummary);
-        setCashFlowItems(data.items || mockCashFlowItems);
-        setBankAccounts(data.accounts || mockBankAccounts);
-        setForecast(data.forecast || mockForecast);
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.summary) setSummary(payload.summary);
+        if (payload.items) setCashFlowItems(payload.items);
+        if (payload.accounts) setBankAccounts(payload.accounts);
+        if (payload.forecast) setForecast(payload.forecast);
       }
     } catch (error) {
       console.error('Error fetching cash flow data:', error);

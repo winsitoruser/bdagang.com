@@ -28,9 +28,10 @@ export default function MaintenanceManagement() {
 
   const fetchData = async () => {
     try {
-      const [schedRes, vehRes] = await Promise.all([
+      const [schedRes, vehRes, maintRes] = await Promise.all([
         fetch('/api/fleet/maintenance/schedules'),
-        fetch('/api/fleet/vehicles?limit=100')
+        fetch('/api/fleet/vehicles?limit=100'),
+        fetch('/api/hq/fleet/maintenance')
       ]);
       if (schedRes.ok) { const d = await schedRes.json(); setSchedules(d.data || []); }
       if (vehRes.ok) {
@@ -38,6 +39,12 @@ export default function MaintenanceManagement() {
         const map: Record<string, string> = {};
         (d.data || []).forEach((v: any) => { map[v.id] = v.licensePlate || v.vehicleNumber; });
         setVehicleMap(map);
+      }
+      if (maintRes.ok) {
+        const d = await maintRes.json();
+        const payload = d.data || d;
+        if (Array.isArray(payload)) setRecords(payload);
+        else if (payload.records) setRecords(payload.records);
       }
     } catch (e) { console.error('Maintenance fetch failed:', e); }
   };

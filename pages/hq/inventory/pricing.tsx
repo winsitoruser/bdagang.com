@@ -54,53 +54,13 @@ interface ProductPrice {
   lockedBy: string | null;
 }
 
-const mockPriceTiers: PriceTier[] = [
-  { id: '1', code: 'STD', name: 'Harga Standar', description: 'Harga dasar untuk semua cabang', multiplier: 1.0, markupPercent: 0, region: 'Nasional', appliedBranches: 6, productCount: 1250, isActive: true, createdAt: '2024-01-01' },
-  { id: '2', code: 'MALL', name: 'Harga Mall Premium', description: 'Harga untuk cabang di mall dengan markup 10%', multiplier: 1.1, markupPercent: 10, region: 'Mall Premium', appliedBranches: 2, productCount: 1250, isActive: true, createdAt: '2024-01-15' },
-  { id: '3', code: 'PROMO', name: 'Harga Promosi', description: 'Harga diskon untuk periode promosi', multiplier: 0.85, markupPercent: -15, region: 'Nasional', appliedBranches: 6, productCount: 350, isActive: true, createdAt: '2024-02-01' },
-  { id: '4', code: 'GROSIR', name: 'Harga Grosir', description: 'Harga khusus untuk pembelian grosir', multiplier: 0.9, markupPercent: -10, region: 'Nasional', appliedBranches: 3, productCount: 800, isActive: true, createdAt: '2024-01-20' },
-  { id: '5', code: 'REGIONAL', name: 'Harga Regional Timur', description: 'Harga untuk wilayah Indonesia Timur', multiplier: 1.05, markupPercent: 5, region: 'Indonesia Timur', appliedBranches: 1, productCount: 1250, isActive: false, createdAt: '2024-03-01' }
-];
-
-const mockProductPrices: ProductPrice[] = [
-  { id: '1', productId: '1', productName: 'Beras Premium 5kg', sku: 'BRS-001', category: 'Sembako', basePrice: 75000, costPrice: 65000, margin: 15.38,
-    tierPrices: [
-      { tierId: '1', tierName: 'Standar', price: 75000 },
-      { tierId: '2', tierName: 'Mall', price: 82500 },
-      { tierId: '3', tierName: 'Promo', price: 63750 },
-      { tierId: '4', tierName: 'Grosir', price: 67500 }
-    ], isLocked: true, lockedBy: 'Admin HQ' },
-  { id: '2', productId: '2', productName: 'Minyak Goreng 2L', sku: 'MYK-001', category: 'Sembako', basePrice: 35000, costPrice: 30000, margin: 16.67,
-    tierPrices: [
-      { tierId: '1', tierName: 'Standar', price: 35000 },
-      { tierId: '2', tierName: 'Mall', price: 38500 },
-      { tierId: '3', tierName: 'Promo', price: 29750 }
-    ], isLocked: true, lockedBy: 'Admin HQ' },
-  { id: '3', productId: '3', productName: 'Gula Pasir 1kg', sku: 'GLA-001', category: 'Sembako', basePrice: 15000, costPrice: 12500, margin: 20,
-    tierPrices: [
-      { tierId: '1', tierName: 'Standar', price: 15000 },
-      { tierId: '2', tierName: 'Mall', price: 16500 }
-    ], isLocked: false, lockedBy: null },
-  { id: '4', productId: '4', productName: 'Kopi Arabica 250g', sku: 'KPI-001', category: 'Minuman', basePrice: 85000, costPrice: 70000, margin: 21.43,
-    tierPrices: [
-      { tierId: '1', tierName: 'Standar', price: 85000 },
-      { tierId: '2', tierName: 'Mall', price: 93500 }
-    ], isLocked: false, lockedBy: null },
-  { id: '5', productId: '5', productName: 'Susu UHT 1L', sku: 'SSU-001', category: 'Minuman', basePrice: 18000, costPrice: 15000, margin: 20,
-    tierPrices: [
-      { tierId: '1', tierName: 'Standar', price: 18000 },
-      { tierId: '2', tierName: 'Mall', price: 19800 },
-      { tierId: '3', tierName: 'Promo', price: 15300 }
-    ], isLocked: true, lockedBy: 'Admin HQ' }
-];
-
 const categories = ['Semua Kategori', 'Sembako', 'Minuman', 'Snack', 'Frozen', 'Non-Food'];
 
 export default function InventoryPricing() {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'tiers' | 'products'>('tiers');
-  const [priceTiers, setPriceTiers] = useState<PriceTier[]>(mockPriceTiers);
-  const [productPrices, setProductPrices] = useState<ProductPrice[]>(mockProductPrices);
+  const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
+  const [productPrices, setProductPrices] = useState<ProductPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Semua Kategori');
@@ -133,13 +93,15 @@ export default function InventoryPricing() {
       ]);
       
       if (tiersRes.ok) {
-        const data = await tiersRes.json();
-        setPriceTiers(data.priceTiers || mockPriceTiers);
+        const json1 = await tiersRes.json();
+        const p1 = json1.data || json1;
+        if (p1.priceTiers) setPriceTiers(p1.priceTiers);
       }
       
       if (pricesRes.ok) {
-        const data = await pricesRes.json();
-        setProductPrices(data.productPrices || mockProductPrices);
+        const json2 = await pricesRes.json();
+        const p2 = json2.data || json2;
+        if (p2.productPrices) setProductPrices(p2.productPrices);
       }
     } catch (error) {
       console.error('Error fetching pricing data:', error);

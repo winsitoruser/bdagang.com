@@ -70,42 +70,6 @@ const HRIS_MODULES = [
   },
 ];
 
-// ── Mock Data for Dashboard Widgets ──
-const MOCK_PENDING_APPROVALS = [
-  { id: '1', type: 'leave', title: 'Cuti Tahunan - Fitri Handayani', subtitle: '3-7 Mar 2026 (5 hari)', status: 'pending', date: '28 Feb 2026', color: 'yellow' },
-  { id: '2', type: 'overtime', title: 'Lembur - Eko Prasetyo', subtitle: 'Sabtu, 1 Mar 2026 (4 jam)', status: 'pending', date: '27 Feb 2026', color: 'blue' },
-  { id: '3', type: 'expense', title: 'Klaim Transport - Budi Santoso', subtitle: 'Rp 450.000 - Perjalanan dinas Surabaya', status: 'pending', date: '27 Feb 2026', color: 'green' },
-  { id: '4', type: 'leave', title: 'Cuti Sakit - Hendra Kusuma', subtitle: '28 Feb 2026 (1 hari)', status: 'pending', date: '28 Feb 2026', color: 'red' },
-  { id: '5', type: 'performance', title: 'Review Q1 - Ahmad Wijaya', subtitle: 'Performance review pending approval', status: 'pending', date: '26 Feb 2026', color: 'purple' },
-];
-
-const MOCK_RECENT_ACTIVITIES = [
-  { id: '1', action: 'Karyawan baru bergabung', detail: 'Rina Wulandari - Kasir Cabang Medan', time: '2 jam lalu', icon: UserPlus, color: 'text-green-600 bg-green-50' },
-  { id: '2', action: 'Payroll diproses', detail: 'Periode Februari 2026 - 80 karyawan', time: '5 jam lalu', icon: DollarSign, color: 'text-blue-600 bg-blue-50' },
-  { id: '3', action: 'KPI diperbarui', detail: 'Q1 2026 - Target sales +15%', time: '1 hari lalu', icon: Target, color: 'text-purple-600 bg-purple-50' },
-  { id: '4', action: 'Kontrak diperpanjang', detail: 'Ahmad Wijaya - Branch Manager (2 tahun)', time: '1 hari lalu', icon: FileText, color: 'text-indigo-600 bg-indigo-50' },
-  { id: '5', action: 'Pelatihan selesai', detail: 'Customer Service Excellence - 12 peserta', time: '2 hari lalu', icon: GraduationCap, color: 'text-orange-600 bg-orange-50' },
-  { id: '6', action: 'Cuti disetujui', detail: 'Dewi Lestari - Cuti tahunan 5-7 Mar', time: '2 hari lalu', icon: CheckCircle2, color: 'text-green-600 bg-green-50' },
-];
-
-const MOCK_UPCOMING = [
-  { id: '1', title: 'Batas Payroll Maret', date: '5 Mar 2026', type: 'deadline', color: 'red' },
-  { id: '2', title: 'Review KPI Q1', date: '10 Mar 2026', type: 'review', color: 'purple' },
-  { id: '3', title: 'Training: Leadership', date: '12 Mar 2026', type: 'training', color: 'orange' },
-  { id: '4', title: 'Kontrak Berakhir: 3 orang', date: '15 Mar 2026', type: 'alert', color: 'yellow' },
-  { id: '5', title: 'Town Hall Meeting', date: '20 Mar 2026', type: 'event', color: 'blue' },
-  { id: '6', title: 'Audit Kehadiran Q1', date: '25 Mar 2026', type: 'audit', color: 'indigo' },
-];
-
-const MOCK_DEPT_STATS = [
-  { department: 'Operations', total: 15, active: 14, perf: 86, attend: 96, color: 'blue' },
-  { department: 'Sales', total: 45, active: 43, perf: 84, attend: 95, color: 'green' },
-  { department: 'Warehouse', total: 12, active: 12, perf: 78, attend: 93, color: 'yellow' },
-  { department: 'Finance', total: 5, active: 5, perf: 90, attend: 98, color: 'purple' },
-  { department: 'HR', total: 3, active: 3, perf: 88, attend: 97, color: 'indigo' },
-  { department: 'IT', total: 4, active: 4, perf: 91, attend: 99, color: 'cyan' },
-];
-
 const QUICK_ACTIONS = [
   { label: 'Tambah Karyawan', href: '/hq/hris/employees', icon: UserPlus, color: 'bg-blue-600' },
   { label: 'Input Kehadiran', href: '/hq/hris/attendance', icon: Clock, color: 'bg-green-600' },
@@ -118,11 +82,11 @@ const QUICK_ACTIONS = [
 export default function HRISDashboard() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [stats, setStats] = useState({ total: 80, active: 76, onLeave: 3, inactive: 1, avgPerf: 84, avgKpi: 96, topPerformers: 28, attendanceToday: 95 });
-  const [pendingApprovals, setPendingApprovals] = useState(MOCK_PENDING_APPROVALS);
-  const [recentActivities, setRecentActivities] = useState(MOCK_RECENT_ACTIVITIES);
-  const [deptStats, setDeptStats] = useState(MOCK_DEPT_STATS);
-  const [upcoming, setUpcoming] = useState(MOCK_UPCOMING);
+  const [stats, setStats] = useState({ total: 0, active: 0, onLeave: 0, inactive: 0, avgPerf: 0, avgKpi: 0, topPerformers: 0, attendanceToday: 0 });
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
+  const [deptStats, setDeptStats] = useState<any[]>([]);
+  const [upcoming, setUpcoming] = useState<any[]>([]);
   const [expandedCat, setExpandedCat] = useState<string>('');
   const [loading, setLoading] = useState(true);
 

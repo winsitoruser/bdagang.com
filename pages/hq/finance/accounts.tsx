@@ -78,52 +78,18 @@ interface AgingData {
   over90: number;
 }
 
-const mockSummary: AccountsSummary = {
-  totalReceivables: 450000000,
-  totalPayables: 320000000,
-  netPosition: 130000000,
-  overdueReceivables: 85000000,
-  overduePayables: 45000000,
-  dueThisWeek: 120000000,
-  collectedThisMonth: 380000000,
-  paidThisMonth: 290000000
+const defaultSummary: AccountsSummary = {
+  totalReceivables: 0,
+  totalPayables: 0,
+  netPosition: 0,
+  overdueReceivables: 0,
+  overduePayables: 0,
+  dueThisWeek: 0,
+  collectedThisMonth: 0,
+  paidThisMonth: 0
 };
 
-const mockReceivables: Receivable[] = [
-  { id: '1', invoiceNumber: 'INV-2026-0215', customer: 'PT ABC Corporation', customerType: 'corporate', issueDate: '2026-02-01', dueDate: '2026-02-15', amount: 75000000, paid: 0, balance: 75000000, status: 'overdue', daysOverdue: 7, contact: 'Budi Santoso', phone: '08123456789' },
-  { id: '2', invoiceNumber: 'INV-2026-0218', customer: 'CV Maju Jaya', customerType: 'corporate', issueDate: '2026-02-05', dueDate: '2026-02-25', amount: 45000000, paid: 20000000, balance: 25000000, status: 'partial', daysOverdue: 0, contact: 'Siti Rahayu', phone: '08234567890' },
-  { id: '3', invoiceNumber: 'INV-2026-0220', customer: 'Hotel Grand Indonesia', customerType: 'corporate', issueDate: '2026-02-10', dueDate: '2026-03-10', amount: 120000000, paid: 0, balance: 120000000, status: 'current', daysOverdue: 0, contact: 'Ahmad Wijaya', phone: '08345678901' },
-  { id: '4', invoiceNumber: 'INV-2026-0198', customer: 'Restaurant Chain XYZ', customerType: 'corporate', issueDate: '2026-01-15', dueDate: '2026-01-30', amount: 85000000, paid: 85000000, balance: 0, status: 'paid', daysOverdue: 0, contact: 'Diana Kusuma', phone: '08456789012' },
-  { id: '5', invoiceNumber: 'INV-2026-0222', customer: 'Catering Berkah', customerType: 'corporate', issueDate: '2026-02-12', dueDate: '2026-02-28', amount: 35000000, paid: 0, balance: 35000000, status: 'current', daysOverdue: 0, contact: 'Eko Prasetyo', phone: '08567890123' },
-  { id: '6', invoiceNumber: 'INV-2026-0185', customer: 'PT Sukses Mandiri', customerType: 'corporate', issueDate: '2026-01-10', dueDate: '2026-01-25', amount: 55000000, paid: 30000000, balance: 25000000, status: 'overdue', daysOverdue: 28, contact: 'Fajar Rahman', phone: '08678901234' }
-];
-
-const mockPayables: Payable[] = [
-  { id: '1', invoiceNumber: 'PO-2026-0445', supplier: 'PT Sukses Makmur', category: 'Raw Materials', issueDate: '2026-02-10', dueDate: '2026-02-25', amount: 85000000, paid: 0, balance: 85000000, status: 'current', daysOverdue: 0, priority: 'high' },
-  { id: '2', invoiceNumber: 'PO-2026-0438', supplier: 'CV Packaging Indo', category: 'Packaging', issueDate: '2026-02-05', dueDate: '2026-02-20', amount: 25000000, paid: 25000000, balance: 0, status: 'paid', daysOverdue: 0, priority: 'medium' },
-  { id: '3', invoiceNumber: 'PO-2026-0420', supplier: 'PT Segar Selalu', category: 'Fresh Produce', issueDate: '2026-01-28', dueDate: '2026-02-12', amount: 45000000, paid: 0, balance: 45000000, status: 'overdue', daysOverdue: 10, priority: 'high' },
-  { id: '4', invoiceNumber: 'PO-2026-0450', supplier: 'PLN', category: 'Utilities', issueDate: '2026-02-15', dueDate: '2026-02-28', amount: 35000000, paid: 0, balance: 35000000, status: 'current', daysOverdue: 0, priority: 'high' },
-  { id: '5', invoiceNumber: 'PO-2026-0448', supplier: 'CV Peralatan Dapur', category: 'Equipment', issueDate: '2026-02-12', dueDate: '2026-03-12', amount: 65000000, paid: 30000000, balance: 35000000, status: 'partial', daysOverdue: 0, priority: 'medium' },
-  { id: '6', invoiceNumber: 'PO-2026-0415', supplier: 'JNE Express', category: 'Logistics', issueDate: '2026-01-25', dueDate: '2026-02-10', amount: 18000000, paid: 0, balance: 18000000, status: 'overdue', daysOverdue: 12, priority: 'low' }
-];
-
-const mockAgingReceivables: AgingData = {
-  category: 'Receivables',
-  current: 155000000,
-  days1to30: 100000000,
-  days31to60: 85000000,
-  days61to90: 60000000,
-  over90: 50000000
-};
-
-const mockAgingPayables: AgingData = {
-  category: 'Payables',
-  current: 120000000,
-  days1to30: 85000000,
-  days31to60: 63000000,
-  days61to90: 32000000,
-  over90: 20000000
-};
+const defaultAging: AgingData = { category: '', current: 0, days1to30: 0, days31to60: 0, days61to90: 0, over90: 0 };
 
 const formatCurrency = (value: number) => {
   if (Math.abs(value) >= 1000000000) {
@@ -137,9 +103,11 @@ const formatCurrency = (value: number) => {
 export default function AccountsManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<AccountsSummary>(mockSummary);
-  const [receivables, setReceivables] = useState<Receivable[]>(mockReceivables);
-  const [payables, setPayables] = useState<Payable[]>(mockPayables);
+  const [summary, setSummary] = useState<AccountsSummary>(defaultSummary);
+  const [receivables, setReceivables] = useState<Receivable[]>([]);
+  const [payables, setPayables] = useState<Payable[]>([]);
+  const [agingReceivables, setAgingReceivables] = useState<AgingData>({...defaultAging, category: 'Receivables'});
+  const [agingPayables, setAgingPayables] = useState<AgingData>({...defaultAging, category: 'Payables'});
   const [viewMode, setViewMode] = useState<'receivables' | 'payables' | 'aging'>('receivables');
   const [filterStatus, setFilterStatus] = useState<'all' | 'current' | 'overdue' | 'partial' | 'paid'>('all');
 
@@ -148,10 +116,13 @@ export default function AccountsManagement() {
     try {
       const response = await fetch('/api/hq/finance/accounts');
       if (response.ok) {
-        const data = await response.json();
-        setSummary(data.summary || mockSummary);
-        setReceivables(data.receivables || mockReceivables);
-        setPayables(data.payables || mockPayables);
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.summary) setSummary(payload.summary);
+        if (payload.receivables) setReceivables(payload.receivables);
+        if (payload.payables) setPayables(payload.payables);
+        if (payload.agingReceivables) setAgingReceivables(payload.agingReceivables);
+        if (payload.agingPayables) setAgingPayables(payload.agingPayables);
       }
     } catch (error) {
       console.error('Error fetching accounts data:', error);
@@ -178,8 +149,8 @@ export default function AccountsManagement() {
   };
 
   const agingChartSeries = [
-    { name: 'Receivables', data: [mockAgingReceivables.current, mockAgingReceivables.days1to30, mockAgingReceivables.days31to60, mockAgingReceivables.days61to90, mockAgingReceivables.over90] },
-    { name: 'Payables', data: [mockAgingPayables.current, mockAgingPayables.days1to30, mockAgingPayables.days31to60, mockAgingPayables.days61to90, mockAgingPayables.over90] }
+    { name: 'Receivables', data: [agingReceivables.current, agingReceivables.days1to30, agingReceivables.days31to60, agingReceivables.days61to90, agingReceivables.over90] },
+    { name: 'Payables', data: [agingPayables.current, agingPayables.days1to30, agingPayables.days31to60, agingPayables.days61to90, agingPayables.over90] }
   ];
 
   const trendChartOptions: ApexCharts.ApexOptions = {
@@ -524,11 +495,11 @@ export default function AccountsManagement() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    <tr><td className="px-5 py-3">Current</td><td className="px-5 py-3 text-right font-medium">{formatCurrency(mockAgingReceivables.current)}</td><td className="px-5 py-3 text-right text-gray-500">34%</td></tr>
-                    <tr><td className="px-5 py-3">1-30 Days</td><td className="px-5 py-3 text-right font-medium">{formatCurrency(mockAgingReceivables.days1to30)}</td><td className="px-5 py-3 text-right text-gray-500">22%</td></tr>
-                    <tr><td className="px-5 py-3 text-yellow-600">31-60 Days</td><td className="px-5 py-3 text-right font-medium text-yellow-600">{formatCurrency(mockAgingReceivables.days31to60)}</td><td className="px-5 py-3 text-right text-yellow-600">19%</td></tr>
-                    <tr><td className="px-5 py-3 text-orange-600">61-90 Days</td><td className="px-5 py-3 text-right font-medium text-orange-600">{formatCurrency(mockAgingReceivables.days61to90)}</td><td className="px-5 py-3 text-right text-orange-600">13%</td></tr>
-                    <tr><td className="px-5 py-3 text-red-600">90+ Days</td><td className="px-5 py-3 text-right font-medium text-red-600">{formatCurrency(mockAgingReceivables.over90)}</td><td className="px-5 py-3 text-right text-red-600">11%</td></tr>
+                    <tr><td className="px-5 py-3">Current</td><td className="px-5 py-3 text-right font-medium">{formatCurrency(agingReceivables.current)}</td><td className="px-5 py-3 text-right text-gray-500">34%</td></tr>
+                    <tr><td className="px-5 py-3">1-30 Days</td><td className="px-5 py-3 text-right font-medium">{formatCurrency(agingReceivables.days1to30)}</td><td className="px-5 py-3 text-right text-gray-500">22%</td></tr>
+                    <tr><td className="px-5 py-3 text-yellow-600">31-60 Days</td><td className="px-5 py-3 text-right font-medium text-yellow-600">{formatCurrency(agingReceivables.days31to60)}</td><td className="px-5 py-3 text-right text-yellow-600">19%</td></tr>
+                    <tr><td className="px-5 py-3 text-orange-600">61-90 Days</td><td className="px-5 py-3 text-right font-medium text-orange-600">{formatCurrency(agingReceivables.days61to90)}</td><td className="px-5 py-3 text-right text-orange-600">13%</td></tr>
+                    <tr><td className="px-5 py-3 text-red-600">90+ Days</td><td className="px-5 py-3 text-right font-medium text-red-600">{formatCurrency(agingReceivables.over90)}</td><td className="px-5 py-3 text-right text-red-600">11%</td></tr>
                     <tr className="bg-green-50 font-bold"><td className="px-5 py-3">Total</td><td className="px-5 py-3 text-right">{formatCurrency(summary.totalReceivables)}</td><td className="px-5 py-3 text-right">100%</td></tr>
                   </tbody>
                 </table>
@@ -547,11 +518,11 @@ export default function AccountsManagement() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    <tr><td className="px-5 py-3">Current</td><td className="px-5 py-3 text-right font-medium">{formatCurrency(mockAgingPayables.current)}</td><td className="px-5 py-3 text-right text-gray-500">38%</td></tr>
-                    <tr><td className="px-5 py-3">1-30 Days</td><td className="px-5 py-3 text-right font-medium">{formatCurrency(mockAgingPayables.days1to30)}</td><td className="px-5 py-3 text-right text-gray-500">27%</td></tr>
-                    <tr><td className="px-5 py-3 text-yellow-600">31-60 Days</td><td className="px-5 py-3 text-right font-medium text-yellow-600">{formatCurrency(mockAgingPayables.days31to60)}</td><td className="px-5 py-3 text-right text-yellow-600">20%</td></tr>
-                    <tr><td className="px-5 py-3 text-orange-600">61-90 Days</td><td className="px-5 py-3 text-right font-medium text-orange-600">{formatCurrency(mockAgingPayables.days61to90)}</td><td className="px-5 py-3 text-right text-orange-600">10%</td></tr>
-                    <tr><td className="px-5 py-3 text-red-600">90+ Days</td><td className="px-5 py-3 text-right font-medium text-red-600">{formatCurrency(mockAgingPayables.over90)}</td><td className="px-5 py-3 text-right text-red-600">6%</td></tr>
+                    <tr><td className="px-5 py-3">Current</td><td className="px-5 py-3 text-right font-medium">{formatCurrency(agingPayables.current)}</td><td className="px-5 py-3 text-right text-gray-500">38%</td></tr>
+                    <tr><td className="px-5 py-3">1-30 Days</td><td className="px-5 py-3 text-right font-medium">{formatCurrency(agingPayables.days1to30)}</td><td className="px-5 py-3 text-right text-gray-500">27%</td></tr>
+                    <tr><td className="px-5 py-3 text-yellow-600">31-60 Days</td><td className="px-5 py-3 text-right font-medium text-yellow-600">{formatCurrency(agingPayables.days31to60)}</td><td className="px-5 py-3 text-right text-yellow-600">20%</td></tr>
+                    <tr><td className="px-5 py-3 text-orange-600">61-90 Days</td><td className="px-5 py-3 text-right font-medium text-orange-600">{formatCurrency(agingPayables.days61to90)}</td><td className="px-5 py-3 text-right text-orange-600">10%</td></tr>
+                    <tr><td className="px-5 py-3 text-red-600">90+ Days</td><td className="px-5 py-3 text-right font-medium text-red-600">{formatCurrency(agingPayables.over90)}</td><td className="px-5 py-3 text-right text-red-600">6%</td></tr>
                     <tr className="bg-red-50 font-bold"><td className="px-5 py-3">Total</td><td className="px-5 py-3 text-right">{formatCurrency(summary.totalPayables)}</td><td className="px-5 py-3 text-right">100%</td></tr>
                   </tbody>
                 </table>

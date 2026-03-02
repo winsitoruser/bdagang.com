@@ -161,7 +161,7 @@ export const hqSidebarConfig: SidebarConfig = {
     icon: Building2,
     title: 'Bedagang',
     subtitle: 'HQ Platform',
-    href: '/hq/dashboard'
+    href: '/hq/home'
   },
   groups: [
     {
@@ -169,10 +169,17 @@ export const hqSidebarConfig: SidebarConfig = {
       title: 'Utama',
       items: [
         { 
-          id: 'dashboard',
-          name: 'Dashboard', 
-          href: '/hq/dashboard', 
+          id: 'home',
+          name: 'Home', 
+          href: '/hq/home', 
           icon: LayoutDashboard,
+          modules: ['dashboard']
+        },
+        { 
+          id: 'dashboard',
+          name: 'Dashboard Operasional', 
+          href: '/hq/dashboard', 
+          icon: BarChart3,
           modules: ['dashboard']
         }
       ]
@@ -203,21 +210,12 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'wh-stock', name: 'Stok Global', href: '/hq/inventory/stock', icon: Package },
             { id: 'wh-categories', name: 'Kategori Produk', href: '/hq/inventory/categories', icon: Layers },
             { id: 'wh-pricing', name: 'Harga & Pricing', href: '/hq/inventory/pricing', icon: DollarSign },
-            { id: 'wh-transfers', name: 'Transfer Stok', href: '/hq/inventory/transfers', icon: ArrowRightLeft },
+            { id: 'wh-transfers', name: 'Transfer & Requisition', href: '/hq/inventory/transfers', icon: ArrowRightLeft },
+            { id: 'wh-po', name: 'Purchase Order', href: '/hq/purchase-orders', icon: ShoppingCart },
+            { id: 'wh-suppliers', name: 'Supplier', href: '/hq/suppliers', icon: Truck },
             { id: 'wh-receipts', name: 'Penerimaan Barang', href: '/hq/inventory/receipts', icon: FileText },
             { id: 'wh-stocktake', name: 'Stock Opname', href: '/hq/inventory/stocktake', icon: ClipboardList },
             { id: 'wh-alerts', name: 'Alerts', href: '/hq/inventory/alerts', icon: AlertCircle },
-          ]
-        },
-        { 
-          id: 'supply-chain',
-          name: 'Supply Chain', 
-          icon: Truck,
-          modules: ['supply_chain'],
-          children: [
-            { id: 'sc-requisitions', name: 'Internal Requisition', href: '/hq/requisitions', icon: ClipboardList },
-            { id: 'sc-po', name: 'Purchase Order', href: '/hq/purchase-orders', icon: ShoppingCart },
-            { id: 'sc-suppliers', name: 'Supplier', href: '/hq/suppliers', icon: Truck },
           ]
         },
         { 

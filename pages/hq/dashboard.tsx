@@ -125,224 +125,6 @@ interface Alert {
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 
-// Mock data defined outside component to avoid TDZ issues
-const mockBranchesData: BranchData[] = [
-    {
-      id: '1',
-      code: 'HQ-001',
-      name: 'Cabang Pusat Jakarta',
-      type: 'main',
-      city: 'Jakarta Selatan',
-      province: 'DKI Jakarta',
-      isActive: true,
-      manager: 'Ahmad Wijaya',
-      todaySales: 45000000,
-      yesterdaySales: 42000000,
-      monthSales: 1250000000,
-      transactionCount: 156,
-      avgTicketSize: 288462,
-      stockValue: 850000000,
-      lowStockItems: 5,
-      employeeCount: 25,
-      activeEmployees: 22,
-      lastSync: new Date().toISOString(),
-      status: 'online',
-      performanceScore: 92
-    },
-    {
-      id: '2',
-      code: 'BR-002',
-      name: 'Cabang Bandung',
-      type: 'branch',
-      city: 'Bandung',
-      province: 'Jawa Barat',
-      isActive: true,
-      manager: 'Siti Rahayu',
-      todaySales: 32000000,
-      yesterdaySales: 35000000,
-      monthSales: 920000000,
-      transactionCount: 98,
-      avgTicketSize: 326531,
-      stockValue: 450000000,
-      lowStockItems: 12,
-      employeeCount: 18,
-      activeEmployees: 16,
-      lastSync: new Date(Date.now() - 300000).toISOString(),
-      status: 'online',
-      performanceScore: 85
-    },
-    {
-      id: '3',
-      code: 'BR-003',
-      name: 'Cabang Surabaya',
-      type: 'branch',
-      city: 'Surabaya',
-      province: 'Jawa Timur',
-      isActive: true,
-      manager: 'Budi Santoso',
-      todaySales: 28500000,
-      yesterdaySales: 31000000,
-      monthSales: 780000000,
-      transactionCount: 87,
-      avgTicketSize: 327586,
-      stockValue: 380000000,
-      lowStockItems: 8,
-      employeeCount: 15,
-      activeEmployees: 14,
-      lastSync: new Date(Date.now() - 600000).toISOString(),
-      status: 'online',
-      performanceScore: 78
-    },
-    {
-      id: '4',
-      code: 'BR-004',
-      name: 'Cabang Medan',
-      type: 'branch',
-      city: 'Medan',
-      province: 'Sumatera Utara',
-      isActive: true,
-      manager: 'Dewi Lestari',
-      todaySales: 22000000,
-      yesterdaySales: 24500000,
-      monthSales: 650000000,
-      transactionCount: 72,
-      avgTicketSize: 305556,
-      stockValue: 320000000,
-      lowStockItems: 15,
-      employeeCount: 12,
-      activeEmployees: 10,
-      lastSync: new Date(Date.now() - 1800000).toISOString(),
-      status: 'warning',
-      performanceScore: 72
-    },
-    {
-      id: '5',
-      code: 'BR-005',
-      name: 'Cabang Yogyakarta',
-      type: 'branch',
-      city: 'Yogyakarta',
-      province: 'DI Yogyakarta',
-      isActive: true,
-      manager: 'Eko Prasetyo',
-      todaySales: 18500000,
-      yesterdaySales: 19000000,
-      monthSales: 520000000,
-      transactionCount: 65,
-      avgTicketSize: 284615,
-      stockValue: 280000000,
-      lowStockItems: 3,
-      employeeCount: 10,
-      activeEmployees: 10,
-      lastSync: new Date(Date.now() - 120000).toISOString(),
-      status: 'online',
-      performanceScore: 88
-    },
-    {
-      id: '6',
-      code: 'WH-001',
-      name: 'Gudang Pusat Cikarang',
-      type: 'warehouse',
-      city: 'Cikarang',
-      province: 'Jawa Barat',
-      isActive: true,
-      manager: 'Hendra Kusuma',
-      todaySales: 0,
-      yesterdaySales: 0,
-      monthSales: 0,
-      transactionCount: 45,
-      avgTicketSize: 0,
-      stockValue: 2500000000,
-      lowStockItems: 22,
-      employeeCount: 35,
-      activeEmployees: 30,
-      lastSync: new Date(Date.now() - 60000).toISOString(),
-      status: 'online',
-      performanceScore: 95
-    },
-    {
-      id: '7',
-      code: 'KS-001',
-      name: 'Kiosk Mall Taman Anggrek',
-      type: 'kiosk',
-      city: 'Jakarta Barat',
-      province: 'DKI Jakarta',
-      isActive: true,
-      manager: 'Linda Susanti',
-      todaySales: 8500000,
-      yesterdaySales: 9200000,
-      monthSales: 245000000,
-      transactionCount: 45,
-      avgTicketSize: 188889,
-      stockValue: 85000000,
-      lowStockItems: 2,
-      employeeCount: 4,
-      activeEmployees: 3,
-      lastSync: new Date(Date.now() - 180000).toISOString(),
-      status: 'online',
-      performanceScore: 82
-    },
-    {
-      id: '8',
-      code: 'BR-006',
-      name: 'Cabang Semarang',
-      type: 'branch',
-      city: 'Semarang',
-      province: 'Jawa Tengah',
-      isActive: false,
-      manager: 'Agus Hermawan',
-      todaySales: 0,
-      yesterdaySales: 15000000,
-      monthSales: 380000000,
-      transactionCount: 0,
-      avgTicketSize: 0,
-      stockValue: 220000000,
-      lowStockItems: 0,
-      employeeCount: 8,
-      activeEmployees: 0,
-      lastSync: new Date(Date.now() - 7200000).toISOString(),
-      status: 'offline',
-      performanceScore: 0
-    }
-];
-
-const mockAlertsData: Alert[] = [
-    {
-      id: '1',
-      branchId: '4',
-      branchName: 'Cabang Medan',
-      type: 'low_stock',
-      message: '15 produk mencapai batas minimum stok',
-      severity: 'warning',
-      timestamp: new Date(Date.now() - 1800000).toISOString()
-    },
-    {
-      id: '2',
-      branchId: '8',
-      branchName: 'Cabang Semarang',
-      type: 'system',
-      message: 'Tidak ada koneksi selama 2 jam terakhir',
-      severity: 'critical',
-      timestamp: new Date(Date.now() - 7200000).toISOString()
-    },
-    {
-      id: '3',
-      branchId: '1',
-      branchName: 'Cabang Pusat Jakarta',
-      type: 'high_sales',
-      message: 'Penjualan hari ini meningkat 25% dari rata-rata',
-      severity: 'info',
-      timestamp: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-      id: '4',
-      branchId: '6',
-      branchName: 'Gudang Pusat Cikarang',
-      type: 'low_stock',
-      message: '22 produk perlu restocking segera',
-      severity: 'warning',
-      timestamp: new Date(Date.now() - 5400000).toISOString()
-    }
-];
 
 interface SalesTrendData {
   date: string;
@@ -399,51 +181,8 @@ interface TargetProgress {
   unit: string;
 }
 
-const mockTopProducts: TopProduct[] = [
-  { id: '1', name: 'Nasi Goreng Spesial', category: 'Makanan', sold: 1250, revenue: 31250000, growth: 15.2 },
-  { id: '2', name: 'Es Teh Manis', category: 'Minuman', sold: 2100, revenue: 10500000, growth: 8.5 },
-  { id: '3', name: 'Ayam Bakar', category: 'Makanan', sold: 890, revenue: 26700000, growth: 12.3 },
-  { id: '4', name: 'Mie Goreng', category: 'Makanan', sold: 780, revenue: 19500000, growth: -2.1 },
-  { id: '5', name: 'Kopi Susu', category: 'Minuman', sold: 1450, revenue: 21750000, growth: 22.4 }
-];
-
-const mockRecentTransactions: RecentTransaction[] = [
-  { id: 'TRX001', branchName: 'Cabang Pusat Jakarta', amount: 485000, items: 5, paymentMethod: 'QRIS', timestamp: new Date(Date.now() - 120000).toISOString() },
-  { id: 'TRX002', branchName: 'Cabang Bandung', amount: 235000, items: 3, paymentMethod: 'Tunai', timestamp: new Date(Date.now() - 300000).toISOString() },
-  { id: 'TRX003', branchName: 'Cabang Surabaya', amount: 892000, items: 8, paymentMethod: 'Debit', timestamp: new Date(Date.now() - 480000).toISOString() },
-  { id: 'TRX004', branchName: 'Kiosk Mall TA', amount: 156000, items: 2, paymentMethod: 'E-Wallet', timestamp: new Date(Date.now() - 720000).toISOString() },
-  { id: 'TRX005', branchName: 'Cabang Medan', amount: 445000, items: 4, paymentMethod: 'Kredit', timestamp: new Date(Date.now() - 900000).toISOString() }
-];
-
-const mockEmployeeStats: EmployeeStats = {
-  total: 127,
-  present: 112,
-  absent: 5,
-  late: 7,
-  onLeave: 3
-};
-
-const mockFinancialMetrics: FinancialMetrics = {
-  revenue: 4120000000,
-  expenses: 2884000000,
-  profit: 1236000000,
-  profitMargin: 30,
-  pendingPayables: 320000000,
-  pendingReceivables: 450000000
-};
-
-const mockTargets: TargetProgress[] = [
-  { label: 'Penjualan Bulanan', current: 4.12, target: 5, unit: 'M' },
-  { label: 'Transaksi Harian', current: 523, target: 600, unit: '' },
-  { label: 'Pelanggan Baru', current: 1250, target: 1500, unit: '' },
-  { label: 'Rating Kepuasan', current: 4.6, target: 4.8, unit: '/5' }
-];
-
-const hourlyData = Array.from({ length: 24 }, (_, i) => ({
-  hour: `${i.toString().padStart(2, '0')}:00`,
-  sales: Math.floor(Math.random() * 15000000) + 2000000,
-  transactions: Math.floor(Math.random() * 50) + 10
-}));
+const defaultEmployeeStats: EmployeeStats = { total: 0, present: 0, absent: 0, late: 0, onLeave: 0 };
+const defaultFinancialMetrics: FinancialMetrics = { revenue: 0, expenses: 0, profit: 0, profitMargin: 0, pendingPayables: 0, pendingReceivables: 0 };
 
 export default function HQDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -457,14 +196,15 @@ export default function HQDashboard() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
   // New comprehensive dashboard state
-  const [topProducts, setTopProducts] = useState<TopProduct[]>(mockTopProducts);
-  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>(mockRecentTransactions);
-  const [employeeStats, setEmployeeStats] = useState<EmployeeStats>(mockEmployeeStats);
-  const [financialMetrics, setFinancialMetrics] = useState<FinancialMetrics>(mockFinancialMetrics);
-  const [targets, setTargets] = useState<TargetProgress[]>(mockTargets);
+  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
+  const [employeeStats, setEmployeeStats] = useState<EmployeeStats>(defaultEmployeeStats);
+  const [financialMetrics, setFinancialMetrics] = useState<FinancialMetrics>(defaultFinancialMetrics);
+  const [targets, setTargets] = useState<TargetProgress[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'sales' | 'branches' | 'analytics'>('overview');
   const [isLiveMode, setIsLiveMode] = useState(true);
   const [chartView, setChartView] = useState<'daily' | 'hourly' | 'weekly'>('daily');
+  const [hourlyData] = useState(() => Array.from({ length: 24 }, (_, i) => ({ hour: `${i.toString().padStart(2, '0')}:00`, sales: 0, transactions: 0 })));
   
   // Interactive state
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -486,29 +226,25 @@ export default function HQDashboard() {
     try {
       const response = await fetch(`/api/hq/dashboard?period=${selectedPeriod}`);
       if (response.ok) {
-        const data = await response.json();
-        setBranches(data.branches || mockBranchesData);
-        setAlerts(data.alerts || mockAlertsData);
-        if (data.salesTrend) {
-          setSalesTrendData(data.salesTrend.map((t: SalesTrendData) => ({
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.branches) setBranches(payload.branches);
+        if (payload.alerts) setAlerts(payload.alerts);
+        if (payload.salesTrend) {
+          setSalesTrendData(payload.salesTrend.map((t: SalesTrendData) => ({
             ...t,
-            sales: t.sales / 1000000 // Convert to millions for chart
+            sales: t.sales / 1000000
           })));
         }
-        if (data.regionPerformance) {
-          setRegionData(data.regionPerformance.map((r: RegionData) => ({
+        if (payload.regionPerformance) {
+          setRegionData(payload.regionPerformance.map((r: RegionData) => ({
             ...r,
-            sales: r.sales / 1000000 // Convert to millions
+            sales: r.sales / 1000000
           })));
         }
-      } else {
-        setBranches(mockBranchesData);
-        setAlerts(mockAlertsData);
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      setBranches(mockBranchesData);
-      setAlerts(mockAlertsData);
     } finally {
       setLoading(false);
       setLastUpdated(new Date());

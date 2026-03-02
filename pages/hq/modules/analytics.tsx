@@ -43,85 +43,12 @@ export default function ModuleAnalytics() {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      // In production, this would fetch from actual analytics API
-      // For now, using mock data
-      
-      const mockModuleStats: ModuleStats[] = [
-        {
-          code: 'POS_CORE',
-          name: 'Point of Sale',
-          category: 'core',
-          tenantCount: 45,
-          activeFlows: 3,
-          eventsProcessed: 12500,
-          avgResponseTime: 120,
-          errorRate: 0.5,
-          trend: 'up'
-        },
-        {
-          code: 'INVENTORY_CORE',
-          name: 'Inventory Management',
-          category: 'core',
-          tenantCount: 42,
-          activeFlows: 2,
-          eventsProcessed: 8900,
-          avgResponseTime: 95,
-          errorRate: 0.3,
-          trend: 'stable'
-        },
-        {
-          code: 'TABLE_MANAGEMENT',
-          name: 'Table Management',
-          category: 'fnb',
-          tenantCount: 28,
-          activeFlows: 4,
-          eventsProcessed: 5600,
-          avgResponseTime: 85,
-          errorRate: 0.2,
-          trend: 'up'
-        },
-        {
-          code: 'KITCHEN_DISPLAY',
-          name: 'Kitchen Display System',
-          category: 'fnb',
-          tenantCount: 35,
-          activeFlows: 3,
-          eventsProcessed: 9800,
-          avgResponseTime: 110,
-          errorRate: 0.4,
-          trend: 'up'
-        },
-        {
-          code: 'ONLINE_ORDERING',
-          name: 'Online Ordering',
-          category: 'optional',
-          tenantCount: 18,
-          activeFlows: 2,
-          eventsProcessed: 4200,
-          avgResponseTime: 150,
-          errorRate: 1.2,
-          trend: 'down'
-        }
-      ];
-      
-      const mockSystemMetrics: SystemMetrics = {
-        totalModules: 10,
-        activeModules: 8,
-        totalTenants: 45,
-        totalEvents: 41000,
-        avgEventsPerDay: 5857,
-        systemUptime: 99.8
-      };
-      
-      setModuleStats(mockModuleStats);
-      setSystemMetrics(mockSystemMetrics);
-      
+      const res = await fetch(`/api/hq/integrations/configs?category=module_analytics&timeRange=${timeRange}`);
+      if (res.ok) { const json = await res.json(); const p = json.data || json; if (p.moduleStats) { setModuleStats(p.moduleStats); setSystemMetrics(p.systemMetrics || {}); } }
     } catch (error) {
-      console.error('Error fetching analytics:', error);
-      toast.error('Failed to load analytics');
-    } finally {
-      setLoading(false);
+      console.error('Error loading analytics:', error);
     }
+    setLoading(false);
   };
   
   const getTrendIcon = (trend: string) => {

@@ -55,32 +55,7 @@ interface BranchBudget {
   status: 'on_track' | 'warning' | 'over_budget';
 }
 
-const mockSummary: BudgetSummary = {
-  totalBudget: 3400000000,
-  totalSpent: 2884000000,
-  totalRemaining: 516000000,
-  utilizationRate: 85,
-  onTrackCategories: 4,
-  overBudgetCategories: 1,
-  underBudgetCategories: 2
-};
-
-const mockCategories: BudgetCategory[] = [
-  { id: '1', name: 'Cost of Goods Sold', budget: 1800000000, spent: 1586200000, remaining: 213800000, utilization: 88, status: 'on_track', variance: -213800000, lastMonth: 1520000000 },
-  { id: '2', name: 'Payroll & Benefits', budget: 850000000, spent: 721000000, remaining: 129000000, utilization: 85, status: 'on_track', variance: -129000000, lastMonth: 695000000 },
-  { id: '3', name: 'Utilities', budget: 280000000, spent: 230720000, remaining: 49280000, utilization: 82, status: 'on_track', variance: -49280000, lastMonth: 210000000 },
-  { id: '4', name: 'Marketing', budget: 250000000, spent: 201880000, remaining: 48120000, utilization: 81, status: 'under_budget', variance: -48120000, lastMonth: 195000000 },
-  { id: '5', name: 'Logistics', budget: 120000000, spent: 86520000, remaining: 33480000, utilization: 72, status: 'under_budget', variance: -33480000, lastMonth: 80000000 },
-  { id: '6', name: 'Maintenance', budget: 100000000, spent: 57680000, remaining: 42320000, utilization: 58, status: 'under_budget', variance: -42320000, lastMonth: 52000000 }
-];
-
-const mockBranchBudgets: BranchBudget[] = [
-  { id: '1', name: 'Cabang Pusat Jakarta', code: 'HQ-001', totalBudget: 1100000000, spent: 875000000, utilization: 80, status: 'on_track' },
-  { id: '2', name: 'Cabang Bandung', code: 'BR-002', totalBudget: 800000000, spent: 644000000, utilization: 81, status: 'on_track' },
-  { id: '3', name: 'Cabang Surabaya', code: 'BR-003', totalBudget: 650000000, spent: 546000000, utilization: 84, status: 'on_track' },
-  { id: '4', name: 'Cabang Medan', code: 'BR-004', totalBudget: 500000000, spent: 455000000, utilization: 91, status: 'warning' },
-  { id: '5', name: 'Cabang Yogyakarta', code: 'BR-005', totalBudget: 350000000, spent: 364000000, utilization: 104, status: 'over_budget' }
-];
+const defaultBudgetSummary: BudgetSummary = { totalBudget: 0, totalSpent: 0, totalRemaining: 0, utilizationRate: 0, onTrackCategories: 0, overBudgetCategories: 0, underBudgetCategories: 0 };
 
 const formatCurrency = (value: number) => {
   if (Math.abs(value) >= 1000000000) {
@@ -95,9 +70,9 @@ export default function BudgetManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
-  const [summary, setSummary] = useState<BudgetSummary>(mockSummary);
-  const [categories, setCategories] = useState<BudgetCategory[]>(mockCategories);
-  const [branchBudgets, setBranchBudgets] = useState<BranchBudget[]>(mockBranchBudgets);
+  const [summary, setSummary] = useState<BudgetSummary>(defaultBudgetSummary);
+  const [categories, setCategories] = useState<BudgetCategory[]>([]);
+  const [branchBudgets, setBranchBudgets] = useState<BranchBudget[]>([]);
   const [viewMode, setViewMode] = useState<'category' | 'branch' | 'trend'>('category');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newBudget, setNewBudget] = useState({
@@ -108,10 +83,47 @@ export default function BudgetManagement() {
     notes: ''
   });
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/hq/finance/budget?period=${period}`);
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.summary) {
+          setSummary({
+            totalBudget: payload.summary.totalBudget || 0,
+            totalSpent: payload.summary.totalActual || 0,
+            totalRemaining: (payload.summary.totalBudget || 0) - (payload.summary.totalActual || 0),
+            utilizationRate: payload.summary.totalBudget > 0 ? Math.round((payload.summary.totalActual / payload.summary.totalBudget) * 100) : 0,
+            onTrackCategories: payload.summary.onTrackCategories || 0,
+            overBudgetCategories: payload.summary.overBudgetCategories || 0,
+            underBudgetCategories: payload.summary.underBudgetCategories || 0
+          });
+        }
+        if (payload.budgets && payload.budgets.length > 0) {
+          const activeBudget = payload.budgets.find((b: any) => b.status === 'active') || payload.budgets[0];
+          if (activeBudget?.branches?.length > 0) {
+            setBranchBudgets(activeBudget.branches.map((b: any) => ({
+              id: b.branchId || b.id, name: b.branchName, code: b.branchCode,
+              totalBudget: b.totalBudget, spent: b.totalActual,
+              utilization: b.totalBudget > 0 ? Math.round((b.totalActual / b.totalBudget) * 100) : 0,
+              status: b.status || 'on_track'
+            })));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching budget data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
-    setLoading(false);
-  }, []);
+    fetchData();
+  }, [period]);
 
   if (!mounted) return null;
 

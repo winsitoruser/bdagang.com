@@ -42,92 +42,6 @@ interface POItem {
   status: 'pending' | 'partial' | 'received';
 }
 
-const mockPurchaseOrders: PurchaseOrder[] = [
-  {
-    id: '1',
-    poNumber: 'PO-2602-0001',
-    supplier: { id: '1', name: 'PT Supplier Utama', code: 'SUP-001' },
-    status: 'approved',
-    totalItems: 15,
-    totalQuantity: 500,
-    totalAmount: 45000000,
-    expectedDelivery: '2026-02-25',
-    createdBy: 'Admin HQ',
-    createdAt: '2026-02-20T08:00:00Z',
-    approvedBy: 'Manager',
-    approvedAt: '2026-02-20T10:00:00Z',
-    notes: 'Urgent restock untuk cabang Jakarta',
-    items: [
-      { id: '1-1', productId: '1', productName: 'Beras Premium 5kg', sku: 'BRS-001', quantity: 100, receivedQuantity: 0, unitPrice: 70000, total: 7000000, status: 'pending' },
-      { id: '1-2', productId: '2', productName: 'Minyak Goreng 2L', sku: 'MYK-001', quantity: 200, receivedQuantity: 0, unitPrice: 30000, total: 6000000, status: 'pending' }
-    ]
-  },
-  {
-    id: '2',
-    poNumber: 'PO-2602-0002',
-    supplier: { id: '2', name: 'CV Distributor Jaya', code: 'SUP-002' },
-    status: 'sent',
-    totalItems: 8,
-    totalQuantity: 300,
-    totalAmount: 28500000,
-    expectedDelivery: '2026-02-24',
-    createdBy: 'Admin HQ',
-    createdAt: '2026-02-19T14:00:00Z',
-    approvedBy: 'Manager',
-    approvedAt: '2026-02-19T16:00:00Z',
-    notes: '',
-    items: []
-  },
-  {
-    id: '3',
-    poNumber: 'PO-2602-0003',
-    supplier: { id: '1', name: 'PT Supplier Utama', code: 'SUP-001' },
-    status: 'partial',
-    totalItems: 12,
-    totalQuantity: 450,
-    totalAmount: 38000000,
-    expectedDelivery: '2026-02-22',
-    createdBy: 'Admin HQ',
-    createdAt: '2026-02-18T09:00:00Z',
-    approvedBy: 'Manager',
-    approvedAt: '2026-02-18T11:00:00Z',
-    notes: 'Sebagian sudah diterima',
-    items: []
-  },
-  {
-    id: '4',
-    poNumber: 'PO-2602-0004',
-    supplier: { id: '3', name: 'UD Grosir Makmur', code: 'SUP-003' },
-    status: 'draft',
-    totalItems: 5,
-    totalQuantity: 150,
-    totalAmount: 12000000,
-    expectedDelivery: null,
-    createdBy: 'Admin HQ',
-    createdAt: '2026-02-22T06:00:00Z',
-    approvedBy: null,
-    approvedAt: null,
-    notes: 'Draft PO untuk mingguan',
-    items: []
-  },
-  {
-    id: '5',
-    poNumber: 'PO-2602-0005',
-    supplier: { id: '2', name: 'CV Distributor Jaya', code: 'SUP-002' },
-    status: 'received',
-    totalItems: 10,
-    totalQuantity: 400,
-    totalAmount: 32000000,
-    expectedDelivery: '2026-02-20',
-    createdBy: 'Admin HQ',
-    createdAt: '2026-02-15T10:00:00Z',
-    approvedBy: 'Manager',
-    approvedAt: '2026-02-15T12:00:00Z',
-    notes: 'Sudah diterima lengkap',
-    items: []
-  }
-];
-
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-800', icon: FileText },
   pending: { label: 'Menunggu Approval', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
@@ -167,16 +81,14 @@ export default function PurchaseOrders() {
       ]);
       if (poRes.ok) {
         const data = await poRes.json();
-        setPurchaseOrders(data.purchaseOrders || mockPurchaseOrders);
-      } else {
-        setPurchaseOrders(mockPurchaseOrders);
+        setPurchaseOrders(data.purchaseOrders || []);
       }
       if (enhancedRes.ok) {
         const eData = await enhancedRes.json();
         setEnhancedData(eData.data || null);
       }
     } catch (error) {
-      setPurchaseOrders(mockPurchaseOrders);
+      console.error('Error fetching purchase orders:', error);
     } finally {
       setLoading(false);
     }

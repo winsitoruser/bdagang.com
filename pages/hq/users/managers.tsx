@@ -46,119 +46,6 @@ interface Manager {
   lastActive: string;
 }
 
-const mockManagers: Manager[] = [
-  {
-    id: '1',
-    name: 'Ahmad Wijaya',
-    email: 'ahmad.wijaya@bedagang.com',
-    phone: '081234567890',
-    avatar: null,
-    branchId: '1',
-    branchName: 'Cabang Pusat Jakarta',
-    branchCode: 'HQ-001',
-    branchCity: 'Jakarta Selatan',
-    joinDate: '2023-06-15',
-    status: 'active',
-    performance: {
-      salesTarget: 1200000000,
-      salesActual: 1250000000,
-      achievement: 104,
-      rating: 4.8,
-      employeeCount: 25,
-      activeEmployees: 22
-    },
-    lastActive: '2026-02-22T06:30:00Z'
-  },
-  {
-    id: '2',
-    name: 'Siti Rahayu',
-    email: 'siti.rahayu@bedagang.com',
-    phone: '082345678901',
-    avatar: null,
-    branchId: '2',
-    branchName: 'Cabang Bandung',
-    branchCode: 'BR-002',
-    branchCity: 'Bandung',
-    joinDate: '2023-08-01',
-    status: 'active',
-    performance: {
-      salesTarget: 900000000,
-      salesActual: 920000000,
-      achievement: 102,
-      rating: 4.5,
-      employeeCount: 18,
-      activeEmployees: 16
-    },
-    lastActive: '2026-02-22T05:45:00Z'
-  },
-  {
-    id: '3',
-    name: 'Budi Santoso',
-    email: 'budi.santoso@bedagang.com',
-    phone: '083456789012',
-    avatar: null,
-    branchId: '3',
-    branchName: 'Cabang Surabaya',
-    branchCode: 'BR-003',
-    branchCity: 'Surabaya',
-    joinDate: '2023-09-10',
-    status: 'active',
-    performance: {
-      salesTarget: 850000000,
-      salesActual: 780000000,
-      achievement: 92,
-      rating: 4.0,
-      employeeCount: 15,
-      activeEmployees: 14
-    },
-    lastActive: '2026-02-22T04:00:00Z'
-  },
-  {
-    id: '4',
-    name: 'Dewi Lestari',
-    email: 'dewi.lestari@bedagang.com',
-    phone: '084567890123',
-    avatar: null,
-    branchId: '4',
-    branchName: 'Cabang Medan',
-    branchCode: 'BR-004',
-    branchCity: 'Medan',
-    joinDate: '2024-01-15',
-    status: 'active',
-    performance: {
-      salesTarget: 600000000,
-      salesActual: 650000000,
-      achievement: 108,
-      rating: 4.6,
-      employeeCount: 12,
-      activeEmployees: 11
-    },
-    lastActive: '2026-02-22T03:30:00Z'
-  },
-  {
-    id: '5',
-    name: 'Eko Prasetyo',
-    email: 'eko.prasetyo@bedagang.com',
-    phone: '085678901234',
-    avatar: null,
-    branchId: '5',
-    branchName: 'Cabang Yogyakarta',
-    branchCode: 'BR-005',
-    branchCity: 'Yogyakarta',
-    joinDate: '2024-02-01',
-    status: 'on_leave',
-    performance: {
-      salesTarget: 500000000,
-      salesActual: 520000000,
-      achievement: 104,
-      rating: 4.3,
-      employeeCount: 10,
-      activeEmployees: 9
-    },
-    lastActive: '2026-02-20T10:00:00Z'
-  }
-];
-
 export default function ManagersPage() {
   const [mounted, setMounted] = useState(false);
   const [managers, setManagers] = useState<Manager[]>([]);
@@ -174,13 +61,12 @@ export default function ManagersPage() {
     try {
       const response = await fetch('/api/hq/managers');
       if (response.ok) {
-        const data = await response.json();
-        setManagers(data.managers || mockManagers);
-      } else {
-        setManagers(mockManagers);
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.managers) setManagers(payload.managers);
       }
     } catch (error) {
-      setManagers(mockManagers);
+      console.error('Error fetching managers:', error);
     } finally {
       setLoading(false);
     }

@@ -38,62 +38,12 @@ interface Category {
   children?: Category[];
 }
 
-const mockCategories: Category[] = [
-  {
-    id: '1', name: 'Sembako', slug: 'sembako', description: 'Sembilan bahan pokok', parentId: null, parentName: null, level: 0, productCount: 156, isActive: true, sortOrder: 1, icon: '🌾', color: '#F59E0B',
-    children: [
-      { id: '1-1', name: 'Beras', slug: 'beras', description: 'Berbagai jenis beras', parentId: '1', parentName: 'Sembako', level: 1, productCount: 45, isActive: true, sortOrder: 1, icon: '🍚', color: '#F59E0B' },
-      { id: '1-2', name: 'Minyak Goreng', slug: 'minyak-goreng', description: 'Minyak untuk memasak', parentId: '1', parentName: 'Sembako', level: 1, productCount: 28, isActive: true, sortOrder: 2, icon: '🫗', color: '#F59E0B' },
-      { id: '1-3', name: 'Gula', slug: 'gula', description: 'Gula pasir dan gula merah', parentId: '1', parentName: 'Sembako', level: 1, productCount: 18, isActive: true, sortOrder: 3, icon: '🍬', color: '#F59E0B' },
-      { id: '1-4', name: 'Tepung', slug: 'tepung', description: 'Tepung terigu dan lainnya', parentId: '1', parentName: 'Sembako', level: 1, productCount: 22, isActive: true, sortOrder: 4, icon: '🥖', color: '#F59E0B' }
-    ]
-  },
-  {
-    id: '2', name: 'Minuman', slug: 'minuman', description: 'Berbagai jenis minuman', parentId: null, parentName: null, level: 0, productCount: 128, isActive: true, sortOrder: 2, icon: '🥤', color: '#3B82F6',
-    children: [
-      { id: '2-1', name: 'Air Mineral', slug: 'air-mineral', description: 'Air mineral kemasan', parentId: '2', parentName: 'Minuman', level: 1, productCount: 35, isActive: true, sortOrder: 1, icon: '💧', color: '#3B82F6' },
-      { id: '2-2', name: 'Minuman Ringan', slug: 'minuman-ringan', description: 'Soft drink dan soda', parentId: '2', parentName: 'Minuman', level: 1, productCount: 48, isActive: true, sortOrder: 2, icon: '🥤', color: '#3B82F6' },
-      { id: '2-3', name: 'Jus', slug: 'jus', description: 'Jus buah kemasan', parentId: '2', parentName: 'Minuman', level: 1, productCount: 25, isActive: true, sortOrder: 3, icon: '🧃', color: '#3B82F6' },
-      { id: '2-4', name: 'Kopi & Teh', slug: 'kopi-teh', description: 'Kopi dan teh kemasan', parentId: '2', parentName: 'Minuman', level: 1, productCount: 20, isActive: true, sortOrder: 4, icon: '☕', color: '#3B82F6' }
-    ]
-  },
-  {
-    id: '3', name: 'Makanan Ringan', slug: 'makanan-ringan', description: 'Snack dan cemilan', parentId: null, parentName: null, level: 0, productCount: 215, isActive: true, sortOrder: 3, icon: '🍿', color: '#10B981',
-    children: [
-      { id: '3-1', name: 'Keripik', slug: 'keripik', description: 'Berbagai keripik', parentId: '3', parentName: 'Makanan Ringan', level: 1, productCount: 68, isActive: true, sortOrder: 1, icon: '🥔', color: '#10B981' },
-      { id: '3-2', name: 'Biskuit', slug: 'biskuit', description: 'Biskuit dan cookies', parentId: '3', parentName: 'Makanan Ringan', level: 1, productCount: 82, isActive: true, sortOrder: 2, icon: '🍪', color: '#10B981' },
-      { id: '3-3', name: 'Cokelat & Permen', slug: 'cokelat-permen', description: 'Cokelat dan permen', parentId: '3', parentName: 'Makanan Ringan', level: 1, productCount: 45, isActive: true, sortOrder: 3, icon: '🍫', color: '#10B981' },
-      { id: '3-4', name: 'Kacang', slug: 'kacang', description: 'Kacang-kacangan', parentId: '3', parentName: 'Makanan Ringan', level: 1, productCount: 20, isActive: true, sortOrder: 4, icon: '🥜', color: '#10B981' }
-    ]
-  },
-  {
-    id: '4', name: 'Produk Susu', slug: 'produk-susu', description: 'Susu dan olahannya', parentId: null, parentName: null, level: 0, productCount: 85, isActive: true, sortOrder: 4, icon: '🥛', color: '#8B5CF6',
-    children: [
-      { id: '4-1', name: 'Susu Cair', slug: 'susu-cair', description: 'Susu UHT dan pasteurisasi', parentId: '4', parentName: 'Produk Susu', level: 1, productCount: 32, isActive: true, sortOrder: 1, icon: '🥛', color: '#8B5CF6' },
-      { id: '4-2', name: 'Susu Bubuk', slug: 'susu-bubuk', description: 'Susu bubuk dan formula', parentId: '4', parentName: 'Produk Susu', level: 1, productCount: 28, isActive: true, sortOrder: 2, icon: '🍼', color: '#8B5CF6' },
-      { id: '4-3', name: 'Yogurt', slug: 'yogurt', description: 'Yogurt dan keju', parentId: '4', parentName: 'Produk Susu', level: 1, productCount: 25, isActive: true, sortOrder: 3, icon: '🧀', color: '#8B5CF6' }
-    ]
-  },
-  {
-    id: '5', name: 'Perawatan Pribadi', slug: 'perawatan-pribadi', description: 'Produk perawatan diri', parentId: null, parentName: null, level: 0, productCount: 142, isActive: true, sortOrder: 5, icon: '🧴', color: '#EC4899'
-  },
-  {
-    id: '6', name: 'Kebersihan Rumah', slug: 'kebersihan-rumah', description: 'Produk kebersihan rumah tangga', parentId: null, parentName: null, level: 0, productCount: 98, isActive: true, sortOrder: 6, icon: '🧹', color: '#06B6D4'
-  },
-  {
-    id: '7', name: 'Frozen Food', slug: 'frozen-food', description: 'Makanan beku', parentId: null, parentName: null, level: 0, productCount: 76, isActive: true, sortOrder: 7, icon: '🧊', color: '#0EA5E9'
-  },
-  {
-    id: '8', name: 'Bumbu & Rempah', slug: 'bumbu-rempah', description: 'Bumbu masak dan rempah', parentId: null, parentName: null, level: 0, productCount: 64, isActive: false, sortOrder: 8, icon: '🌶️', color: '#EF4444'
-  }
-];
-
 const iconOptions = ['📦', '🌾', '🍚', '🫗', '🍬', '🥖', '🥤', '💧', '🧃', '☕', '🍿', '🥔', '🍪', '🍫', '🥜', '🥛', '🍼', '🧀', '🧴', '🧹', '🧊', '🌶️', '🍎', '🥕', '🍞', '🥚', '🧈', '🍜', '🍕', '🌭'];
 const colorOptions = ['#F59E0B', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899', '#06B6D4', '#0EA5E9', '#EF4444', '#84CC16', '#F97316'];
 
 export default function InventoryCategories() {
   const [mounted, setMounted] = useState(false);
-  const [categories, setCategories] = useState<Category[]>(mockCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<string[]>(['1', '2', '3', '4']);
@@ -121,8 +71,9 @@ export default function InventoryCategories() {
     try {
       const response = await fetch('/api/hq/inventory/categories');
       if (response.ok) {
-        const data = await response.json();
-        setCategories(data.categories || mockCategories);
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.categories) setCategories(payload.categories);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);

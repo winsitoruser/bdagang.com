@@ -191,16 +191,16 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
               isExpanded ? 'bg-blue-50/80 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-              {!sidebarCollapsed && <span className="text-sm font-semibold truncate">{item.name}</span>}
+            <div className="flex items-center gap-3 min-w-0">
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              {!sidebarCollapsed && <span className="text-[15px] font-semibold truncate">{item.name}</span>}
             </div>
             {!sidebarCollapsed && (
-              <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
             )}
           </button>
           {!sidebarCollapsed && isExpanded && (
-            <div className="ml-[18px] mt-0.5 space-y-px border-l border-gray-200 pl-2.5">
+            <div className="ml-5 mt-0.5 space-y-0.5 border-l border-gray-200 pl-3">
               {item.children!.map(child => renderNavItem(child, depth + 1))}
             </div>
           )}
@@ -213,7 +213,7 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
         key={item.id}
         href={item.href || '#'}
         className={`group relative flex items-center justify-between rounded-md transition-all duration-150 ${
-          isChild ? 'px-2.5 py-[5px]' : 'px-3 py-2'
+          isChild ? 'px-2.5 py-1.5' : 'px-3 py-2.5'
         } ${
           active 
             ? isChild
@@ -224,10 +224,10 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
               : 'text-gray-600 hover:bg-gray-50'
         } ${sidebarCollapsed ? 'justify-center' : ''}`}
       >
-        <div className={`flex items-center min-w-0 ${isChild ? 'gap-2' : 'gap-2.5'} ${sidebarCollapsed ? 'justify-center' : ''}`}>
-          <Icon className={`flex-shrink-0 ${isChild ? 'w-3.5 h-3.5' : 'w-[18px] h-[18px]'}`} />
+        <div className={`flex items-center min-w-0 ${isChild ? 'gap-2.5' : 'gap-3'} ${sidebarCollapsed ? 'justify-center' : ''}`}>
+          <Icon className={`flex-shrink-0 ${isChild ? 'w-4 h-4' : 'w-5 h-5'}`} />
           {!sidebarCollapsed && (
-            <span className={`truncate ${isChild ? 'text-[13px] font-normal leading-tight' : 'text-sm font-semibold'}`}>
+            <span className={`truncate ${isChild ? 'text-sm font-normal' : 'text-[15px] font-semibold'}`}>
               {item.name}
             </span>
           )}
@@ -252,7 +252,7 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
     <div key={group.id} className={idx > 0 ? 'mt-5' : ''}>
       {!sidebarCollapsed && (
         <div className="px-3 mb-1.5 flex items-center gap-2">
-          <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.06em] whitespace-nowrap">
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">
             {group.title}
           </h3>
           <div className="flex-1 h-px bg-gray-100" />
@@ -283,19 +283,19 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
       <aside className={`fixed inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transform transition-all duration-300 ease-in-out ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 ${
-        sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
-      } w-64`}>
+        sidebarCollapsed ? 'lg:w-20' : 'lg:w-72'
+      } w-72`}>
         {/* Logo */}
-        <div className="h-14 flex items-center justify-between px-4 border-b border-gray-100">
-          <Link href={filteredConfig.logo.href} className={`flex items-center gap-2.5 ${sidebarCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
-            <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center flex-shrink-0">
-              <LogoIcon className="w-5 h-5 text-white" />
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
+          <Link href={filteredConfig.logo.href} className={`flex items-center gap-3 ${sidebarCollapsed ? 'lg:justify-center lg:w-full' : ''}`}>
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center flex-shrink-0">
+              <LogoIcon className="w-6 h-6 text-white" />
             </div>
             {!sidebarCollapsed && (
               <div className={`${sidebarCollapsed ? 'hidden' : ''}`}>
-                <h1 className="text-sm font-bold text-gray-900 leading-tight">{filteredConfig.logo.title}</h1>
+                <h1 className="text-base font-bold text-gray-900 leading-tight">{filteredConfig.logo.title}</h1>
                 {filteredConfig.logo.subtitle && (
-                  <p className="text-[10px] text-gray-400 font-medium leading-tight">{filteredConfig.logo.subtitle}</p>
+                  <p className="text-xs text-gray-400 font-medium leading-tight">{filteredConfig.logo.subtitle}</p>
                 )}
               </div>
             )}
@@ -327,7 +327,7 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
       <button
         onClick={toggleSidebarCollapse}
         className={`hidden lg:flex fixed top-20 z-50 items-center justify-center w-8 h-8 bg-white border border-gray-200 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 ${
-          sidebarCollapsed ? 'left-16' : 'left-60'
+          sidebarCollapsed ? 'left-16' : 'left-[17rem]'
         }`}
         title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
       >
@@ -339,7 +339,7 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
       </button>
 
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+      <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}`}>
         {/* Mobile Menu Button */}
         <button
           onClick={() => setSidebarOpen(true)}

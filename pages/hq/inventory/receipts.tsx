@@ -53,59 +53,10 @@ interface GoodsReceipt {
   notes?: string;
 }
 
-const mockReceipts: GoodsReceipt[] = [
-  {
-    id: '1', receiptNumber: 'GR-2026-0125', poNumber: 'PO-2026-0089',
-    supplier: { id: '1', name: 'PT Supplier Utama', code: 'SUP-001' },
-    branch: { id: '1', name: 'Gudang Pusat', code: 'WH-001' },
-    status: 'pending', receiptDate: '2026-02-22', expectedDate: '2026-02-22',
-    items: [
-      { productId: '1', productName: 'Beras Premium 5kg', sku: 'BRS-001', orderedQty: 500, receivedQty: 0, unit: 'pcs', unitPrice: 75000, totalPrice: 37500000, status: 'pending' },
-      { productId: '2', productName: 'Minyak Goreng 2L', sku: 'MYK-001', orderedQty: 300, receivedQty: 0, unit: 'pcs', unitPrice: 35000, totalPrice: 10500000, status: 'pending' }
-    ],
-    totalItems: 2, totalValue: 48000000, receivedValue: 0
-  },
-  {
-    id: '2', receiptNumber: 'GR-2026-0124', poNumber: 'PO-2026-0087',
-    supplier: { id: '2', name: 'CV Distributor Jaya', code: 'SUP-002' },
-    branch: { id: '1', name: 'Gudang Pusat', code: 'WH-001' },
-    status: 'partial', receiptDate: '2026-02-21', expectedDate: '2026-02-21',
-    items: [
-      { productId: '6', productName: 'Tepung Terigu 1kg', sku: 'TPG-001', orderedQty: 1000, receivedQty: 600, unit: 'pcs', unitPrice: 14000, totalPrice: 14000000, status: 'partial', notes: 'Sisa 400 akan dikirim besok' },
-      { productId: '3', productName: 'Gula Pasir 1kg', sku: 'GLA-001', orderedQty: 500, receivedQty: 500, unit: 'pcs', unitPrice: 16000, totalPrice: 8000000, status: 'complete' }
-    ],
-    totalItems: 2, totalValue: 22000000, receivedValue: 16400000,
-    receivedBy: 'Staff Gudang 1'
-  },
-  {
-    id: '3', receiptNumber: 'GR-2026-0123', poNumber: 'PO-2026-0085',
-    supplier: { id: '1', name: 'PT Supplier Utama', code: 'SUP-001' },
-    branch: { id: '1', name: 'Gudang Pusat', code: 'WH-001' },
-    status: 'complete', receiptDate: '2026-02-20', expectedDate: '2026-02-20',
-    items: [
-      { productId: '4', productName: 'Kopi Arabica 250g', sku: 'KPI-001', orderedQty: 200, receivedQty: 200, unit: 'pcs', unitPrice: 85000, totalPrice: 17000000, status: 'complete' },
-      { productId: '5', productName: 'Susu UHT 1L', sku: 'SSU-001', orderedQty: 400, receivedQty: 400, unit: 'pcs', unitPrice: 18000, totalPrice: 7200000, status: 'complete' }
-    ],
-    totalItems: 2, totalValue: 24200000, receivedValue: 24200000,
-    receivedBy: 'Staff Gudang 2', verifiedBy: 'Supervisor Gudang'
-  },
-  {
-    id: '4', receiptNumber: 'GR-2026-0122', poNumber: 'PO-2026-0083',
-    supplier: { id: '3', name: 'UD Sembako Makmur', code: 'SUP-003' },
-    branch: { id: '2', name: 'Cabang Jakarta', code: 'HQ-001' },
-    status: 'complete', receiptDate: '2026-02-19', expectedDate: '2026-02-19',
-    items: [
-      { productId: '1', productName: 'Beras Premium 5kg', sku: 'BRS-001', orderedQty: 100, receivedQty: 100, unit: 'pcs', unitPrice: 75000, totalPrice: 7500000, status: 'complete' }
-    ],
-    totalItems: 1, totalValue: 7500000, receivedValue: 7500000,
-    receivedBy: 'Staff Jakarta', verifiedBy: 'Manager Jakarta'
-  }
-];
-
 export default function GoodsReceiptManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [receipts, setReceipts] = useState<GoodsReceipt[]>(mockReceipts);
+  const [receipts, setReceipts] = useState<GoodsReceipt[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -121,8 +72,9 @@ export default function GoodsReceiptManagement() {
       
       const response = await fetch(`/api/hq/inventory/receipts?${params.toString()}`);
       if (response.ok) {
-        const data = await response.json();
-        setReceipts(data.receipts || mockReceipts);
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.receipts) setReceipts(payload.receipts);
       }
     } catch (error) {
       console.error('Error fetching receipts:', error);

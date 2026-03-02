@@ -42,102 +42,10 @@ export default function FeatureManagement() {
   const fetchFeatures = async () => {
     setLoading(true);
     try {
-      // Mock data - in production, fetch from module_features table
-      const mockFeatures: ModuleFeature[] = [
-        {
-          id: '1',
-          moduleId: 'pos-core',
-          moduleName: 'POS Core',
-          code: 'DINE_IN',
-          name: 'Dine-In Mode',
-          description: 'Enable table service and dine-in functionality',
-          isDefault: true,
-          businessTypes: ['fine_dining', 'cafe'],
-          isActive: true
-        },
-        {
-          id: '2',
-          moduleId: 'pos-core',
-          moduleName: 'POS Core',
-          code: 'SPLIT_BILL',
-          name: 'Split Bill',
-          description: 'Allow customers to split bills',
-          isDefault: false,
-          businessTypes: ['fine_dining', 'qsr', 'cafe'],
-          isActive: true
-        },
-        {
-          id: '3',
-          moduleId: 'pos-core',
-          moduleName: 'POS Core',
-          code: 'DELIVERY_MODE',
-          name: 'Delivery Mode',
-          description: 'Enable delivery order processing',
-          isDefault: true,
-          businessTypes: ['cloud_kitchen', 'qsr'],
-          isActive: true
-        },
-        {
-          id: '4',
-          moduleId: 'table-management',
-          moduleName: 'Table Management',
-          code: 'FLOOR_PLAN',
-          name: 'Floor Plan Designer',
-          description: 'Visual floor plan editor for table layout',
-          isDefault: true,
-          businessTypes: ['fine_dining'],
-          isActive: true
-        },
-        {
-          id: '5',
-          moduleId: 'table-management',
-          moduleName: 'Table Management',
-          code: 'TABLE_MERGING',
-          name: 'Table Merging',
-          description: 'Merge multiple tables for large parties',
-          isDefault: false,
-          businessTypes: ['fine_dining', 'cafe'],
-          isActive: true
-        },
-        {
-          id: '6',
-          moduleId: 'kitchen-display',
-          moduleName: 'Kitchen Display',
-          code: 'MULTI_STATION',
-          name: 'Multi-Station Support',
-          description: 'Route orders to different kitchen stations',
-          isDefault: true,
-          businessTypes: ['fine_dining', 'cloud_kitchen'],
-          isActive: true
-        },
-        {
-          id: '7',
-          moduleId: 'kitchen-display',
-          moduleName: 'Kitchen Display',
-          code: 'PLATING_INSTRUCTIONS',
-          name: 'Plating Instructions',
-          description: 'Show detailed plating instructions for dishes',
-          isDefault: false,
-          businessTypes: ['fine_dining'],
-          isActive: true
-        },
-        {
-          id: '8',
-          moduleId: 'inventory',
-          moduleName: 'Inventory',
-          code: 'INGREDIENT_TRACKING',
-          name: 'Ingredient Tracking',
-          description: 'Track individual ingredients and components',
-          isDefault: true,
-          businessTypes: ['fine_dining', 'cloud_kitchen'],
-          isActive: true
-        }
-      ];
-      
-      setFeatures(mockFeatures);
+      const res = await fetch('/api/hq/integrations/configs?category=module_features');
+      if (res.ok) { const json = await res.json(); const p = json.data || json; if (p.features) { setFeatures(p.features); } }
     } catch (error) {
-      console.error('Error fetching features:', error);
-      toast.error('Failed to load features');
+      console.error('Error loading features:', error);
     } finally {
       setLoading(false);
     }

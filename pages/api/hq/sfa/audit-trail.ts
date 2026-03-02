@@ -180,37 +180,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Activity summary / stats
         case 'summary': {
           const { period = '7d' } = req.query;
-          let interval = 'INTERVAL 7 DAY';
-          if (period === '30d') interval = 'INTERVAL 30 DAY';
-          if (period === '90d') interval = 'INTERVAL 90 DAY';
+          let days = 7;
+          if (period === '30d') days = 30;
+          if (period === '90d') days = 90;
 
           const [byAction, byEntity, byUser, dailyTrend] = await Promise.all([
             // Actions breakdown
             q(`SELECT action, COUNT(*) as count
                FROM audit_logs WHERE tenant_id = :tid
                  AND (entity_type LIKE 'crm_%' OR entity_type LIKE 'sfa_%')
-                 AND created_at >= DATE_SUB(NOW(), ${interval})
-               GROUP BY action ORDER BY count DESC`, { tid: tenantId }),
+                 AND created_at >= NOW() - :days * INTERVAL '1 day'
+               GROUP BY action ORDER BY count DESC`, { tid: tenantId, days }),
             // Entity types breakdown
             q(`SELECT entity_type, COUNT(*) as count
                FROM audit_logs WHERE tenant_id = :tid
                  AND (entity_type LIKE 'crm_%' OR entity_type LIKE 'sfa_%')
-                 AND created_at >= DATE_SUB(NOW(), ${interval})
-               GROUP BY entity_type ORDER BY count DESC LIMIT 10`, { tid: tenantId }),
+                 AND created_at >= NOW() - :days * INTERVAL '1 day'
+               GROUP BY entity_type ORDER BY count DESC LIMIT 10`, { tid: tenantId, days }),
             // User activity ranking
             q(`SELECT a.user_id, u.name as user_name, u.role, COUNT(*) as count
                FROM audit_logs a
                LEFT JOIN users u ON u.id = a.user_id
                WHERE a.tenant_id = :tid
                  AND (a.entity_type LIKE 'crm_%' OR a.entity_type LIKE 'sfa_%')
-                 AND a.created_at >= DATE_SUB(NOW(), ${interval})
-               GROUP BY a.user_id, u.name, u.role ORDER BY count DESC LIMIT 10`, { tid: tenantId }),
+                 AND a.created_at >= NOW() - :days * INTERVAL '1 day'
+               GROUP BY a.user_id, u.name, u.role ORDER BY count DESC LIMIT 10`, { tid: tenantId, days }),
             // Daily activity trend
-            q(`SELECT DATE(created_at) as date, COUNT(*) as count
+            q(`SELECT created_at::date as date, COUNT(*) as count
                FROM audit_logs WHERE tenant_id = :tid
                  AND (entity_type LIKE 'crm_%' OR entity_type LIKE 'sfa_%')
-                 AND created_at >= DATE_SUB(NOW(), ${interval})
-               GROUP BY DATE(created_at) ORDER BY date ASC`, { tid: tenantId }),
+                 AND created_at >= NOW() - :days * INTERVAL '1 day'
+               GROUP BY created_at::date ORDER BY date ASC`, { tid: tenantId, days }),
           ]);
 
           return res.json({

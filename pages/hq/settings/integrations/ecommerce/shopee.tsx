@@ -14,24 +14,31 @@ interface ShopStore {
   productSynced: boolean; lastSyncAt?: string;
 }
 
-const mockStores: ShopStore[] = [
-  { id: 'ss-001', branchId: 'hq', branchName: 'HQ Jakarta', branchCode: 'HQ-001', shopId: 'bedagang.id', shopName: 'Bedagang.ID Official', shopUrl: 'shopee.co.id/bedagang.id', status: 'active', isOpen: true, autoReply: true, stats: { orders: 5280, revenue: 785000000, products: 168, rating: 4.9, followers: 25600, chatResponseRate: 99 }, productSynced: true, lastSyncAt: '2026-02-22T23:00:00Z' },
-  { id: 'ss-002', branchId: 'branch-001', branchName: 'Cabang Sudirman', branchCode: 'JKT-001', shopId: 'bedagang.sudirman', shopName: 'Bedagang Sudirman', shopUrl: 'shopee.co.id/bedagang.sudirman', status: 'active', isOpen: true, autoReply: true, stats: { orders: 4120, revenue: 612000000, products: 145, rating: 4.8, followers: 18200, chatResponseRate: 97 }, productSynced: true, lastSyncAt: '2026-02-22T22:00:00Z' },
-  { id: 'ss-003', branchId: 'branch-002', branchName: 'Cabang Bandung', branchCode: 'BDG-001', shopId: '', shopName: '', shopUrl: '', status: 'pending', isOpen: false, autoReply: false, stats: { orders: 0, revenue: 0, products: 0, rating: 0, followers: 0, chatResponseRate: 0 }, productSynced: false },
-  { id: 'ss-004', branchId: 'branch-003', branchName: 'Cabang Surabaya', branchCode: 'SBY-001', shopId: 'bedagang.sby', shopName: 'Bedagang Surabaya', shopUrl: 'shopee.co.id/bedagang.sby', status: 'active', isOpen: true, autoReply: false, stats: { orders: 3450, revenue: 453000000, products: 132, rating: 4.7, followers: 12400, chatResponseRate: 92 }, productSynced: true, lastSyncAt: '2026-02-22T20:00:00Z' },
-];
-
 const formatCurrency = (v: number) => v >= 1e9 ? `Rp ${(v/1e9).toFixed(2)}M` : v >= 1e6 ? `Rp ${(v/1e6).toFixed(0)}Jt` : `Rp ${v.toLocaleString('id-ID')}`;
 
 export default function ShopeeIntegrationPage() {
   const [mounted, setMounted] = useState(false);
-  const [stores, setStores] = useState(mockStores);
+  const [stores, setStores] = useState<ShopStore[]>([]);
   const [selectedStore, setSelectedStore] = useState<ShopStore | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'stores' | 'products' | 'orders' | 'promos' | 'settings'>('overview');
   const [loading, setLoading] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
 
-  useEffect(() => { setMounted(true); if (mockStores.length) setSelectedStore(mockStores[0]); }, []);
+  const fetchPlatformData = async () => {
+    try {
+      const response = await fetch('/api/integrations/ecommerce?platform=shopee');
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.stores) {
+          setStores(payload.stores);
+          if (payload.stores.length > 0) setSelectedStore(payload.stores[0]);
+        }
+      }
+    } catch { }
+  };
+
+  useEffect(() => { setMounted(true); fetchPlatformData(); }, []);
 
   const totalStats = stores.reduce((a, s) => ({ orders: a.orders + s.stats.orders, revenue: a.revenue + s.stats.revenue, products: a.products + s.stats.products }), { orders: 0, revenue: 0, products: 0 });
   const avgRating = (stores.filter(s => s.stats.rating > 0).reduce((a, s) => a + s.stats.rating, 0) / stores.filter(s => s.stats.rating > 0).length).toFixed(1);

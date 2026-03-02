@@ -65,121 +65,7 @@ interface InvoiceSummary {
   overdueCount: number;
 }
 
-const mockSummary: InvoiceSummary = {
-  totalInvoices: 156,
-  totalAmount: 2850000000,
-  paidAmount: 2150000000,
-  pendingAmount: 520000000,
-  overdueAmount: 180000000,
-  draftCount: 8,
-  sentCount: 32,
-  paidCount: 98,
-  overdueCount: 18
-};
-
-const mockInvoices: Invoice[] = [
-  {
-    id: '1',
-    invoiceNumber: 'INV-2026-0245',
-    customer: 'PT ABC Corporation',
-    customerType: 'corporate',
-    branch: 'Cabang Pusat Jakarta',
-    branchCode: 'HQ-001',
-    issueDate: '2026-02-20',
-    dueDate: '2026-03-20',
-    items: [
-      { id: '1', description: 'Catering Service - 500 pax', quantity: 1, unitPrice: 75000000, total: 75000000 },
-      { id: '2', description: 'Delivery Fee', quantity: 1, unitPrice: 2500000, total: 2500000 }
-    ],
-    subtotal: 77500000,
-    tax: 7750000,
-    discount: 0,
-    total: 85250000,
-    status: 'sent',
-    paidAmount: 0,
-    notes: 'Corporate event catering'
-  },
-  {
-    id: '2',
-    invoiceNumber: 'INV-2026-0244',
-    customer: 'Hotel Grand Indonesia',
-    customerType: 'corporate',
-    branch: 'Cabang Pusat Jakarta',
-    branchCode: 'HQ-001',
-    issueDate: '2026-02-18',
-    dueDate: '2026-03-18',
-    items: [
-      { id: '1', description: 'Weekly Supply - Food Items', quantity: 1, unitPrice: 120000000, total: 120000000 }
-    ],
-    subtotal: 120000000,
-    tax: 12000000,
-    discount: 5000000,
-    total: 127000000,
-    status: 'partial',
-    paidAmount: 60000000,
-    notes: 'Recurring weekly supply'
-  },
-  {
-    id: '3',
-    invoiceNumber: 'INV-2026-0240',
-    customer: 'CV Maju Jaya',
-    customerType: 'corporate',
-    branch: 'Cabang Bandung',
-    branchCode: 'BR-002',
-    issueDate: '2026-02-10',
-    dueDate: '2026-02-25',
-    items: [
-      { id: '1', description: 'Bulk Order - Frozen Products', quantity: 500, unitPrice: 85000, total: 42500000 }
-    ],
-    subtotal: 42500000,
-    tax: 4250000,
-    discount: 0,
-    total: 46750000,
-    status: 'overdue',
-    paidAmount: 0,
-    notes: ''
-  },
-  {
-    id: '4',
-    invoiceNumber: 'INV-2026-0238',
-    customer: 'Restaurant Chain XYZ',
-    customerType: 'corporate',
-    branch: 'Cabang Surabaya',
-    branchCode: 'BR-003',
-    issueDate: '2026-02-05',
-    dueDate: '2026-02-20',
-    items: [
-      { id: '1', description: 'Monthly Supply Contract', quantity: 1, unitPrice: 95000000, total: 95000000 }
-    ],
-    subtotal: 95000000,
-    tax: 9500000,
-    discount: 2500000,
-    total: 102000000,
-    status: 'paid',
-    paidAmount: 102000000,
-    notes: 'Contract #RC-2026-001'
-  },
-  {
-    id: '5',
-    invoiceNumber: 'INV-2026-0250',
-    customer: 'Catering Berkah',
-    customerType: 'corporate',
-    branch: 'Cabang Medan',
-    branchCode: 'BR-004',
-    issueDate: '2026-02-22',
-    dueDate: '2026-03-22',
-    items: [
-      { id: '1', description: 'Raw Materials Supply', quantity: 1, unitPrice: 35000000, total: 35000000 }
-    ],
-    subtotal: 35000000,
-    tax: 3500000,
-    discount: 0,
-    total: 38500000,
-    status: 'draft',
-    paidAmount: 0,
-    notes: 'Pending approval'
-  }
-];
+const defaultInvSummary: InvoiceSummary = { totalInvoices: 0, totalAmount: 0, paidAmount: 0, pendingAmount: 0, overdueAmount: 0, draftCount: 0, sentCount: 0, paidCount: 0, overdueCount: 0 };
 
 const formatCurrency = (value: number) => {
   if (Math.abs(value) >= 1000000000) {
@@ -197,8 +83,8 @@ const formatFullCurrency = (value: number) => {
 export default function InvoiceManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [summary, setSummary] = useState<InvoiceSummary>(mockSummary);
-  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoices);
+  const [summary, setSummary] = useState<InvoiceSummary>(defaultInvSummary);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -216,9 +102,27 @@ export default function InvoiceManagement() {
     notes: ''
   });
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/hq/finance/invoices?status=${filterStatus}`);
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.summary) setSummary(payload.summary);
+        if (payload.invoices) setInvoices(payload.invoices);
+      }
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
-  }, []);
+    fetchData();
+  }, [filterStatus]);
 
   if (!mounted) return null;
 

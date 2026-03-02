@@ -136,21 +136,24 @@ export default function IntegrationsSettingsPage() {
       ]);
 
       if (providersRes.ok) {
-        const data = await providersRes.json();
-        setProviders(data.providers || []);
-        setCategories(data.categories || {});
+        const json1 = await providersRes.json();
+        const p1 = json1.data || json1;
+        setProviders(p1.providers || []);
+        setCategories(p1.categories || {});
       }
 
       if (configsRes.ok) {
-        const data = await configsRes.json();
-        setConfigs(data.configs || []);
-        setConfigSummary(data.summary);
+        const json2 = await configsRes.json();
+        const p2 = json2.data || json2;
+        setConfigs(p2.configs || []);
+        setConfigSummary(p2.summary);
       }
 
       if (requestsRes.ok) {
-        const data = await requestsRes.json();
-        setRequests(data.requests || []);
-        setRequestSummary(data.summary);
+        const json3 = await requestsRes.json();
+        const p3 = json3.data || json3;
+        setRequests(p3.requests || []);
+        setRequestSummary(p3.summary);
       }
     } catch (error) {
       console.error('Error fetching data:', error);

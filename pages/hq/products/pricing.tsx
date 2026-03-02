@@ -36,61 +36,6 @@ interface PriceTier {
   createdAt: string;
 }
 
-const mockPriceTiers: PriceTier[] = [
-  {
-    id: '1',
-    code: 'STD',
-    name: 'Harga Standar',
-    description: 'Harga dasar untuk semua cabang',
-    multiplier: 1.0,
-    markupPercent: 0,
-    region: 'Nasional',
-    appliedBranches: 3,
-    productCount: 156,
-    isActive: true,
-    createdAt: '2024-01-01'
-  },
-  {
-    id: '2',
-    code: 'MALL',
-    name: 'Harga Mall',
-    description: 'Harga untuk cabang di mall dengan markup 10%',
-    multiplier: 1.1,
-    markupPercent: 10,
-    region: 'Mall Premium',
-    appliedBranches: 2,
-    productCount: 156,
-    isActive: true,
-    createdAt: '2024-01-15'
-  },
-  {
-    id: '3',
-    code: 'PROMO',
-    name: 'Harga Promosi',
-    description: 'Harga diskon untuk periode promosi',
-    multiplier: 0.85,
-    markupPercent: -15,
-    region: 'Nasional',
-    appliedBranches: 8,
-    productCount: 45,
-    isActive: true,
-    createdAt: '2024-02-01'
-  },
-  {
-    id: '4',
-    code: 'REGIONAL',
-    name: 'Harga Regional Timur',
-    description: 'Harga untuk wilayah Indonesia Timur',
-    multiplier: 1.05,
-    markupPercent: 5,
-    region: 'Indonesia Timur',
-    appliedBranches: 1,
-    productCount: 156,
-    isActive: true,
-    createdAt: '2024-01-20'
-  }
-];
-
 interface ProductPrice {
   id: string;
   productId: string;
@@ -102,53 +47,6 @@ interface ProductPrice {
   isStandard: boolean;
   lockedBy: string | null;
 }
-
-const mockProductPrices: ProductPrice[] = [
-  {
-    id: '1',
-    productId: '1',
-    productName: 'Beras Premium 5kg',
-    sku: 'BRS-001',
-    category: 'Sembako',
-    basePrice: 75000,
-    tierPrices: [
-      { tierId: '1', tierName: 'Standar', price: 75000 },
-      { tierId: '2', tierName: 'Mall', price: 82500 },
-      { tierId: '3', tierName: 'Promo', price: 63750 }
-    ],
-    isStandard: true,
-    lockedBy: 'Admin HQ'
-  },
-  {
-    id: '2',
-    productId: '2',
-    productName: 'Minyak Goreng 2L',
-    sku: 'MYK-001',
-    category: 'Sembako',
-    basePrice: 35000,
-    tierPrices: [
-      { tierId: '1', tierName: 'Standar', price: 35000 },
-      { tierId: '2', tierName: 'Mall', price: 38500 },
-      { tierId: '3', tierName: 'Promo', price: 29750 }
-    ],
-    isStandard: true,
-    lockedBy: 'Admin HQ'
-  },
-  {
-    id: '3',
-    productId: '3',
-    productName: 'Gula Pasir 1kg',
-    sku: 'GUL-001',
-    category: 'Sembako',
-    basePrice: 15000,
-    tierPrices: [
-      { tierId: '1', tierName: 'Standar', price: 15000 },
-      { tierId: '2', tierName: 'Mall', price: 16500 }
-    ],
-    isStandard: false,
-    lockedBy: null
-  }
-];
 
 export default function ProductPricing() {
   const [mounted, setMounted] = useState(false);
@@ -185,21 +83,18 @@ export default function ProductPricing() {
       ]);
       
       if (tiersRes.ok) {
-        const data = await tiersRes.json();
-        setPriceTiers(data.tiers || mockPriceTiers);
-      } else {
-        setPriceTiers(mockPriceTiers);
+        const json1 = await tiersRes.json();
+        const p1 = json1.data || json1;
+        if (p1.tiers) setPriceTiers(p1.tiers);
       }
       
       if (pricesRes.ok) {
-        const data = await pricesRes.json();
-        setProductPrices(data.prices || mockProductPrices);
-      } else {
-        setProductPrices(mockProductPrices);
+        const json2 = await pricesRes.json();
+        const p2 = json2.data || json2;
+        if (p2.prices) setProductPrices(p2.prices);
       }
     } catch (error) {
-      setPriceTiers(mockPriceTiers);
-      setProductPrices(mockProductPrices);
+      console.error('Error fetching pricing data:', error);
     } finally {
       setLoading(false);
     }

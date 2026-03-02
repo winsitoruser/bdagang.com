@@ -50,92 +50,6 @@ interface Provider {
   features: string[];
 }
 
-const mockProviderData: Record<string, Provider> = {
-  midtrans: {
-    id: 'pg-001',
-    code: 'midtrans',
-    name: 'Midtrans',
-    category: 'payment_gateway',
-    description: 'Payment gateway lengkap dengan dukungan QRIS, Virtual Account, E-Wallet, Kartu Kredit/Debit.',
-    applicationFields: [
-      { key: 'business_name', label: 'Nama Bisnis', type: 'text', required: true, placeholder: 'PT/CV/UD Nama Bisnis' },
-      { key: 'business_type', label: 'Bentuk Usaha', type: 'select', options: ['PT', 'CV', 'UD', 'Perorangan', 'Koperasi'], required: true },
-      { key: 'business_category', label: 'Kategori Usaha', type: 'select', options: ['Retail', 'F&B', 'Jasa', 'E-Commerce', 'Lainnya'], required: true },
-      { key: 'npwp', label: 'NPWP', type: 'text', required: true, placeholder: '00.000.000.0-000.000', helpText: 'NPWP Badan Usaha atau Perorangan' },
-      { key: 'business_address', label: 'Alamat Usaha', type: 'textarea', required: true, placeholder: 'Alamat lengkap tempat usaha' },
-      { key: 'city', label: 'Kota', type: 'text', required: true },
-      { key: 'province', label: 'Provinsi', type: 'select', options: ['DKI Jakarta', 'Jawa Barat', 'Jawa Tengah', 'Jawa Timur', 'Banten', 'DI Yogyakarta', 'Sumatera Utara', 'Sumatera Selatan', 'Bali', 'Lainnya'], required: true },
-      { key: 'postal_code', label: 'Kode Pos', type: 'text', required: true },
-      { key: 'phone', label: 'Telepon Bisnis', type: 'tel', required: true, placeholder: '021-12345678' },
-      { key: 'email', label: 'Email Bisnis', type: 'email', required: true, placeholder: 'bisnis@example.com' },
-      { key: 'website', label: 'Website', type: 'text', required: false, placeholder: 'https://www.example.com' },
-      { key: 'monthly_volume', label: 'Estimasi Volume Transaksi/Bulan', type: 'select', options: ['< Rp 50 Juta', 'Rp 50 - 100 Juta', 'Rp 100 - 500 Juta', 'Rp 500 Juta - 1 Miliar', '> Rp 1 Miliar'], required: true }
-    ],
-    requiredDocuments: ['KTP Pemilik/Direktur', 'NPWP', 'SIUP/NIB', 'Akta Pendirian (untuk PT/CV)', 'Buku Rekening Bank'],
-    estimatedProcessingDays: 7,
-    features: ['QRIS', 'GoPay', 'ShopeePay', 'OVO', 'DANA', 'Virtual Account', 'Kartu Kredit']
-  },
-  xendit: {
-    id: 'pg-002',
-    code: 'xendit',
-    name: 'Xendit',
-    category: 'payment_gateway',
-    description: 'Platform pembayaran modern dengan API yang mudah diintegrasikan.',
-    applicationFields: [
-      { key: 'business_name', label: 'Nama Bisnis', type: 'text', required: true },
-      { key: 'business_type', label: 'Bentuk Usaha', type: 'select', options: ['PT', 'CV', 'UD', 'Perorangan'], required: true },
-      { key: 'email', label: 'Email Bisnis', type: 'email', required: true },
-      { key: 'phone', label: 'Nomor Telepon', type: 'tel', required: true },
-      { key: 'address', label: 'Alamat Bisnis', type: 'textarea', required: true }
-    ],
-    requiredDocuments: ['KTP', 'NPWP', 'SIUP/NIB'],
-    estimatedProcessingDays: 5,
-    features: ['QRIS', 'E-Wallet', 'Virtual Account', 'Direct Debit']
-  },
-  whatsapp_cloud: {
-    id: 'msg-001',
-    code: 'whatsapp_cloud',
-    name: 'WhatsApp Business Cloud API',
-    category: 'messaging',
-    description: 'Official WhatsApp Business API untuk notifikasi dan customer service.',
-    applicationFields: [
-      { key: 'business_name', label: 'Nama Bisnis', type: 'text', required: true },
-      { key: 'business_description', label: 'Deskripsi Bisnis', type: 'textarea', required: true, placeholder: 'Jelaskan bisnis Anda secara singkat' },
-      { key: 'phone_number', label: 'Nomor WhatsApp', type: 'tel', required: true, placeholder: '+62812xxxxxxxx', helpText: 'Nomor yang akan digunakan untuk WhatsApp Business' },
-      { key: 'industry', label: 'Industri', type: 'select', options: ['Retail', 'F&B', 'Healthcare', 'Education', 'Finance', 'Travel', 'E-Commerce', 'Other'], required: true },
-      { key: 'website', label: 'Website', type: 'text', required: false },
-      { key: 'facebook_page', label: 'Facebook Page URL', type: 'text', required: false, helpText: 'Diperlukan untuk verifikasi bisnis' },
-      { key: 'use_case', label: 'Tujuan Penggunaan', type: 'select', options: ['Notifikasi Transaksi', 'Customer Support', 'Marketing', 'OTP/Verifikasi', 'Semua'], required: true },
-      { key: 'estimated_messages', label: 'Estimasi Pesan/Bulan', type: 'select', options: ['< 1,000', '1,000 - 10,000', '10,000 - 100,000', '> 100,000'], required: true }
-    ],
-    requiredDocuments: ['Dokumen Legalitas Bisnis', 'Facebook Business Manager Access'],
-    estimatedProcessingDays: 14,
-    features: ['Template Messages', 'Session Messages', 'Media Messages', 'Interactive Buttons']
-  },
-  qris_bi: {
-    id: 'qris-001',
-    code: 'qris_bi',
-    name: 'QRIS Bank Indonesia',
-    category: 'payment_gateway',
-    description: 'Daftar QRIS resmi melalui bank atau PSP yang terdaftar di Bank Indonesia.',
-    applicationFields: [
-      { key: 'merchant_name', label: 'Nama Merchant', type: 'text', required: true, helpText: 'Nama yang akan tampil di QRIS' },
-      { key: 'merchant_category', label: 'Kategori Merchant (MCC)', type: 'select', options: ['5812 - Eating Places, Restaurants', '5411 - Grocery Stores', '5311 - Department Stores', '5999 - Miscellaneous Retail', '7299 - Other Services'], required: true },
-      { key: 'business_type', label: 'Bentuk Usaha', type: 'select', options: ['PT', 'CV', 'UD', 'Perorangan'], required: true },
-      { key: 'npwp', label: 'NPWP', type: 'text', required: true },
-      { key: 'nik', label: 'NIK Pemilik', type: 'text', required: true, placeholder: '16 digit NIK' },
-      { key: 'address', label: 'Alamat Usaha', type: 'textarea', required: true },
-      { key: 'phone', label: 'Nomor Telepon', type: 'tel', required: true },
-      { key: 'bank_name', label: 'Bank Settlement', type: 'select', options: ['BCA', 'Mandiri', 'BNI', 'BRI', 'CIMB Niaga', 'Bank Lainnya'], required: true },
-      { key: 'bank_account', label: 'Nomor Rekening', type: 'text', required: true },
-      { key: 'account_name', label: 'Nama Pemilik Rekening', type: 'text', required: true }
-    ],
-    requiredDocuments: ['KTP Pemilik', 'NPWP', 'SIUP/NIB', 'Foto Lokasi Usaha', 'Buku Tabungan'],
-    estimatedProcessingDays: 10,
-    features: ['QRIS Static', 'QRIS Dynamic', 'Settlement H+1']
-  }
-};
-
 const steps = [
   { id: 1, name: 'Informasi Bisnis', icon: Building2 },
   { id: 2, name: 'Pemilik/PIC', icon: User },
@@ -172,10 +86,10 @@ export default function IntegrationRequestPage() {
   useEffect(() => {
     setMounted(true);
     if (providerCode && typeof providerCode === 'string') {
-      const providerData = mockProviderData[providerCode];
-      if (providerData) {
-        setProvider(providerData);
-      }
+      fetch(`/api/hq/integrations/providers?code=${providerCode}`)
+        .then(r => r.json())
+        .then(json => { const p = json.data || json; if (p) setProvider(p); })
+        .catch(err => console.error('Error fetching provider:', err));
     }
   }, [providerCode]);
 

@@ -14,24 +14,31 @@ interface ShopStore {
   productSynced: boolean; lastSyncAt?: string;
 }
 
-const mockStores: ShopStore[] = [
-  { id: 'ts-001', branchId: 'hq', branchName: 'HQ Jakarta', branchCode: 'HQ-001', shopId: 'bedagang-official', shopName: 'Bedagang Official Store', shopUrl: 'tokopedia.com/bedagang-official', status: 'active', isOpen: true, autoReply: true, stats: { orders: 3250, revenue: 485000000, products: 156, rating: 4.9, followers: 12500, chatResponseRate: 98 }, productSynced: true, lastSyncAt: '2026-02-22T23:00:00Z' },
-  { id: 'ts-002', branchId: 'branch-001', branchName: 'Cabang Sudirman', branchCode: 'JKT-001', shopId: 'bedagang-sudirman', shopName: 'Bedagang Sudirman', shopUrl: 'tokopedia.com/bedagang-sudirman', status: 'active', isOpen: true, autoReply: true, stats: { orders: 2450, revenue: 368000000, products: 142, rating: 4.8, followers: 8200, chatResponseRate: 95 }, productSynced: true, lastSyncAt: '2026-02-22T22:00:00Z' },
-  { id: 'ts-003', branchId: 'branch-002', branchName: 'Cabang Bandung', branchCode: 'BDG-001', shopId: 'bedagang-bdg', shopName: 'Bedagang Bandung', shopUrl: 'tokopedia.com/bedagang-bdg', status: 'active', isOpen: true, autoReply: false, stats: { orders: 1850, revenue: 275000000, products: 128, rating: 4.7, followers: 5400, chatResponseRate: 88 }, productSynced: false, lastSyncAt: '2026-02-20T10:00:00Z' },
-  { id: 'ts-004', branchId: 'branch-003', branchName: 'Cabang Surabaya', branchCode: 'SBY-001', shopId: '', shopName: '', shopUrl: '', status: 'pending', isOpen: false, autoReply: false, stats: { orders: 0, revenue: 0, products: 0, rating: 0, followers: 0, chatResponseRate: 0 }, productSynced: false },
-];
-
 const formatCurrency = (v: number) => v >= 1e9 ? `Rp ${(v/1e9).toFixed(2)}M` : v >= 1e6 ? `Rp ${(v/1e6).toFixed(0)}Jt` : `Rp ${v.toLocaleString('id-ID')}`;
 
 export default function TokopediaIntegrationPage() {
   const [mounted, setMounted] = useState(false);
-  const [stores, setStores] = useState(mockStores);
+  const [stores, setStores] = useState<ShopStore[]>([]);
   const [selectedStore, setSelectedStore] = useState<ShopStore | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'stores' | 'products' | 'orders' | 'settings'>('overview');
   const [loading, setLoading] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
 
-  useEffect(() => { setMounted(true); if (mockStores.length) setSelectedStore(mockStores[0]); }, []);
+  const fetchPlatformData = async () => {
+    try {
+      const response = await fetch('/api/integrations/ecommerce?platform=tokopedia');
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.stores) {
+          setStores(payload.stores);
+          if (payload.stores.length > 0) setSelectedStore(payload.stores[0]);
+        }
+      }
+    } catch { }
+  };
+
+  useEffect(() => { setMounted(true); fetchPlatformData(); }, []);
 
   const totalStats = stores.reduce((a, s) => ({ orders: a.orders + s.stats.orders, revenue: a.revenue + s.stats.revenue, products: a.products + s.stats.products }), { orders: 0, revenue: 0, products: 0 });
   const avgRating = (stores.filter(s => s.stats.rating > 0).reduce((a, s) => a + s.stats.rating, 0) / stores.filter(s => s.stats.rating > 0).length).toFixed(1);

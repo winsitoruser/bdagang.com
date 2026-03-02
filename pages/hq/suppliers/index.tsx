@@ -31,114 +31,6 @@ interface Supplier {
   lastOrderDate: string | null;
 }
 
-const mockSuppliers: Supplier[] = [
-  {
-    id: '1',
-    code: 'SUP-001',
-    name: 'PT Supplier Utama',
-    contactPerson: 'Budi Santoso',
-    phone: '021-5551234',
-    email: 'order@supplierutama.co.id',
-    address: 'Jl. Industri Raya No. 45',
-    city: 'Jakarta',
-    province: 'DKI Jakarta',
-    categories: ['Sembako', 'Minuman'],
-    rating: 4.5,
-    totalPO: 45,
-    totalValue: 450000000,
-    paymentTerms: 'Net 30',
-    leadTimeDays: 3,
-    isActive: true,
-    notes: 'Supplier utama untuk beras dan minyak goreng',
-    createdAt: '2024-01-01',
-    lastOrderDate: '2026-02-20'
-  },
-  {
-    id: '2',
-    code: 'SUP-002',
-    name: 'CV Distributor Jaya',
-    contactPerson: 'Siti Rahayu',
-    phone: '022-7778899',
-    email: 'sales@distributorjaya.com',
-    address: 'Jl. Soekarno Hatta No. 120',
-    city: 'Bandung',
-    province: 'Jawa Barat',
-    categories: ['Makanan Ringan', 'Minuman'],
-    rating: 4.2,
-    totalPO: 32,
-    totalValue: 280000000,
-    paymentTerms: 'Net 14',
-    leadTimeDays: 2,
-    isActive: true,
-    notes: 'Spesialis snack dan minuman ringan',
-    createdAt: '2024-02-15',
-    lastOrderDate: '2026-02-19'
-  },
-  {
-    id: '3',
-    code: 'SUP-003',
-    name: 'UD Grosir Makmur',
-    contactPerson: 'Ahmad Wijaya',
-    phone: '031-8889900',
-    email: 'info@grosirmakmur.id',
-    address: 'Jl. Rungkut Industri III No. 8',
-    city: 'Surabaya',
-    province: 'Jawa Timur',
-    categories: ['Sembako', 'Perawatan Pribadi'],
-    rating: 4.0,
-    totalPO: 18,
-    totalValue: 150000000,
-    paymentTerms: 'COD',
-    leadTimeDays: 4,
-    isActive: true,
-    notes: '',
-    createdAt: '2024-03-20',
-    lastOrderDate: '2026-02-15'
-  },
-  {
-    id: '4',
-    code: 'SUP-004',
-    name: 'PT Global Foods Indonesia',
-    contactPerson: 'Dewi Lestari',
-    phone: '021-4445566',
-    email: 'procurement@globalfoods.co.id',
-    address: 'Kawasan Industri MM2100 Blok C-5',
-    city: 'Bekasi',
-    province: 'Jawa Barat',
-    categories: ['Makanan Ringan', 'Minuman', 'Sembako'],
-    rating: 4.8,
-    totalPO: 28,
-    totalValue: 380000000,
-    paymentTerms: 'Net 45',
-    leadTimeDays: 5,
-    isActive: true,
-    notes: 'Supplier premium dengan kualitas terbaik',
-    createdAt: '2024-01-10',
-    lastOrderDate: '2026-02-18'
-  },
-  {
-    id: '5',
-    code: 'SUP-005',
-    name: 'CV Mitra Sejahtera',
-    contactPerson: 'Eko Prasetyo',
-    phone: '0274-556677',
-    email: 'order@mitrasejahtera.com',
-    address: 'Jl. Solo-Jogja KM 8',
-    city: 'Yogyakarta',
-    province: 'DI Yogyakarta',
-    categories: ['Kebersihan Rumah', 'Perawatan Pribadi'],
-    rating: 3.8,
-    totalPO: 12,
-    totalValue: 85000000,
-    paymentTerms: 'Net 14',
-    leadTimeDays: 3,
-    isActive: false,
-    notes: 'Sementara tidak aktif - evaluasi kinerja',
-    createdAt: '2024-05-01',
-    lastOrderDate: '2026-01-20'
-  }
-];
-
 export default function Suppliers() {
   const [mounted, setMounted] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -178,12 +70,10 @@ export default function Suppliers() {
       const response = await fetch('/api/hq/suppliers');
       if (response.ok) {
         const data = await response.json();
-        setSuppliers(data.suppliers || mockSuppliers);
-      } else {
-        setSuppliers(mockSuppliers);
+        setSuppliers(data.suppliers || []);
       }
     } catch (error) {
-      setSuppliers(mockSuppliers);
+      console.error('Error fetching suppliers:', error);
     } finally {
       setLoading(false);
     }

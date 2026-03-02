@@ -88,38 +88,7 @@ interface RecentTransaction {
   status: 'completed' | 'pending' | 'failed';
 }
 
-const mockSummary: FinanceSummary = {
-  totalRevenue: 4120000000,
-  totalExpenses: 2884000000,
-  grossProfit: 1236000000,
-  netProfit: 824000000,
-  grossMargin: 30,
-  netMargin: 20,
-  cashOnHand: 1250000000,
-  accountsReceivable: 450000000,
-  accountsPayable: 320000000,
-  pendingInvoices: 45,
-  overdueInvoices: 8,
-  monthlyGrowth: 12.5,
-  yearlyGrowth: 28.3
-};
-
-const mockBranchFinance: BranchFinance[] = [
-  { id: '1', name: 'Cabang Pusat Jakarta', code: 'HQ-001', revenue: 1250000000, expenses: 875000000, profit: 375000000, margin: 30, growth: 15.2, status: 'excellent' },
-  { id: '2', name: 'Cabang Bandung', code: 'BR-002', revenue: 920000000, expenses: 644000000, profit: 276000000, margin: 30, growth: 12.8, status: 'excellent' },
-  { id: '3', name: 'Cabang Surabaya', code: 'BR-003', revenue: 780000000, expenses: 546000000, profit: 234000000, margin: 30, growth: 8.5, status: 'good' },
-  { id: '4', name: 'Cabang Medan', code: 'BR-004', revenue: 650000000, expenses: 455000000, profit: 195000000, margin: 30, growth: 5.2, status: 'good' },
-  { id: '5', name: 'Cabang Yogyakarta', code: 'BR-005', revenue: 520000000, expenses: 410000000, profit: 110000000, margin: 21, growth: -2.3, status: 'warning' }
-];
-
-const mockTransactions: RecentTransaction[] = [
-  { id: '1', date: '2026-02-22', description: 'Penjualan Harian - Cabang Pusat', branch: 'HQ-001', type: 'income', category: 'Sales', amount: 45000000, status: 'completed' },
-  { id: '2', date: '2026-02-22', description: 'Pembayaran Supplier PT Sukses', branch: 'HQ-001', type: 'expense', category: 'COGS', amount: 25000000, status: 'completed' },
-  { id: '3', date: '2026-02-22', description: 'Transfer Dana ke Cabang Bandung', branch: 'BR-002', type: 'transfer', category: 'Transfer', amount: 50000000, status: 'pending' },
-  { id: '4', date: '2026-02-21', description: 'Penjualan Online - GoFood', branch: 'BR-003', type: 'income', category: 'Sales', amount: 12500000, status: 'completed' },
-  { id: '5', date: '2026-02-21', description: 'Pembayaran Gaji Karyawan', branch: 'ALL', type: 'expense', category: 'Payroll', amount: 150000000, status: 'completed' },
-  { id: '6', date: '2026-02-21', description: 'Tagihan Listrik Cabang Medan', branch: 'BR-004', type: 'expense', category: 'Utilities', amount: 8500000, status: 'pending' }
-];
+const defaultFinSummary: FinanceSummary = { totalRevenue: 0, totalExpenses: 0, grossProfit: 0, netProfit: 0, grossMargin: 0, netMargin: 0, cashOnHand: 0, accountsReceivable: 0, accountsPayable: 0, pendingInvoices: 0, overdueInvoices: 0, monthlyGrowth: 0, yearlyGrowth: 0 };
 
 const formatCurrency = (value: number) => {
   if (value >= 1000000000) {
@@ -141,9 +110,9 @@ export default function HQFinanceDashboard() {
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
   const [industry, setIndustry] = useState('general');
   const [subTab, setSubTab] = useState<'overview' | 'ratios' | 'comparison' | 'forecast'>('overview');
-  const [summary, setSummary] = useState<FinanceSummary>(mockSummary);
-  const [branchFinance, setBranchFinance] = useState<BranchFinance[]>(mockBranchFinance);
-  const [transactions, setTransactions] = useState<RecentTransaction[]>(mockTransactions);
+  const [summary, setSummary] = useState<FinanceSummary>(defaultFinSummary);
+  const [branchFinance, setBranchFinance] = useState<BranchFinance[]>([]);
+  const [transactions, setTransactions] = useState<RecentTransaction[]>([]);
   const [allBranches, setAllBranches] = useState<{id: string, name: string, code: string}[]>([]);
   const [health, setHealth] = useState<FinancialHealth | null>(null);
   const [industryKpis, setIndustryKpis] = useState<IndustryKPI[]>([]);
@@ -154,8 +123,9 @@ export default function HQFinanceDashboard() {
     try {
       const response = await fetch('/api/hq/branches?limit=100');
       if (response.ok) {
-        const data = await response.json();
-        setAllBranches(data.branches || []);
+        const json = await response.json();
+        const bp = json.data || json;
+        setAllBranches(bp.branches || []);
       }
     } catch (error) {
       console.error('Error fetching branches:', error);
@@ -171,9 +141,9 @@ export default function HQFinanceDashboard() {
       if (enhRes.ok) {
         const json = await enhRes.json();
         if (json.success && json.data) {
-          setSummary(json.data.summary || mockSummary);
-          setBranchFinance(json.data.branches || mockBranchFinance);
-          setTransactions(json.data.transactions || mockTransactions);
+          setSummary(json.data.summary || defaultFinSummary);
+          setBranchFinance(json.data.branches || []);
+          setTransactions(json.data.transactions || []);
           setHealth(json.data.health || null);
           // Also fetch ratios
           try {
@@ -192,10 +162,11 @@ export default function HQFinanceDashboard() {
       // Fallback to original API
       const response = await fetch(`/api/hq/finance/summary?period=${period}${branchParam}`);
       if (response.ok) {
-        const data = await response.json();
-        setSummary(data.summary || mockSummary);
-        setBranchFinance(data.branches || mockBranchFinance);
-        setTransactions(data.transactions || mockTransactions);
+        const json2 = await response.json();
+        const payload = json2.data || json2;
+        if (payload.summary) setSummary(payload.summary);
+        if (payload.branches) setBranchFinance(payload.branches);
+        if (payload.transactions) setTransactions(payload.transactions);
       }
     } catch (error) {
       console.error('Error fetching finance data:', error);

@@ -73,12 +73,13 @@ export default function TransactionsPage() {
       });
 
       const response = await fetch(`/api/hq/finance/transactions?${params}`);
-      const data = await response.json();
+      const json = await response.json();
+      const payload = json.data || json;
 
       if (response.ok) {
-        setTransactions(data.transactions || []);
-        setPagination(prev => ({ ...prev, total: data.total || 0 }));
-        calculateStats(data.transactions || []);
+        setTransactions(payload.transactions || []);
+        setPagination(prev => ({ ...prev, total: payload.total || 0 }));
+        calculateStats(payload.transactions || []);
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
@@ -90,9 +91,10 @@ export default function TransactionsPage() {
   const fetchBranches = async () => {
     try {
       const response = await fetch('/api/hq/branches');
-      const data = await response.json();
+      const json = await response.json();
+      const bp = json.data || json;
       if (response.ok) {
-        setBranches(data.branches || []);
+        setBranches(bp.branches || []);
       }
     } catch (error) {
       console.error('Error fetching branches:', error);
@@ -102,9 +104,10 @@ export default function TransactionsPage() {
   const fetchAccounts = async () => {
     try {
       const response = await fetch('/api/hq/finance/accounts');
-      const data = await response.json();
+      const json2 = await response.json();
+      const ap = json2.data || json2;
       if (response.ok) {
-        setAccounts(data.accounts || []);
+        setAccounts(ap.accounts || []);
       }
     } catch (error) {
       console.error('Error fetching accounts:', error);
