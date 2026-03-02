@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Modal, { ConfirmDialog } from '../../../components/hq/ui/Modal';
-import { StatusBadge } from '../../../components/hq/ui/Badge';
 import {
   Truck, Save, RefreshCw, Plus, Edit, Trash2, Search, Eye,
-  Phone, Mail, MapPin, Building2, DollarSign, Package, Star,
-  Calendar, FileText, CheckCircle, AlertTriangle, Clock, Download, Loader2
+  Phone, Mail, MapPin, Package, FileText, CheckCircle, Loader2
 } from 'lucide-react';
 
 interface Supplier {
