@@ -36,9 +36,27 @@ export default function GPSTracking() {
 
   const fetchTracking = async () => {
     try {
-      const res = await fetch('/api/fleet/tracking/live');
-      if (res.ok) {
-        const data = await res.json();
+      const [trackRes, alertRes] = await Promise.allSettled([
+        fetch('/api/hq/fleet/tracking'),
+        fetch('/api/fleet/tracking/live')
+      ]);
+      if (trackRes.status === 'fulfilled' && trackRes.value.ok) {
+        const json = await trackRes.value.json();
+        const payload = json.data || json;
+        const trackingData = Array.isArray(payload) ? payload : payload.tracking || [];
+        if (trackingData.length > 0) {
+          const locs = trackingData.map((v: any) => ({
+            lat: v.latitude, lng: v.longitude, speed: v.speed, heading: v.heading,
+            isMoving: v.status === 'moving', isIdle: v.status === 'stopped' || v.status === 'idle',
+            vehicleId: v.vehicleId
+          }));
+          setLocations(locs);
+          const map: Record<string, string> = {};
+          trackingData.forEach((v: any) => { map[v.vehicleId] = v.vehicleLicensePlate || v.vehicleId; });
+          setVehicleMap(map);
+        }
+      } else if (alertRes.status === 'fulfilled' && alertRes.value.ok) {
+        const data = await alertRes.value.json();
         if (data.data && data.data.length > 0) {
           const locs = data.data.map((v: any) => ({ ...v.location, vehicleId: v.vehicleId }));
           setLocations(locs);
@@ -79,7 +97,7 @@ export default function GPSTracking() {
               </div>
               <div className="flex items-center gap-3">
                 <button 
-                  onClick={() => setLocations([...mockGPSLocations])}
+                  onClick={() => fetchTracking()}
                   className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-lg hover:bg-white/20 transition-all"
                 >
                   <RefreshCw className="w-4 h-4" />

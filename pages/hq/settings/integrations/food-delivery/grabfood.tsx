@@ -34,9 +34,13 @@ export default function GrabFoodIntegrationPage() {
   const fetchPlatformData = async () => {
     try {
       const response = await fetch('/api/integrations/food-delivery/grabfood?type=stats');
-      const data = await response.json();
-      if (data.success) {
-        console.log('GrabFood stats:', data.stats);
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.stores) {
+          setStores(payload.stores);
+          if (payload.stores.length > 0) setSelectedStore(payload.stores[0]);
+        }
       }
     } catch (error) {
       console.error('Error fetching GrabFood data:', error);

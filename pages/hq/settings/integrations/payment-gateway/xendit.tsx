@@ -90,7 +90,21 @@ export default function XenditIntegrationPage() {
   const [loading, setLoading] = useState(false);
   const [newAccount, setNewAccount] = useState({ branchId: '', accountName: '', environment: 'sandbox', secretKey: '', publicKey: '' });
 
-  useEffect(() => { setMounted(true); if (mockAccounts.length) setSelectedAccount(mockAccounts[0]); }, []);
+  const fetchData = async () => {
+    try {
+      const response = await fetch('/api/integrations/payment-gateway?provider=xendit');
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.accounts) {
+          setAccounts(payload.accounts);
+          if (payload.accounts.length > 0) setSelectedAccount(payload.accounts[0]);
+        }
+      }
+    } catch { }
+  };
+
+  useEffect(() => { setMounted(true); if (mockAccounts.length) setSelectedAccount(mockAccounts[0]); fetchData(); }, []);
 
   const handleToggleMethod = (methodId: string) => {
     if (!selectedAccount) return;

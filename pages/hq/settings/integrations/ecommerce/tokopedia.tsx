@@ -31,7 +31,21 @@ export default function TokopediaIntegrationPage() {
   const [loading, setLoading] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
 
-  useEffect(() => { setMounted(true); if (mockStores.length) setSelectedStore(mockStores[0]); }, []);
+  const fetchPlatformData = async () => {
+    try {
+      const response = await fetch('/api/integrations/ecommerce?platform=tokopedia');
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.stores) {
+          setStores(payload.stores);
+          if (payload.stores.length > 0) setSelectedStore(payload.stores[0]);
+        }
+      }
+    } catch { }
+  };
+
+  useEffect(() => { setMounted(true); if (mockStores.length) setSelectedStore(mockStores[0]); fetchPlatformData(); }, []);
 
   const totalStats = stores.reduce((a, s) => ({ orders: a.orders + s.stats.orders, revenue: a.revenue + s.stats.revenue, products: a.products + s.stats.products }), { orders: 0, revenue: 0, products: 0 });
   const avgRating = (stores.filter(s => s.stats.rating > 0).reduce((a, s) => a + s.stats.rating, 0) / stores.filter(s => s.stats.rating > 0).length).toFixed(1);

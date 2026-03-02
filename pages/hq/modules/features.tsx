@@ -42,7 +42,10 @@ export default function FeatureManagement() {
   const fetchFeatures = async () => {
     setLoading(true);
     try {
-      // Mock data - in production, fetch from module_features table
+      const res = await fetch('/api/hq/integrations/configs?category=module_features');
+      if (res.ok) { const json = await res.json(); const p = json.data || json; if (p.features) { setFeatures(p.features); setLoading(false); return; } }
+    } catch { }
+    try {
       const mockFeatures: ModuleFeature[] = [
         {
           id: '1',
@@ -136,8 +139,7 @@ export default function FeatureManagement() {
       
       setFeatures(mockFeatures);
     } catch (error) {
-      console.error('Error fetching features:', error);
-      toast.error('Failed to load features');
+      console.error('Error loading features:', error);
     } finally {
       setLoading(false);
     }

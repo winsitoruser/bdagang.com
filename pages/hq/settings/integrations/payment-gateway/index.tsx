@@ -185,8 +185,20 @@ export default function PaymentGatewaySettingsPage() {
   const [activeTab, setActiveTab] = useState<'configs' | 'branches' | 'history'>('configs');
   const [filterEnvironment, setFilterEnvironment] = useState<'all' | 'production' | 'sandbox'>('all');
 
+  const fetchData = async () => {
+    try {
+      const response = await fetch('/api/hq/integrations/configs?category=payment_gateway');
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.configs) setConfigs(payload.configs);
+      }
+    } catch { }
+  };
+
   useEffect(() => {
     setMounted(true);
+    fetchData();
   }, []);
 
   const filteredConfigs = configs.filter(c => {

@@ -75,9 +75,13 @@ export default function GoFoodIntegrationPage() {
   const fetchPlatformData = async () => {
     try {
       const response = await fetch('/api/integrations/food-delivery/gofood?type=stats');
-      const data = await response.json();
-      if (data.success) {
-        console.log('GoFood stats:', data.stats);
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.stores) {
+          setStores(payload.stores);
+          if (payload.stores.length > 0) setSelectedStore(payload.stores[0]);
+        }
       }
     } catch (error) {
       console.error('Error fetching GoFood data:', error);

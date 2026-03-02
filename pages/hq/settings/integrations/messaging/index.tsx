@@ -147,8 +147,20 @@ export default function MessagingSettingsPage() {
   const [showTestModal, setShowTestModal] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<MessagingConfig | null>(null);
 
+  const fetchData = async () => {
+    try {
+      const response = await fetch('/api/hq/integrations/configs?category=messaging');
+      if (response.ok) {
+        const json = await response.json();
+        const payload = json.data || json;
+        if (payload.configs) setConfigs(payload.configs);
+      }
+    } catch { }
+  };
+
   useEffect(() => {
     setMounted(true);
+    fetchData();
   }, []);
 
   const totalMessagesSent = configs.reduce((sum, c) => sum + c.stats.messagesSent, 0);

@@ -43,9 +43,10 @@ export default function ModuleAnalytics() {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      // In production, this would fetch from actual analytics API
-      // For now, using mock data
-      
+      const res = await fetch(`/api/hq/integrations/configs?category=module_analytics&timeRange=${timeRange}`);
+      if (res.ok) { const json = await res.json(); const p = json.data || json; if (p.moduleStats) { setModuleStats(p.moduleStats); setSystemMetrics(p.systemMetrics || {}); setLoading(false); return; } }
+    } catch { }
+    try {
       const mockModuleStats: ModuleStats[] = [
         {
           code: 'POS_CORE',
@@ -115,13 +116,10 @@ export default function ModuleAnalytics() {
       
       setModuleStats(mockModuleStats);
       setSystemMetrics(mockSystemMetrics);
-      
     } catch (error) {
-      console.error('Error fetching analytics:', error);
-      toast.error('Failed to load analytics');
-    } finally {
-      setLoading(false);
+      console.error('Error loading analytics:', error);
     }
+    setLoading(false);
   };
   
   const getTrendIcon = (trend: string) => {

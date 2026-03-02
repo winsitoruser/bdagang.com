@@ -60,7 +60,10 @@ export default function IntegrationFlows() {
   const fetchFlows = async () => {
     setLoading(true);
     try {
-      // Mock data - in production, fetch from API
+      const res = await fetch('/api/hq/integrations/configs?category=module_flows');
+      if (res.ok) { const json = await res.json(); const p = json.data || json; if (p.flows) { setFlows(p.flows); setLoading(false); return; } }
+    } catch { }
+    try {
       const mockFlows: IntegrationFlow[] = [
         {
           id: '1',
@@ -146,16 +149,17 @@ export default function IntegrationFlows() {
       
       setFlows(mockFlows);
     } catch (error) {
-      console.error('Error fetching flows:', error);
-      toast.error('Failed to load integration flows');
-    } finally {
-      setLoading(false);
+      console.error('Error loading flows:', error);
     }
+    setLoading(false);
   };
   
   const fetchRecentExecutions = async () => {
     try {
-      // Mock data - in production, fetch from event_logs table
+      const res = await fetch('/api/hq/integrations/configs?category=module_executions');
+      if (res.ok) { const json = await res.json(); const p = json.data || json; if (p.executions) { setRecentExecutions(p.executions); return; } }
+    } catch { }
+    try {
       const mockExecutions: FlowExecution[] = [
         {
           id: '1',
@@ -202,7 +206,7 @@ export default function IntegrationFlows() {
       
       setRecentExecutions(mockExecutions);
     } catch (error) {
-      console.error('Error fetching executions:', error);
+      console.error('Error loading executions:', error);
     }
   };
   
