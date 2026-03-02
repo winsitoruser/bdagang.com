@@ -61,93 +61,7 @@ export default function IntegrationFlows() {
     setLoading(true);
     try {
       const res = await fetch('/api/hq/integrations/configs?category=module_flows');
-      if (res.ok) { const json = await res.json(); const p = json.data || json; if (p.flows) { setFlows(p.flows); setLoading(false); return; } }
-    } catch { }
-    try {
-      const mockFlows: IntegrationFlow[] = [
-        {
-          id: '1',
-          code: 'order-to-kitchen',
-          name: 'Order to Kitchen',
-          description: 'Route orders to kitchen display system',
-          sourceModule: 'POS_CORE',
-          targetModule: 'KITCHEN_DISPLAY',
-          eventType: 'order.created',
-          isActive: true,
-          activeTenants: 35,
-          totalExecutions: 12500,
-          successRate: 99.2,
-          avgExecutionTime: 85,
-          lastExecuted: new Date(),
-          status: 'healthy'
-        },
-        {
-          id: '2',
-          code: 'order-to-inventory',
-          name: 'Order to Inventory',
-          description: 'Deduct stock when order is created',
-          sourceModule: 'POS_CORE',
-          targetModule: 'INVENTORY_CORE',
-          eventType: 'order.created',
-          isActive: true,
-          activeTenants: 42,
-          totalExecutions: 11800,
-          successRate: 98.5,
-          avgExecutionTime: 120,
-          lastExecuted: new Date(),
-          status: 'warning'
-        },
-        {
-          id: '3',
-          code: 'kitchen-to-table',
-          name: 'Kitchen to Table',
-          description: 'Update table status when order is ready',
-          sourceModule: 'KITCHEN_DISPLAY',
-          targetModule: 'TABLE_MANAGEMENT',
-          eventType: 'kitchen.order.complete',
-          isActive: true,
-          activeTenants: 28,
-          totalExecutions: 9200,
-          successRate: 99.8,
-          avgExecutionTime: 65,
-          lastExecuted: new Date(),
-          status: 'healthy'
-        },
-        {
-          id: '4',
-          code: 'payment-to-loyalty',
-          name: 'Payment to Loyalty',
-          description: 'Award loyalty points on payment completion',
-          sourceModule: 'POS_CORE',
-          targetModule: 'LOYALTY_PROGRAM',
-          eventType: 'payment.completed',
-          isActive: true,
-          activeTenants: 15,
-          totalExecutions: 5600,
-          successRate: 97.2,
-          avgExecutionTime: 95,
-          lastExecuted: new Date(),
-          status: 'warning'
-        },
-        {
-          id: '5',
-          code: 'reservation-to-table',
-          name: 'Reservation to Table',
-          description: 'Reserve table when reservation is confirmed',
-          sourceModule: 'RESERVATION',
-          targetModule: 'TABLE_MANAGEMENT',
-          eventType: 'reservation.confirmed',
-          isActive: true,
-          activeTenants: 18,
-          totalExecutions: 3400,
-          successRate: 99.5,
-          avgExecutionTime: 75,
-          lastExecuted: new Date(),
-          status: 'healthy'
-        }
-      ];
-      
-      setFlows(mockFlows);
+      if (res.ok) { const json = await res.json(); const p = json.data || json; if (p.flows) { setFlows(p.flows); } }
     } catch (error) {
       console.error('Error loading flows:', error);
     }
@@ -157,54 +71,7 @@ export default function IntegrationFlows() {
   const fetchRecentExecutions = async () => {
     try {
       const res = await fetch('/api/hq/integrations/configs?category=module_executions');
-      if (res.ok) { const json = await res.json(); const p = json.data || json; if (p.executions) { setRecentExecutions(p.executions); return; } }
-    } catch { }
-    try {
-      const mockExecutions: FlowExecution[] = [
-        {
-          id: '1',
-          flowName: 'Order to Kitchen',
-          eventType: 'order.created',
-          tenantId: 'tenant-1',
-          tenantName: 'Restaurant ABC',
-          status: 'success',
-          executionTime: 82,
-          timestamp: new Date(Date.now() - 2000)
-        },
-        {
-          id: '2',
-          flowName: 'Order to Inventory',
-          eventType: 'order.created',
-          tenantId: 'tenant-1',
-          tenantName: 'Restaurant ABC',
-          status: 'success',
-          executionTime: 115,
-          timestamp: new Date(Date.now() - 2000)
-        },
-        {
-          id: '3',
-          flowName: 'Payment to Loyalty',
-          eventType: 'payment.completed',
-          tenantId: 'tenant-2',
-          tenantName: 'Cafe XYZ',
-          status: 'error',
-          executionTime: 0,
-          timestamp: new Date(Date.now() - 15000),
-          errorMessage: 'Customer not found in loyalty program'
-        },
-        {
-          id: '4',
-          flowName: 'Kitchen to Table',
-          eventType: 'kitchen.order.complete',
-          tenantId: 'tenant-3',
-          tenantName: 'Cloud Kitchen 123',
-          status: 'success',
-          executionTime: 68,
-          timestamp: new Date(Date.now() - 30000)
-        }
-      ];
-      
-      setRecentExecutions(mockExecutions);
+      if (res.ok) { const json = await res.json(); const p = json.data || json; if (p.executions) { setRecentExecutions(p.executions); } }
     } catch (error) {
       console.error('Error loading executions:', error);
     }

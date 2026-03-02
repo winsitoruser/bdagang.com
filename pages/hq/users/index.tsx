@@ -56,87 +56,6 @@ const roleLabels: Record<string, string> = {
   STAFF: 'Staff'
 };
 
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'super@bedagang.com',
-    name: 'Super Admin',
-    phone: '081234567890',
-    role: 'SUPER_ADMIN',
-    branchId: null,
-    branchName: 'Semua Cabang',
-    isActive: true,
-    lastLogin: new Date().toISOString(),
-    createdAt: '2024-01-01',
-    avatar: null
-  },
-  {
-    id: '2',
-    email: 'ahmad@bedagang.com',
-    name: 'Ahmad Wijaya',
-    phone: '081234567891',
-    role: 'BRANCH_MANAGER',
-    branchId: '1',
-    branchName: 'Cabang Pusat Jakarta',
-    isActive: true,
-    lastLogin: new Date(Date.now() - 3600000).toISOString(),
-    createdAt: '2024-01-15',
-    avatar: null
-  },
-  {
-    id: '3',
-    email: 'siti@bedagang.com',
-    name: 'Siti Rahayu',
-    phone: '081234567892',
-    role: 'BRANCH_MANAGER',
-    branchId: '2',
-    branchName: 'Cabang Bandung',
-    isActive: true,
-    lastLogin: new Date(Date.now() - 7200000).toISOString(),
-    createdAt: '2024-03-15',
-    avatar: null
-  },
-  {
-    id: '4',
-    email: 'budi@bedagang.com',
-    name: 'Budi Santoso',
-    phone: '081234567893',
-    role: 'BRANCH_MANAGER',
-    branchId: '3',
-    branchName: 'Cabang Surabaya',
-    isActive: true,
-    lastLogin: new Date(Date.now() - 86400000).toISOString(),
-    createdAt: '2024-05-20',
-    avatar: null
-  },
-  {
-    id: '5',
-    email: 'dewi@bedagang.com',
-    name: 'Dewi Kusuma',
-    phone: '081234567894',
-    role: 'CASHIER',
-    branchId: '1',
-    branchName: 'Cabang Pusat Jakarta',
-    isActive: true,
-    lastLogin: new Date(Date.now() - 1800000).toISOString(),
-    createdAt: '2024-06-01',
-    avatar: null
-  },
-  {
-    id: '6',
-    email: 'rudi@bedagang.com',
-    name: 'Rudi Hermawan',
-    phone: '081234567895',
-    role: 'STAFF',
-    branchId: '1',
-    branchName: 'Cabang Pusat Jakarta',
-    isActive: false,
-    lastLogin: new Date(Date.now() - 604800000).toISOString(),
-    createdAt: '2024-07-01',
-    avatar: null
-  }
-];
-
 export default function UserManagement() {
   const [mounted, setMounted] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
@@ -172,15 +91,11 @@ export default function UserManagement() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        setUsers(payload.users || mockUsers);
-        setTotal(payload.total || mockUsers.length);
-      } else {
-        setUsers(mockUsers);
-        setTotal(mockUsers.length);
+        if (payload.users) setUsers(payload.users);
+        if (payload.total) setTotal(payload.total);
       }
     } catch (error) {
-      setUsers(mockUsers);
-      setTotal(mockUsers.length);
+      console.error('Error fetching users:', error);
     } finally {
       setLoading(false);
     }

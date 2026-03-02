@@ -72,38 +72,6 @@ export default function SalesReport() {
     salesGrowth: 0
   });
 
-  const loadMockData = () => {
-    const mockBranchSales: SalesData[] = [
-      { branchId: '1', branchName: 'Cabang Pusat Jakarta', branchCode: 'HQ-001', totalSales: 145000000, totalTransactions: 486, avgTicketSize: 298354, grossProfit: 43500000, grossMargin: 30, growth: 8.5 },
-      { branchId: '2', branchName: 'Cabang Bandung', branchCode: 'BR-002', totalSales: 98000000, totalTransactions: 312, avgTicketSize: 314103, grossProfit: 27440000, grossMargin: 28, growth: 5.2 },
-      { branchId: '3', branchName: 'Cabang Surabaya', branchCode: 'BR-003', totalSales: 87000000, totalTransactions: 278, avgTicketSize: 313669, grossProfit: 23490000, grossMargin: 27, growth: -2.1 },
-      { branchId: '4', branchName: 'Cabang Medan', branchCode: 'BR-004', totalSales: 68000000, totalTransactions: 215, avgTicketSize: 316279, grossProfit: 17680000, grossMargin: 26, growth: 3.8 },
-      { branchId: '5', branchName: 'Kiosk Mall TA', branchCode: 'KS-001', totalSales: 28000000, totalTransactions: 142, avgTicketSize: 197183, grossProfit: 8400000, grossMargin: 30, growth: 12.5 }
-    ];
-
-    const mockDailySales: DailySales[] = Array.from({ length: 30 }, (_, i) => ({
-      date: new Date(Date.now() - (29 - i) * 86400000).toISOString().split('T')[0],
-      sales: Math.floor(Math.random() * 20000000) + 10000000,
-      transactions: Math.floor(Math.random() * 100) + 50
-    }));
-
-    setSalesData(mockBranchSales);
-    setDailySales(mockDailySales);
-    
-    const totalSales = mockBranchSales.reduce((sum, b) => sum + b.totalSales, 0);
-    const totalTransactions = mockBranchSales.reduce((sum, b) => sum + b.totalTransactions, 0);
-    const totalProfit = mockBranchSales.reduce((sum, b) => sum + b.grossProfit, 0);
-    
-    setSummary({
-      totalSales,
-      totalTransactions,
-      avgTicketSize: totalSales / totalTransactions,
-      totalProfit,
-      avgMargin: (totalProfit / totalSales) * 100,
-      salesGrowth: 7.5
-    });
-  };
-
   const processSalesData = (data: any) => {
     if (data.branchData) {
       setSalesData(data.branchData.map((b: any) => ({
@@ -138,11 +106,9 @@ export default function SalesReport() {
         const json = await response.json();
         const payload = json.data || json;
         processSalesData(payload.data || payload);
-      } else {
-        loadMockData();
       }
     } catch (error) {
-      loadMockData();
+      console.error('Error fetching sales data:', error);
     } finally {
       setLoading(false);
     }
@@ -150,7 +116,6 @@ export default function SalesReport() {
 
   useEffect(() => {
     setMounted(true);
-    loadMockData();
     fetchSalesData();
   }, [period, branchFilter]);
 

@@ -35,78 +35,6 @@ interface BranchSettingTemplate {
   updatedAt: string;
 }
 
-const mockTemplates: BranchSettingTemplate[] = [
-  {
-    id: '1',
-    name: 'Template Standar Cabang',
-    description: 'Pengaturan default untuk semua cabang baru',
-    category: 'operations',
-    settings: {
-      openingHour: '08:00',
-      closingHour: '22:00',
-      maxCashInDrawer: 5000000,
-      autoLogoutMinutes: 30,
-      requireManagerApproval: true,
-      allowDiscount: true,
-      maxDiscountPercent: 15
-    },
-    appliedBranches: 5,
-    isDefault: true,
-    createdAt: '2024-01-15',
-    updatedAt: '2024-02-20'
-  },
-  {
-    id: '2',
-    name: 'Template Mall Premium',
-    description: 'Pengaturan khusus untuk cabang di mall premium',
-    category: 'pricing',
-    settings: {
-      priceTierId: '2',
-      serviceChargePercent: 5,
-      allowPriceOverride: false,
-      minimumMargin: 25
-    },
-    appliedBranches: 2,
-    isDefault: false,
-    createdAt: '2024-02-01',
-    updatedAt: '2024-02-18'
-  },
-  {
-    id: '3',
-    name: 'Template Notifikasi Aktif',
-    description: 'Pengaturan notifikasi untuk monitoring ketat',
-    category: 'notifications',
-    settings: {
-      lowStockAlert: true,
-      lowStockThreshold: 20,
-      dailyReportEmail: true,
-      salesTargetAlert: true,
-      employeeClockAlert: true
-    },
-    appliedBranches: 8,
-    isDefault: false,
-    createdAt: '2024-01-20',
-    updatedAt: '2024-02-15'
-  },
-  {
-    id: '4',
-    name: 'Template Keamanan Tinggi',
-    description: 'Pengaturan keamanan untuk cabang dengan nilai transaksi tinggi',
-    category: 'security',
-    settings: {
-      requireDualAuth: true,
-      maxSingleTransaction: 10000000,
-      voidRequiresManager: true,
-      refundRequiresHQ: true,
-      auditLogRetentionDays: 365
-    },
-    appliedBranches: 3,
-    isDefault: false,
-    createdAt: '2024-02-05',
-    updatedAt: '2024-02-19'
-  }
-];
-
 export default function BranchSettings() {
   const [mounted, setMounted] = useState(false);
   const [templates, setTemplates] = useState<BranchSettingTemplate[]>([]);
@@ -137,12 +65,10 @@ export default function BranchSettings() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        setTemplates(payload.templates || mockTemplates);
-      } else {
-        setTemplates(mockTemplates);
+        if (payload.templates) setTemplates(payload.templates);
       }
     } catch (error) {
-      setTemplates(mockTemplates);
+      console.error('Error fetching settings:', error);
     } finally {
       setLoading(false);
     }

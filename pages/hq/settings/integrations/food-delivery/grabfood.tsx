@@ -14,18 +14,11 @@ interface BranchStore {
   menuSynced: boolean; lastSyncAt?: string;
 }
 
-const mockStores: BranchStore[] = [
-  { id: 'gb-001', branchId: 'hq', branchName: 'HQ Jakarta', branchCode: 'HQ-001', storeId: 'GRAB-HQ-001', storeName: 'Bedagang HQ - GrabFood', status: 'active', isOpen: true, autoAccept: true, avgPrepTime: 12, stats: { orders: 3280, revenue: 245000000, rating: 4.8, completionRate: 97.5, todayOrders: 32 }, menuSynced: true, lastSyncAt: '2026-02-22T23:00:00Z' },
-  { id: 'gb-002', branchId: 'branch-001', branchName: 'Cabang Sudirman', branchCode: 'JKT-001', storeId: 'GRAB-JKT-001', storeName: 'Bedagang Sudirman - GrabFood', status: 'active', isOpen: true, autoAccept: true, avgPrepTime: 10, stats: { orders: 2450, revenue: 178000000, rating: 4.7, completionRate: 96.8, todayOrders: 28 }, menuSynced: true, lastSyncAt: '2026-02-22T22:00:00Z' },
-  { id: 'gb-003', branchId: 'branch-002', branchName: 'Cabang Bandung', branchCode: 'BDG-001', storeId: '', storeName: '', status: 'pending', isOpen: false, autoAccept: false, avgPrepTime: 15, stats: { orders: 0, revenue: 0, rating: 0, completionRate: 0, todayOrders: 0 }, menuSynced: false },
-  { id: 'gb-004', branchId: 'branch-003', branchName: 'Cabang Surabaya', branchCode: 'SBY-001', storeId: 'GRAB-SBY-001', storeName: 'Bedagang Surabaya - GrabFood', status: 'active', isOpen: true, autoAccept: true, avgPrepTime: 14, stats: { orders: 3020, revenue: 202000000, rating: 4.6, completionRate: 95.2, todayOrders: 25 }, menuSynced: true, lastSyncAt: '2026-02-22T21:00:00Z' },
-];
-
 const formatCurrency = (v: number) => v >= 1e9 ? `Rp ${(v/1e9).toFixed(2)}M` : v >= 1e6 ? `Rp ${(v/1e6).toFixed(0)}Jt` : `Rp ${v.toLocaleString('id-ID')}`;
 
 export default function GrabFoodIntegrationPage() {
   const [mounted, setMounted] = useState(false);
-  const [stores, setStores] = useState(mockStores);
+  const [stores, setStores] = useState<BranchStore[]>([]);
   const [selectedStore, setSelectedStore] = useState<BranchStore | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'stores' | 'menu' | 'ads' | 'settings'>('overview');
   const [loading, setLoading] = useState(false);
@@ -49,7 +42,7 @@ export default function GrabFoodIntegrationPage() {
 
   useEffect(() => { 
     setMounted(true); 
-    if (mockStores.length) setSelectedStore(mockStores[0]); 
+    
     fetchPlatformData();
   }, []);
 

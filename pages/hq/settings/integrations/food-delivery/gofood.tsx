@@ -17,14 +17,6 @@ interface BranchStore {
 
 interface MenuCategory { id: string; name: string; itemCount: number; enabled: boolean; }
 
-const mockStores: BranchStore[] = [
-  { id: 'gs-001', branchId: 'hq', branchName: 'HQ Jakarta', branchCode: 'HQ-001', storeId: 'GFOOD-HQ-001', storeName: 'Bedagang HQ - GoFood', status: 'active', isOpen: true, autoAccept: true, avgPrepTime: 15, stats: { orders: 4520, revenue: 325000000, rating: 4.9, completionRate: 98.2, todayOrders: 45 }, menuSynced: true, lastSyncAt: '2026-02-22T23:00:00Z' },
-  { id: 'gs-002', branchId: 'branch-001', branchName: 'Cabang Sudirman', branchCode: 'JKT-001', storeId: 'GFOOD-JKT-001', storeName: 'Bedagang Sudirman - GoFood', status: 'active', isOpen: true, autoAccept: true, avgPrepTime: 12, stats: { orders: 3250, revenue: 228000000, rating: 4.8, completionRate: 97.5, todayOrders: 38 }, menuSynced: true, lastSyncAt: '2026-02-22T22:30:00Z' },
-  { id: 'gs-003', branchId: 'branch-002', branchName: 'Cabang Bandung', branchCode: 'BDG-001', storeId: 'GFOOD-BDG-001', storeName: 'Bedagang Bandung - GoFood', status: 'active', isOpen: false, autoAccept: true, avgPrepTime: 18, stats: { orders: 2150, revenue: 156000000, rating: 4.7, completionRate: 96.8, todayOrders: 0 }, menuSynced: true, lastSyncAt: '2026-02-22T20:00:00Z' },
-  { id: 'gs-004', branchId: 'branch-003', branchName: 'Cabang Surabaya', branchCode: 'SBY-001', storeId: 'GFOOD-SBY-001', storeName: 'Bedagang Surabaya - GoFood', status: 'active', isOpen: true, autoAccept: false, avgPrepTime: 20, stats: { orders: 2530, revenue: 166000000, rating: 4.6, completionRate: 95.2, todayOrders: 28 }, menuSynced: false, lastSyncAt: '2026-02-20T10:00:00Z' },
-  { id: 'gs-005', branchId: 'branch-004', branchName: 'Cabang Medan', branchCode: 'MDN-001', storeId: '', storeName: '', status: 'pending', isOpen: false, autoAccept: false, avgPrepTime: 15, stats: { orders: 0, revenue: 0, rating: 0, completionRate: 0, todayOrders: 0 }, menuSynced: false },
-];
-
 const menuCategories: MenuCategory[] = [
   { id: 'cat-1', name: 'Makanan Utama', itemCount: 24, enabled: true },
   { id: 'cat-2', name: 'Minuman', itemCount: 18, enabled: true },
@@ -37,13 +29,13 @@ const formatCurrency = (v: number) => v >= 1e9 ? `Rp ${(v/1e9).toFixed(2)}M` : v
 
 export default function GoFoodIntegrationPage() {
   const [mounted, setMounted] = useState(false);
-  const [stores, setStores] = useState(mockStores);
+  const [stores, setStores] = useState<BranchStore[]>([]);
   const [selectedStore, setSelectedStore] = useState<BranchStore | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'stores' | 'menu' | 'promos' | 'settings'>('overview');
   const [loading, setLoading] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
 
-  useEffect(() => { setMounted(true); if (mockStores.length) setSelectedStore(mockStores[0]); }, []);
+  useEffect(() => { setMounted(true); }, []);
 
   const totalStats = stores.reduce((a, s) => ({ orders: a.orders + s.stats.orders, revenue: a.revenue + s.stats.revenue, todayOrders: a.todayOrders + s.stats.todayOrders }), { orders: 0, revenue: 0, todayOrders: 0 });
   const avgRating = (stores.filter(s => s.stats.rating > 0).reduce((a, s) => a + s.stats.rating, 0) / stores.filter(s => s.stats.rating > 0).length).toFixed(1);

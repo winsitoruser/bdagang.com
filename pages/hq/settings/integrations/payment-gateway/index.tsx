@@ -78,88 +78,6 @@ interface Branch {
   hasPaymentConfig: boolean;
 }
 
-const mockPaymentConfigs: PaymentConfig[] = [
-  {
-    id: 'pc-001',
-    providerId: 'pg-001',
-    providerName: 'Midtrans',
-    branchId: null,
-    branchName: 'HQ (Default)',
-    name: 'Midtrans Production',
-    environment: 'production',
-    merchantId: 'G123456789',
-    merchantName: 'Bedagang POS',
-    status: 'active',
-    isDefault: true,
-    paymentMethods: [
-      { id: '1', code: 'qris', name: 'QRIS', type: 'qris', icon: 'qr', enabled: true, fee: { type: 'percentage', value: 0.7 } },
-      { id: '2', code: 'gopay', name: 'GoPay', type: 'ewallet', icon: 'wallet', enabled: true, fee: { type: 'percentage', value: 2 } },
-      { id: '3', code: 'shopeepay', name: 'ShopeePay', type: 'ewallet', icon: 'wallet', enabled: true, fee: { type: 'percentage', value: 2 } },
-      { id: '4', code: 'ovo', name: 'OVO', type: 'ewallet', icon: 'wallet', enabled: false, fee: { type: 'percentage', value: 2 } },
-      { id: '5', code: 'bca_va', name: 'BCA Virtual Account', type: 'va', icon: 'building', enabled: true, fee: { type: 'fixed', value: 4000 } },
-      { id: '6', code: 'bni_va', name: 'BNI Virtual Account', type: 'va', icon: 'building', enabled: true, fee: { type: 'fixed', value: 4000 } },
-      { id: '7', code: 'credit_card', name: 'Kartu Kredit', type: 'card', icon: 'card', enabled: true, fee: { type: 'percentage', value: 2.9 } }
-    ],
-    totalTransactions: 15420,
-    totalVolume: 2850000000,
-    lastTestedAt: '2026-02-22T10:30:00Z',
-    lastTestResult: { success: true },
-    createdAt: '2026-01-10T00:00:00Z'
-  },
-  {
-    id: 'pc-002',
-    providerId: 'pg-002',
-    providerName: 'Xendit',
-    branchId: 'branch-001',
-    branchName: 'Cabang Pusat Jakarta',
-    name: 'Xendit Jakarta',
-    environment: 'production',
-    merchantId: 'XND-123456',
-    merchantName: 'Bedagang Jakarta',
-    status: 'active',
-    isDefault: false,
-    paymentMethods: [
-      { id: '1', code: 'qris', name: 'QRIS', type: 'qris', icon: 'qr', enabled: true, fee: { type: 'percentage', value: 0.7 } },
-      { id: '2', code: 'ovo', name: 'OVO', type: 'ewallet', icon: 'wallet', enabled: true, fee: { type: 'percentage', value: 1.5 } },
-      { id: '3', code: 'dana', name: 'DANA', type: 'ewallet', icon: 'wallet', enabled: true, fee: { type: 'percentage', value: 1.5 } },
-      { id: '4', code: 'bca_va', name: 'BCA VA', type: 'va', icon: 'building', enabled: true, fee: { type: 'fixed', value: 4500 } }
-    ],
-    totalTransactions: 8750,
-    totalVolume: 1250000000,
-    lastTestedAt: '2026-02-21T16:00:00Z',
-    lastTestResult: { success: true },
-    createdAt: '2026-02-08T00:00:00Z'
-  },
-  {
-    id: 'pc-003',
-    providerId: 'pg-001',
-    providerName: 'Midtrans',
-    branchId: null,
-    branchName: 'HQ',
-    name: 'Midtrans Sandbox',
-    environment: 'sandbox',
-    merchantId: 'G999999999',
-    status: 'active',
-    isDefault: false,
-    paymentMethods: [
-      { id: '1', code: 'qris', name: 'QRIS', type: 'qris', icon: 'qr', enabled: true, fee: { type: 'percentage', value: 0.7 } },
-      { id: '2', code: 'gopay', name: 'GoPay', type: 'ewallet', icon: 'wallet', enabled: true, fee: { type: 'percentage', value: 2 } },
-      { id: '3', code: 'bca_va', name: 'BCA VA', type: 'va', icon: 'building', enabled: true, fee: { type: 'fixed', value: 4000 } }
-    ],
-    lastTestedAt: '2026-02-22T11:00:00Z',
-    lastTestResult: { success: true },
-    createdAt: '2026-01-10T00:00:00Z'
-  }
-];
-
-const mockBranches: Branch[] = [
-  { id: 'branch-001', name: 'Cabang Pusat Jakarta', code: 'HQ-001', hasPaymentConfig: true },
-  { id: 'branch-002', name: 'Cabang Bandung', code: 'BR-002', hasPaymentConfig: false },
-  { id: 'branch-003', name: 'Cabang Surabaya', code: 'BR-003', hasPaymentConfig: false },
-  { id: 'branch-004', name: 'Cabang Medan', code: 'BR-004', hasPaymentConfig: false },
-  { id: 'branch-005', name: 'Cabang Yogyakarta', code: 'BR-005', hasPaymentConfig: false }
-];
-
 const paymentTypeIcons: Record<string, any> = {
   qris: QrCode,
   ewallet: Wallet,
@@ -176,8 +94,8 @@ const formatCurrency = (value: number) => {
 
 export default function PaymentGatewaySettingsPage() {
   const [mounted, setMounted] = useState(false);
-  const [configs, setConfigs] = useState<PaymentConfig[]>(mockPaymentConfigs);
-  const [branches, setBranches] = useState<Branch[]>(mockBranches);
+  const [configs, setConfigs] = useState<PaymentConfig[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<PaymentConfig | null>(null);
   const [showConfigModal, setShowConfigModal] = useState(false);

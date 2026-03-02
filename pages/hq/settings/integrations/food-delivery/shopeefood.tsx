@@ -14,18 +14,11 @@ interface BranchStore {
   menuSynced: boolean; lastSyncAt?: string;
 }
 
-const mockStores: BranchStore[] = [
-  { id: 'sf-001', branchId: 'hq', branchName: 'HQ Jakarta', branchCode: 'HQ-001', storeId: 'SFOOD-HQ-001', storeName: 'Bedagang HQ - ShopeeFood', status: 'active', isOpen: true, autoAccept: true, avgPrepTime: 15, stats: { orders: 1520, revenue: 125000000, rating: 4.7, completionRate: 96.5, todayOrders: 18 }, menuSynced: true, lastSyncAt: '2026-02-22T23:00:00Z' },
-  { id: 'sf-002', branchId: 'branch-001', branchName: 'Cabang Sudirman', branchCode: 'JKT-001', storeId: '', storeName: '', status: 'pending', isOpen: false, autoAccept: false, avgPrepTime: 15, stats: { orders: 0, revenue: 0, rating: 0, completionRate: 0, todayOrders: 0 }, menuSynced: false },
-  { id: 'sf-003', branchId: 'branch-003', branchName: 'Cabang Surabaya', branchCode: 'SBY-001', storeId: 'SFOOD-SBY-001', storeName: 'Bedagang Surabaya - ShopeeFood', status: 'active', isOpen: true, autoAccept: true, avgPrepTime: 18, stats: { orders: 980, revenue: 78000000, rating: 4.5, completionRate: 94.2, todayOrders: 12 }, menuSynced: true, lastSyncAt: '2026-02-22T20:00:00Z' },
-  { id: 'sf-004', branchId: 'branch-004', branchName: 'Cabang Medan', branchCode: 'MDN-001', storeId: 'SFOOD-MDN-001', storeName: 'Bedagang Medan - ShopeeFood', status: 'active', isOpen: false, autoAccept: true, avgPrepTime: 20, stats: { orders: 750, revenue: 42000000, rating: 4.4, completionRate: 93.8, todayOrders: 0 }, menuSynced: false },
-];
-
 const formatCurrency = (v: number) => v >= 1e9 ? `Rp ${(v/1e9).toFixed(2)}M` : v >= 1e6 ? `Rp ${(v/1e6).toFixed(0)}Jt` : `Rp ${v.toLocaleString('id-ID')}`;
 
 export default function ShopeeFoodIntegrationPage() {
   const [mounted, setMounted] = useState(false);
-  const [stores, setStores] = useState(mockStores);
+  const [stores, setStores] = useState<BranchStore[]>([]);
   const [selectedStore, setSelectedStore] = useState<BranchStore | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'stores' | 'menu' | 'promos' | 'settings'>('overview');
   const [loading, setLoading] = useState(false);
@@ -49,7 +42,7 @@ export default function ShopeeFoodIntegrationPage() {
 
   useEffect(() => { 
     setMounted(true); 
-    if (mockStores.length) setSelectedStore(mockStores[0]); 
+    
     fetchPlatformData();
   }, []);
 

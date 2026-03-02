@@ -31,58 +31,12 @@ interface PaymentMethod {
   fee: { type: 'percentage' | 'fixed'; value: number };
 }
 
-const mockAccounts: BranchAccount[] = [
-  {
-    id: 'xa-001', branchId: 'hq', branchName: 'HQ (Default)', branchCode: 'HQ-001',
-    accountName: 'Xendit Production - HQ', environment: 'production', status: 'active',
-    merchantId: 'XND-MERCHANT-001', secretKeyMasked: 'xnd_production_••••••••xxxx',
-    webhookUrl: 'https://api.bedagang.com/webhooks/xendit',
-    enabledMethods: [
-      { id: '1', code: 'QRIS', name: 'QRIS', type: 'qris', enabled: true, fee: { type: 'percentage', value: 0.7 } },
-      { id: '2', code: 'OVO', name: 'OVO', type: 'ewallet', enabled: true, fee: { type: 'percentage', value: 1.5 } },
-      { id: '3', code: 'DANA', name: 'DANA', type: 'ewallet', enabled: true, fee: { type: 'percentage', value: 1.5 } },
-      { id: '4', code: 'SHOPEEPAY', name: 'ShopeePay', type: 'ewallet', enabled: true, fee: { type: 'percentage', value: 1.5 } },
-      { id: '5', code: 'BCA', name: 'BCA VA', type: 'va', enabled: true, fee: { type: 'fixed', value: 4500 } },
-      { id: '6', code: 'BNI', name: 'BNI VA', type: 'va', enabled: true, fee: { type: 'fixed', value: 4500 } },
-      { id: '7', code: 'BRI', name: 'BRI VA', type: 'va', enabled: true, fee: { type: 'fixed', value: 4500 } },
-      { id: '8', code: 'ALFAMART', name: 'Alfamart', type: 'retail', enabled: true, fee: { type: 'fixed', value: 5000 } },
-    ],
-    stats: { totalTransactions: 15420, totalVolume: 2850000000, successRate: 98.5, todayTransactions: 245 },
-    isDefault: true
-  },
-  {
-    id: 'xa-002', branchId: 'branch-001', branchName: 'Cabang Pusat Jakarta', branchCode: 'JKT-001',
-    accountName: 'Xendit - Jakarta', environment: 'production', status: 'active',
-    merchantId: 'XND-MERCHANT-JKT', secretKeyMasked: 'xnd_production_••••••••jkt',
-    webhookUrl: 'https://api.bedagang.com/webhooks/xendit/jkt',
-    enabledMethods: [
-      { id: '1', code: 'QRIS', name: 'QRIS', type: 'qris', enabled: true, fee: { type: 'percentage', value: 0.7 } },
-      { id: '2', code: 'OVO', name: 'OVO', type: 'ewallet', enabled: true, fee: { type: 'percentage', value: 1.5 } },
-      { id: '3', code: 'BCA', name: 'BCA VA', type: 'va', enabled: true, fee: { type: 'fixed', value: 4500 } },
-    ],
-    stats: { totalTransactions: 8750, totalVolume: 1250000000, successRate: 97.8, todayTransactions: 125 },
-    isDefault: false
-  },
-  {
-    id: 'xa-003', branchId: 'branch-002', branchName: 'Cabang Bandung', branchCode: 'BDG-001',
-    accountName: 'Xendit - Bandung (Pending)', environment: 'sandbox', status: 'pending',
-    enabledMethods: [],
-    stats: { totalTransactions: 0, totalVolume: 0, successRate: 0, todayTransactions: 0 },
-    isDefault: false
-  }
-];
-
-const availableBranches = [
-  { id: 'branch-003', name: 'Cabang Surabaya', code: 'SBY-001' },
-  { id: 'branch-004', name: 'Cabang Medan', code: 'MDN-001' },
-];
-
 const methodIcons: Record<string, any> = { qris: QrCode, ewallet: Wallet, va: Building, retail: Store };
 const formatCurrency = (v: number) => v >= 1e9 ? `Rp ${(v/1e9).toFixed(2)}M` : v >= 1e6 ? `Rp ${(v/1e6).toFixed(1)}Jt` : `Rp ${v.toLocaleString('id-ID')}`;
 
 export default function XenditIntegrationPage() {
   const [mounted, setMounted] = useState(false);
-  const [accounts, setAccounts] = useState<BranchAccount[]>(mockAccounts);
+  const [accounts, setAccounts] = useState<BranchAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<BranchAccount | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'accounts' | 'methods' | 'webhooks' | 'settings'>('overview');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -104,7 +58,7 @@ export default function XenditIntegrationPage() {
     } catch { }
   };
 
-  useEffect(() => { setMounted(true); if (mockAccounts.length) setSelectedAccount(mockAccounts[0]); fetchData(); }, []);
+  useEffect(() => { setMounted(true); fetchData(); }, []);
 
   const handleToggleMethod = (methodId: string) => {
     if (!selectedAccount) return;
@@ -118,7 +72,7 @@ export default function XenditIntegrationPage() {
     if (!newAccount.branchId || !newAccount.secretKey) { alert('Branch dan Secret Key wajib diisi'); return; }
     setLoading(true);
     await new Promise(r => setTimeout(r, 1500));
-    const branch = availableBranches.find(b => b.id === newAccount.branchId);
+    const branch = { name: newAccount.accountName, code: '' };
     setAccounts(prev => [...prev, {
       id: `xa-${Date.now()}`, branchId: newAccount.branchId, branchName: branch?.name || '', branchCode: branch?.code || '',
       accountName: newAccount.accountName || `Xendit - ${branch?.name}`, environment: newAccount.environment as any, status: 'pending',
@@ -262,7 +216,7 @@ export default function XenditIntegrationPage() {
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="bg-white rounded-2xl p-6 w-full max-w-lg mx-4"><h3 className="text-xl font-semibold text-gray-900 mb-6">Tambah Akun Xendit Cabang</h3>
           <div className="space-y-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Cabang <span className="text-red-500">*</span></label><select value={newAccount.branchId} onChange={(e) => setNewAccount(p => ({ ...p, branchId: e.target.value }))} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="">Pilih Cabang</option>{availableBranches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Cabang <span className="text-red-500">*</span></label><select value={newAccount.branchId} onChange={(e) => setNewAccount(p => ({ ...p, branchId: e.target.value }))} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="">Pilih Cabang</option>{accounts.filter((a: any) => !a.isDefault).length === 0 && <option value="">No branches available</option>}</select></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Nama Akun</label><input type="text" value={newAccount.accountName} onChange={(e) => setNewAccount(p => ({ ...p, accountName: e.target.value }))} placeholder="Xendit - Nama Cabang" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Environment</label><select value={newAccount.environment} onChange={(e) => setNewAccount(p => ({ ...p, environment: e.target.value }))} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500"><option value="sandbox">Sandbox (Testing)</option><option value="production">Production</option></select></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Secret API Key <span className="text-red-500">*</span></label><input type="password" value={newAccount.secretKey} onChange={(e) => setNewAccount(p => ({ ...p, secretKey: e.target.value }))} placeholder="xnd_production_xxxx atau xnd_development_xxxx" className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500" /></div>

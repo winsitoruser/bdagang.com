@@ -40,103 +40,6 @@ interface Permission {
   description: string;
 }
 
-const mockRoles: Role[] = [
-  {
-    id: '1',
-    code: 'SUPER_ADMIN',
-    name: 'Super Admin',
-    description: 'Akses penuh ke semua fitur sistem',
-    level: 1,
-    permissions: [
-      { id: '1', module: 'all', action: 'all', description: 'Full Access' }
-    ],
-    userCount: 2,
-    isSystem: true,
-    isActive: true,
-    createdAt: '2024-01-01'
-  },
-  {
-    id: '2',
-    code: 'HQ_ADMIN',
-    name: 'HQ Admin',
-    description: 'Admin level HQ untuk manajemen cabang',
-    level: 2,
-    permissions: [
-      { id: '2', module: 'branches', action: 'all', description: 'Manage Branches' },
-      { id: '3', module: 'products', action: 'all', description: 'Manage Products' },
-      { id: '4', module: 'users', action: 'read', description: 'View Users' },
-      { id: '5', module: 'reports', action: 'all', description: 'View Reports' }
-    ],
-    userCount: 5,
-    isSystem: true,
-    isActive: true,
-    createdAt: '2024-01-01'
-  },
-  {
-    id: '3',
-    code: 'BRANCH_MANAGER',
-    name: 'Manager Cabang',
-    description: 'Manajer dengan akses penuh ke cabangnya',
-    level: 3,
-    permissions: [
-      { id: '6', module: 'branch', action: 'all', description: 'Manage Own Branch' },
-      { id: '7', module: 'pos', action: 'all', description: 'POS Operations' },
-      { id: '8', module: 'employees', action: 'all', description: 'Manage Employees' },
-      { id: '9', module: 'reports', action: 'read', description: 'View Reports' }
-    ],
-    userCount: 8,
-    isSystem: true,
-    isActive: true,
-    createdAt: '2024-01-01'
-  },
-  {
-    id: '4',
-    code: 'SUPERVISOR',
-    name: 'Supervisor',
-    description: 'Supervisor dengan akses terbatas',
-    level: 4,
-    permissions: [
-      { id: '10', module: 'pos', action: 'all', description: 'POS Operations' },
-      { id: '11', module: 'employees', action: 'read', description: 'View Employees' },
-      { id: '12', module: 'void', action: 'approve', description: 'Approve Void' }
-    ],
-    userCount: 12,
-    isSystem: false,
-    isActive: true,
-    createdAt: '2024-02-15'
-  },
-  {
-    id: '5',
-    code: 'CASHIER',
-    name: 'Kasir',
-    description: 'Staff kasir dengan akses POS saja',
-    level: 5,
-    permissions: [
-      { id: '13', module: 'pos', action: 'create', description: 'Create Transaction' },
-      { id: '14', module: 'pos', action: 'read', description: 'View Transaction' }
-    ],
-    userCount: 45,
-    isSystem: true,
-    isActive: true,
-    createdAt: '2024-01-01'
-  },
-  {
-    id: '6',
-    code: 'WAREHOUSE',
-    name: 'Staff Gudang',
-    description: 'Staff gudang untuk manajemen stok',
-    level: 5,
-    permissions: [
-      { id: '15', module: 'inventory', action: 'all', description: 'Manage Inventory' },
-      { id: '16', module: 'receiving', action: 'all', description: 'Receive Goods' }
-    ],
-    userCount: 8,
-    isSystem: false,
-    isActive: true,
-    createdAt: '2024-03-01'
-  }
-];
-
 const allPermissions = [
   { module: 'branches', actions: ['read', 'create', 'update', 'delete'] },
   { module: 'products', actions: ['read', 'create', 'update', 'delete', 'price_lock'] },
@@ -175,12 +78,10 @@ export default function UserRoles() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        setRoles(payload.roles || mockRoles);
-      } else {
-        setRoles(mockRoles);
+        if (payload.roles) setRoles(payload.roles);
       }
     } catch (error) {
-      setRoles(mockRoles);
+      console.error('Error fetching roles:', error);
     } finally {
       setLoading(false);
     }

@@ -58,104 +58,6 @@ interface Branch {
   setupProgress?: number;
 }
 
-const mockBranches: Branch[] = [
-  {
-    id: '1',
-    code: 'HQ-001',
-    name: 'Cabang Pusat Jakarta',
-    type: 'main',
-    address: 'Jl. Sudirman No. 123',
-    city: 'Jakarta Selatan',
-    province: 'DKI Jakarta',
-    phone: '021-1234567',
-    email: 'pusat@bedagang.com',
-    manager: { id: '1', name: 'Ahmad Wijaya', email: 'ahmad@bedagang.com' },
-    isActive: true,
-    priceTierId: null,
-    priceTierName: 'Harga Standar',
-    createdAt: '2024-01-01',
-    lastSync: new Date().toISOString(),
-    status: 'online',
-    stats: { todaySales: 45000000, monthSales: 1250000000, employeeCount: 25, lowStockItems: 5 }
-  },
-  {
-    id: '2',
-    code: 'BR-002',
-    name: 'Cabang Bandung',
-    type: 'branch',
-    address: 'Jl. Asia Afrika No. 45',
-    city: 'Bandung',
-    province: 'Jawa Barat',
-    phone: '022-7654321',
-    email: 'bandung@bedagang.com',
-    manager: { id: '2', name: 'Siti Rahayu', email: 'siti@bedagang.com' },
-    isActive: true,
-    priceTierId: '1',
-    priceTierName: 'Harga Mall',
-    createdAt: '2024-03-15',
-    lastSync: new Date(Date.now() - 300000).toISOString(),
-    status: 'online',
-    stats: { todaySales: 32000000, monthSales: 920000000, employeeCount: 18, lowStockItems: 12 }
-  },
-  {
-    id: '3',
-    code: 'BR-003',
-    name: 'Cabang Surabaya',
-    type: 'branch',
-    address: 'Jl. Tunjungan No. 78',
-    city: 'Surabaya',
-    province: 'Jawa Timur',
-    phone: '031-8765432',
-    email: 'surabaya@bedagang.com',
-    manager: { id: '3', name: 'Budi Santoso', email: 'budi@bedagang.com' },
-    isActive: true,
-    priceTierId: null,
-    priceTierName: 'Harga Standar',
-    createdAt: '2024-05-20',
-    lastSync: new Date(Date.now() - 3600000).toISOString(),
-    status: 'warning',
-    stats: { todaySales: 28500000, monthSales: 850000000, employeeCount: 15, lowStockItems: 8 }
-  },
-  {
-    id: '4',
-    code: 'WH-001',
-    name: 'Gudang Pusat Cikarang',
-    type: 'warehouse',
-    address: 'Kawasan Industri Jababeka Blok A5',
-    city: 'Cikarang',
-    province: 'Jawa Barat',
-    phone: '021-89123456',
-    email: 'gudang@bedagang.com',
-    manager: { id: '4', name: 'Rudi Hermawan', email: 'rudi@bedagang.com' },
-    isActive: true,
-    priceTierId: null,
-    priceTierName: null,
-    createdAt: '2024-01-01',
-    lastSync: new Date().toISOString(),
-    status: 'online',
-    stats: { todaySales: 0, monthSales: 0, employeeCount: 12, lowStockItems: 3 }
-  },
-  {
-    id: '5',
-    code: 'KS-001',
-    name: 'Kiosk Mall Taman Anggrek',
-    type: 'kiosk',
-    address: 'Mall Taman Anggrek Lt. 3',
-    city: 'Jakarta Barat',
-    province: 'DKI Jakarta',
-    phone: '021-56781234',
-    email: 'kiosk.ta@bedagang.com',
-    manager: { id: '5', name: 'Dewi Kusuma', email: 'dewi@bedagang.com' },
-    isActive: true,
-    priceTierId: '2',
-    priceTierName: 'Harga Mall Premium',
-    createdAt: '2024-08-01',
-    lastSync: new Date(Date.now() - 7200000).toISOString(),
-    status: 'offline',
-    stats: { todaySales: 8500000, monthSales: 280000000, employeeCount: 5, lowStockItems: 2 }
-  }
-];
-
 export default function BranchManagement() {
   const [mounted, setMounted] = useState(false);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -194,15 +96,11 @@ export default function BranchManagement() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        setBranches(payload.branches || mockBranches);
-        setTotal(payload.total || mockBranches.length);
-      } else {
-        setBranches(mockBranches);
-        setTotal(mockBranches.length);
+        if (payload.branches) setBranches(payload.branches);
+        if (payload.total) setTotal(payload.total);
       }
     } catch (error) {
-      setBranches(mockBranches);
-      setTotal(mockBranches.length);
+      console.error('Error fetching branches:', error);
     } finally {
       setLoading(false);
     }

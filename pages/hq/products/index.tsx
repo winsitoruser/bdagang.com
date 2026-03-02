@@ -54,123 +54,6 @@ interface Product {
   createdAt: string;
 }
 
-const mockProducts: Product[] = [
-  {
-    id: 1,
-    sku: 'NAS-001',
-    name: 'Nasi Goreng Special',
-    description: 'Nasi goreng dengan telur, ayam, dan sayuran',
-    categoryId: 1,
-    categoryName: 'Makanan Utama',
-    basePrice: 35000,
-    costPrice: 15000,
-    isActive: true,
-    imageUrl: null,
-    unit: 'porsi',
-    stock: 999,
-    minStock: 10,
-    pricing: {
-      isStandard: true,
-      lockedBy: 'Super Admin',
-      lockedAt: '2026-02-20T10:00:00Z',
-      branchPrices: [
-        { branchId: '1', branchName: 'Cabang Pusat', price: 35000, priceTier: null },
-        { branchId: '2', branchName: 'Cabang Bandung', price: 38000, priceTier: 'Mall' },
-        { branchId: '5', branchName: 'Kiosk Mall TA', price: 42000, priceTier: 'Mall Premium' }
-      ]
-    },
-    createdAt: '2024-01-15'
-  },
-  {
-    id: 2,
-    sku: 'AYM-001',
-    name: 'Ayam Bakar Madu',
-    description: 'Ayam bakar dengan saus madu spesial',
-    categoryId: 1,
-    categoryName: 'Makanan Utama',
-    basePrice: 45000,
-    costPrice: 20000,
-    isActive: true,
-    imageUrl: null,
-    unit: 'porsi',
-    stock: 150,
-    minStock: 20,
-    pricing: {
-      isStandard: true,
-      lockedBy: 'Super Admin',
-      lockedAt: '2026-02-20T10:00:00Z',
-      branchPrices: []
-    },
-    createdAt: '2024-01-15'
-  },
-  {
-    id: 3,
-    sku: 'MIN-001',
-    name: 'Es Teh Manis',
-    description: 'Teh manis dingin segar',
-    categoryId: 2,
-    categoryName: 'Minuman',
-    basePrice: 8000,
-    costPrice: 2000,
-    isActive: true,
-    imageUrl: null,
-    unit: 'gelas',
-    stock: 500,
-    minStock: 50,
-    pricing: {
-      isStandard: false,
-      lockedBy: null,
-      lockedAt: null,
-      branchPrices: []
-    },
-    createdAt: '2024-01-15'
-  },
-  {
-    id: 4,
-    sku: 'MIE-001',
-    name: 'Mie Goreng Seafood',
-    description: 'Mie goreng dengan udang, cumi, dan sayuran',
-    categoryId: 1,
-    categoryName: 'Makanan Utama',
-    basePrice: 40000,
-    costPrice: 18000,
-    isActive: true,
-    imageUrl: null,
-    unit: 'porsi',
-    stock: 80,
-    minStock: 15,
-    pricing: {
-      isStandard: false,
-      lockedBy: null,
-      lockedAt: null,
-      branchPrices: []
-    },
-    createdAt: '2024-02-01'
-  },
-  {
-    id: 5,
-    sku: 'DES-001',
-    name: 'Es Krim Coklat',
-    description: 'Es krim coklat premium dengan topping',
-    categoryId: 3,
-    categoryName: 'Dessert',
-    basePrice: 25000,
-    costPrice: 8000,
-    isActive: false,
-    imageUrl: null,
-    unit: 'cup',
-    stock: 0,
-    minStock: 10,
-    pricing: {
-      isStandard: false,
-      lockedBy: null,
-      lockedAt: null,
-      branchPrices: []
-    },
-    createdAt: '2024-03-10'
-  }
-];
-
 export default function ProductManagement() {
   const [mounted, setMounted] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -207,15 +90,11 @@ export default function ProductManagement() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        setProducts(payload.products || mockProducts);
-        setTotal(payload.total || mockProducts.length);
-      } else {
-        setProducts(mockProducts);
-        setTotal(mockProducts.length);
+        if (payload.products) setProducts(payload.products);
+        if (payload.total) setTotal(payload.total);
       }
     } catch (error) {
-      setProducts(mockProducts);
-      setTotal(mockProducts.length);
+      console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }

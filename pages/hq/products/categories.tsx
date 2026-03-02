@@ -34,89 +34,6 @@ interface Category {
   children?: Category[];
 }
 
-const mockCategories: Category[] = [
-  {
-    id: '1',
-    name: 'Sembako',
-    slug: 'sembako',
-    description: 'Sembilan bahan pokok',
-    parentId: null,
-    parentName: null,
-    level: 0,
-    productCount: 45,
-    isActive: true,
-    sortOrder: 1,
-    icon: '🌾',
-    children: [
-      { id: '1-1', name: 'Beras', slug: 'beras', description: 'Berbagai jenis beras', parentId: '1', parentName: 'Sembako', level: 1, productCount: 12, isActive: true, sortOrder: 1, icon: '🍚' },
-      { id: '1-2', name: 'Minyak Goreng', slug: 'minyak-goreng', description: 'Minyak untuk memasak', parentId: '1', parentName: 'Sembako', level: 1, productCount: 8, isActive: true, sortOrder: 2, icon: '🫗' },
-      { id: '1-3', name: 'Gula', slug: 'gula', description: 'Gula pasir dan gula merah', parentId: '1', parentName: 'Sembako', level: 1, productCount: 5, isActive: true, sortOrder: 3, icon: '🍬' }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Minuman',
-    slug: 'minuman',
-    description: 'Berbagai jenis minuman',
-    parentId: null,
-    parentName: null,
-    level: 0,
-    productCount: 32,
-    isActive: true,
-    sortOrder: 2,
-    icon: '🥤',
-    children: [
-      { id: '2-1', name: 'Air Mineral', slug: 'air-mineral', description: 'Air mineral kemasan', parentId: '2', parentName: 'Minuman', level: 1, productCount: 10, isActive: true, sortOrder: 1, icon: '💧' },
-      { id: '2-2', name: 'Minuman Ringan', slug: 'minuman-ringan', description: 'Soft drink dan soda', parentId: '2', parentName: 'Minuman', level: 1, productCount: 15, isActive: true, sortOrder: 2, icon: '🥤' },
-      { id: '2-3', name: 'Jus', slug: 'jus', description: 'Jus buah kemasan', parentId: '2', parentName: 'Minuman', level: 1, productCount: 7, isActive: true, sortOrder: 3, icon: '🧃' }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Makanan Ringan',
-    slug: 'makanan-ringan',
-    description: 'Snack dan cemilan',
-    parentId: null,
-    parentName: null,
-    level: 0,
-    productCount: 58,
-    isActive: true,
-    sortOrder: 3,
-    icon: '🍿',
-    children: [
-      { id: '3-1', name: 'Keripik', slug: 'keripik', description: 'Berbagai keripik', parentId: '3', parentName: 'Makanan Ringan', level: 1, productCount: 20, isActive: true, sortOrder: 1, icon: '🥔' },
-      { id: '3-2', name: 'Biskuit', slug: 'biskuit', description: 'Biskuit dan cookies', parentId: '3', parentName: 'Makanan Ringan', level: 1, productCount: 25, isActive: true, sortOrder: 2, icon: '🍪' },
-      { id: '3-3', name: 'Cokelat', slug: 'cokelat', description: 'Cokelat dan permen', parentId: '3', parentName: 'Makanan Ringan', level: 1, productCount: 13, isActive: true, sortOrder: 3, icon: '🍫' }
-    ]
-  },
-  {
-    id: '4',
-    name: 'Perawatan Pribadi',
-    slug: 'perawatan-pribadi',
-    description: 'Produk perawatan diri',
-    parentId: null,
-    parentName: null,
-    level: 0,
-    productCount: 28,
-    isActive: true,
-    sortOrder: 4,
-    icon: '🧴'
-  },
-  {
-    id: '5',
-    name: 'Kebersihan Rumah',
-    slug: 'kebersihan-rumah',
-    description: 'Produk kebersihan rumah tangga',
-    parentId: null,
-    parentName: null,
-    level: 0,
-    productCount: 22,
-    isActive: true,
-    sortOrder: 5,
-    icon: '🧹'
-  }
-];
-
 export default function ProductCategories() {
   const [mounted, setMounted] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -147,12 +64,10 @@ export default function ProductCategories() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        setCategories(payload.categories || mockCategories);
-      } else {
-        setCategories(mockCategories);
+        if (payload.categories) setCategories(payload.categories);
       }
     } catch (error) {
-      setCategories(mockCategories);
+      console.error('Error fetching categories:', error);
     } finally {
       setLoading(false);
     }
