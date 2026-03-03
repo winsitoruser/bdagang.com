@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 let FinanceReceivable: any, FinancePayable: any, FinanceReceivablePayment: any, FinancePayablePayment: any;
 try {
@@ -30,7 +31,7 @@ const mockPayables = [
   { id: '4', invoiceNumber: 'PO-2026-0450', supplier: 'PLN', category: 'Utilities', issueDate: '2026-02-15', dueDate: '2026-02-28', amount: 35000000, paid: 0, balance: 35000000, status: 'current', daysOverdue: 0, priority: 'high' }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET': return await getAccounts(req, res);
@@ -47,6 +48,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'finance_pro' });
 
 async function getAccounts(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -78,8 +81,12 @@ async function getAccounts(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
+    // Calculate aging from mock data
+    const mockAgingReceivables = { category: 'Receivables', current: 155000000, days1to30: 100000000, days31to60: 85000000, days61to90: 60000000, over90: 50000000 };
+    const mockAgingPayables = { category: 'Payables', current: 120000000, days1to30: 85000000, days31to60: 65000000, days61to90: 30000000, over90: 20000000 };
+
     return res.status(HttpStatus.OK).json(
-      successResponse({ summary: mockSummary, receivables: mockReceivables, payables: mockPayables })
+      successResponse({ summary: mockSummary, receivables: mockReceivables, payables: mockPayables, agingReceivables: mockAgingReceivables, agingPayables: mockAgingPayables })
     );
   } catch (error) {
     console.error('Error fetching accounts:', error);

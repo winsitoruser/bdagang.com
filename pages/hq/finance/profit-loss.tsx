@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, RefreshCw, Download,
   Calendar, Building2, ChevronLeft, FileText, Printer, ChevronDown,
@@ -198,18 +199,14 @@ export default function ProfitLossReport() {
             <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button onClick={() => { window.print(); }} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              <Printer className="w-4 h-4" /> Print
-            </button>
-            <button onClick={() => {
-              const rows = plItems.map(i => `${i.name},${i.currentPeriod},${i.previousPeriod},${i.change},${i.changePercent}`);
-              const csv = `Account,Current,Previous,Change,Change%\n${rows.join('\n')}`;
-              const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
-              const a = document.createElement('a'); a.href = url; a.download = `profit-loss-${period}.csv`; a.click(); URL.revokeObjectURL(url);
-              toast.success('Export P&L berhasil');
-            }} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-              <Download className="w-4 h-4" /> Export
-            </button>
+            <DocumentExportButton
+              documentType="profit-loss"
+              data={{ items: plItems.map(i => ({ Kategori: i.isSubtotal ? 'Subtotal' : i.isTotal ? 'Total' : '', Akun: i.name, 'Periode Ini': i.currentPeriod, 'Periode Lalu': i.previousPeriod, Perubahan: i.change, 'Perubahan %': i.changePercent })), summary }}
+              meta={{ period: `${period} - ${new Date().getFullYear()}` }}
+              options={{ orientation: 'portrait' }}
+              showFormats={['pdf', 'excel', 'csv', 'html']}
+              label="Export P&L"
+            />
           </div>
         </div>
 
@@ -239,7 +236,7 @@ export default function ProfitLossReport() {
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <p className="text-gray-500 text-sm">EBITDA</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.ebitda)}</p>
-            <p className="text-sm text-gray-500 mt-2">{((summary.ebitda / summary.revenue) * 100).toFixed(1)}% of revenue</p>
+            <p className="text-sm text-gray-500 mt-2">{summary.revenue > 0 ? ((summary.ebitda / summary.revenue) * 100).toFixed(1) : '0.0'}% of revenue</p>
           </div>
 
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
@@ -387,7 +384,7 @@ export default function ProfitLossReport() {
               {[
                 { label: 'Gross Margin', value: summary.grossMargin, benchmark: industry === 'fnb' ? 65 : industry === 'retail' ? 35 : 40, color: 'blue' },
                 { label: 'Operating Margin', value: summary.operatingMargin, benchmark: industry === 'fnb' ? 15 : industry === 'retail' ? 8 : 25, color: 'green' },
-                { label: 'EBITDA Margin', value: Math.round((summary.ebitda / summary.revenue) * 100), benchmark: industry === 'fnb' ? 18 : industry === 'retail' ? 10 : 28, color: 'purple' },
+                { label: 'EBITDA Margin', value: summary.revenue > 0 ? Math.round((summary.ebitda / summary.revenue) * 100) : 0, benchmark: industry === 'fnb' ? 18 : industry === 'retail' ? 10 : 28, color: 'purple' },
                 { label: 'Net Margin', value: summary.netMargin, benchmark: industry === 'fnb' ? 10 : industry === 'retail' ? 5 : 20, color: 'teal' },
               ].map(m => {
                 const diff = m.value - m.benchmark;
@@ -436,7 +433,7 @@ export default function ProfitLossReport() {
                     legend: { position: 'bottom' },
                     dataLabels: { enabled: true, formatter: (v: number) => `${v.toFixed(1)}%` },
                   }}
-                  series={[
+                  series={summary.revenue > 0 ? [
                     Math.round((summary.cogs / summary.revenue) * 100),
                     Math.round((309000000 / summary.revenue) * 100),
                     Math.round((123600000 / summary.revenue) * 100),
@@ -444,7 +441,7 @@ export default function ProfitLossReport() {
                     Math.round((summary.depreciation / summary.revenue) * 100),
                     Math.round((summary.taxExpense / summary.revenue) * 100),
                     Math.round(((summary.otherExpenses + summary.interestExpense) / summary.revenue) * 100),
-                  ]}
+                  ] : [0, 0, 0, 0, 0, 0, 0]}
                   type="donut"
                   height={300}
                 />

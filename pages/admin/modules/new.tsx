@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -13,6 +13,7 @@ import {
   Link2,
   Hash
 } from 'lucide-react';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 export default function NewModule() {
   const { data: session, status } = useSession();
@@ -67,17 +68,27 @@ export default function NewModule() {
     });
   };
 
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/admin/login');
+      return;
+    }
+
+    const userRole = (session?.user?.role as string)?.toLowerCase();
+    if (session && !['admin', 'super_admin', 'superadmin'].includes(userRole)) {
+      router.push('/admin/login');
+      return;
+    }
+  }, [status, session, router]);
+
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </AdminLayout>
     );
-  }
-
-  if (status === 'unauthenticated') {
-    router.push('/admin/login');
-    return null;
   }
 
   return (
@@ -86,24 +97,15 @@ export default function NewModule() {
         <title>Create New Module - Admin Panel</title>
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <AdminLayout>
         {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Link
-                  href="/admin/modules"
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <ArrowLeft className="h-5 w-5 text-gray-600" />
-                </Link>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Create New Module</h1>
-                  <p className="text-sm text-gray-500 mt-1">Add a new system module</p>
-                </div>
-              </div>
-            </div>
+        <div className="mb-6 flex items-center space-x-4">
+          <Link href="/admin/modules" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <ArrowLeft className="h-5 w-5 text-gray-600" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Create New Module</h1>
+            <p className="text-sm text-gray-500">Add a new system module</p>
           </div>
         </div>
 
@@ -296,7 +298,7 @@ export default function NewModule() {
             </div>
           </form>
         </div>
-      </div>
+      </AdminLayout>
     </>
   );
 }

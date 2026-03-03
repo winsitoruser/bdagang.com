@@ -1,271 +1,136 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Op } from 'sequelize';
-import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
-import { getPaginationParams, getPaginationMeta } from '../../../../lib/api/pagination';
+const sequelize = require('../../../../lib/sequelize');
+import { successResponse, errorResponse } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext, buildTenantFilter } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
-let Transaction: any, Account: any, Branch: any;
-try {
-  const TransactionModel = require('../../../../models/finance/Transaction');
-  const AccountModel = require('../../../../models/finance/Account');
-  const models = require('../../../../models');
-  
-  Transaction = TransactionModel.default || TransactionModel;
-  Account = AccountModel.default || AccountModel;
-  Branch = models.Branch;
-} catch (e) {
-  console.warn('Finance models not available:', e);
-}
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
-      case 'GET':
-        return await getTransactions(req, res);
-      case 'POST':
-        return await createTransaction(req, res);
-      case 'PUT':
-        return await updateTransaction(req, res);
-      case 'DELETE':
-        return await deleteTransaction(req, res);
+      case 'GET': return await getTransactions(req, res);
+      case 'POST': return await createTransaction(req, res);
+      case 'PUT': return await updateTransaction(req, res);
+      case 'DELETE': return await deleteTransaction(req, res);
       default:
         res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
-          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
-        );
+        return res.status(405).json(errorResponse('METHOD_NOT_ALLOWED', `Method ${req.method} Not Allowed`));
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Finance Transactions API Error:', error);
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Internal server error')
-    );
+    return res.status(500).json(errorResponse('INTERNAL_SERVER_ERROR', error.message || 'Internal server error'));
   }
 }
 
+export default withHQAuth(handler, { module: ['finance_pro', 'finance_lite'] });
+
 async function getTransactions(req: NextApiRequest, res: NextApiResponse) {
-  if (!Transaction) {
-    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Transaction model not available')
-    );
-  }
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId, 'ft');
+  const { search, type, status, startDate, endDate, page = '1', limit = '20' } = req.query;
+  let where = 'WHERE 1=1' + tf.condition;
+  const replacements: any = { ...tf.replacements };
 
-  const { search, type, status, branchId, startDate, endDate } = req.query;
-  const { limit, offset } = getPaginationParams(req.query);
+  if (search) { where += ` AND (ft."transactionNumber" ILIKE :search OR ft.description ILIKE :search OR ft."contactName" ILIKE :search)`; replacements.search = `%${search}%`; }
+  if (type && type !== 'all') { where += ` AND ft."transactionType" = :type`; replacements.type = type; }
+  if (status && status !== 'all') { where += ' AND ft.status = :status'; replacements.status = status; }
+  if (startDate && endDate) { where += ` AND ft."transactionDate" BETWEEN :startDate AND :endDate`; replacements.startDate = startDate; replacements.endDate = endDate; }
 
-  try {
-    const where: any = {};
-    
-    if (search) {
-      where[Op.or] = [
-        { transactionNumber: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } }
-      ];
-    }
-    
-    if (type && type !== 'all') {
-      where.type = type;
-    }
-    
-    if (status && status !== 'all') {
-      where.status = status;
-    }
-    
-    if (branchId && branchId !== 'all') {
-      where.branchId = branchId;
-    }
+  const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
-    if (startDate && endDate) {
-      where.transactionDate = {
-        [Op.between]: [new Date(startDate as string), new Date(endDate as string)]
-      };
-    }
+  const [countResult] = await sequelize.query(`SELECT COUNT(*) as total FROM finance_transactions ft ${where}`, { replacements });
+  const [rows] = await sequelize.query(`
+    SELECT ft.*,
+      fa."accountName" as account_name, fa."accountNumber" as account_code
+    FROM finance_transactions ft
+    LEFT JOIN finance_accounts fa ON ft."accountId" = fa.id
+    ${where}
+    ORDER BY ft."transactionDate" DESC
+    LIMIT :limit OFFSET :offset
+  `, { replacements: { ...replacements, limit: parseInt(limit as string), offset } });
 
-    const { count, rows } = await Transaction.findAndCountAll({
-      where,
-      include: [
-        { model: Branch, as: 'branch', attributes: ['id', 'code', 'name'] },
-        { model: Account, as: 'account', attributes: ['id', 'accountCode', 'accountName'] }
-      ],
-      order: [['transactionDate', 'DESC']],
-      limit,
-      offset
-    });
-
-    return res.status(HttpStatus.OK).json(
-      successResponse(rows, getPaginationMeta(count, limit, offset))
-    );
-  } catch (error) {
-    console.error('Error fetching transactions:', error);
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to fetch transactions')
-    );
-  }
+  return res.status(200).json(successResponse(rows, {
+    total: parseInt(countResult[0]?.total || '0'),
+    page: parseInt(page as string),
+    limit: parseInt(limit as string),
+    totalPages: Math.ceil(parseInt(countResult[0]?.total || '0') / parseInt(limit as string))
+  }));
 }
 
 async function createTransaction(req: NextApiRequest, res: NextApiResponse) {
-  if (!Transaction) {
-    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Transaction model not available')
-    );
-  }
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    transactionType: V.required().oneOf(['income', 'expense', 'transfer']),
+    amount: V.required().number().min(0),
+    description: V.required().string().maxLength(500),
+  });
+  if (errors) return res.status(400).json(errors);
 
-  const {
-    tenantId,
-    branchId,
-    transactionDate,
-    type,
-    category,
-    accountId,
-    debitAccountId,
-    creditAccountId,
-    amount,
-    currency = 'IDR',
-    description,
-    reference,
-    paymentMethod,
-    createdBy
-  } = req.body;
+  const ctx = getTenantContext(req);
+  const { transactionType, accountId, category, subcategory, amount, description, referenceType, referenceId, paymentMethod, contactId, contactName, notes, tags } = req.body;
 
-  if (!tenantId || !transactionDate || !type || !accountId || !amount || !description || !createdBy) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(
-        ErrorCodes.MISSING_REQUIRED_FIELDS,
-        'Missing required fields: tenantId, transactionDate, type, accountId, amount, description, createdBy'
-      )
-    );
-  }
+  const prefix = transactionType === 'income' ? 'INC' : transactionType === 'expense' ? 'EXP' : 'TRF';
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const tf = buildTenantFilter(ctx.tenantId);
+  const [countRes] = await sequelize.query(`SELECT COUNT(*) as c FROM finance_transactions WHERE "transactionNumber" LIKE :prefix ${tf.condition}`, { replacements: { prefix: `${prefix}-${dateStr}%`, ...tf.replacements } });
+  const txnNumber = `${prefix}-${dateStr}-${String(parseInt(countRes[0]?.c || '0') + 1).padStart(4, '0')}`;
 
-  try {
-    // Generate transaction number
-    const today = new Date();
-    const prefix = type === 'income' ? 'INC' : type === 'expense' ? 'EXP' : 'TRF';
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-    const count = await Transaction.count({
-      where: {
-        transactionNumber: { [Op.like]: `${prefix}-${dateStr}%` }
-      }
-    });
-    const transactionNumber = `${prefix}-${dateStr}-${String(count + 1).padStart(4, '0')}`;
+  const [rows] = await sequelize.query(`
+    INSERT INTO finance_transactions (tenant_id, "transactionNumber", "transactionDate", "transactionType", "accountId", category, subcategory, amount, description, "referenceType", "referenceId", "paymentMethod", "contactId", "contactName", notes, tags, status, "createdBy", "isActive", "createdAt", "updatedAt")
+    VALUES (:tenantId, :txnNumber, NOW(), :transactionType, :accountId, :category, :subcategory, :amount, :description, :referenceType, :referenceId, :paymentMethod, :contactId, :contactName, :notes, :tags, 'draft', :createdBy, true, NOW(), NOW())
+    RETURNING *
+  `, { replacements: { tenantId: ctx.tenantId, txnNumber, transactionType, accountId: accountId || null, category: category || null, subcategory: subcategory || null, amount, description, referenceType: referenceType || null, referenceId: referenceId || null, paymentMethod: paymentMethod || null, contactId: contactId || null, contactName: contactName || null, notes: notes || null, tags: tags ? JSON.stringify(tags) : null, createdBy: ctx.userId } });
 
-    const transaction = await Transaction.create({
-      tenantId,
-      branchId,
-      transactionNumber,
-      transactionDate: new Date(transactionDate),
-      type,
-      category,
-      accountId,
-      debitAccountId,
-      creditAccountId,
-      amount: parseFloat(amount),
-      currency,
-      description,
-      reference,
-      status: 'draft',
-      paymentMethod,
-      createdBy
-    });
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'finance_transaction', entityId: rows[0]?.id, newValues: { txnNumber, transactionType, amount, description }, req });
 
-    return res.status(HttpStatus.CREATED).json(
-      successResponse(transaction, undefined, 'Transaction created successfully')
-    );
-  } catch (error: any) {
-    console.error('Error creating transaction:', error);
-    if (error.name === 'SequelizeValidationError') {
-      return res.status(HttpStatus.BAD_REQUEST).json(
-        errorResponse(ErrorCodes.VALIDATION_ERROR, error.message)
-      );
-    }
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to create transaction')
-    );
-  }
+  return res.status(201).json(successResponse(rows[0], undefined, 'Transaction created'));
 }
 
 async function updateTransaction(req: NextApiRequest, res: NextApiResponse) {
-  if (!Transaction) {
-    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Transaction model not available')
-    );
-  }
-
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
   const { id } = req.query;
-  const updateData = req.body;
+  if (!id) return res.status(400).json(errorResponse('VALIDATION', 'ID required'));
 
-  if (!id) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Transaction ID is required')
-    );
-  }
+  // Fetch old values for audit diff
+  const [oldRows] = await sequelize.query(`SELECT * FROM finance_transactions WHERE id = :id ${tf.condition}`, { replacements: { id, ...tf.replacements } });
+  if (!oldRows[0]) return res.status(404).json(errorResponse('NOT_FOUND', 'Transaction not found'));
 
-  try {
-    const transaction = await Transaction.findByPk(id);
-    
-    if (!transaction) {
-      return res.status(HttpStatus.NOT_FOUND).json(
-        errorResponse(ErrorCodes.NOT_FOUND, 'Transaction not found')
-      );
-    }
+  const { status, description, amount, notes, category } = req.body;
+  const sets: string[] = [];
+  const replacements: any = { id, ...tf.replacements };
 
-    // Don't allow updating completed transactions
-    if (transaction.status === 'completed') {
-      return res.status(HttpStatus.BAD_REQUEST).json(
-        errorResponse(ErrorCodes.VALIDATION_ERROR, 'Cannot update completed transaction')
-      );
-    }
+  if (status) { sets.push('status = :status'); replacements.status = status; }
+  if (description) { sets.push('description = :description'); replacements.description = description; }
+  if (amount !== undefined) { sets.push('amount = :amount'); replacements.amount = amount; }
+  if (notes !== undefined) { sets.push('notes = :notes'); replacements.notes = notes; }
+  if (category) { sets.push('category = :category'); replacements.category = category; }
+  sets.push('"updatedAt" = NOW()');
 
-    await transaction.update(updateData);
+  const [rows] = await sequelize.query(`UPDATE finance_transactions SET ${sets.join(', ')} WHERE id = :id ${tf.condition} RETURNING *`, { replacements });
+  if (!rows[0]) return res.status(404).json(errorResponse('NOT_FOUND', 'Transaction not found'));
 
-    return res.status(HttpStatus.OK).json(
-      successResponse(transaction, undefined, 'Transaction updated successfully')
-    );
-  } catch (error: any) {
-    console.error('Error updating transaction:', error);
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to update transaction')
-    );
-  }
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'finance_transaction', entityId: id as string, oldValues: oldRows[0], newValues: { status, description, amount, notes, category }, req });
+
+  return res.status(200).json(successResponse(rows[0], undefined, 'Transaction updated'));
 }
 
 async function deleteTransaction(req: NextApiRequest, res: NextApiResponse) {
-  if (!Transaction) {
-    return res.status(HttpStatus.SERVICE_UNAVAILABLE).json(
-      errorResponse(ErrorCodes.MODEL_NOT_AVAILABLE, 'Transaction model not available')
-    );
-  }
-
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
   const { id } = req.query;
+  if (!id) return res.status(400).json(errorResponse('VALIDATION', 'ID required'));
 
-  if (!id) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.VALIDATION_ERROR, 'Transaction ID is required')
-    );
-  }
+  const [rows] = await sequelize.query(`UPDATE finance_transactions SET status = 'cancelled', "updatedAt" = NOW() WHERE id = :id AND status != 'completed' ${tf.condition} RETURNING *`, { replacements: { id, ...tf.replacements } });
+  if (!rows[0]) return res.status(404).json(errorResponse('NOT_FOUND', 'Transaction not found or completed'));
 
-  try {
-    const transaction = await Transaction.findByPk(id);
-    
-    if (!transaction) {
-      return res.status(HttpStatus.NOT_FOUND).json(
-        errorResponse(ErrorCodes.NOT_FOUND, 'Transaction not found')
-      );
-    }
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'delete', entityType: 'finance_transaction', entityId: id as string, oldValues: rows[0], req });
 
-    // Don't allow deleting completed transactions
-    if (transaction.status === 'completed') {
-      return res.status(HttpStatus.BAD_REQUEST).json(
-        errorResponse(ErrorCodes.VALIDATION_ERROR, 'Cannot delete completed transaction')
-      );
-    }
-
-    await transaction.update({ status: 'cancelled' });
-
-    return res.status(HttpStatus.OK).json(
-      successResponse(null, undefined, 'Transaction cancelled successfully')
-    );
-  } catch (error) {
-    console.error('Error deleting transaction:', error);
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
-      errorResponse(ErrorCodes.DATABASE_ERROR, 'Failed to delete transaction')
-    );
-  }
+  return res.status(200).json(successResponse(rows[0], undefined, 'Transaction cancelled'));
 }

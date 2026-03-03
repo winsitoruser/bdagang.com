@@ -16,7 +16,8 @@ export default async function handler(
     }
 
     // Only super_admin and admin can manage global settings
-    if (!['super_admin', 'admin'].includes(session.user.role)) {
+    const userRole = (session.user?.role as string)?.toLowerCase();
+    if (!['admin', 'super_admin', 'superadmin'].includes(userRole)) {
       return res.status(403).json({ 
         success: false, 
         error: 'Insufficient permissions' 

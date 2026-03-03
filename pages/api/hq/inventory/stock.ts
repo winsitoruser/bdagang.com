@@ -1,9 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext, buildTenantFilter } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
 const sequelize = require('../../../../lib/sequelize');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -26,7 +31,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
+export default withHQAuth(handler, { module: 'inventory' });
+
 async function getStock(req: NextApiRequest, res: NextApiResponse) {
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId, 'p');
   const { search, category, branch, stockFilter, page = '1', limit = '20' } = req.query;
   const pageNum = Math.max(1, parseInt(page as string));
   const limitNum = Math.min(100, parseInt(limit as string));
@@ -38,8 +47,8 @@ async function getStock(req: NextApiRequest, res: NextApiResponse) {
   else if (stockFilter === 'over') having = 'HAVING SUM(s.quantity) > p.maximum_stock';
   else if (stockFilter === 'normal') having = 'HAVING SUM(s.quantity) >= p.minimum_stock AND SUM(s.quantity) <= p.maximum_stock';
 
-  let where = 'WHERE p.is_active=true';
-  const params: any = {};
+  let where = 'WHERE p.is_active=true' + tf.condition;
+  const params: any = { ...tf.replacements };
   if (search) { where += ` AND (p.name ILIKE :search OR p.sku ILIKE :search OR p.barcode ILIKE :search)`; params.search = `%${search}%`; }
   if (category && category !== 'Semua Kategori' && category !== 'all') { where += ` AND pc.name = :category`; params.category = category; }
 
@@ -112,32 +121,40 @@ async function getStock(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function updateStock(req: NextApiRequest, res: NextApiResponse) {
-  const { productId, branchId, adjustment, reason } = req.body;
-  if (!productId || !branchId || adjustment === undefined) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Product ID, Branch ID, and adjustment are required')
-    );
-  }
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    productId: V.required().integer(),
+    branchId: V.required().integer(),
+    adjustment: V.required().number(),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
 
-  // Update inventory_stock
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
+  const { productId, branchId, adjustment, reason } = req.body;
+
+  // Update inventory_stock - tenant scoped
   const [existing] = await sequelize.query(
-    "SELECT id, quantity FROM inventory_stock WHERE product_id=:pid AND warehouse_id=:whId LIMIT 1",
-    { replacements: { pid: productId, whId: branchId } }
+    `SELECT id, quantity FROM inventory_stock WHERE product_id=:pid AND warehouse_id=:whId ${tf.condition} LIMIT 1`,
+    { replacements: { pid: productId, whId: branchId, ...tf.replacements } }
   );
 
   if (existing.length > 0) {
     const newQty = Math.max(0, parseFloat(existing[0].quantity) + parseFloat(adjustment));
     await sequelize.query(
-      "UPDATE inventory_stock SET quantity=:qty, available_quantity=:qty, updated_at=NOW() WHERE id=:id",
-      { replacements: { qty: newQty, id: existing[0].id } }
+      `UPDATE inventory_stock SET quantity=:qty, available_quantity=:qty, updated_at=NOW() WHERE id=:id ${tf.condition}`,
+      { replacements: { qty: newQty, id: existing[0].id, ...tf.replacements } }
     );
   }
 
-  // Record movement
+  // Record movement - tenant scoped
   await sequelize.query(`
     INSERT INTO stock_movements (tenant_id, product_id, warehouse_id, movement_type, quantity, notes, performed_by_name, reference_type)
-    VALUES ((SELECT tenant_id FROM products WHERE id=:pid), :pid, :whId, 'adjustment', :qty, :reason, 'Admin', 'manual')
-  `, { replacements: { pid: productId, whId: branchId, qty: adjustment, reason: reason || 'Stock adjustment' } });
+    VALUES (:tenantId, :pid, :whId, 'adjustment', :qty, :reason, :userName, 'manual')
+  `, { replacements: { tenantId: ctx.tenantId, pid: productId, whId: branchId, qty: adjustment, reason: reason || 'Stock adjustment', userName: ctx.userName } });
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'inventory_stock', entityId: productId, newValues: { productId, branchId, adjustment, reason }, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse({ productId, branchId, adjustment, reason }, undefined, `Stock adjusted by ${adjustment}`)
@@ -145,26 +162,34 @@ async function updateStock(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function transferStock(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    productId: V.required().integer(),
+    fromBranch: V.required().integer(),
+    toBranch: V.required().integer(),
+    quantity: V.required().number().min(1),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+  const ctx = getTenantContext(req);
   const { productId, fromBranch, toBranch, quantity, notes } = req.body;
-  if (!productId || !fromBranch || !toBranch || !quantity) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'All transfer fields are required')
-    );
-  }
 
   const [seqResult] = await sequelize.query("SELECT COALESCE(MAX(id),0)+1 as next_id FROM stock_transfers");
   const tfNum = `TF-2026-${String(seqResult[0].next_id).padStart(4, '0')}`;
 
   const [result] = await sequelize.query(`
     INSERT INTO stock_transfers (tenant_id, transfer_number, from_warehouse_id, to_warehouse_id, status, total_items, total_quantity, notes, requested_by_name)
-    VALUES ((SELECT tenant_id FROM warehouses LIMIT 1), :num, :from, :to, 'pending', 1, :qty, :notes, 'Admin')
+    VALUES (:tenantId, :num, :from, :to, 'pending', 1, :qty, :notes, :userName)
     RETURNING id
-  `, { replacements: { num: tfNum, from: fromBranch, to: toBranch, qty: quantity, notes: notes || null } });
+  `, { replacements: { tenantId: ctx.tenantId, num: tfNum, from: fromBranch, to: toBranch, qty: quantity, notes: notes || null, userName: ctx.userName } });
 
   await sequelize.query(`
     INSERT INTO stock_transfer_items (transfer_id, product_id, requested_qty, unit_cost)
     VALUES (:tfId, :pid, :qty, (SELECT buy_price FROM products WHERE id=:pid))
   `, { replacements: { tfId: result[0].id, pid: productId, qty: quantity } });
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'stock_transfer', entityId: result[0]?.id, newValues: { tfNum, productId, fromBranch, toBranch, quantity }, req });
 
   return res.status(HttpStatus.CREATED).json(
     successResponse({ id: result[0].id, transferNumber: tfNum, status: 'pending' }, undefined, 'Stock transfer created')

@@ -74,7 +74,8 @@ export default function BusinessTypeEditPage() {
       return;
     }
 
-    if (session && !['ADMIN', 'super_admin'].includes(session.user?.role as string)) {
+    const userRole = (session?.user?.role as string)?.toLowerCase();
+    if (session && !['admin', 'super_admin', 'superadmin'].includes(userRole)) {
       router.push('/admin/login');
       return;
     }

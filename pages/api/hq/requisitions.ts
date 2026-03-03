@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withHQAuth } from '../../../lib/middleware/withHQAuth';
 
 interface RequisitionItem {
   id: string;
@@ -41,7 +42,7 @@ interface Requisition {
   items: RequisitionItem[];
 }
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
@@ -56,6 +57,8 @@ export default async function handler(
       return res.status(405).json({ error: 'Method not allowed' });
   }
 }
+
+export default withHQAuth(handler, { module: 'inventory' });
 
 async function getRequisitions(req: NextApiRequest, res: NextApiResponse) {
   try {

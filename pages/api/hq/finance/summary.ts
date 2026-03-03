@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Op } from 'sequelize';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 let Branch: any, PosTransaction: any, FinanceTransaction: any, FinanceInvoice: any, FinanceAccount: any;
 try {
@@ -53,7 +54,7 @@ const mockTransactions = [
   { id: '6', date: '2026-02-21', description: 'Tagihan Listrik Cabang Medan', branch: 'BR-004', type: 'expense', category: 'Utilities', amount: 8500000, status: 'pending' }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
@@ -255,3 +256,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withHQAuth(handler, { module: ['finance_pro', 'finance_lite'] });

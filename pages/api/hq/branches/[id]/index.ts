@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Branch, User, Store } from '../../../../../models';
+import { withHQAuth } from '../../../../../lib/middleware/withHQAuth';
 
 // Mock branch data
 const getMockBranch = (id: string) => ({
@@ -42,7 +43,7 @@ const getMockBranch = (id: string) => ({
   }
 });
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
 
   try {
@@ -62,6 +63,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withHQAuth(handler, { module: 'branches' });
 
 async function getBranch(req: NextApiRequest, res: NextApiResponse, id: string) {
   try {

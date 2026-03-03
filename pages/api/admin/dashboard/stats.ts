@@ -43,6 +43,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let totalUsers = 0;
     let activeSubscriptions = 0;
     let expiringSubscriptions = 0;
+    let kybStats = { pending: 0, inReview: 0, approved: 0, rejected: 0, total: 0 };
+    let businessTypeBreakdown: any[] = [];
     
     try {
       // Count tenants (partners)
@@ -87,7 +89,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
       }) || 0;
-      
+
+      // KYB Stats
+      try {
+        const kybResults = await sequelize.query(`
+          SELECT 
+            COUNT(*) FILTER (WHERE status = 'submitted') as pending,
+            COUNT(*) FILTER (WHERE status = 'in_review') as in_review,
+            COUNT(*) FILTER (WHERE status = 'approved') as approved,
+            COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
+            COUNT(*) as total
+          FROM kyb_applications
+        `, { type: QueryTypes.SELECT });
+        if (kybResults?.[0]) {
+          kybStats = {
+            pending: parseInt((kybResults[0] as any).pending) || 0,
+            inReview: parseInt((kybResults[0] as any).in_review) || 0,
+            approved: parseInt((kybResults[0] as any).approved) || 0,
+            rejected: parseInt((kybResults[0] as any).rejected) || 0,
+            total: parseInt((kybResults[0] as any).total) || 0,
+          };
+        }
+      } catch (e) { /* KYB table may not exist yet */ }
+
+      // Business Type Breakdown
+      try {
+        const btResults = await sequelize.query(`
+          SELECT bt.code, bt.name, COUNT(t.id) as tenant_count
+          FROM business_types bt
+          LEFT JOIN tenants t ON t.business_type_id = bt.id
+          WHERE bt.is_active = true
+          GROUP BY bt.id ORDER BY tenant_count DESC
+        `, { type: QueryTypes.SELECT });
+        businessTypeBreakdown = (btResults as any[]).map(r => ({
+          code: r.code, name: r.name, count: parseInt(r.tenant_count) || 0
+        }));
+      } catch (e) { /* business_types table may not exist yet */ }
+
     } catch (dbError) {
       console.error('Database query error:', dbError);
       // Use fallback values if DB queries fail
@@ -195,6 +233,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           active: activeSubscriptions,
           expiring: expiringSubscriptions
         },
+        kyb: kybStats,
+        businessTypes: businessTypeBreakdown,
         charts: {
           partnerGrowth,
           packageDistribution

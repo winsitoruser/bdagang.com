@@ -64,6 +64,8 @@ import {
   Timer,
   Warehouse,
   Gauge,
+  Factory,
+  Cog,
   type LucideIcon
 } from 'lucide-react';
 
@@ -112,7 +114,8 @@ export type ModuleCode =
   | 'sfa'
   | 'marketing'
   | 'tms'
-  | 'fms';
+  | 'fms'
+  | 'manufacturing';
 
 export type LayoutType = 'hq' | 'branch' | 'admin';
 
@@ -271,6 +274,33 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'tms-zones', name: 'Zona', href: '/hq/tms?tab=zones', icon: Globe },
             { id: 'tms-rate-cards', name: 'Tarif', href: '/hq/tms?tab=rate-cards', icon: CreditCard },
             { id: 'tms-warehouses', name: 'Gudang', href: '/hq/tms?tab=warehouses', icon: Warehouse },
+          ]
+        }
+      ]
+    },
+    {
+      id: 'manufacturing',
+      title: 'Manufaktur',
+      items: [
+        {
+          id: 'manufacturing',
+          name: 'Manufacturing',
+          icon: Factory,
+          modules: ['manufacturing'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'],
+          children: [
+            { id: 'mfg-dashboard', name: 'Dashboard', href: '/hq/manufacturing', icon: LayoutDashboard },
+            { id: 'mfg-work-orders', name: 'Work Orders', href: '/hq/manufacturing?tab=work-orders', icon: ClipboardList },
+            { id: 'mfg-bom', name: 'Bill of Materials', href: '/hq/manufacturing?tab=bom', icon: Layers },
+            { id: 'mfg-routings', name: 'Routing', href: '/hq/manufacturing?tab=routings', icon: Activity },
+            { id: 'mfg-work-centers', name: 'Work Centers', href: '/hq/manufacturing?tab=work-centers', icon: Building2 },
+            { id: 'mfg-machines', name: 'Mesin & Equipment', href: '/hq/manufacturing?tab=machines', icon: Cog },
+            { id: 'mfg-quality', name: 'Quality Control', href: '/hq/manufacturing?tab=quality', icon: Shield },
+            { id: 'mfg-planning', name: 'Production Plan', href: '/hq/manufacturing?tab=planning', icon: Calendar },
+            { id: 'mfg-oee', name: 'OEE Analytics', href: '/hq/manufacturing?tab=oee', icon: Gauge },
+            { id: 'mfg-costs', name: 'Production Costing', href: '/hq/manufacturing?tab=costs', icon: DollarSign },
+            { id: 'mfg-waste', name: 'Waste & Scrap', href: '/hq/manufacturing?tab=waste', icon: AlertTriangle },
+            { id: 'mfg-settings', name: 'Pengaturan', href: '/hq/manufacturing?tab=settings', icon: Settings },
           ]
         }
       ]

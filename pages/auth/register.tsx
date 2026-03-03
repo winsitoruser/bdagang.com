@@ -26,12 +26,16 @@ const Register: React.FC = () => {
   });
 
   const businessTypes = [
-    { value: 'retail', label: 'Retail / Toko', icon: '🏪', desc: 'Toko kelontong, minimarket' },
-    { value: 'fnb', label: 'F&B / Restoran', icon: '🍽️', desc: 'Kafe, restoran, warung makan' },
-    { value: 'fashion', label: 'Fashion', icon: '👔', desc: 'Pakaian, sepatu, aksesoris' },
-    { value: 'beauty', label: 'Beauty & Salon', icon: '💄', desc: 'Salon, spa, barbershop' },
-    { value: 'grocery', label: 'Grocery', icon: '🛒', desc: 'Supermarket, minimarket' },
-    { value: 'other', label: 'Lainnya', icon: '📦', desc: 'Bisnis lainnya' },
+    { value: 'fnb', label: 'F&B / Restoran', icon: '�️', desc: 'Kafe, restoran, warung makan, catering' },
+    { value: 'retail', label: 'Retail / Toko', icon: '�', desc: 'Toko ritel, minimarket, kelontong' },
+    { value: 'fashion', label: 'Fashion & Apparel', icon: '👔', desc: 'Pakaian, sepatu, aksesoris, butik' },
+    { value: 'beauty', label: 'Beauty & Salon', icon: '💄', desc: 'Salon, spa, barbershop, klinik kecantikan' },
+    { value: 'grocery', label: 'Grocery / Supermarket', icon: '🛒', desc: 'Supermarket, toko bahan pokok' },
+    { value: 'pharmacy', label: 'Apotek / Farmasi', icon: '💊', desc: 'Apotek, toko obat, distributor farmasi' },
+    { value: 'electronics', label: 'Elektronik', icon: '📱', desc: 'Toko elektronik, gadget, servis' },
+    { value: 'automotive', label: 'Otomotif', icon: '🚗', desc: 'Bengkel, dealer, sparepart, car wash' },
+    { value: 'services', label: 'Jasa / Layanan', icon: '🔧', desc: 'Konsultan, laundry, jasa profesional' },
+    { value: 'other', label: 'Lainnya', icon: '📦', desc: 'Jenis bisnis lainnya' },
   ];
 
   const steps = [
@@ -478,7 +482,7 @@ const Register: React.FC = () => {
                           <label className="block text-sm font-medium text-gray-700 mb-3">
                             Jenis Bisnis <span className="text-red-500">*</span>
                           </label>
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {businessTypes.map((type) => (
                               <motion.button
                                 key={type.value}
@@ -491,20 +495,20 @@ const Register: React.FC = () => {
                                 }}
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                className={`p-4 rounded-xl border-2 text-left transition-all ${
+                                className={`p-3 rounded-xl border-2 text-left transition-all ${
                                   formData.businessType === type.value
                                     ? 'border-sky-500 bg-sky-50 shadow-md'
                                     : 'border-gray-200 hover:border-sky-300 hover:bg-gray-50'
                                 }`}
                               >
-                                <div className="flex items-start space-x-3">
-                                  <span className="text-2xl">{type.icon}</span>
-                                  <div className="flex-1">
-                                    <div className="font-semibold text-gray-900 text-sm">{type.label}</div>
-                                    <div className="text-xs text-gray-500 mt-0.5">{type.desc}</div>
+                                <div className="flex items-start space-x-2">
+                                  <span className="text-xl">{type.icon}</span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-semibold text-gray-900 text-xs">{type.label}</div>
+                                    <div className="text-[11px] text-gray-500 mt-0.5 truncate">{type.desc}</div>
                                   </div>
                                   {formData.businessType === type.value && (
-                                    <CheckCircle className="w-5 h-5 text-sky-600 flex-shrink-0" />
+                                    <CheckCircle className="w-4 h-4 text-sky-600 flex-shrink-0" />
                                   )}
                                 </div>
                               </motion.button>

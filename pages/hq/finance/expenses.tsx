@@ -140,7 +140,7 @@ export default function ExpenseManagement() {
         if (accountRes.ok) {
           const accountJson = await accountRes.json();
           const accountPayload = accountJson.data || accountJson;
-          setAccounts(accountPayload.accounts || []);
+          setAccounts(accountPayload.accounts || accountPayload.receivables || []);
         }
       } catch (error) {
         console.error('Error fetching branches/accounts:', error);
@@ -155,23 +155,40 @@ export default function ExpenseManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch expense transactions (type=expense)
-      const response = await fetch(`/api/hq/finance/transactions?type=expense&limit=100&offset=0`);
+      // Try the expenses API first (has categories + summary)
+      const expApiRes = await fetch(`/api/hq/finance/expenses?period=${period}`);
+      if (expApiRes.ok) {
+        const expJson = await expApiRes.json();
+        const expPayload = expJson.data || expJson;
+        if (expPayload.summary) setSummary(expPayload.summary);
+        if (expPayload.categories) setCategories(expPayload.categories);
+        if (expPayload.branches) setBranchExpenses(expPayload.branches);
+        if (expPayload.expenses && expPayload.expenses.length > 0) {
+          setExpenses(expPayload.expenses);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Fallback: fetch from transactions API
+      const response = await fetch(`/api/hq/finance/transactions?type=expense&limit=100&page=1`);
       if (response.ok) {
         const result = await response.json();
-        const transactions = result.data || [];
+        const rawData = result.data || result;
+        const transactions = (Array.isArray(rawData) ? rawData : []).map((t: any) => ({
+          ...t,
+          type: t.type || t.transactionType || '',
+          amount: parseFloat(t.amount || 0),
+        }));
         
-        // Calculate summary from transactions
-        const totalExpenses = transactions.reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0);
+        const totalExpenses = transactions.reduce((sum: number, t: any) => sum + t.amount, 0);
         
-        // Group by category
         const categoryMap: { [key: string]: number } = {};
         transactions.forEach((t: any) => {
           const cat = t.category || 'Other';
-          categoryMap[cat] = (categoryMap[cat] || 0) + parseFloat(t.amount);
+          categoryMap[cat] = (categoryMap[cat] || 0) + t.amount;
         });
         
-        // Update summary
         setSummary({
           ...defaultExpSummary,
           totalExpenses,
@@ -183,18 +200,26 @@ export default function ExpenseManagement() {
           maintenance: categoryMap['Maintenance'] || 0,
           other: categoryMap['Other'] || 0
         });
+
+        // Build categories from data
+        const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+        const builtCategories = Object.entries(categoryMap).map(([name, amount], i) => ({
+          id: String(i + 1), name, icon: 'circle', amount,
+          budget: 0, percentage: totalExpenses > 0 ? Math.round(amount / totalExpenses * 100) : 0,
+          trend: 0, color: colors[i % colors.length]
+        }));
+        if (builtCategories.length > 0) setCategories(builtCategories);
         
-        // Map transactions to expenses
-        const mappedExpenses = transactions.map((t: any) => ({
+        const mappedExpenses: ExpenseItem[] = transactions.map((t: any) => ({
           id: t.id,
           date: t.transactionDate,
           description: t.description,
           category: t.category,
-          branch: t.branch?.code || 'N/A',
+          branch: t.account_code || 'N/A',
           amount: parseFloat(t.amount),
-          status: t.status === 'completed' ? 'approved' : t.status === 'pending' ? 'pending' : 'rejected',
-          approver: t.approvedBy || '-',
-          vendor: t.reference || '-'
+          status: (t.status === 'completed' ? 'approved' : t.status === 'pending' ? 'pending' : 'rejected') as 'approved' | 'pending' | 'rejected',
+          approver: '-',
+          vendor: t.contactName || '-'
         }));
         
         setExpenses(mappedExpenses);
@@ -319,10 +344,13 @@ export default function ExpenseManagement() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                      ...data,
-                      type: 'expense',
-                      tenantId: 'default-tenant',
-                      createdBy: 'current-user'
+                      transactionType: 'expense',
+                      accountId: data.accountId || null,
+                      category: data.category || null,
+                      amount: data.amount,
+                      description: data.description,
+                      paymentMethod: data.paymentMethod || null,
+                      contactName: data.contactName || null,
                     })
                   });
                   
@@ -368,7 +396,7 @@ export default function ExpenseManagement() {
             </div>
             <p className="text-gray-500 text-sm">COGS</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.cogs)}</p>
-            <p className="text-xs text-gray-500 mt-1">{((summary.cogs / summary.totalExpenses) * 100).toFixed(1)}% of total</p>
+            <p className="text-xs text-gray-500 mt-1">{summary.totalExpenses > 0 ? ((summary.cogs / summary.totalExpenses) * 100).toFixed(1) : '0.0'}% of total</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
@@ -379,7 +407,7 @@ export default function ExpenseManagement() {
             </div>
             <p className="text-gray-500 text-sm">Payroll</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.payroll)}</p>
-            <p className="text-xs text-gray-500 mt-1">{((summary.payroll / summary.totalExpenses) * 100).toFixed(1)}% of total</p>
+            <p className="text-xs text-gray-500 mt-1">{summary.totalExpenses > 0 ? ((summary.payroll / summary.totalExpenses) * 100).toFixed(1) : '0.0'}% of total</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">

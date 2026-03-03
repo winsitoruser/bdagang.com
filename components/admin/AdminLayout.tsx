@@ -20,7 +20,12 @@ import {
   DollarSign,
   ShoppingBag,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CreditCard,
+  ShieldCheck,
+  Brain,
+  Users2,
+  ClipboardCheck
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -46,10 +51,22 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
       active: router.pathname === '/admin/dashboard'
     },
     {
+      title: 'KYB Review',
+      icon: ClipboardCheck,
+      href: '/admin/kyb-review',
+      active: router.pathname.startsWith('/admin/kyb-review')
+    },
+    {
       title: 'Tenant',
       icon: Building2,
       href: '/admin/tenants',
       active: router.pathname.startsWith('/admin/tenants')
+    },
+    {
+      title: 'Jenis Bisnis',
+      icon: ShoppingBag,
+      href: '/admin/business-types',
+      active: router.pathname.startsWith('/admin/business-types')
     },
     {
       title: 'Cabang',
@@ -61,7 +78,37 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
       title: 'Modul',
       icon: Boxes,
       href: '/admin/modules',
-      active: router.pathname === '/admin/modules'
+      active: router.pathname.startsWith('/admin/modules')
+    },
+    {
+      title: 'Mitra',
+      icon: Users2,
+      href: '/admin/partners',
+      active: router.pathname.startsWith('/admin/partners')
+    },
+    {
+      title: 'Outlet',
+      icon: Package,
+      href: '/admin/outlets',
+      active: router.pathname.startsWith('/admin/outlets')
+    },
+    {
+      title: 'Aktivasi',
+      icon: FileCheck,
+      href: '/admin/activations',
+      active: router.pathname.startsWith('/admin/activations')
+    },
+    {
+      title: 'Transaksi',
+      icon: DollarSign,
+      href: '/admin/transactions',
+      active: router.pathname.startsWith('/admin/transactions')
+    },
+    {
+      title: 'Langganan',
+      icon: CreditCard,
+      href: '/admin/subscriptions',
+      active: router.pathname.startsWith('/admin/subscriptions')
     },
     {
       title: 'Analitik',
@@ -70,34 +117,16 @@ export default function AdminLayout({ children, title = 'Admin Panel' }: AdminLa
       active: router.pathname === '/admin/analytics'
     },
     {
-      title: 'Jenis Bisnis',
-      icon: ShoppingBag,
-      href: '/admin/business-types',
-      active: router.pathname === '/admin/business-types'
+      title: 'AI Models',
+      icon: Brain,
+      href: '/admin/ai-models',
+      active: router.pathname === '/admin/ai-models'
     },
     {
-      title: 'Mitra',
-      icon: Users,
-      href: '/admin/partners',
-      active: router.pathname === '/admin/partners'
-    },
-    {
-      title: 'Outlet',
-      icon: Store,
-      href: '/admin/outlets',
-      active: router.pathname === '/admin/outlets'
-    },
-    {
-      title: 'Aktivasi',
-      icon: FileCheck,
-      href: '/admin/activations',
-      active: router.pathname === '/admin/activations'
-    },
-    {
-      title: 'Transaksi',
-      icon: DollarSign,
-      href: '/admin/transactions',
-      active: router.pathname === '/admin/transactions'
+      title: 'Pengaturan',
+      icon: Settings,
+      href: '/admin/settings',
+      active: router.pathname.startsWith('/admin/settings')
     }
   ];
 

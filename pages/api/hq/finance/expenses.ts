@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 let FinanceTransaction: any, Branch: any;
 try {
@@ -55,7 +56,7 @@ const mockBranchExpenses = [
   { id: '5', name: 'Cabang Yogyakarta', code: 'BR-005', totalExpenses: 364000000, cogs: 200200000, payroll: 91000000, utilities: 29120000, other: 43680000, budgetUsed: 92 }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method !== 'GET') {
       res.setHeader('Allow', ['GET']);
@@ -72,6 +73,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'finance_pro' });
 
 async function getExpenses(req: NextApiRequest, res: NextApiResponse) {
   const { period = 'month' } = req.query;
@@ -90,10 +93,12 @@ async function getExpenses(req: NextApiRequest, res: NextApiResponse) {
         const { Op } = require('sequelize');
         const where: any = { type: 'expense', transactionDate: { [Op.between]: [startDate, now] } };
 
-        const transactions = await FinanceTransaction.findAll({
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB query timeout')), 5000));
+        const queryPromise = FinanceTransaction.findAll({
           where, order: [['transactionDate', 'DESC']], limit: 50,
           include: Branch ? [{ model: Branch, as: 'branch', attributes: ['code', 'name'] }] : []
         });
+        const transactions = await Promise.race([queryPromise, timeoutPromise]) as any[];
 
         if (transactions.length > 0) {
           const totalExpenses = transactions.reduce((s: number, t: any) => s + parseFloat(t.amount || 0), 0);

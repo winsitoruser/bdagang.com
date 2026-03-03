@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 interface SalesSummary {
   totalSales: number;
@@ -57,7 +58,7 @@ interface PaymentMethodSales {
   percentage: number;
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method !== 'GET') {
       res.setHeader('Allow', ['GET']);
@@ -149,3 +150,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'reports' });

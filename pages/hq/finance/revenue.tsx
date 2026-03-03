@@ -114,7 +114,7 @@ export default function RevenueAnalysis() {
         if (accountRes.ok) {
           const accountJson = await accountRes.json();
           const accountPayload = accountJson.data || accountJson;
-          setAccounts(accountPayload.accounts || []);
+          setAccounts(accountPayload.accounts || accountPayload.receivables || []);
         }
       } catch (error) {
         console.error('Error fetching branches/accounts:', error);
@@ -129,57 +129,70 @@ export default function RevenueAnalysis() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/hq/finance/transactions?type=income&limit=100&offset=0`);
+      // Try the dedicated revenue API first (has summary + branches + products + hourly)
+      const revRes = await fetch(`/api/hq/finance/revenue?period=${period}`);
+      if (revRes.ok) {
+        const revJson = await revRes.json();
+        const revPayload = revJson.data || revJson;
+        if (revPayload.summary) {
+          setRevenueData({
+            ...defaultRevData,
+            totalRevenue: revPayload.summary.totalRevenue || 0,
+            avgDailyRevenue: revPayload.summary.avgDailyRevenue || 0,
+            avgTicketSize: revPayload.summary.avgTicketSize || 0,
+            totalTransactions: revPayload.summary.totalTransactions || 0,
+            growth: revPayload.summary.growth || 0,
+          });
+        }
+        if (revPayload.branches && revPayload.branches.length > 0) {
+          const totalRev = revPayload.branches.reduce((s: number, b: any) => s + (b.revenue || 0), 0);
+          setBranchRevenue(revPayload.branches.map((b: any) => ({
+            id: b.id, name: b.name, code: b.code,
+            revenue: b.revenue || 0, transactions: b.transactions || 0,
+            avgTicket: b.avgTicket || 0, growth: b.growth || 0,
+            contribution: totalRev > 0 ? (b.revenue / totalRev) * 100 : 0
+          })));
+        }
+        if (revPayload.products) setProductRevenue(revPayload.products);
+        if (revPayload.hourly) setHourlyRevenue(revPayload.hourly);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback: fetch from transactions API
+      const response = await fetch(`/api/hq/finance/transactions?type=income&limit=100&page=1`);
       if (response.ok) {
         const result = await response.json();
-        const transactions = result.data || [];
+        const rawData = result.data || result;
+        const transactions = (Array.isArray(rawData) ? rawData : []).map((t: any) => ({
+          ...t,
+          type: t.type || t.transactionType || '',
+          amount: parseFloat(t.amount || 0),
+        }));
         
-        const totalRevenue = transactions.reduce((sum: number, t: any) => sum + parseFloat(t.amount), 0);
+        const totalRevenue = transactions.reduce((sum: number, t: any) => sum + t.amount, 0);
         const totalTransactions = transactions.length;
         const avgTicketSize = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
-        
-        const categoryMap: { [key: string]: number } = {};
-        transactions.forEach((t: any) => {
-          const cat = t.category || 'Other';
-          categoryMap[cat] = (categoryMap[cat] || 0) + parseFloat(t.amount);
-        });
         
         const branchMap: { [key: string]: { revenue: number; count: number; name: string; code: string } } = {};
         transactions.forEach((t: any) => {
           const branchId = t.branchId || 'unknown';
           if (!branchMap[branchId]) {
-            branchMap[branchId] = {
-              revenue: 0,
-              count: 0,
-              name: t.branch?.name || 'Unknown',
-              code: t.branch?.code || 'N/A'
-            };
+            branchMap[branchId] = { revenue: 0, count: 0, name: t.branch?.name || 'Unknown', code: t.branch?.code || 'N/A' };
           }
-          branchMap[branchId].revenue += parseFloat(t.amount);
+          branchMap[branchId].revenue += parseFloat(t.amount || 0);
           branchMap[branchId].count += 1;
         });
         
-        const mappedBranches = Object.keys(branchMap).map((id, index) => ({
+        const mappedBranches = Object.keys(branchMap).map((id) => ({
           id,
-          name: branchMap[id].name,
-          code: branchMap[id].code,
-          revenue: branchMap[id].revenue,
-          transactions: branchMap[id].count,
+          name: branchMap[id].name, code: branchMap[id].code,
+          revenue: branchMap[id].revenue, transactions: branchMap[id].count,
           avgTicket: branchMap[id].count > 0 ? branchMap[id].revenue / branchMap[id].count : 0,
-          growth: 0,
-          contribution: totalRevenue > 0 ? (branchMap[id].revenue / totalRevenue) * 100 : 0
+          growth: 0, contribution: totalRevenue > 0 ? (branchMap[id].revenue / totalRevenue) * 100 : 0
         }));
         
-        setRevenueData({
-          ...defaultRevData,
-          totalRevenue,
-          avgTicketSize,
-          totalTransactions,
-          cashSales: categoryMap['Cash Sales'] || 0,
-          cardSales: categoryMap['Card Sales'] || 0,
-          digitalSales: categoryMap['Digital Sales'] || 0
-        });
-        
+        setRevenueData({ ...defaultRevData, totalRevenue, avgTicketSize, totalTransactions });
         if (mappedBranches.length > 0) setBranchRevenue(mappedBranches);
       }
     } catch (error) {
@@ -358,9 +371,9 @@ export default function RevenueAnalysis() {
               </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-green-500 h-2 rounded-full" style={{ width: `${(revenueData.cashSales / revenueData.totalRevenue) * 100}%` }}></div>
+              <div className="bg-green-500 h-2 rounded-full" style={{ width: `${revenueData.totalRevenue > 0 ? (revenueData.cashSales / revenueData.totalRevenue) * 100 : 0}%` }}></div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">{((revenueData.cashSales / revenueData.totalRevenue) * 100).toFixed(1)}% of total</p>
+            <p className="text-xs text-gray-500 mt-1">{revenueData.totalRevenue > 0 ? ((revenueData.cashSales / revenueData.totalRevenue) * 100).toFixed(1) : '0.0'}% of total</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 border border-gray-200">
@@ -374,9 +387,9 @@ export default function RevenueAnalysis() {
               </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${(revenueData.cardSales / revenueData.totalRevenue) * 100}%` }}></div>
+              <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${revenueData.totalRevenue > 0 ? (revenueData.cardSales / revenueData.totalRevenue) * 100 : 0}%` }}></div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">{((revenueData.cardSales / revenueData.totalRevenue) * 100).toFixed(1)}% of total</p>
+            <p className="text-xs text-gray-500 mt-1">{revenueData.totalRevenue > 0 ? ((revenueData.cardSales / revenueData.totalRevenue) * 100).toFixed(1) : '0.0'}% of total</p>
           </div>
 
           <div className="bg-white rounded-xl p-4 border border-gray-200">
@@ -390,9 +403,9 @@ export default function RevenueAnalysis() {
               </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${(revenueData.digitalSales / revenueData.totalRevenue) * 100}%` }}></div>
+              <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${revenueData.totalRevenue > 0 ? (revenueData.digitalSales / revenueData.totalRevenue) * 100 : 0}%` }}></div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">{((revenueData.digitalSales / revenueData.totalRevenue) * 100).toFixed(1)}% of total</p>
+            <p className="text-xs text-gray-500 mt-1">{revenueData.totalRevenue > 0 ? ((revenueData.digitalSales / revenueData.totalRevenue) * 100).toFixed(1) : '0.0'}% of total</p>
           </div>
         </div>
 

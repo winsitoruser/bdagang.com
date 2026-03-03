@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 let sequelize: any;
 try { sequelize = require('../../../../lib/sequelize'); } catch (e) { console.warn('Sequelize not available for enhanced inventory'); }
@@ -171,7 +172,7 @@ function generateMockABCAnalysis() {
 }
 
 // ─── Main handler ───
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
     return fail(res, `Method ${req.method} Not Allowed`, 405);
@@ -243,3 +244,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return fail(res, error.message || 'Internal Server Error');
   }
 }
+
+export default withHQAuth(handler, { module: 'inventory' });

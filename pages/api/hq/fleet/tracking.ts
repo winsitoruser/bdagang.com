@@ -1,5 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
 // Mock tracking data
 const mockTrackingData: any[] = [
@@ -35,7 +40,7 @@ const mockTrackingData: any[] = [
   }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -55,6 +60,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'fleet' });
 
 async function getTrackingData(req: NextApiRequest, res: NextApiResponse) {
   const { vehicleId, driverId, status, routeId } = req.query;
@@ -92,6 +99,16 @@ async function getTrackingData(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function updateTrackingData(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.STANDARD)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    vehicleId: V.required().string(),
+    latitude: V.required().number().min(-90).max(90),
+    longitude: V.required().number().min(-180).max(180),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+  const ctx = getTenantContext(req);
   const {
     vehicleId,
     latitude,
@@ -100,13 +117,6 @@ async function updateTrackingData(req: NextApiRequest, res: NextApiResponse) {
     heading,
     status
   } = req.body;
-
-  // Validation
-  if (!vehicleId || latitude === undefined || longitude === undefined) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Vehicle ID, latitude, and longitude are required')
-    );
-  }
 
   // Find existing tracking data
   const trackingIndex = mockTrackingData.findIndex(t => t.vehicleId === vehicleId);

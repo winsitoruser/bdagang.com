@@ -1,9 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext, buildTenantFilter } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
 const sequelize = require('../../../../lib/sequelize');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET': return await getReceipts(req, res);
@@ -19,13 +24,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
+export default withHQAuth(handler, { module: 'inventory' });
+
 async function getReceipts(req: NextApiRequest, res: NextApiResponse) {
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId, 'gr');
   const { status, search } = req.query;
-  let where = '';
-  const params: any = {};
-  if (status && status !== 'all') { where = 'WHERE gr.status=:status'; params.status = status; }
+  let where = 'WHERE 1=1' + tf.condition;
+  const params: any = { ...tf.replacements };
+  if (status && status !== 'all') { where += ' AND gr.status=:status'; params.status = status; }
   if (search) {
-    where += (where ? ' AND' : 'WHERE') + ' (gr.gr_number ILIKE :search OR s.name ILIKE :search OR po.po_number ILIKE :search)';
+    where += ' AND (gr.gr_number ILIKE :search OR s.name ILIKE :search OR po.po_number ILIKE :search)';
     params.search = `%${search}%`;
   }
 
@@ -50,7 +59,7 @@ async function getReceipts(req: NextApiRequest, res: NextApiResponse) {
     `, { replacements: { ids: grIds } });
   }
 
-  const [statsRows] = await sequelize.query("SELECT status, COUNT(*)::int as count FROM goods_receipts GROUP BY status");
+  const [statsRows] = await sequelize.query(`SELECT status, COUNT(*)::int as count FROM goods_receipts gr WHERE 1=1 ${tf.condition} GROUP BY status`, { replacements: tf.replacements });
   const stats: Record<string, any> = { pending: 0, partial: 0, completed: 0, draft: 0 };
   statsRows.forEach((s: any) => { stats[s.status] = s.count; });
 
@@ -76,8 +85,15 @@ async function getReceipts(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createReceipt(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    items: V.required().array().arrayMinLength(1),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+  const ctx = getTenantContext(req);
   const { purchaseOrderId, warehouseId, items: reqItems, invoiceNumber, notes } = req.body;
-  if (!reqItems?.length) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Items required'));
 
   const [seqResult] = await sequelize.query("SELECT COALESCE(MAX(id),0)+1 as nid FROM goods_receipts");
   const grNum = `GR-2026-${String(seqResult[0].nid).padStart(4, '0')}`;
@@ -92,8 +108,8 @@ async function createReceipt(req: NextApiRequest, res: NextApiResponse) {
 
   const [result] = await sequelize.query(`
     INSERT INTO goods_receipts (tenant_id, gr_number, purchase_order_id, supplier_id, warehouse_id, status, invoice_number, total_items, total_quantity, total_value, received_by_name, notes)
-    VALUES ((SELECT tenant_id FROM warehouses LIMIT 1), :num, :poId, :supId, :whId, 'completed', :inv, :items, :qty, :val, 'Admin', :notes) RETURNING id
-  `, { replacements: { num: grNum, poId: purchaseOrderId || null, supId: supplierId, whId: warehouseId || null, inv: invoiceNumber || null, items: reqItems.length, qty: totalQty, val: totalValue, notes: notes || null } });
+    VALUES (:tenantId, :num, :poId, :supId, :whId, 'completed', :inv, :items, :qty, :val, :userName, :notes) RETURNING id
+  `, { replacements: { tenantId: ctx.tenantId, num: grNum, poId: purchaseOrderId || null, supId: supplierId, whId: warehouseId || null, inv: invoiceNumber || null, items: reqItems.length, qty: totalQty, val: totalValue, userName: ctx.userName, notes: notes || null } });
 
   const grId = result[0].id;
   for (const item of reqItems) {
@@ -111,15 +127,21 @@ async function createReceipt(req: NextApiRequest, res: NextApiResponse) {
     }
   }
 
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'goods_receipt', entityId: grId, newValues: { grNum, purchaseOrderId, warehouseId, totalItems: reqItems.length, totalValue }, req });
+
   return res.status(HttpStatus.CREATED).json(successResponse({ id: grId, grNumber: grNum }, undefined, 'Goods receipt created'));
 }
 
 async function updateReceipt(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
   const { id, action } = req.body;
   if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Receipt ID required'));
 
   if (action === 'cancel') {
-    await sequelize.query("UPDATE goods_receipts SET status='cancelled', updated_at=NOW() WHERE id=:id", { replacements: { id } });
+    await sequelize.query(`UPDATE goods_receipts SET status='cancelled', updated_at=NOW() WHERE id=:id ${tf.condition}`, { replacements: { id, ...tf.replacements } });
+    await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'status_change', entityType: 'goods_receipt', entityId: id, newValues: { action: 'cancel' }, req });
   }
   return res.status(HttpStatus.OK).json(successResponse({ id }, undefined, 'Receipt updated'));
 }

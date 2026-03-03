@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/admin/')) {
     const userRole = (token.role as string)?.toLowerCase();
     if (!['admin', 'super_admin', 'superadmin'].includes(userRole)) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/hq/dashboard', request.url));
     }
     return NextResponse.next();
   }
@@ -42,6 +42,11 @@ export async function middleware(request: NextRequest) {
   if (!['admin', 'super_admin', 'superadmin'].includes(userRole)) {
     // Allow onboarding pages
     if (pathname.startsWith('/onboarding')) {
+      return NextResponse.next();
+    }
+
+    // Allow /hq/home always — it handles its own under-review / inactive state
+    if (pathname === '/hq/home') {
       return NextResponse.next();
     }
 

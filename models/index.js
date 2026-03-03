@@ -215,6 +215,28 @@ db.CrmDocumentTemplate = require('./CrmDocumentTemplate')(sequelize);
 db.CrmSavedReport = require('./CrmSavedReport')(sequelize);
 db.CrmCustomDashboard = require('./CrmCustomDashboard')(sequelize);
 
+// Manufacturing Models
+db.MfgWorkCenter = require('./MfgWorkCenter')(sequelize);
+db.MfgBom = require('./MfgBom')(sequelize);
+db.MfgBomItem = require('./MfgBomItem')(sequelize);
+db.MfgRouting = require('./MfgRouting')(sequelize);
+db.MfgRoutingOperation = require('./MfgRoutingOperation')(sequelize);
+db.MfgWorkOrder = require('./MfgWorkOrder')(sequelize);
+db.MfgWoMaterial = require('./MfgWoMaterial')(sequelize);
+db.MfgWoOperation = require('./MfgWoOperation')(sequelize);
+db.MfgWoOutput = require('./MfgWoOutput')(sequelize);
+db.MfgQcTemplate = require('./MfgQcTemplate')(sequelize);
+db.MfgQcInspection = require('./MfgQcInspection')(sequelize);
+db.MfgQcResult = require('./MfgQcResult')(sequelize);
+db.MfgMachine = require('./MfgMachine')(sequelize);
+db.MfgMaintenanceRecord = require('./MfgMaintenanceRecord')(sequelize);
+db.MfgProductionPlan = require('./MfgProductionPlan')(sequelize);
+db.MfgProductionPlanItem = require('./MfgProductionPlanItem')(sequelize);
+db.MfgWasteRecord = require('./MfgWasteRecord')(sequelize);
+db.MfgProductionCost = require('./MfgProductionCost')(sequelize);
+db.MfgShiftProduction = require('./MfgShiftProduction')(sequelize);
+db.MfgSetting = require('./MfgSetting')(sequelize);
+
 // Finance Models
 db.FinanceAccount = require('./FinanceAccount');
 db.FinanceBudget = require('./FinanceBudget');

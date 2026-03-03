@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 let PosTransaction: any, Branch: any, FinanceTransaction: any;
 try {
@@ -61,7 +62,7 @@ const mockHourlyRevenue = [
   { hour: '21:00', revenue: 180000000, transactions: 973 }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method !== 'GET') {
       res.setHeader('Allow', ['GET']);
@@ -78,6 +79,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'finance_pro' });
 
 async function getRevenue(req: NextApiRequest, res: NextApiResponse) {
   const { period = 'month', branchId } = req.query;
@@ -96,13 +99,12 @@ async function getRevenue(req: NextApiRequest, res: NextApiResponse) {
     if (PosTransaction && Branch) {
       try {
         const { Op } = require('sequelize');
-        const sequelize = require('../../../../lib/sequelize');
 
-        // Get branches
-        const branches = await Branch.findAll({ where: { isActive: true }, attributes: ['id', 'code', 'name'], order: [['name', 'ASC']] });
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB query timeout')), 5000));
+        const dbQuery = async () => {
+          const branches = await Branch.findAll({ where: { isActive: true }, attributes: ['id', 'code', 'name'], order: [['name', 'ASC']] });
+          if (branches.length === 0) return null;
 
-        if (branches.length > 0) {
-          // Revenue per branch from POS transactions (status: closed = completed sale)
           const branchRevenue = await Promise.all(branches.map(async (b: any) => {
             const where: any = { branchId: b.id, status: 'closed', createdAt: { [Op.between]: [startDate, now] } };
             const total = await PosTransaction.sum('total', { where }) || 0;
@@ -111,27 +113,29 @@ async function getRevenue(req: NextApiRequest, res: NextApiResponse) {
             return { id: b.id, name: b.name, code: b.code, revenue: total, transactions: count, avgTicket, growth: 0, contribution: 0 };
           }));
 
-          const totalRevenue = branchRevenue.reduce((s, b) => s + b.revenue, 0);
-          branchRevenue.forEach(b => { b.contribution = totalRevenue > 0 ? Math.round(b.revenue / totalRevenue * 1000) / 10 : 0; });
+          const totalRevenue = branchRevenue.reduce((s: number, b: any) => s + b.revenue, 0);
+          branchRevenue.forEach((b: any) => { b.contribution = totalRevenue > 0 ? Math.round(b.revenue / totalRevenue * 1000) / 10 : 0; });
+          if (totalRevenue === 0) return null;
 
-          if (totalRevenue > 0) {
-            const totalTxns = branchRevenue.reduce((s, b) => s + b.transactions, 0);
-            return res.status(HttpStatus.OK).json(
-              successResponse({
-                summary: {
-                  totalRevenue, previousRevenue: 0, growth: 0,
-                  avgDailyRevenue: Math.round(totalRevenue / 30),
-                  avgTicketSize: totalTxns > 0 ? Math.round(totalRevenue / totalTxns) : 0,
-                  totalTransactions: totalTxns,
-                  cashSales: 0, cardSales: 0, digitalSales: 0, onlineSales: 0, offlineSales: totalRevenue
-                },
-                branches: branchRevenue,
-                products: mockProductRevenue,
-                hourly: mockHourlyRevenue,
-                period
-              })
-            );
-          }
+          const totalTxns = branchRevenue.reduce((s: number, b: any) => s + b.transactions, 0);
+          return {
+            summary: {
+              totalRevenue, previousRevenue: 0, growth: 0,
+              avgDailyRevenue: Math.round(totalRevenue / 30),
+              avgTicketSize: totalTxns > 0 ? Math.round(totalRevenue / totalTxns) : 0,
+              totalTransactions: totalTxns,
+              cashSales: 0, cardSales: 0, digitalSales: 0, onlineSales: 0, offlineSales: totalRevenue
+            },
+            branches: branchRevenue,
+            products: mockProductRevenue,
+            hourly: mockHourlyRevenue,
+            period
+          };
+        };
+
+        const result = await Promise.race([dbQuery(), timeoutPromise]) as any;
+        if (result) {
+          return res.status(HttpStatus.OK).json(successResponse(result));
         }
       } catch (e: any) { console.warn('Revenue DB failed:', e.message); }
     }

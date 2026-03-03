@@ -1,9 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext, buildTenantFilter } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
 const sequelize = require('../../../../lib/sequelize');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET': return await getPricing(req, res);
@@ -20,7 +25,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
+export default withHQAuth(handler, { module: 'inventory' });
+
 async function getPricing(req: NextApiRequest, res: NextApiResponse) {
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
   const { type, search, category } = req.query;
 
   // Check if product_price_tiers table exists
@@ -31,9 +40,9 @@ async function getPricing(req: NextApiRequest, res: NextApiResponse) {
   } catch (e) { /* table doesn't exist yet */ }
 
   if (type === 'tiers' && hasTierTable) {
-    let where = '';
-    const params: any = {};
-    if (search) { where = 'WHERE name ILIKE :search OR code ILIKE :search'; params.search = `%${search}%`; }
+    let where = 'WHERE 1=1' + tf.condition;
+    const params: any = { ...tf.replacements };
+    if (search) { where += ' AND (name ILIKE :search OR code ILIKE :search)'; params.search = `%${search}%`; }
     const [tiers] = await sequelize.query(`SELECT * FROM product_price_tiers ${where} ORDER BY sort_order, name`, { replacements: params });
     return res.status(HttpStatus.OK).json(successResponse({ priceTiers: tiers.map((t: any) => ({
       id: String(t.id), code: t.code, name: t.name, description: t.description || '',
@@ -44,8 +53,9 @@ async function getPricing(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (type === 'products') {
-    let where = 'WHERE p.is_active=true';
-    const params: any = {};
+    const tfp = buildTenantFilter(ctx.tenantId, 'p');
+    let where = 'WHERE p.is_active=true' + tfp.condition;
+    const params: any = { ...tfp.replacements };
     if (search) { where += ' AND (p.name ILIKE :search OR p.sku ILIKE :search)'; params.search = `%${search}%`; }
     if (category && category !== 'Semua Kategori' && category !== 'all') { where += ' AND pc.name=:cat'; params.cat = category; }
 
@@ -106,14 +116,26 @@ async function getPricing(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createPriceTier(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    code: V.required().string().minLength(1).maxLength(20),
+    name: V.required().string().minLength(1).maxLength(100),
+    multiplier: V.optional().number().min(0),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+  const ctx = getTenantContext(req);
   const { code, name, description, multiplier, markupPercent, region } = req.body;
-  if (!code || !name) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Code and name required'));
 
   try {
     const [result] = await sequelize.query(`
       INSERT INTO product_price_tiers (tenant_id, code, name, description, multiplier, markup_percent, region, is_active)
-      VALUES ((SELECT tenant_id FROM products LIMIT 1), :code, :name, :desc, :mult, :markup, :region, true) RETURNING id
-    `, { replacements: { code: code.toUpperCase(), name, desc: description || null, mult: multiplier || 1.0, markup: markupPercent || 0, region: region || 'Nasional' } });
+      VALUES (:tenantId, :code, :name, :desc, :mult, :markup, :region, true) RETURNING id
+    `, { replacements: { tenantId: ctx.tenantId, code: code.toUpperCase(), name, desc: description || null, mult: multiplier || 1.0, markup: markupPercent || 0, region: region || 'Nasional' } });
+
+    await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'price_tier', entityId: result[0]?.id, newValues: { code, name, multiplier }, req });
+
     return res.status(HttpStatus.CREATED).json(successResponse({ id: result[0].id }, undefined, 'Price tier created'));
   } catch (e: any) {
     if (e.message?.includes('does not exist')) {
@@ -124,22 +146,28 @@ async function createPriceTier(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function updatePricing(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
   const { id, productId, basePrice, costPrice } = req.body;
 
   if (productId) {
     const sets: string[] = [];
-    const params: any = { id: productId };
+    const params: any = { id: productId, ...tf.replacements };
     if (basePrice !== undefined) { sets.push('sell_price=:basePrice'); params.basePrice = basePrice; }
     if (costPrice !== undefined) { sets.push('buy_price=:costPrice'); params.costPrice = costPrice; }
     if (sets.length > 0) {
       // Track price change
-      const [old] = await sequelize.query("SELECT buy_price, sell_price FROM products WHERE id=:id", { replacements: { id: productId } });
+      const [old] = await sequelize.query(`SELECT buy_price, sell_price FROM products WHERE id=:id ${tf.condition}`, { replacements: { id: productId, ...tf.replacements } });
       if (old.length > 0) {
         await sequelize.query(`INSERT INTO product_cost_history (product_id, old_buy_price, new_buy_price, old_sell_price, new_sell_price, reason) VALUES (:id, :ob, :nb, :os, :ns, 'Price update')`,
           { replacements: { id: productId, ob: old[0].buy_price, nb: costPrice ?? old[0].buy_price, os: old[0].sell_price, ns: basePrice ?? old[0].sell_price } });
       }
       sets.push("updated_at=NOW()");
-      await sequelize.query(`UPDATE products SET ${sets.join(', ')} WHERE id=:id`, { replacements: params });
+      await sequelize.query(`UPDATE products SET ${sets.join(', ')} WHERE id=:id ${tf.condition}`, { replacements: params });
+
+      await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'product_pricing', entityId: productId, oldValues: old[0], newValues: { basePrice, costPrice }, req });
     }
     return res.status(HttpStatus.OK).json(successResponse({ productId }, undefined, 'Product pricing updated'));
   }
@@ -148,14 +176,15 @@ async function updatePricing(req: NextApiRequest, res: NextApiResponse) {
     try {
       const fields = req.body;
       const sets: string[] = [];
-      const params: any = { id };
+      const params: any = { id, ...tf.replacements };
       const map: Record<string, string> = { name: 'name', description: 'description', multiplier: 'multiplier', markupPercent: 'markup_percent', region: 'region', isActive: 'is_active' };
       for (const [k, col] of Object.entries(map)) {
         if (fields[k] !== undefined) { sets.push(`${col}=:${k}`); params[k] = fields[k]; }
       }
       if (sets.length > 0) {
         sets.push("updated_at=NOW()");
-        await sequelize.query(`UPDATE product_price_tiers SET ${sets.join(', ')} WHERE id=:id`, { replacements: params });
+        await sequelize.query(`UPDATE product_price_tiers SET ${sets.join(', ')} WHERE id=:id ${tf.condition}`, { replacements: params });
+        await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'price_tier', entityId: id, newValues: fields, req });
       }
     } catch (e) { /* table may not exist */ }
     return res.status(HttpStatus.OK).json(successResponse({ id }, undefined, 'Price tier updated'));
@@ -165,15 +194,19 @@ async function updatePricing(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function deletePriceTier(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
   const id = req.query.id || req.body?.id;
   if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Tier ID required'));
 
   try {
-    const [tier] = await sequelize.query("SELECT code FROM product_price_tiers WHERE id=:id", { replacements: { id } });
+    const [tier] = await sequelize.query(`SELECT code FROM product_price_tiers WHERE id=:id ${tf.condition}`, { replacements: { id, ...tf.replacements } });
     if (tier.length > 0 && tier[0].code === 'STD') {
       return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.VALIDATION_ERROR, 'Cannot delete standard tier'));
     }
-    await sequelize.query("DELETE FROM product_price_tiers WHERE id=:id", { replacements: { id } });
+    await sequelize.query(`DELETE FROM product_price_tiers WHERE id=:id ${tf.condition}`, { replacements: { id, ...tf.replacements } });
+    await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'delete', entityType: 'price_tier', entityId: id as string, req });
   } catch (e) { /* table may not exist */ }
   return res.status(HttpStatus.OK).json(successResponse(null, undefined, 'Price tier deleted'));
 }

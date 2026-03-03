@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 interface BranchSettingTemplate {
   id: string;
@@ -100,7 +101,7 @@ const mockTemplates: BranchSettingTemplate[] = [
   }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -116,6 +117,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withHQAuth(handler, { module: 'branches' });
 
 function getTemplates(req: NextApiRequest, res: NextApiResponse) {
   const { category } = req.query;

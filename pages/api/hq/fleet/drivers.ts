@@ -1,5 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 import { 
   mockDrivers, 
   createMockDriver,
@@ -7,7 +12,7 @@ import {
   MockDriver 
 } from '../../../../lib/mockData/fleet';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -31,6 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'fleet' });
 
 async function getDrivers(req: NextApiRequest, res: NextApiResponse) {
   const { status, availability, branch, search } = req.query;
@@ -71,6 +78,16 @@ async function getDrivers(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createDriver(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    fullName: V.required().string().minLength(2).maxLength(100),
+    licenseNumber: V.required().string().minLength(3),
+    licenseType: V.required().oneOf(['A', 'B1', 'B2', 'C', 'D']),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+  const ctx = getTenantContext(req);
   const {
     fullName,
     phone,
@@ -86,13 +103,6 @@ async function createDriver(req: NextApiRequest, res: NextApiResponse) {
     assignedBranchId,
     notes
   } = req.body;
-
-  // Validation
-  if (!fullName || !licenseNumber || !licenseType) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Full name, license number, and license type are required')
-    );
-  }
 
   // Check duplicate license
   const existing = mockDrivers.find(d => d.licenseNumber === licenseNumber);
@@ -121,12 +131,17 @@ async function createDriver(req: NextApiRequest, res: NextApiResponse) {
   // TODO: When database is ready, replace with:
   // const driver = await db.FleetDriver.create({...});
 
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'fleet_driver', entityId: newDriver.id, newValues: { fullName, licenseNumber, licenseType }, req });
+
   return res.status(HttpStatus.CREATED).json(
     successResponse(newDriver, undefined, 'Driver created successfully')
   );
 }
 
 async function updateDriver(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const ctx = getTenantContext(req);
   const { id, ...updates } = req.body;
 
   if (!id) {
@@ -142,7 +157,10 @@ async function updateDriver(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
+  const oldValues = { ...mockDrivers[driverIndex] };
   Object.assign(mockDrivers[driverIndex], updates);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'fleet_driver', entityId: id, oldValues, newValues: updates, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(mockDrivers[driverIndex], undefined, 'Driver updated successfully')
@@ -150,6 +168,8 @@ async function updateDriver(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function deleteDriver(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
   const { id } = req.body;
 
   if (!id) {
@@ -165,7 +185,10 @@ async function deleteDriver(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
+  const deleted = mockDrivers[driverIndex];
   mockDrivers.splice(driverIndex, 1);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'delete', entityType: 'fleet_driver', entityId: id, oldValues: deleted, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(null, undefined, 'Driver deleted successfully')

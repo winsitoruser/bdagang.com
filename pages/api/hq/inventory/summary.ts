@@ -1,25 +1,29 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext, buildTenantFilter } from '../../../../lib/middleware/tenantIsolation';
 
 const sequelize = require('../../../../lib/sequelize');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
   const { branchId } = req.query;
 
   try {
-    // Summary stats
+    // Summary stats - tenant scoped
     const [summaryRows] = await sequelize.query(`
       SELECT 
-        (SELECT COUNT(*) FROM products WHERE is_active=true)::int as total_products,
-        (SELECT COALESCE(SUM(quantity),0)::int FROM inventory_stock) as total_stock,
-        (SELECT COALESCE(SUM(quantity * cost_price),0)::numeric(15,0) FROM inventory_stock) as total_value,
-        (SELECT COUNT(*) FROM stock_transfers WHERE status IN ('pending','approved','in_transit'))::int as pending_transfers,
-        (SELECT COUNT(*) FROM purchase_orders WHERE status IN ('draft','pending','approved','ordered'))::int as pending_orders
-    `);
+        (SELECT COUNT(*) FROM products WHERE is_active=true ${tf.condition})::int as total_products,
+        (SELECT COALESCE(SUM(quantity),0)::int FROM inventory_stock WHERE 1=1 ${tf.condition}) as total_stock,
+        (SELECT COALESCE(SUM(quantity * cost_price),0)::numeric(15,0) FROM inventory_stock WHERE 1=1 ${tf.condition}) as total_value,
+        (SELECT COUNT(*) FROM stock_transfers WHERE status IN ('pending','approved','in_transit') ${tf.condition})::int as pending_transfers,
+        (SELECT COUNT(*) FROM purchase_orders WHERE status IN ('draft','pending','approved','ordered') ${tf.condition})::int as pending_orders
+    `, { replacements: tf.replacements });
 
     // Low/out/over stock counts
     const [lowStockRows] = await sequelize.query(`
@@ -30,9 +34,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       FROM (
         SELECT p.id, p.minimum_stock as min_stock, p.maximum_stock as max_stock, COALESCE(SUM(s.quantity),0) as total_qty
         FROM products p LEFT JOIN inventory_stock s ON s.product_id=p.id
-        WHERE p.is_active=true GROUP BY p.id, p.minimum_stock, p.maximum_stock
+        WHERE p.is_active=true ${tf.condition.replace('tenant_id', 'p.tenant_id')} GROUP BY p.id, p.minimum_stock, p.maximum_stock
       ) sub
-    `);
+    `, { replacements: tf.replacements });
 
     const s = summaryRows[0] || {};
     const ls = lowStockRows[0] || {};
@@ -44,8 +48,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         COALESCE(SUM(s.quantity),0)::int as total_stock,
         COALESCE(SUM(s.quantity * s.cost_price),0)::numeric(15,0) as stock_value
       FROM warehouses w LEFT JOIN inventory_stock s ON s.warehouse_id=w.id
-      WHERE w.is_active=true GROUP BY w.id ORDER BY w.type, w.name
-    `);
+      WHERE w.is_active=true ${tf.condition.replace('tenant_id', 'w.tenant_id')} GROUP BY w.id ORDER BY w.type, w.name
+    `, { replacements: tf.replacements });
 
     let filteredBranch = branchStock;
     if (branchId && branchId !== 'all') {
@@ -61,10 +65,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
              WHEN COALESCE(SUM(s.quantity),0) > p.minimum_stock THEN 'medium' ELSE 'slow' END as movement
       FROM products p LEFT JOIN inventory_stock s ON s.product_id=p.id
       LEFT JOIN product_categories pc ON pc.id=p.category_id
-      WHERE p.is_active=true
+      WHERE p.is_active=true ${tf.condition.replace('tenant_id', 'p.tenant_id')}
       GROUP BY p.id, p.name, p.sku, pc.name, p.maximum_stock, p.minimum_stock
       ORDER BY stock_value DESC LIMIT 10
-    `);
+    `, { replacements: tf.replacements });
 
     // Recent activities
     const [activities] = await sequelize.query(`
@@ -73,8 +77,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         w.name as branch, sm.notes
       FROM stock_movements sm JOIN products p ON p.id=sm.product_id
       LEFT JOIN warehouses w ON w.id=sm.warehouse_id
+      WHERE 1=1 ${tf.condition.replace('tenant_id', 'sm.tenant_id')}
       ORDER BY sm.movement_date DESC LIMIT 10
-    `);
+    `, { replacements: tf.replacements });
 
     return res.status(200).json({
       summary: {
@@ -115,3 +120,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 }
+
+export default withHQAuth(handler, { module: 'inventory' });

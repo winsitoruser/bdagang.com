@@ -1,1307 +1,339 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { ResponsiveGridLayout, LayoutItem, verticalCompactor, useContainerWidth } from 'react-grid-layout';
+import type { Layout, ResponsiveLayouts } from 'react-grid-layout';
 import HQLayout from '../../components/hq/HQLayout';
-import { StatsCard, StatusBadge } from '../../components/hq/ui';
-import Modal from '../../components/hq/ui/Modal';
-import { 
-  Building2, 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  ShoppingCart, 
-  Package, 
-  Users, 
-  AlertTriangle,
-  ArrowUpRight,
-  ArrowDownRight,
-  RefreshCw,
-  MapPin,
-  Clock,
-  Activity,
-  BarChart3,
-  PieChart,
-  Filter,
-  Download,
-  Bell,
-  ChevronRight,
-  Store,
-  Wallet,
-  Box,
-  UserCheck,
-  Zap,
-  Target,
-  Award,
-  Calendar,
-  Eye,
-  Edit,
-  Check,
-  X,
-  ExternalLink,
-  Settings,
-  MoreVertical,
-  Briefcase,
-  CreditCard,
-  Receipt,
-  Truck,
-  LayoutGrid,
-  LineChart as LineChartIcon,
-  Globe,
-  Layers,
-  Coffee,
-  Utensils,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Info,
-  Percent,
-  Hash,
-  Timer,
-  Play,
-  Pause,
-  RotateCcw,
-  Maximize2,
-  Minimize2,
-  Sun,
-  Moon,
-  Sparkles
-} from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area,
-  Legend,
-  ComposedChart,
-  RadialBarChart,
-  RadialBar,
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis
-} from 'recharts';
+import { LayoutGrid, Plus, Save, RotateCcw, Edit, Sparkles, GripVertical, X } from 'lucide-react';
+import { WidgetLayoutItem, WidgetSize, SIZE_TO_GRID, MODULE_COLORS, MODULE_LABELS } from '../../lib/widgets/types';
+import { getWidgetById, DEFAULT_LAYOUT } from '../../lib/widgets/registry';
+import WidgetPicker from '../../components/hq/dashboard/WidgetPicker';
 
-interface BranchData {
-  id: string;
-  code: string;
-  name: string;
-  type: 'main' | 'branch' | 'warehouse' | 'kiosk';
-  city: string;
-  province: string;
-  isActive: boolean;
-  manager: string;
-  todaySales: number;
-  yesterdaySales: number;
-  monthSales: number;
-  transactionCount: number;
-  avgTicketSize: number;
-  stockValue: number;
-  lowStockItems: number;
-  employeeCount: number;
-  activeEmployees: number;
-  lastSync: string;
-  status: 'online' | 'offline' | 'warning';
-  performanceScore: number;
+const STORAGE_KEY = 'bedagang-dashboard-layout';
+const ROW_HEIGHT = 60;
+const GRID_COLS = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 };
+
+function widgetToGridSize(w: number): WidgetSize {
+  if (w >= 10) return 'xl';
+  if (w >= 7) return 'lg';
+  if (w >= 4) return 'md';
+  return 'sm';
 }
-
-interface Alert {
-  id: string;
-  branchId: string;
-  branchName: string;
-  type: 'low_stock' | 'high_sales' | 'low_sales' | 'employee' | 'system';
-  message: string;
-  severity: 'info' | 'warning' | 'critical';
-  timestamp: string;
-}
-
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
-
-
-interface SalesTrendData {
-  date: string;
-  day: string;
-  sales: number;
-  transactions: number;
-}
-
-interface RegionData {
-  region: string;
-  sales: number;
-  branches: number;
-}
-
-interface TopProduct {
-  id: string;
-  name: string;
-  category: string;
-  sold: number;
-  revenue: number;
-  growth: number;
-}
-
-interface RecentTransaction {
-  id: string;
-  branchName: string;
-  amount: number;
-  items: number;
-  paymentMethod: string;
-  timestamp: string;
-}
-
-interface EmployeeStats {
-  total: number;
-  present: number;
-  absent: number;
-  late: number;
-  onLeave: number;
-}
-
-interface FinancialMetrics {
-  revenue: number;
-  expenses: number;
-  profit: number;
-  profitMargin: number;
-  pendingPayables: number;
-  pendingReceivables: number;
-}
-
-interface TargetProgress {
-  label: string;
-  current: number;
-  target: number;
-  unit: string;
-}
-
-const defaultEmployeeStats: EmployeeStats = { total: 0, present: 0, absent: 0, late: 0, onLeave: 0 };
-const defaultFinancialMetrics: FinancialMetrics = { revenue: 0, expenses: 0, profit: 0, profitMargin: 0, pendingPayables: 0, pendingReceivables: 0 };
 
 export default function HQDashboard() {
   const [mounted, setMounted] = useState(false);
-  const [branches, setBranches] = useState<BranchData[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [salesTrendData, setSalesTrendData] = useState<SalesTrendData[]>([]);
-  const [regionData, setRegionData] = useState<RegionData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'today' | 'week' | 'month' | 'year'>('today');
-  const [selectedBranch, setSelectedBranch] = useState<string>('all');
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  
-  // New comprehensive dashboard state
-  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
-  const [employeeStats, setEmployeeStats] = useState<EmployeeStats>(defaultEmployeeStats);
-  const [financialMetrics, setFinancialMetrics] = useState<FinancialMetrics>(defaultFinancialMetrics);
-  const [targets, setTargets] = useState<TargetProgress[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'sales' | 'branches' | 'analytics'>('overview');
-  const [isLiveMode, setIsLiveMode] = useState(true);
-  const [chartView, setChartView] = useState<'daily' | 'hourly' | 'weekly'>('daily');
-  const [hourlyData] = useState(() => Array.from({ length: 24 }, (_, i) => ({ hour: `${i.toString().padStart(2, '0')}:00`, sales: 0, transactions: 0 })));
-  
-  // Interactive state
-  const [showBranchModal, setShowBranchModal] = useState(false);
-  const [selectedBranchData, setSelectedBranchData] = useState<BranchData | null>(null);
-  const [showAlertModal, setShowAlertModal] = useState(false);
-  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
-  const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
-
-  // Current time for live display
-  const [currentTime, setCurrentTime] = useState(new Date());
-  
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/hq/dashboard?period=${selectedPeriod}`);
-      if (response.ok) {
-        const json = await response.json();
-        const payload = json.data || json;
-        if (payload.branches) setBranches(payload.branches);
-        if (payload.alerts) setAlerts(payload.alerts);
-        if (payload.salesTrend) {
-          setSalesTrendData(payload.salesTrend.map((t: SalesTrendData) => ({
-            ...t,
-            sales: t.sales / 1000000
-          })));
-        }
-        if (payload.regionPerformance) {
-          setRegionData(payload.regionPerformance.map((r: RegionData) => ({
-            ...r,
-            sales: r.sales / 1000000
-          })));
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-    } finally {
-      setLoading(false);
-      setLastUpdated(new Date());
-    }
-  };
+  const [widgets, setWidgets] = useState<WidgetLayoutItem[]>([]);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const { width: containerWidth, containerRef, mounted: containerMounted } = useContainerWidth();
+  const [showPicker, setShowPicker] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, 60000);
-    return () => clearInterval(interval);
-  }, [selectedPeriod]);
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.widgets && Array.isArray(parsed.widgets) && parsed.widgets.length > 0 && parsed.widgets[0].x !== undefined) {
+          setWidgets(parsed.widgets);
+          return;
+        }
+      }
+    } catch {}
+    setWidgets([...DEFAULT_LAYOUT]);
+  }, []);
 
-  const handleViewBranch = (branch: BranchData) => {
-    setSelectedBranchData(branch);
-    setShowBranchModal(true);
-  };
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/hq/dashboard/widget-layout');
+        if (r.ok) {
+          const j = await r.json();
+          if (j.data?.widgets?.length > 0 && j.data.widgets[0].x !== undefined) {
+            setWidgets(j.data.widgets);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(j.data));
+          }
+        }
+      } catch {}
+    })();
+  }, []);
 
-  const handleEditBranch = (branch: BranchData) => {
-    window.location.href = `/hq/branches/${branch.id}/edit`;
-  };
+  const saveLayout = useCallback(async (layout: WidgetLayoutItem[]) => {
+    const data = { widgets: layout, updatedAt: new Date().toISOString() };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    try {
+      await fetch('/api/hq/dashboard/widget-layout', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ widgets: layout }),
+      });
+    } catch {}
+    setHasChanges(false);
+  }, []);
 
-  const handleViewAlert = (alert: Alert) => {
-    setSelectedAlert(alert);
-    setShowAlertModal(true);
-  };
+  const handleAddWidget = useCallback((widgetId: string) => {
+    const def = getWidgetById(widgetId);
+    if (!def) return;
+    const grid = SIZE_TO_GRID[def.defaultSize];
+    const maxY = widgets.length > 0 ? Math.max(...widgets.map(w => (w.y || 0) + (w.h || 4))) : 0;
+    const maxOrder = widgets.length > 0 ? Math.max(...widgets.map(w => w.order)) : -1;
+    const newWidget: WidgetLayoutItem = {
+      widgetId,
+      size: def.defaultSize,
+      order: maxOrder + 1,
+      x: 0,
+      y: maxY,
+      w: grid.w,
+      h: grid.h,
+      minW: grid.minW,
+      minH: grid.minH,
+    };
+    setWidgets(prev => [...prev, newWidget]);
+    setHasChanges(true);
+  }, [widgets]);
 
-  const handleDismissAlert = async (alertId: string) => {
-    setAlerts(prev => prev.filter(a => a.id !== alertId));
-    setShowAlertModal(false);
-  };
+  const handleRemoveWidget = useCallback((widgetId: string) => {
+    setWidgets(prev => prev.filter(w => w.widgetId !== widgetId).map((w, i) => ({ ...w, order: i })));
+    setHasChanges(true);
+  }, []);
 
-  const handleResolveAlert = async (alertId: string) => {
-    setAlerts(prev => prev.filter(a => a.id !== alertId));
-    setShowAlertModal(false);
-  };
+  const handleResetLayout = useCallback(() => {
+    setWidgets([...DEFAULT_LAYOUT]);
+    setHasChanges(true);
+  }, []);
 
-  if (!mounted) {
-    return null;
-  }
+  const handleSave = useCallback(() => {
+    saveLayout(widgets);
+    setIsEditMode(false);
+  }, [widgets, saveLayout]);
 
-  // Calculate totals
-  const activeBranches = branches.filter(b => b.isActive && b.type !== 'warehouse');
-  const totalSalesToday = activeBranches.reduce((sum, b) => sum + b.todaySales, 0);
-  const totalSalesYesterday = activeBranches.reduce((sum, b) => sum + b.yesterdaySales, 0);
-  const totalSalesMonth = activeBranches.reduce((sum, b) => sum + b.monthSales, 0);
-  const totalTransactions = activeBranches.reduce((sum, b) => sum + b.transactionCount, 0);
-  const totalStockValue = branches.reduce((sum, b) => sum + b.stockValue, 0);
-  const totalLowStockItems = branches.reduce((sum, b) => sum + b.lowStockItems, 0);
-  const totalEmployees = branches.reduce((sum, b) => sum + b.employeeCount, 0);
-  const totalActiveEmployees = branches.reduce((sum, b) => sum + b.activeEmployees, 0);
-  const avgPerformance = activeBranches.length > 0 
-    ? Math.round(activeBranches.reduce((sum, b) => sum + b.performanceScore, 0) / activeBranches.length)
-    : 0;
+  const gridLayout: LayoutItem[] = useMemo(() => {
+    return widgets.map(w => {
+      const grid = SIZE_TO_GRID[w.size] || SIZE_TO_GRID['sm'];
+      return {
+        i: w.widgetId,
+        x: w.x ?? 0,
+        y: w.y ?? 0,
+        w: w.w ?? grid.w,
+        h: w.h ?? grid.h,
+        minW: w.minW ?? grid.minW,
+        minH: w.minH ?? grid.minH,
+        maxW: 12,
+        maxH: 16,
+        static: !isEditMode,
+      };
+    });
+  }, [widgets, isEditMode]);
 
-  const salesGrowth = totalSalesYesterday > 0 
-    ? ((totalSalesToday - totalSalesYesterday) / totalSalesYesterday * 100).toFixed(1)
-    : '0';
+  const handleLayoutChange = useCallback((layout: Layout, _layouts: ResponsiveLayouts) => {
+    if (!isEditMode) return;
+    setWidgets(prev => {
+      const layoutMap = new Map(layout.map(l => [l.i, l]));
+      return prev.map(w => {
+        const l = layoutMap.get(w.widgetId);
+        if (!l) return w;
+        return {
+          ...w,
+          x: l.x,
+          y: l.y,
+          w: l.w,
+          h: l.h,
+          size: widgetToGridSize(l.w),
+        };
+      });
+    });
+    setHasChanges(true);
+  }, [isEditMode]);
 
-  // Chart data
-  const branchSalesData = activeBranches
-    .filter(b => b.type !== 'warehouse')
-    .map(b => ({
-      name: b.name.replace('Cabang ', '').replace('Kiosk ', ''),
-      sales: b.todaySales / 1000000,
-      transactions: b.transactionCount
-    }))
-    .sort((a, b) => b.sales - a.sales);
-
-  const branchTypeData = [
-    { name: 'Cabang Utama', value: branches.filter(b => b.type === 'main').length },
-    { name: 'Cabang', value: branches.filter(b => b.type === 'branch').length },
-    { name: 'Gudang', value: branches.filter(b => b.type === 'warehouse').length },
-    { name: 'Kiosk', value: branches.filter(b => b.type === 'kiosk').length }
-  ].filter(d => d.value > 0);
-
-  // Use API data if available, otherwise use defaults
-  const fallbackSalesTrend = [
-    { day: 'Sen', sales: 125 },
-    { day: 'Sel', sales: 142 },
-    { day: 'Rab', sales: 138 },
-    { day: 'Kam', sales: 155 },
-    { day: 'Jum', sales: 162 },
-    { day: 'Sab', sales: 185 },
-    { day: 'Min', sales: 154 }
-  ];
-
-  const fallbackRegionData = [
-    { region: 'DKI Jakarta', sales: 53.5, branches: 2 },
-    { region: 'Jawa Barat', sales: 32, branches: 2 },
-    { region: 'Jawa Timur', sales: 28.5, branches: 1 },
-    { region: 'Sumatera Utara', sales: 22, branches: 1 },
-    { region: 'DI Yogyakarta', sales: 18.5, branches: 1 }
-  ];
-
-  const chartSalesTrend = salesTrendData.length > 0 ? salesTrendData : fallbackSalesTrend;
-  const chartRegionData = regionData.length > 0 ? regionData : fallbackRegionData;
-
-  const formatCurrency = (value: number) => {
-    if (value >= 1000000000) {
-      return `Rp ${(value / 1000000000).toFixed(1)}M`;
-    } else if (value >= 1000000) {
-      return `Rp ${(value / 1000000).toFixed(1)}Jt`;
-    } else if (value >= 1000) {
-      return `Rp ${(value / 1000).toFixed(0)}rb`;
-    }
-    return `Rp ${value.toLocaleString('id-ID')}`;
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'online': return 'bg-green-500';
-      case 'warning': return 'bg-yellow-500';
-      case 'offline': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const getAlertIcon = (type: string) => {
-    switch (type) {
-      case 'low_stock': return <Package className="w-4 h-4" />;
-      case 'high_sales': return <TrendingUp className="w-4 h-4" />;
-      case 'low_sales': return <TrendingDown className="w-4 h-4" />;
-      case 'employee': return <Users className="w-4 h-4" />;
-      case 'system': return <AlertTriangle className="w-4 h-4" />;
-      default: return <Bell className="w-4 h-4" />;
-    }
-  };
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical': return 'bg-red-100 text-red-800 border-red-200';
-      case 'warning': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'info': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'main': return 'Pusat';
-      case 'branch': return 'Cabang';
-      case 'warehouse': return 'Gudang';
-      case 'kiosk': return 'Kiosk';
-      default: return type;
-    }
-  };
-
-  const getTypeBadgeColor = (type: string) => {
-    switch (type) {
-      case 'main': return 'bg-purple-100 text-purple-800';
-      case 'branch': return 'bg-blue-100 text-blue-800';
-      case 'warehouse': return 'bg-orange-100 text-orange-800';
-      case 'kiosk': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  if (!mounted) return null;
 
   return (
-    <HQLayout title="HQ Dashboard" subtitle="Pusat Kontrol Bisnis">
-      <div className="space-y-6">
-        {/* Executive Header */}
-        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-2xl p-6 text-white shadow-xl">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-                  <Sparkles className="w-6 h-6" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold">Selamat {currentTime.getHours() < 12 ? 'Pagi' : currentTime.getHours() < 18 ? 'Siang' : 'Malam'}!</h1>
-                  <p className="text-white/80 text-sm">
-                    {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                  </p>
-                </div>
+    <HQLayout>
+      <div className="-mx-6 -mt-6 -mb-6">
+        {/* Dashboard Header - always on top */}
+        <div className="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg px-4 sm:px-6 pb-3 pt-4 border-b border-gray-100 dark:border-gray-800">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/20">
+                <LayoutGrid className="w-5 h-5 text-white" />
               </div>
-              <div className="flex items-center gap-4 mt-4">
-                <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${isLiveMode ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`}></div>
-                  <span className="text-sm">{isLiveMode ? 'Live Mode' : 'Static Mode'}</span>
-                </div>
-                <div className="text-sm text-white/80">
-                  <Clock className="w-4 h-4 inline mr-1" />
-                  {currentTime.toLocaleTimeString('id-ID')}
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => setIsLiveMode(!isLiveMode)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  isLiveMode ? 'bg-green-500/20 text-green-100 border border-green-400/30' : 'bg-white/10 text-white/80 border border-white/20'
-                }`}
-              >
-                {isLiveMode ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                {isLiveMode ? 'Live' : 'Paused'}
-              </button>
-              <select
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value as any)}
-                className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-sm focus:ring-2 focus:ring-white/30 backdrop-blur-sm"
-              >
-                <option value="today" className="text-gray-900">Hari Ini</option>
-                <option value="week" className="text-gray-900">Minggu Ini</option>
-                <option value="month" className="text-gray-900">Bulan Ini</option>
-                <option value="year" className="text-gray-900">Tahun Ini</option>
-              </select>
-              <button
-                onClick={fetchDashboardData}
-                disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-sm hover:bg-white/20 transition-all disabled:opacity-50"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 rounded-xl text-sm font-medium hover:bg-white/90 transition-all">
-                <Download className="w-4 h-4" />
-                Export
-              </button>
-            </div>
-          </div>
-          
-          {/* Quick Stats in Header */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="flex items-center justify-between">
-                <span className="text-white/70 text-sm">Total Penjualan</span>
-                <DollarSign className="w-4 h-4 text-white/50" />
-              </div>
-              <p className="text-2xl font-bold mt-1">{formatCurrency(totalSalesToday)}</p>
-              <div className={`flex items-center gap-1 text-xs mt-1 ${parseFloat(salesGrowth) >= 0 ? 'text-green-300' : 'text-red-300'}`}>
-                {parseFloat(salesGrowth) >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                {Math.abs(parseFloat(salesGrowth))}% dari kemarin
-              </div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="flex items-center justify-between">
-                <span className="text-white/70 text-sm">Transaksi</span>
-                <Receipt className="w-4 h-4 text-white/50" />
-              </div>
-              <p className="text-2xl font-bold mt-1">{totalTransactions.toLocaleString('id-ID')}</p>
-              <p className="text-xs text-white/70 mt-1">Avg: {formatCurrency(totalSalesToday / (totalTransactions || 1))}</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="flex items-center justify-between">
-                <span className="text-white/70 text-sm">Cabang Aktif</span>
-                <Store className="w-4 h-4 text-white/50" />
-              </div>
-              <p className="text-2xl font-bold mt-1">{branches.filter(b => b.status === 'online').length}/{branches.length}</p>
-              <div className="flex items-center gap-2 text-xs mt-1">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-400 rounded-full"></span>{branches.filter(b => b.status === 'online').length}</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-yellow-400 rounded-full"></span>{branches.filter(b => b.status === 'warning').length}</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-400 rounded-full"></span>{branches.filter(b => b.status === 'offline').length}</span>
-              </div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-              <div className="flex items-center justify-between">
-                <span className="text-white/70 text-sm">Performa</span>
-                <Target className="w-4 h-4 text-white/50" />
-              </div>
-              <p className="text-2xl font-bold mt-1">{avgPerformance}%</p>
-              <div className="w-full bg-white/20 rounded-full h-1.5 mt-2">
-                <div className="bg-white h-1.5 rounded-full" style={{ width: `${avgPerformance}%` }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-xl w-fit">
-          {[
-            { id: 'overview', label: 'Overview', icon: LayoutGrid },
-            { id: 'sales', label: 'Penjualan', icon: LineChartIcon },
-            { id: 'branches', label: 'Cabang', icon: Building2 },
-            { id: 'analytics', label: 'Analytics', icon: BarChart3 }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-white text-gray-900 shadow-sm' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          {/* Left Column - Main Charts & Data */}
-          <div className="xl:col-span-3 space-y-6">
-            {/* Financial Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div className="p-2.5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl">
-                    <Wallet className="w-5 h-5 text-white" />
-                  </div>
-                  <span className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
-                    parseFloat(salesGrowth) >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                  }`}>
-                    {parseFloat(salesGrowth) >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                    {Math.abs(parseFloat(salesGrowth))}%
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue Hari Ini</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalSalesToday)}</p>
-                  <p className="text-xs text-gray-400 mt-1">vs {formatCurrency(totalSalesYesterday)} kemarin</p>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div className="p-2.5 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl">
-                    <CreditCard className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-blue-50 text-blue-600">
-                    <Activity className="w-3 h-3" />
-                    Live
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Transaksi</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{totalTransactions.toLocaleString('id-ID')}</p>
-                  <p className="text-xs text-gray-400 mt-1">Avg {formatCurrency(totalSalesToday / (totalTransactions || 1))}/trx</p>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div className="p-2.5 bg-gradient-to-br from-violet-400 to-violet-600 rounded-xl">
-                    <Package className="w-5 h-5 text-white" />
-                  </div>
-                  {totalLowStockItems > 0 && (
-                    <span className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-red-50 text-red-600">
-                      <AlertCircle className="w-3 h-3" />
-                      {totalLowStockItems}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Nilai Stok</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalStockValue)}</p>
-                  <p className="text-xs text-gray-400 mt-1">Di {branches.length} lokasi</p>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div className="p-2.5 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl">
-                    <Target className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-amber-50 text-amber-600">
-                    Bulan Ini
-                  </span>
-                </div>
-                <div className="mt-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Bulan</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalSalesMonth)}</p>
-                  <div className="mt-2">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-gray-500">Target Rp 5M</span>
-                      <span className="font-medium text-amber-600">{Math.round((totalSalesMonth / 5000000000) * 100)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-1.5">
-                      <div className="bg-gradient-to-r from-amber-400 to-amber-600 h-1.5 rounded-full" style={{ width: `${Math.min((totalSalesMonth / 5000000000) * 100, 100)}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Sales Chart with View Toggle */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Tren Penjualan</h3>
-                  <p className="text-sm text-gray-500">Analisis penjualan real-time</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
-                    {['daily', 'hourly', 'weekly'].map(view => (
-                      <button
-                        key={view}
-                        onClick={() => setChartView(view as any)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                          chartView === view ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                      >
-                        {view === 'daily' ? 'Harian' : view === 'hourly' ? 'Per Jam' : 'Mingguan'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartView === 'hourly' ? hourlyData.slice(6, 23) : chartSalesTrend}>
-                    <defs>
-                      <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#6366F1" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                    <XAxis 
-                      dataKey={chartView === 'hourly' ? 'hour' : 'day'} 
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: '#6B7280' }}
-                    />
-                    <YAxis 
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 12, fill: '#6B7280' }}
-                      tickFormatter={(v) => chartView === 'hourly' ? `${(v/1000000).toFixed(0)}Jt` : `${v}Jt`}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        borderRadius: '12px', 
-                        border: 'none',
-                        boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-                        padding: '12px'
-                      }}
-                      formatter={(value: number) => [
-                        chartView === 'hourly' ? `Rp ${(value/1000000).toFixed(1)} Juta` : `Rp ${value} Juta`, 
-                        'Penjualan'
-                      ]}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="sales" 
-                      stroke="#6366F1" 
-                      strokeWidth={2.5}
-                      fill="url(#salesGradient)"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="transactions" 
-                      stroke="#10B981" 
-                      strokeWidth={2}
-                      dot={false}
-                      hide={chartView === 'hourly'}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-gray-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
-                  <span className="text-sm text-gray-600">Penjualan</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                  <span className="text-sm text-gray-600">Transaksi</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Two Column Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Top Products */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="p-5 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Produk Terlaris</h3>
-                      <p className="text-sm text-gray-500">Berdasarkan jumlah terjual</p>
-                    </div>
-                    <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-                      Lihat Semua
-                    </button>
-                  </div>
-                </div>
-                <div className="p-5 space-y-4">
-                  {topProducts.map((product, index) => (
-                    <div key={product.id} className="flex items-center gap-4">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
-                        index === 0 ? 'bg-amber-100 text-amber-700' :
-                        index === 1 ? 'bg-gray-100 text-gray-700' :
-                        index === 2 ? 'bg-orange-100 text-orange-700' :
-                        'bg-gray-50 text-gray-500'
-                      }`}>
-                        {index + 1}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{product.name}</p>
-                        <p className="text-xs text-gray-500">{product.category}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900">{product.sold.toLocaleString()}</p>
-                        <p className={`text-xs flex items-center justify-end gap-0.5 ${product.growth >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {product.growth >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                          {Math.abs(product.growth)}%
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent Transactions */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                <div className="p-5 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">Transaksi Terbaru</h3>
-                      <p className="text-sm text-gray-500">Real-time dari semua cabang</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                      Live
-                    </div>
-                  </div>
-                </div>
-                <div className="p-5 space-y-3">
-                  {recentTransactions.map((trx) => (
-                    <div key={trx.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                      <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
-                        <Receipt className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-gray-900 text-sm">{trx.id}</p>
-                          <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full">{trx.paymentMethod}</span>
-                        </div>
-                        <p className="text-xs text-gray-500 truncate">{trx.branchName} • {trx.items} item</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900">{formatCurrency(trx.amount)}</p>
-                        <p className="text-xs text-gray-400">
-                          {Math.round((Date.now() - new Date(trx.timestamp).getTime()) / 60000)} menit lalu
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Branch Performance Grid */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="p-5 border-b border-gray-100">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Performa Cabang</h3>
-                    <p className="text-sm text-gray-500">Monitoring real-time semua lokasi</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={selectedBranch}
-                      onChange={(e) => setSelectedBranch(e.target.value)}
-                      className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    >
-                      <option value="all">Semua Tipe</option>
-                      <option value="main">Pusat</option>
-                      <option value="branch">Cabang</option>
-                      <option value="warehouse">Gudang</option>
-                      <option value="kiosk">Kiosk</option>
-                    </select>
-                    <button 
-                      onClick={() => window.location.href = '/hq/branches'}
-                      className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                      Kelola Cabang
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Cabang</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Penjualan</th>
-                      <th className="px-5 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Transaksi</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Performa</th>
-                      <th className="px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {branches
-                      .filter(b => selectedBranch === 'all' || b.type === selectedBranch)
-                      .slice(0, 6)
-                      .map((branch) => (
-                      <tr key={branch.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                              branch.type === 'main' ? 'bg-purple-100' :
-                              branch.type === 'warehouse' ? 'bg-orange-100' :
-                              branch.type === 'kiosk' ? 'bg-green-100' :
-                              'bg-blue-100'
-                            }`}>
-                              {branch.type === 'warehouse' ? <Truck className="w-5 h-5 text-orange-600" /> :
-                               branch.type === 'kiosk' ? <Coffee className="w-5 h-5 text-green-600" /> :
-                               <Store className="w-5 h-5 text-blue-600" />}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{branch.name}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getTypeBadgeColor(branch.type)}`}>
-                                  {getTypeLabel(branch.type)}
-                                </span>
-                                <span className="text-xs text-gray-500">{branch.city}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-center">
-                          <div className="flex flex-col items-center">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                              branch.status === 'online' ? 'bg-emerald-50 text-emerald-700' :
-                              branch.status === 'warning' ? 'bg-amber-50 text-amber-700' :
-                              'bg-red-50 text-red-700'
-                            }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${
-                                branch.status === 'online' ? 'bg-emerald-500' :
-                                branch.status === 'warning' ? 'bg-amber-500' :
-                                'bg-red-500'
-                              }`}></span>
-                              {branch.status === 'online' ? 'Online' : branch.status === 'warning' ? 'Warning' : 'Offline'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <p className="font-semibold text-gray-900">{formatCurrency(branch.todaySales)}</p>
-                          <p className={`text-xs flex items-center justify-end gap-0.5 mt-0.5 ${
-                            branch.todaySales >= branch.yesterdaySales ? 'text-emerald-600' : 'text-red-600'
-                          }`}>
-                            {branch.todaySales >= branch.yesterdaySales ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                            {branch.yesterdaySales > 0 ? Math.abs(((branch.todaySales - branch.yesterdaySales) / branch.yesterdaySales * 100)).toFixed(1) : 0}%
-                          </p>
-                        </td>
-                        <td className="px-5 py-4 text-right">
-                          <p className="font-semibold text-gray-900">{branch.transactionCount}</p>
-                          {branch.lowStockItems > 0 && (
-                            <p className="text-xs text-red-600 mt-0.5">{branch.lowStockItems} low stock</p>
-                          )}
-                        </td>
-                        <td className="px-5 py-4">
-                          <div className="flex justify-center">
-                            <div className="relative w-12 h-12">
-                              <svg className="w-12 h-12 transform -rotate-90">
-                                <circle cx="24" cy="24" r="20" fill="none" stroke="#E5E7EB" strokeWidth="4" />
-                                <circle
-                                  cx="24" cy="24" r="20" fill="none"
-                                  stroke={branch.performanceScore >= 80 ? '#10B981' : branch.performanceScore >= 60 ? '#F59E0B' : '#EF4444'}
-                                  strokeWidth="4"
-                                  strokeDasharray={`${branch.performanceScore * 1.256} 126`}
-                                  strokeLinecap="round"
-                                />
-                              </svg>
-                              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">{branch.performanceScore}%</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 text-center">
-                          <button 
-                            onClick={() => window.location.href = `/hq/branches/${branch.id}`}
-                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                          >
-                            <ChevronRight className="w-5 h-5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Sidebar */}
-          <div className="space-y-6">
-            {/* Target Progress */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">Target & Pencapaian</h3>
-                <Target className="w-5 h-5 text-gray-400" />
-              </div>
-              <div className="space-y-4">
-                {targets.map((target, index) => (
-                  <div key={index}>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-gray-600">{target.label}</span>
-                      <span className="font-medium text-gray-900">
-                        {target.current}{target.unit} / {target.target}{target.unit}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-500 ${
-                          (target.current / target.target) >= 0.9 ? 'bg-emerald-500' :
-                          (target.current / target.target) >= 0.7 ? 'bg-amber-500' :
-                          'bg-red-500'
-                        }`}
-                        style={{ width: `${Math.min((target.current / target.target) * 100, 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Employee Overview */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">Kehadiran Karyawan</h3>
-                <Users className="w-5 h-5 text-gray-400" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-emerald-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-emerald-600">{employeeStats.present}</p>
-                  <p className="text-xs text-emerald-700">Hadir</p>
-                </div>
-                <div className="p-3 bg-red-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-red-600">{employeeStats.absent}</p>
-                  <p className="text-xs text-red-700">Absen</p>
-                </div>
-                <div className="p-3 bg-amber-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-amber-600">{employeeStats.late}</p>
-                  <p className="text-xs text-amber-700">Terlambat</p>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-xl text-center">
-                  <p className="text-2xl font-bold text-blue-600">{employeeStats.onLeave}</p>
-                  <p className="text-xs text-blue-700">Cuti</p>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Total Karyawan</span>
-                  <span className="font-semibold text-gray-900">{employeeStats.total}</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2 mt-2">
-                  <div 
-                    className="bg-emerald-500 h-2 rounded-full"
-                    style={{ width: `${(employeeStats.present / employeeStats.total) * 100}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {Math.round((employeeStats.present / employeeStats.total) * 100)}% tingkat kehadiran
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {isEditMode ? 'Seret widget untuk mengatur tata letak' : `${widgets.length} widget aktif`}
                 </p>
               </div>
             </div>
-
-            {/* Alerts Panel */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-              <div className="p-5 border-b border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Notifikasi</h3>
-                    <p className="text-xs text-gray-500">{alerts.length} alert aktif</p>
-                  </div>
-                  {alerts.filter(a => a.severity === 'critical').length > 0 && (
-                    <span className="flex items-center justify-center w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full">
-                      {alerts.filter(a => a.severity === 'critical').length}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
-                {alerts.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <CheckCircle className="w-12 h-12 mx-auto mb-3 text-emerald-200" />
-                    <p className="text-sm">Tidak ada alert</p>
-                  </div>
-                ) : (
-                  alerts.map((alert) => (
-                    <div
-                      key={alert.id}
-                      onClick={() => handleViewAlert(alert)}
-                      className={`p-3 rounded-xl border cursor-pointer transition-all hover:shadow-sm ${getSeverityColor(alert.severity)}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5">{getAlertIcon(alert.type)}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{alert.branchName}</p>
-                          <p className="text-xs mt-0.5 line-clamp-2">{alert.message}</p>
-                          <p className="text-xs mt-1.5 opacity-60">
-                            {new Date(alert.timestamp).toLocaleString('id-ID', {
-                              day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-              {alerts.length > 0 && (
-                <div className="p-4 border-t border-gray-100">
-                  <button className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-                    Lihat Semua Alert
+            <div className="flex items-center gap-2 flex-wrap">
+              {isEditMode ? (
+                <>
+                  <button onClick={() => setShowPicker(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+                    <Plus className="w-3.5 h-3.5" /> Tambah Widget
                   </button>
-                </div>
+                  <button onClick={handleResetLayout} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    <RotateCcw className="w-3.5 h-3.5" /> Reset
+                  </button>
+                  <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors shadow-sm">
+                    <Save className="w-3.5 h-3.5" /> Simpan
+                  </button>
+                  <button onClick={() => { setIsEditMode(false); setHasChanges(false); }} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 transition-colors">
+                    Batal
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => setIsEditMode(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                  <Edit className="w-3.5 h-3.5" /> Edit Dashboard
+                </button>
               )}
             </div>
-
-            {/* Quick Actions */}
-            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-5 text-white">
-              <h3 className="font-semibold mb-4">Aksi Cepat</h3>
-              <div className="space-y-2">
-                <button 
-                  onClick={() => window.location.href = '/hq/branches/new'}
-                  className="w-full flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-left"
-                >
-                  <Building2 className="w-5 h-5" />
-                  <span className="text-sm font-medium">Tambah Cabang Baru</span>
-                </button>
-                <button 
-                  onClick={() => window.location.href = '/hq/reports/sales'}
-                  className="w-full flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-left"
-                >
-                  <BarChart3 className="w-5 h-5" />
-                  <span className="text-sm font-medium">Lihat Laporan</span>
-                </button>
-                <button 
-                  onClick={() => window.location.href = '/hq/requisitions'}
-                  className="w-full flex items-center gap-3 p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors text-left"
-                >
-                  <Truck className="w-5 h-5" />
-                  <span className="text-sm font-medium">Kelola Requisition</span>
-                </button>
-              </div>
-            </div>
           </div>
+
+          {isEditMode && (
+            <div className="mt-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 flex items-center gap-3">
+              <Sparkles className="w-4 h-4 text-blue-500 flex-shrink-0" />
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                <strong>Mode Edit</strong> — Seret widget ke posisi manapun, tarik sudut untuk mengubah ukuran.
+                {hasChanges && <span className="ml-2 text-blue-900 dark:text-blue-100 font-semibold">• Ada perubahan belum disimpan</span>}
+              </p>
+            </div>
+          )}
         </div>
 
-      {/* Branch Detail Modal */}
-      <Modal
-        isOpen={showBranchModal}
-        onClose={() => setShowBranchModal(false)}
-        title={selectedBranchData?.name || 'Detail Cabang'}
-        subtitle={selectedBranchData?.code}
-        size="xl"
-        footer={
-          <div className="flex justify-between">
-            <button
-              onClick={() => setShowBranchModal(false)}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Tutup
-            </button>
-            <div className="flex gap-2">
-              <button
-                onClick={() => window.open(`/hq/branches/${selectedBranchData?.id}`, '_blank')}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Buka di Tab Baru
-              </button>
-              <button
-                onClick={() => handleEditBranch(selectedBranchData!)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Edit className="w-4 h-4" />
-                Edit Cabang
-              </button>
+        {/* Widget Grid Canvas */}
+        <div className={`px-4 sm:px-5 lg:px-6 pt-4 pb-6 min-h-[calc(100vh-10rem)] transition-colors ${isEditMode ? 'bg-gray-50/50 dark:bg-gray-900/50' : ''}`}>
+        {widgets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-2xl mb-4">
+              <LayoutGrid className="w-12 h-12 text-gray-300 dark:text-gray-600" />
             </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Belum ada widget</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 max-w-sm">Mulai dengan menambahkan widget untuk memonitor bisnis Anda secara real-time.</p>
+            <button onClick={() => { setIsEditMode(true); setShowPicker(true); }} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/25">
+              <Plus className="w-4 h-4" /> Tambah Widget Pertama
+            </button>
           </div>
-        }
-      >
-        {selectedBranchData && (
-          <div className="space-y-6">
-            {/* Branch Info */}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <h4 className="text-sm font-medium text-gray-500 mb-2">Informasi Cabang</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Status</span>
-                    <StatusBadge status={selectedBranchData.status} />
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tipe</span>
-                    <span className="font-medium">{getTypeLabel(selectedBranchData.type)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Lokasi</span>
-                    <span className="font-medium">{selectedBranchData.city}, {selectedBranchData.province}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Manager</span>
-                    <span className="font-medium">{selectedBranchData.manager}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Sinkronisasi Terakhir</span>
-                    <span className="font-medium">{new Date(selectedBranchData.lastSync).toLocaleString('id-ID')}</span>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500 mb-2">Performa Score</h4>
-                <div className="flex items-center gap-4">
-                  <div className="relative w-24 h-24">
-                    <svg className="w-24 h-24 transform -rotate-90">
-                      <circle cx="48" cy="48" r="40" stroke="#E5E7EB" strokeWidth="8" fill="none" />
-                      <circle 
-                        cx="48" cy="48" r="40" 
-                        stroke={selectedBranchData.performanceScore >= 80 ? '#10B981' : selectedBranchData.performanceScore >= 60 ? '#F59E0B' : '#EF4444'} 
-                        strokeWidth="8" 
-                        fill="none"
-                        strokeDasharray={`${selectedBranchData.performanceScore * 2.51} 251`}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-2xl font-bold">{selectedBranchData.performanceScore}</span>
+        ) : (
+          <div ref={containerRef as React.RefObject<HTMLDivElement>} className="w-full">
+          {containerMounted && <ResponsiveGridLayout
+            className={`dashboard-grid ${isEditMode ? 'dashboard-grid--editing' : ''}`}
+            width={containerWidth}
+            layouts={{ lg: gridLayout }}
+            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+            cols={GRID_COLS}
+            rowHeight={ROW_HEIGHT}
+            dragConfig={{ enabled: isEditMode, bounded: true, handle: '.widget-drag-handle' }}
+            resizeConfig={{ enabled: isEditMode }}
+            onLayoutChange={handleLayoutChange}
+            compactor={verticalCompactor}
+            margin={[14, 14] as const}
+            containerPadding={[0, 0] as const}
+          >
+            {widgets.map(item => {
+              const widgetDef = getWidgetById(item.widgetId);
+              if (!widgetDef) return <div key={item.widgetId} />;
+              const WidgetComponent = widgetDef.component;
+              const moduleColor = MODULE_COLORS[widgetDef.module];
+              return (
+                <div key={item.widgetId} className="widget-grid-item">
+                  <div className={`h-full bg-white dark:bg-gray-800 rounded-xl border transition-all overflow-hidden flex flex-col ${
+                    isEditMode
+                      ? 'border-dashed border-blue-300 dark:border-blue-700 shadow-lg shadow-blue-500/5 ring-1 ring-blue-200/50'
+                      : 'border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md'
+                  }`}>
+                    {/* Widget Header */}
+                    <div className={`flex items-center justify-between px-3 py-2 border-b border-gray-100 dark:border-gray-700 flex-shrink-0 ${
+                      isEditMode ? 'widget-drag-handle cursor-grab active:cursor-grabbing bg-gray-50/80 dark:bg-gray-800/80' : ''
+                    }`}>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {isEditMode && <GripVertical className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />}
+                        <span className="text-gray-400 flex-shrink-0">
+                          <widgetDef.icon className="w-3.5 h-3.5" />
+                        </span>
+                        <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{widgetDef.title}</span>
+                        <span className={`hidden sm:inline-flex px-1.5 py-0.5 text-[9px] font-medium rounded-full flex-shrink-0 ${moduleColor}`}>
+                          {MODULE_LABELS[widgetDef.module]}
+                        </span>
+                      </div>
+                      {isEditMode && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleRemoveWidget(item.widgetId); }}
+                          className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex-shrink-0 ml-1"
+                          title="Hapus widget"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    {/* Widget Content */}
+                    <div className="flex-1 p-3 overflow-auto">
+                      <WidgetComponent />
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <p className={`text-lg font-semibold ${
-                      selectedBranchData.performanceScore >= 80 ? 'text-green-600' : 
-                      selectedBranchData.performanceScore >= 60 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
-                      {selectedBranchData.performanceScore >= 80 ? 'Sangat Baik' : 
-                       selectedBranchData.performanceScore >= 60 ? 'Cukup Baik' : 'Perlu Perbaikan'}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">Berdasarkan penjualan, stok, dan aktivitas</p>
-                  </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Sales Stats */}
-            <div className="grid grid-cols-4 gap-4">
-              <div className="bg-blue-50 rounded-xl p-4">
-                <p className="text-sm text-blue-600">Penjualan Hari Ini</p>
-                <p className="text-xl font-bold text-blue-900">{formatCurrency(selectedBranchData.todaySales)}</p>
-                <p className="text-xs text-blue-600 mt-1">
-                  {selectedBranchData.todaySales > selectedBranchData.yesterdaySales ? '↑' : '↓'} 
-                  {Math.abs(((selectedBranchData.todaySales - selectedBranchData.yesterdaySales) / selectedBranchData.yesterdaySales * 100)).toFixed(1)}% dari kemarin
-                </p>
-              </div>
-              <div className="bg-green-50 rounded-xl p-4">
-                <p className="text-sm text-green-600">Transaksi</p>
-                <p className="text-xl font-bold text-green-900">{selectedBranchData.transactionCount}</p>
-                <p className="text-xs text-green-600 mt-1">Hari ini</p>
-              </div>
-              <div className="bg-purple-50 rounded-xl p-4">
-                <p className="text-sm text-purple-600">Rata-rata Ticket</p>
-                <p className="text-xl font-bold text-purple-900">{formatCurrency(selectedBranchData.avgTicketSize)}</p>
-              </div>
-              <div className="bg-orange-50 rounded-xl p-4">
-                <p className="text-sm text-orange-600">Stok Rendah</p>
-                <p className="text-xl font-bold text-orange-900">{selectedBranchData.lowStockItems}</p>
-                <p className="text-xs text-orange-600 mt-1">Item perlu restock</p>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 mb-3">Aksi Cepat</h4>
-              <div className="flex flex-wrap gap-2">
-                <button 
-                  onClick={() => window.location.href = `/hq/reports/sales?branch=${selectedBranchData.id}`}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
-                >
-                  <BarChart3 className="w-4 h-4" />
-                  Lihat Laporan Penjualan
-                </button>
-                <button 
-                  onClick={() => window.location.href = `/hq/requisitions?branch=${selectedBranchData.id}`}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
-                >
-                  <Package className="w-4 h-4" />
-                  Lihat Internal Requisition
-                </button>
-                <button 
-                  onClick={() => window.location.href = `/hq/users?branch=${selectedBranchData.id}`}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
-                >
-                  <Users className="w-4 h-4" />
-                  Kelola Karyawan
-                </button>
-                <button 
-                  onClick={() => window.location.href = `/hq/branches/${selectedBranchData.id}/settings`}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
-                >
-                  <Settings className="w-4 h-4" />
-                  Pengaturan Cabang
-                </button>
-              </div>
-            </div>
+              );
+            })}
+          </ResponsiveGridLayout>}
           </div>
         )}
-      </Modal>
-
-      {/* Alert Detail Modal */}
-      <Modal
-        isOpen={showAlertModal}
-        onClose={() => setShowAlertModal(false)}
-        title="Detail Alert"
-        size="md"
-        footer={
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => handleDismissAlert(selectedAlert?.id || '')}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Abaikan
-            </button>
-            <button
-              onClick={() => handleResolveAlert(selectedAlert?.id || '')}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              <Check className="w-4 h-4" />
-              Tandai Selesai
-            </button>
-          </div>
-        }
-      >
-        {selectedAlert && (
-          <div className="space-y-4">
-            <div className={`p-4 rounded-xl ${getSeverityColor(selectedAlert.severity)}`}>
-              <div className="flex items-center gap-3">
-                {getAlertIcon(selectedAlert.type)}
-                <div>
-                  <p className="font-medium">{selectedAlert.message}</p>
-                  <p className="text-sm opacity-75">{selectedAlert.branchName}</p>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">Tipe</span>
-                <span className="font-medium capitalize">{selectedAlert.type.replace('_', ' ')}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">Severity</span>
-                <StatusBadge status={selectedAlert.severity} />
-              </div>
-              <div className="flex justify-between py-2 border-b border-gray-100">
-                <span className="text-gray-500">Waktu</span>
-                <span className="font-medium">{new Date(selectedAlert.timestamp).toLocaleString('id-ID')}</span>
-              </div>
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-500 mb-2">Aksi yang Disarankan</h4>
-              <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-800">
-                {selectedAlert.type === 'low_stock' && 'Buat Internal Requisition untuk restock item yang stoknya rendah.'}
-                {selectedAlert.type === 'low_sales' && 'Tinjau strategi penjualan cabang dan jadwalkan evaluasi dengan manager.'}
-                {selectedAlert.type === 'high_sales' && 'Pastikan stok mencukupi untuk memenuhi permintaan tinggi.'}
-                {selectedAlert.type === 'employee' && 'Hubungi manager cabang untuk mengatasi masalah kepegawaian.'}
-                {selectedAlert.type === 'system' && 'Hubungi tim IT untuk menyelesaikan masalah teknis.'}
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+        </div>
       </div>
+
+      {showPicker && (
+        <WidgetPicker isOpen={showPicker} activeWidgets={widgets} onAddWidget={handleAddWidget} onRemoveWidget={handleRemoveWidget} onClose={() => setShowPicker(false)} />
+      )}
+
+      <style jsx global>{`
+        .dashboard-grid {
+          position: relative;
+        }
+        .dashboard-grid .react-grid-item {
+          transition: all 200ms ease;
+        }
+        .dashboard-grid .react-grid-item.react-grid-placeholder {
+          background: rgba(59, 130, 246, 0.1) !important;
+          border: 2px dashed rgba(59, 130, 246, 0.5) !important;
+          border-radius: 12px !important;
+          opacity: 1 !important;
+          transition: all 150ms ease;
+        }
+        .dashboard-grid .react-grid-item.resizing {
+          opacity: 0.9;
+          z-index: 10;
+          will-change: width, height;
+        }
+        .dashboard-grid .react-grid-item.react-draggable-dragging {
+          z-index: 100;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.08);
+          border-radius: 12px;
+          opacity: 0.92;
+          will-change: transform;
+          transition: box-shadow 200ms ease, opacity 200ms ease;
+        }
+        .dashboard-grid .react-grid-item > .react-resizable-handle {
+          width: 20px;
+          height: 20px;
+          bottom: 2px;
+          right: 2px;
+        }
+        .dashboard-grid .react-grid-item > .react-resizable-handle::after {
+          border-right: 2.5px solid rgba(59, 130, 246, 0.5);
+          border-bottom: 2.5px solid rgba(59, 130, 246, 0.5);
+          width: 10px;
+          height: 10px;
+          right: 4px;
+          bottom: 4px;
+        }
+        .dashboard-grid--editing .react-grid-item > .react-resizable-handle:hover::after {
+          border-color: rgba(59, 130, 246, 0.9);
+        }
+        .widget-grid-item {
+          height: 100%;
+        }
+        @media (max-width: 640px) {
+          .dashboard-grid .react-grid-item > .react-resizable-handle {
+            width: 24px;
+            height: 24px;
+          }
+        }
+      `}</style>
     </HQLayout>
   );
 }

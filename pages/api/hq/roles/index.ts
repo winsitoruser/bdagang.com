@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Op } from 'sequelize';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 // Mock roles data - in production, this would come from a database
 const mockRoles = [
@@ -11,7 +12,7 @@ const mockRoles = [
   { id: '6', code: 'WAREHOUSE', name: 'Staff Gudang', description: 'Staff gudang untuk manajemen stok', level: 5, permissions: [{ id: '15', module: 'inventory', action: 'all', description: 'Manage Inventory' }], userCount: 8, isSystem: false, isActive: true, createdAt: '2024-03-01' }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -27,6 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withHQAuth(handler);
 
 async function getRoles(req: NextApiRequest, res: NextApiResponse) {
   const { search } = req.query;

@@ -9,8 +9,9 @@ import {
   calculateBonusPenalty,
   calculateTrend
 } from '../../../../lib/hq/kpi-calculator';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -26,6 +27,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withHQAuth(handler, { module: 'hris' });
 
 function getScoringInfo(req: NextApiRequest, res: NextApiResponse) {
   return res.status(200).json({

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { getPaginationParams, getPaginationMeta } from '../../../../lib/api/pagination';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 let Stock: any, Product: any;
 try {
@@ -11,7 +12,7 @@ try {
   console.warn('Stock/Product models not available');
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
     return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
@@ -28,6 +29,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'branches' });
 
 async function getBranchInventory(req: NextApiRequest, res: NextApiResponse) {
   const { branchId, category, stockStatus } = req.query;

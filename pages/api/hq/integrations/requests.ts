@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 // Mock integration requests data
 const mockRequests = [
@@ -167,7 +168,7 @@ const mockRequests = [
   }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   switch (req.method) {
     case 'GET':
       return getRequests(req, res);
@@ -178,6 +179,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 }
+
+export default withHQAuth(handler, { module: 'integrations' });
 
 async function getRequests(req: NextApiRequest, res: NextApiResponse) {
   try {

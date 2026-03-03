@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 let PosTransaction: any;
 try {
@@ -9,7 +10,7 @@ try {
   console.warn('PosTransaction model not available');
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', ['GET']);
     return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
@@ -26,6 +27,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'branches' });
 
 async function getBranchFinance(req: NextApiRequest, res: NextApiResponse) {
   const { branchId, period = 'month' } = req.query;

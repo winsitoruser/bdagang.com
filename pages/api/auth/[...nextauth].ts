@@ -96,7 +96,7 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }: any) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
@@ -112,6 +112,23 @@ export const authOptions: NextAuthOptions = {
         token.businessCode = user.businessCode;
         token.businessStructure = user.businessStructure;
         token.setupCompleted = user.setupCompleted;
+      }
+      // Refresh kybStatus & setupCompleted from DB on session update
+      if (trigger === 'update' && token.tenantId) {
+        try {
+          const db = require('../../../models');
+          const tenant = await db.Tenant.findByPk(token.tenantId, {
+            attributes: ['kybStatus', 'setupCompleted', 'businessCode', 'businessStructure'],
+          });
+          if (tenant) {
+            token.kybStatus = tenant.kybStatus;
+            token.setupCompleted = tenant.setupCompleted ?? false;
+            token.businessCode = tenant.businessCode;
+            token.businessStructure = tenant.businessStructure;
+          }
+        } catch (e: any) {
+          console.error('[JWT update] Tenant refresh error:', e.message);
+        }
       }
       return token;
     },
@@ -135,12 +152,13 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Check if user needs onboarding
+      // Allow all internal URLs (same origin)
       if (url.startsWith(baseUrl)) {
-        // Allow onboarding and auth pages
-        if (url.includes('/onboarding') || url.includes('/auth/') || url.includes('/admin/')) {
-          return url;
-        }
+        return url;
+      }
+      // Allow relative URLs
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
       }
       return baseUrl;
     }

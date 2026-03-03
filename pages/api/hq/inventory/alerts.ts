@@ -1,14 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext, buildTenantFilter } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
 const sequelize = require('../../../../lib/sequelize');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method === 'GET') {
+      const ctx = getTenantContext(req);
+      const tf = buildTenantFilter(ctx.tenantId, 'a');
       const { type, priority, includeResolved } = req.query;
-      let where = 'WHERE 1=1';
-      const params: any = {};
+      let where = 'WHERE 1=1' + tf.condition;
+      const params: any = { ...tf.replacements };
       if (type && type !== 'all') { where += ' AND a.alert_type=:type'; params.type = type; }
       if (priority && priority !== 'all') { where += ' AND a.severity=:priority'; params.priority = priority; }
       if (includeResolved !== 'true') where += ' AND a.is_resolved=false';
@@ -30,8 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           COUNT(*) FILTER (WHERE severity='high' AND is_resolved=false)::int as high,
           COUNT(*) FILTER (WHERE severity='warning' AND is_resolved=false)::int as warning,
           COUNT(*) FILTER (WHERE is_read=false AND is_resolved=false)::int as unread
-        FROM stock_alerts
-      `);
+        FROM stock_alerts a WHERE 1=1 ${tf.condition}
+      `, { replacements: tf.replacements });
       const st = statsRows[0] || {};
 
       return res.status(HttpStatus.OK).json(successResponse({
@@ -49,13 +55,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'PATCH' || req.method === 'PUT') {
+      if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+      const ctx = getTenantContext(req);
+      const tf = buildTenantFilter(ctx.tenantId);
       const { id, action: alertAction } = req.body;
       if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Alert ID required'));
 
       if (alertAction === 'resolve') {
-        await sequelize.query("UPDATE stock_alerts SET is_resolved=true, resolved_at=NOW(), updated_at=NOW() WHERE id=:id", { replacements: { id } });
+        await sequelize.query(`UPDATE stock_alerts SET is_resolved=true, resolved_at=NOW(), updated_at=NOW() WHERE id=:id ${tf.condition}`, { replacements: { id, ...tf.replacements } });
+        await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'resolve', entityType: 'stock_alert', entityId: id, req });
       } else if (alertAction === 'read') {
-        await sequelize.query("UPDATE stock_alerts SET is_read=true, updated_at=NOW() WHERE id=:id", { replacements: { id } });
+        await sequelize.query(`UPDATE stock_alerts SET is_read=true, updated_at=NOW() WHERE id=:id ${tf.condition}`, { replacements: { id, ...tf.replacements } });
       }
       return res.status(HttpStatus.OK).json(successResponse({ id, action: alertAction }, undefined, `Alert ${alertAction}`));
     }
@@ -81,7 +91,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         HAVING COALESCE(SUM(s.quantity),0) = 0
         AND p.id NOT IN (SELECT product_id FROM stock_alerts WHERE alert_type='out_of_stock' AND is_resolved=false AND product_id IS NOT NULL)
       `);
-      const [count] = await sequelize.query("SELECT COUNT(*)::int as c FROM stock_alerts WHERE is_resolved=false");
+      const ctx2 = getTenantContext(req);
+      const tf2 = buildTenantFilter(ctx2.tenantId);
+      const [count] = await sequelize.query(`SELECT COUNT(*)::int as c FROM stock_alerts WHERE is_resolved=false ${tf2.condition}`, { replacements: tf2.replacements });
       return res.status(HttpStatus.OK).json(successResponse({ totalUnresolved: count[0].c }, undefined, 'Alerts generated'));
     }
 
@@ -92,3 +104,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, error.message));
   }
 }
+
+export default withHQAuth(handler, { module: 'inventory' });

@@ -4,6 +4,7 @@
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 let sequelize: any;
 try { sequelize = require('../../../../lib/sequelize'); } catch (e) {}
@@ -21,7 +22,7 @@ async function audit(action: string, details: any) {
   try { if (!sequelize) return; await sequelize.query(`INSERT INTO audit_logs (action,module,details,performed_by,performed_at) VALUES(:a,'smart_warehouse',:d,'System',NOW())`, { replacements: { a: action, d: JSON.stringify(details) } }); } catch {}
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { action } = req.query;
   const m = req.method || 'GET';
   const t0 = Date.now();
@@ -53,6 +54,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json(errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, e.message));
   } finally { console.log(`[SmartWH] ${action} ${Date.now()-t0}ms`); }
 }
+
+export default withHQAuth(handler, { module: 'inventory' });
 
 // ═══════════════════ SMART DASHBOARD ═══════════════════
 async function smartDashboard(_req: NextApiRequest, res: NextApiResponse) {

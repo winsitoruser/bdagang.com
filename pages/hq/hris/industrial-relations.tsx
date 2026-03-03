@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
-import { Shield, FileText, AlertTriangle, Users, CheckSquare, Plus, Edit, Trash2, Eye, Search, ChevronDown, X, Clock, AlertCircle } from 'lucide-react';
+import DocumentExportButton from '@/components/documents/DocumentExportButton';
+import { Shield, FileText, AlertTriangle, Users, CheckSquare, Plus, Edit, Trash2, Eye, Search, ChevronDown, X, Clock, AlertCircle, Download } from 'lucide-react';
 
 interface Regulation { id: string; title: string; regulation_number: string; category: string; description: string; content: string; effective_date: string; expiry_date: string; status: string; version: number; tags: string[]; }
 interface Warning { id: string; employee_id: number; warning_type: string; letter_number: string; issue_date: string; expiry_date: string; violation_type: string; violation_description: string; status: string; acknowledged: boolean; notes: string; }
@@ -233,6 +234,31 @@ export default function IndustrialRelationsPage() {
                     <td className="px-4 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${statusColor(w.status)}`}>{w.status}</span></td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
+                        <DocumentExportButton
+                          documentType="warning-letter"
+                          variant="icon"
+                          data={{
+                            employeeId: w.employee_id,
+                            employeeName: `Karyawan #${w.employee_id}`,
+                            warningType: w.warning_type,
+                            violationType: w.violation_type,
+                            violationDescription: w.violation_description,
+                            expiryDate: w.expiry_date,
+                            notes: w.notes,
+                          }}
+                          meta={{
+                            documentNumber: w.letter_number,
+                            documentDate: w.issue_date,
+                          }}
+                          options={{
+                            includeSignature: true,
+                            signatureFields: [
+                              { label: 'HRD Manager', position: 'Mengetahui' },
+                              { label: 'Yang Bersangkutan', position: 'Karyawan' },
+                            ],
+                          }}
+                          showFormats={['pdf', 'html']}
+                        />
                         <button onClick={() => handleDelete('warning', w.id)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
                     </td>
@@ -305,8 +331,33 @@ export default function IndustrialRelationsPage() {
                     <p className="text-sm text-gray-500 mt-1">{t.reason}</p>
                     {t.effective_date && <p className="text-xs text-gray-400 mt-1">Efektif: {new Date(t.effective_date).toLocaleDateString('id-ID')}</p>}
                   </div>
-                  <div className="text-right">
-                    {t.severance_amount > 0 && <p className="text-sm font-medium">Pesangon: Rp {Number(t.severance_amount).toLocaleString('id-ID')}</p>}
+                  <div className="text-right flex items-start gap-2">
+                    <div>
+                      {t.severance_amount > 0 && <p className="text-sm font-medium">Pesangon: Rp {Number(t.severance_amount).toLocaleString('id-ID')}</p>}
+                    </div>
+                    <DocumentExportButton
+                      documentType="termination-letter"
+                      variant="icon"
+                      data={{
+                        employeeId: t.employee_id,
+                        employeeName: `Karyawan #${t.employee_id}`,
+                        terminationType: t.termination_type,
+                        reason: t.reason,
+                        effectiveDate: t.effective_date,
+                        severanceAmount: t.severance_amount,
+                        clearanceStatus: t.clearance_status,
+                      }}
+                      meta={{ documentNumber: `PHK-${t.id?.substring(0,8)}`, documentDate: t.effective_date || new Date().toISOString().split('T')[0] }}
+                      options={{
+                        includeSignature: true,
+                        signatureFields: [
+                          { label: 'Direktur', position: 'Perusahaan' },
+                          { label: 'HRD Manager', position: 'Mengetahui' },
+                          { label: 'Karyawan', position: 'Yang Bersangkutan' },
+                        ],
+                      }}
+                      showFormats={['pdf']}
+                    />
                   </div>
                 </div>
                 {/* Clearance Status */}

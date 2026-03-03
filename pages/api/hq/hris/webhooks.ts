@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 // HRIS Webhook Event Types
 export type HRISEventType = 
@@ -36,7 +37,7 @@ const EVENT_TYPES = [
   'leave.requested', 'leave.approved', 'leave.rejected'
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -56,6 +57,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'hris' });
 
 async function getWebhooks(req: NextApiRequest, res: NextApiResponse) {
   const { eventType, limit: qLimit } = req.query;

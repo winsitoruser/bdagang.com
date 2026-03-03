@@ -10,6 +10,7 @@ import {
   AlertTriangle, Users, MapPin, ArrowUpDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 interface KybRow {
   id: string;
@@ -78,8 +79,9 @@ export default function KybReviewList() {
       router.push('/admin/login');
     }
     if (sessionStatus === 'authenticated') {
-      if (!['super_admin', 'admin'].includes(session?.user?.role || '')) {
-        router.push('/');
+      const userRole = (session?.user?.role as string)?.toLowerCase();
+      if (!['admin', 'super_admin', 'superadmin'].includes(userRole)) {
+        router.push('/admin/login');
         return;
       }
       fetchApplications();
@@ -122,9 +124,11 @@ export default function KybReviewList() {
 
   if (sessionStatus === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
+        </div>
+      </AdminLayout>
     );
   }
 
@@ -134,34 +138,25 @@ export default function KybReviewList() {
         <title>KYB Review - Admin Panel | BEDAGANG</title>
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <AdminLayout>
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-          <div className="max-w-7xl mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">KYB Review Panel</h1>
-                <p className="text-sm text-gray-500">Kelola dan review aplikasi Know Your Business</p>
-              </div>
-              <div className="flex items-center space-x-3">
-                <button
-                  onClick={fetchApplications}
-                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-                <Link
-                  href="/admin/dashboard"
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                >
-                  Dashboard Admin
-                </Link>
-              </div>
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">KYB Review</h1>
+              <p className="text-sm text-gray-500">Kelola dan review aplikasi Know Your Business</p>
             </div>
+            <button
+              onClick={fetchApplications}
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition"
+              title="Refresh"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </button>
           </div>
-        </header>
+        </div>
 
-        <main className="max-w-7xl mx-auto px-6 py-6">
+        <div>
           {/* Status Filter Tabs */}
           <div className="flex items-center space-x-2 mb-6 overflow-x-auto pb-2">
             {[
@@ -344,8 +339,8 @@ export default function KybReviewList() {
               </div>
             )}
           </div>
-        </main>
-      </div>
+        </div>
+      </AdminLayout>
     </>
   );
 }

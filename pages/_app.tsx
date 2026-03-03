@@ -1,4 +1,6 @@
 import '../styles/global.scss';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 import type { AppProps } from 'next/app';
 import { SessionProvider } from 'next-auth/react';
 import { Toaster } from 'react-hot-toast';

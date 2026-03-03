@@ -61,25 +61,35 @@ export default function TransactionsPage() {
   const fetchTransactions = async () => {
     setLoading(true);
     try {
+      const currentPage = Math.floor(pagination.offset / pagination.limit) + 1;
       const params = new URLSearchParams({
         search: searchTerm,
         type: typeFilter,
         status: statusFilter,
-        branchId: branchFilter,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
         limit: pagination.limit.toString(),
-        offset: pagination.offset.toString()
+        page: currentPage.toString()
       });
 
       const response = await fetch(`/api/hq/finance/transactions?${params}`);
       const json = await response.json();
-      const payload = json.data || json;
+      const rawData = json.data || json;
+      const paginationData = json.pagination || json.meta || {};
 
       if (response.ok) {
-        setTransactions(payload.transactions || []);
-        setPagination(prev => ({ ...prev, total: payload.total || 0 }));
-        calculateStats(payload.transactions || []);
+        const rawList = Array.isArray(rawData) ? rawData : (rawData.transactions || rawData || []);
+        // Normalize DB column names to frontend field names
+        const txnList = rawList.map((t: any) => ({
+          ...t,
+          type: t.type || t.transactionType || '',
+          transactionNumber: t.transactionNumber || '',
+          transactionDate: t.transactionDate || '',
+          amount: parseFloat(t.amount || 0),
+        }));
+        setTransactions(txnList);
+        setPagination(prev => ({ ...prev, total: paginationData.total || txnList.length || 0 }));
+        calculateStats(txnList);
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
@@ -107,7 +117,7 @@ export default function TransactionsPage() {
       const json2 = await response.json();
       const ap = json2.data || json2;
       if (response.ok) {
-        setAccounts(ap.accounts || []);
+        setAccounts(ap.accounts || ap.receivables || []);
       }
     } catch (error) {
       console.error('Error fetching accounts:', error);
@@ -141,9 +151,15 @@ export default function TransactionsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...data,
-          tenantId: 'default-tenant', // Replace with actual tenant ID from session
-          createdBy: 'current-user' // Replace with actual user ID from session
+          transactionType: data.type,
+          accountId: data.accountId || null,
+          category: data.category || null,
+          amount: data.amount,
+          description: data.description,
+          referenceType: data.reference ? 'manual' : null,
+          paymentMethod: data.paymentMethod || null,
+          contactName: data.contactName || null,
+          notes: data.notes || null,
         })
       });
 

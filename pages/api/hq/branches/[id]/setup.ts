@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withHQAuth } from '../../../../../lib/middleware/withHQAuth';
 
 // Import models
 let BranchSetup: any, BranchModule: any, Branch: any, StoreSetting: any, Location: any, User: any;
@@ -33,7 +34,7 @@ interface SetupResponse {
   error?: string;
 }
 
-export default async function handler(
+async function handler(
   req: NextApiRequest,
   res: NextApiResponse<SetupResponse>
 ) {
@@ -57,6 +58,8 @@ export default async function handler(
     return res.status(500).json({ success: false, error: 'Internal server error' });
   }
 }
+
+export default withHQAuth(handler, { module: 'branches' });
 
 async function getSetupStatus(branchId: string, res: NextApiResponse<SetupResponse>) {
   try {

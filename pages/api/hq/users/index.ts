@@ -2,8 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { User, Branch } from '../../../../models';
 import { Op } from 'sequelize';
 import bcrypt from 'bcryptjs';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -19,6 +20,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withHQAuth(handler, { module: 'users' });
 
 async function getUsers(req: NextApiRequest, res: NextApiResponse) {
   const { page = '1', limit = '10', search, role, branch, status } = req.query;

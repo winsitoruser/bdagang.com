@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { v4 as uuidv4 } from 'uuid';
+import { withHQAuth } from '../../../../../lib/middleware/withHQAuth';
 
 let AttendanceDevice: any, AttendanceDeviceLog: any, EmployeeAttendance: any, Employee: any, AttendanceSettings: any;
 try {
@@ -18,7 +19,7 @@ export const config = {
   api: { bodyParser: true }
 };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
@@ -351,3 +352,5 @@ function parseVerifyMode(mode: any): string {
   };
   return modeMap[String(mode).toLowerCase()] || String(mode);
 }
+
+export default withHQAuth(handler, { module: 'hris' });

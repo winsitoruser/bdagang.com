@@ -17,6 +17,7 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 interface TenantDetail {
   id: string;
@@ -79,7 +80,8 @@ export default function TenantDetailPage() {
       return;
     }
 
-    if (session && !['ADMIN', 'SUPER_ADMIN', 'super_admin'].includes(session.user?.role as string)) {
+    const userRole = (session?.user?.role as string)?.toLowerCase();
+    if (session && !['admin', 'super_admin', 'superadmin'].includes(userRole)) {
       router.push('/admin/login');
       return;
     }
@@ -130,25 +132,29 @@ export default function TenantDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading tenant details...</p>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading tenant details...</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   if (error || !tenant) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-red-600">Error: {error || 'Tenant not found'}</p>
-          <Link href="/admin/tenants" className="mt-4 text-blue-600 hover:underline">
-            Back to Tenants
-          </Link>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <p className="text-red-600">Error: {error || 'Tenant not found'}</p>
+            <Link href="/admin/tenants" className="mt-4 text-blue-600 hover:underline">
+              Back to Tenants
+            </Link>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
@@ -156,14 +162,13 @@ export default function TenantDetailPage() {
   const disabledModules = tenant.tenantModules.filter(tm => !tm.isEnabled);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <AdminLayout>
       <Head>
         <title>{tenant.businessName} - Tenant Details - Admin Panel</title>
       </Head>
 
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link href="/admin/tenants" className="text-gray-600 hover:text-gray-900">
@@ -193,7 +198,6 @@ export default function TenantDetailPage() {
               </button>
             </div>
           </div>
-        </div>
       </div>
 
       {/* Content */}
@@ -388,6 +392,6 @@ export default function TenantDetailPage() {
           </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 }

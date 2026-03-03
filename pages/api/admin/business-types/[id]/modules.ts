@@ -13,9 +13,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    // Only super_admin can manage business type modules
-    if (session.user?.role !== 'super_admin') {
-      return res.status(403).json({ success: false, message: 'Only super admin can manage business type modules' });
+    const userRole = (session.user?.role as string)?.toLowerCase();
+    const allowedRoles = ['admin', 'super_admin', 'superadmin'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ success: false, message: 'Hanya admin yang dapat mengelola modul jenis bisnis' });
     }
 
     const { id } = req.query;

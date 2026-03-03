@@ -8,6 +8,7 @@ import {
   DollarSign, RefreshCw, Trash2, ToggleLeft, ToggleRight, Star,
   ArrowLeft, Loader2, Clock, TrendingUp, Users, Zap, Search
 } from 'lucide-react';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 interface AIStats {
   totalModels: number;
@@ -73,12 +74,14 @@ export default function AdminAIModels() {
 
   if (loading && !stats) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto" />
-          <p className="mt-3 text-gray-500 text-sm">Memuat data AI...</p>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto" />
+            <p className="mt-3 text-gray-500 text-sm">Memuat data AI...</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
@@ -86,42 +89,35 @@ export default function AdminAIModels() {
     <>
       <Head><title>AI Models & Workflows - Admin</title></Head>
 
-      {/* Toast */}
-      {toast && (
-        <div className="fixed top-6 right-6 z-[60]">
-          <div className="bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-emerald-400" /> {toast}
-          </div>
-        </div>
-      )}
-
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500 text-white">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <Link href="/admin/dashboard" className="inline-flex items-center gap-1.5 text-blue-200 hover:text-white text-sm mb-3 transition-colors">
-                  <ArrowLeft className="w-4 h-4" /> Kembali ke Dashboard
-                </Link>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                    <Brain className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-bold">AI Models & Workflows</h1>
-                    <p className="text-blue-200 text-sm mt-0.5">Kelola model AI, workflow, dan pantau eksekusi di seluruh tenant</p>
-                  </div>
-                </div>
-              </div>
-              <button onClick={fetchData} className="px-4 py-2 bg-white/15 border border-white/20 rounded-lg text-sm font-medium hover:bg-white/25 transition-all">
-                <RefreshCw className="w-4 h-4 inline mr-1.5" /> Refresh
-              </button>
+      <AdminLayout>
+        {/* Toast */}
+        {toast && (
+          <div className="fixed top-6 right-6 z-[60]">
+            <div className="bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-medium flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-400" /> {toast}
             </div>
           </div>
+        )}
+
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                <Brain className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">AI Models & Workflows</h1>
+                <p className="text-gray-500 text-sm">Kelola model AI, workflow, dan pantau eksekusi di seluruh tenant</p>
+              </div>
+            </div>
+            <button onClick={fetchData} className="px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-200 transition-all text-gray-700">
+              <RefreshCw className="w-4 h-4 inline mr-1.5" /> Refresh
+            </button>
+          </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 py-6">
+        <div>
           {/* Stats Cards */}
           {stats && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
@@ -454,7 +450,7 @@ export default function AdminAIModels() {
             </div>
           )}
         </div>
-      </div>
+      </AdminLayout>
     </>
   );
 }
