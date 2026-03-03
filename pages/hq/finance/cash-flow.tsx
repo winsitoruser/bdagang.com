@@ -117,46 +117,71 @@ export default function CashFlowManagement() {
 
   if (!mounted) return null;
 
+  // Derive weekly inflow/outflow from cashFlowItems
+  const weeklyData = (() => {
+    const weeks: { inflow: number; outflow: number }[] = [{ inflow: 0, outflow: 0 }, { inflow: 0, outflow: 0 }, { inflow: 0, outflow: 0 }, { inflow: 0, outflow: 0 }];
+    cashFlowItems.forEach((item) => {
+      const d = new Date(item.date).getDate();
+      const weekIdx = Math.min(Math.floor((d - 1) / 7), 3);
+      if (item.type === 'inflow') weeks[weekIdx].inflow += item.amount;
+      else if (item.type === 'outflow') weeks[weekIdx].outflow += item.amount;
+    });
+    // If no items, fallback to even split from summary
+    if (cashFlowItems.length === 0 && (summary.cashInflow > 0 || summary.cashOutflow > 0)) {
+      for (let i = 0; i < 4; i++) { weeks[i].inflow = summary.cashInflow / 4; weeks[i].outflow = summary.cashOutflow / 4; }
+    }
+    return weeks;
+  })();
+
   const cashFlowChartOptions: ApexCharts.ApexOptions = {
     chart: { type: 'bar', toolbar: { show: false }, stacked: true },
     plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
     colors: ['#10B981', '#EF4444'],
     xaxis: { categories: ['Week 1', 'Week 2', 'Week 3', 'Week 4'] },
-    yaxis: { labels: { formatter: (val) => formatCurrency(Math.abs(val) * 1000000) } },
+    yaxis: { labels: { formatter: (val) => formatCurrency(Math.abs(val)) } },
     legend: { position: 'top' },
-    tooltip: { y: { formatter: (val) => formatCurrency(Math.abs(val) * 1000000) } }
+    tooltip: { y: { formatter: (val) => formatCurrency(Math.abs(val)) } }
   };
 
   const cashFlowChartSeries = [
-    { name: 'Cash In', data: [980, 1050, 1120, 1200] },
-    { name: 'Cash Out', data: [-850, -920, -980, -1050] }
+    { name: 'Cash In', data: weeklyData.map(w => Math.round(w.inflow)) },
+    { name: 'Cash Out', data: weeklyData.map(w => -Math.round(w.outflow)) }
   ];
+
+  // Derive balance trend from opening balance + weekly cumulative net
+  const balanceLabels = ['Week 0', 'Week 1', 'Week 2', 'Week 3', 'Week 4'];
+  const balanceData = (() => {
+    let running = summary.openingBalance;
+    const points = [running];
+    weeklyData.forEach(w => { running += w.inflow - w.outflow; points.push(Math.round(running)); });
+    return points;
+  })();
 
   const balanceTrendOptions: ApexCharts.ApexOptions = {
     chart: { type: 'area', toolbar: { show: false } },
     stroke: { curve: 'smooth', width: 2 },
     fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
     colors: ['#3B82F6'],
-    xaxis: { categories: ['1 Feb', '5 Feb', '10 Feb', '15 Feb', '20 Feb', '22 Feb'] },
-    yaxis: { labels: { formatter: (val) => formatCurrency(val * 1000000) } }
+    xaxis: { categories: balanceLabels },
+    yaxis: { labels: { formatter: (val) => formatCurrency(val) } }
   };
 
-  const balanceTrendSeries = [{ name: 'Balance', data: [980, 1020, 1080, 1150, 1200, 1250] }];
+  const balanceTrendSeries = [{ name: 'Balance', data: balanceData }];
 
   const cashFlowBreakdownOptions: ApexCharts.ApexOptions = {
     chart: { type: 'bar', toolbar: { show: false } },
     plotOptions: { bar: { horizontal: true, borderRadius: 4, distributed: true } },
     colors: ['#10B981', '#EF4444', '#F59E0B'],
-    xaxis: { labels: { formatter: (val) => formatCurrency(Math.abs(Number(val)) * 1000000) } },
+    xaxis: { labels: { formatter: (val) => formatCurrency(Math.abs(Number(val))) } },
     legend: { show: false }
   };
 
   const cashFlowBreakdownSeries = [{
     name: 'Amount',
     data: [
-      { x: 'Operating', y: 850 },
-      { x: 'Investing', y: -150 },
-      { x: 'Financing', y: -430 }
+      { x: 'Operating', y: Math.round(summary.operatingCashFlow) },
+      { x: 'Investing', y: Math.round(summary.investingCashFlow) },
+      { x: 'Financing', y: Math.round(summary.financingCashFlow) }
     ]
   }];
 

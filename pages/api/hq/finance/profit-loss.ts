@@ -84,14 +84,17 @@ async function getProfitLoss(req: NextApiRequest, res: NextApiResponse) {
     if (PosTransaction && Branch) {
       try {
         const { Op } = require('sequelize');
-        const branches = await Branch.findAll({ where: { isActive: true }, attributes: ['id', 'code', 'name'] });
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB query timeout')), 5000));
 
-        if (branches.length > 0) {
+        const dbQuery = async () => {
+          const branches = await Branch.findAll({ where: { isActive: true }, attributes: ['id', 'code', 'name'] });
+          if (branches.length === 0) return null;
+
           const branchPL = await Promise.all(branches.map(async (b: any) => {
             const revenue = await PosTransaction.sum('total', { where: { branchId: b.id, status: 'closed', createdAt: { [Op.between]: [startDate, now] } } }) || 0;
             let expenses = 0;
             if (FinanceTransaction) {
-              expenses = await FinanceTransaction.sum('amount', { where: { branchId: b.id, type: 'expense', status: 'completed', transactionDate: { [Op.between]: [startDate, now] } } }) || 0;
+              try { expenses = await FinanceTransaction.sum('amount', { where: { branchId: b.id, type: 'expense', status: 'completed', transactionDate: { [Op.between]: [startDate, now] } } }) || 0; } catch (e) {}
             }
             const cogs = revenue * 0.6;
             const grossProfit = revenue - cogs;
@@ -100,27 +103,32 @@ async function getProfitLoss(req: NextApiRequest, res: NextApiResponse) {
             return { id: b.id, name: b.name, code: b.code, revenue, cogs, grossProfit, opex, netIncome, margin: revenue > 0 ? Math.round(netIncome / revenue * 100) : 0 };
           }));
 
-          const totalRevenue = branchPL.reduce((s, b) => s + b.revenue, 0);
-          if (totalRevenue > 0) {
-            const totalCogs = branchPL.reduce((s, b) => s + b.cogs, 0);
-            const totalGross = totalRevenue - totalCogs;
-            const totalOpex = branchPL.reduce((s, b) => s + b.opex, 0);
-            const netIncome = totalGross - totalOpex;
+          const totalRevenue = branchPL.reduce((s: number, b: any) => s + b.revenue, 0);
+          if (totalRevenue === 0) return null;
 
-            return res.status(HttpStatus.OK).json(successResponse({
-              summary: {
-                revenue: totalRevenue, cogs: totalCogs, grossProfit: totalGross,
-                grossMargin: Math.round(totalGross / totalRevenue * 100),
-                operatingExpenses: totalOpex, operatingIncome: totalGross - totalOpex,
-                operatingMargin: Math.round((totalGross - totalOpex) / totalRevenue * 100),
-                otherIncome: 0, otherExpenses: 0, ebitda: totalGross - totalOpex,
-                depreciation: 0, interestExpense: 0, taxExpense: Math.round(netIncome * 0.22),
-                netIncome: Math.round(netIncome * 0.78), netMargin: Math.round(netIncome * 0.78 / totalRevenue * 100),
-                growth: 0
-              },
-              items: mockPLItems, branches: branchPL, period
-            }));
-          }
+          const totalCogs = branchPL.reduce((s: number, b: any) => s + b.cogs, 0);
+          const totalGross = totalRevenue - totalCogs;
+          const totalOpex = branchPL.reduce((s: number, b: any) => s + b.opex, 0);
+          const netIncome = totalGross - totalOpex;
+
+          return {
+            summary: {
+              revenue: totalRevenue, cogs: totalCogs, grossProfit: totalGross,
+              grossMargin: Math.round(totalGross / totalRevenue * 100),
+              operatingExpenses: totalOpex, operatingIncome: totalGross - totalOpex,
+              operatingMargin: Math.round((totalGross - totalOpex) / totalRevenue * 100),
+              otherIncome: 0, otherExpenses: 0, ebitda: totalGross - totalOpex,
+              depreciation: 0, interestExpense: 0, taxExpense: Math.round(netIncome * 0.22),
+              netIncome: Math.round(netIncome * 0.78), netMargin: Math.round(netIncome * 0.78 / totalRevenue * 100),
+              growth: 0
+            },
+            items: mockPLItems, branches: branchPL, period
+          };
+        };
+
+        const result = await Promise.race([dbQuery(), timeoutPromise]) as any;
+        if (result) {
+          return res.status(HttpStatus.OK).json(successResponse(result));
         }
       } catch (e: any) { console.warn('P&L DB failed:', e.message); }
     }

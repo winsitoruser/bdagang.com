@@ -239,7 +239,7 @@ export default function ProfitLossReport() {
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <p className="text-gray-500 text-sm">EBITDA</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.ebitda)}</p>
-            <p className="text-sm text-gray-500 mt-2">{((summary.ebitda / summary.revenue) * 100).toFixed(1)}% of revenue</p>
+            <p className="text-sm text-gray-500 mt-2">{summary.revenue > 0 ? ((summary.ebitda / summary.revenue) * 100).toFixed(1) : '0.0'}% of revenue</p>
           </div>
 
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
@@ -387,7 +387,7 @@ export default function ProfitLossReport() {
               {[
                 { label: 'Gross Margin', value: summary.grossMargin, benchmark: industry === 'fnb' ? 65 : industry === 'retail' ? 35 : 40, color: 'blue' },
                 { label: 'Operating Margin', value: summary.operatingMargin, benchmark: industry === 'fnb' ? 15 : industry === 'retail' ? 8 : 25, color: 'green' },
-                { label: 'EBITDA Margin', value: Math.round((summary.ebitda / summary.revenue) * 100), benchmark: industry === 'fnb' ? 18 : industry === 'retail' ? 10 : 28, color: 'purple' },
+                { label: 'EBITDA Margin', value: summary.revenue > 0 ? Math.round((summary.ebitda / summary.revenue) * 100) : 0, benchmark: industry === 'fnb' ? 18 : industry === 'retail' ? 10 : 28, color: 'purple' },
                 { label: 'Net Margin', value: summary.netMargin, benchmark: industry === 'fnb' ? 10 : industry === 'retail' ? 5 : 20, color: 'teal' },
               ].map(m => {
                 const diff = m.value - m.benchmark;
@@ -436,7 +436,7 @@ export default function ProfitLossReport() {
                     legend: { position: 'bottom' },
                     dataLabels: { enabled: true, formatter: (v: number) => `${v.toFixed(1)}%` },
                   }}
-                  series={[
+                  series={summary.revenue > 0 ? [
                     Math.round((summary.cogs / summary.revenue) * 100),
                     Math.round((309000000 / summary.revenue) * 100),
                     Math.round((123600000 / summary.revenue) * 100),
@@ -444,7 +444,7 @@ export default function ProfitLossReport() {
                     Math.round((summary.depreciation / summary.revenue) * 100),
                     Math.round((summary.taxExpense / summary.revenue) * 100),
                     Math.round(((summary.otherExpenses + summary.interestExpense) / summary.revenue) * 100),
-                  ]}
+                  ] : [0, 0, 0, 0, 0, 0, 0]}
                   type="donut"
                   height={300}
                 />

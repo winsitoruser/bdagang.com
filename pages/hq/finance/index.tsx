@@ -118,6 +118,9 @@ export default function HQFinanceDashboard() {
   const [industryKpis, setIndustryKpis] = useState<IndustryKPI[]>([]);
   const [forecast, setForecast] = useState<any[]>([]);
   const [exporting, setExporting] = useState(false);
+  const [trendData, setTrendData] = useState<any>(null);
+  const [expenseBreakdown, setExpenseBreakdown] = useState<any[]>([]);
+  const [cashFlowForecast, setCashFlowForecast] = useState<any[]>([]);
 
   const fetchBranches = async () => {
     try {
@@ -154,6 +157,21 @@ export default function HQFinanceDashboard() {
           try {
             const fcRes = await fetch(`/api/hq/finance/enhanced?action=forecast`);
             if (fcRes.ok) { const fj = await fcRes.json(); if (fj.success) setForecast(fj.data.forecast || []); }
+          } catch {}
+          // Also fetch trend data
+          try {
+            const trRes = await fetch(`/api/hq/finance/enhanced?action=trend&period=${period}`);
+            if (trRes.ok) { const tj = await trRes.json(); if (tj.success) setTrendData(tj.data.trend || null); }
+          } catch {}
+          // Also fetch expense breakdown
+          try {
+            const ebRes = await fetch(`/api/hq/finance/enhanced?action=expense-breakdown`);
+            if (ebRes.ok) { const ej = await ebRes.json(); if (ej.success) setExpenseBreakdown(ej.data.expenses || []); }
+          } catch {}
+          // Also fetch cash flow forecast
+          try {
+            const cfRes = await fetch(`/api/hq/finance/enhanced?action=cash-flow-forecast`);
+            if (cfRes.ok) { const cfj = await cfRes.json(); if (cfj.success) setCashFlowForecast(cfj.data.cashFlow || []); }
           } catch {}
           setLoading(false);
           return;
@@ -209,31 +227,38 @@ export default function HQFinanceDashboard() {
   const getHealthColor = (score: number) => score >= 85 ? 'text-green-600' : score >= 70 ? 'text-blue-600' : score >= 55 ? 'text-yellow-600' : 'text-red-600';
   const getHealthBg = (score: number) => score >= 85 ? 'bg-green-100' : score >= 70 ? 'bg-blue-100' : score >= 55 ? 'bg-yellow-100' : 'bg-red-100';
 
+  const revenueLabels = trendData?.labels || ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'];
   const revenueChartOptions: ApexCharts.ApexOptions = {
     chart: { type: 'area', toolbar: { show: false }, sparkline: { enabled: false } },
     stroke: { curve: 'smooth', width: 2 },
     fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
     colors: ['#3B82F6', '#10B981'],
-    xaxis: { categories: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb'], labels: { style: { colors: '#64748b' } } },
-    yaxis: { labels: { formatter: (val) => formatCurrency(val * 1000000), style: { colors: '#64748b' } } },
-    tooltip: { y: { formatter: (val) => formatFullCurrency(val * 1000000) } },
+    xaxis: { categories: revenueLabels, labels: { style: { colors: '#64748b' } } },
+    yaxis: { labels: { formatter: (val) => formatCurrency(val), style: { colors: '#64748b' } } },
+    tooltip: { y: { formatter: (val) => formatFullCurrency(val) } },
     legend: { position: 'top' }
   };
 
-  const revenueChartSeries = [
-    { name: 'Revenue', data: [3200, 3450, 3680, 4200, 3900, 4120] },
-    { name: 'Profit', data: [640, 690, 736, 840, 780, 824] }
+  const revenueChartSeries = trendData ? [
+    { name: 'Revenue', data: trendData.revenue },
+    { name: 'Profit', data: trendData.profit }
+  ] : [
+    { name: 'Revenue', data: [3200000000, 3450000000, 3680000000, 4200000000, 3900000000, 4120000000] },
+    { name: 'Profit', data: [640000000, 690000000, 736000000, 840000000, 780000000, 824000000] }
   ];
 
+  const expLabels = expenseBreakdown.length > 0 ? expenseBreakdown.map(e => e.category) : ['COGS', 'Payroll', 'Utilities', 'Marketing', 'Other'];
   const expenseChartOptions: ApexCharts.ApexOptions = {
     chart: { type: 'donut' },
-    labels: ['COGS', 'Payroll', 'Utilities', 'Marketing', 'Other'],
-    colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
+    labels: expLabels,
+    colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'],
     legend: { position: 'bottom' },
     dataLabels: { enabled: true, formatter: (val: number) => `${val.toFixed(1)}%` }
   };
 
-  const expenseChartSeries = [55, 25, 8, 7, 5];
+  const expenseChartSeries = expenseBreakdown.length > 0
+    ? expenseBreakdown.map(e => e.percentage)
+    : [55, 25, 8, 7, 5];
 
   const branchChartOptions: ApexCharts.ApexOptions = {
     chart: { type: 'bar', toolbar: { show: false } },
@@ -249,18 +274,22 @@ export default function HQFinanceDashboard() {
     data: branchFinance.map(b => ({ x: b.code, y: b.revenue }))
   }];
 
+  const cfLabels = cashFlowForecast.length > 0 ? cashFlowForecast.slice(0, 4).map(c => c.label) : ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
   const cashFlowOptions: ApexCharts.ApexOptions = {
     chart: { type: 'bar', stacked: true, toolbar: { show: false } },
     plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
     colors: ['#10B981', '#EF4444'],
-    xaxis: { categories: ['Week 1', 'Week 2', 'Week 3', 'Week 4'] },
-    yaxis: { labels: { formatter: (val) => formatCurrency(Math.abs(val) * 1000000) } },
+    xaxis: { categories: cfLabels },
+    yaxis: { labels: { formatter: (val) => formatCurrency(Math.abs(val)) } },
     legend: { position: 'top' }
   };
 
-  const cashFlowSeries = [
-    { name: 'Cash In', data: [850, 920, 780, 1050] },
-    { name: 'Cash Out', data: [-650, -720, -580, -820] }
+  const cashFlowSeries = cashFlowForecast.length > 0 ? [
+    { name: 'Cash In', data: cashFlowForecast.slice(0, 4).map(c => c.inflow) },
+    { name: 'Cash Out', data: cashFlowForecast.slice(0, 4).map(c => -c.outflow) }
+  ] : [
+    { name: 'Cash In', data: [850000000, 920000000, 780000000, 1050000000] },
+    { name: 'Cash Out', data: [-650000000, -720000000, -580000000, -820000000] }
   ];
 
   const getStatusColor = (status: string) => {

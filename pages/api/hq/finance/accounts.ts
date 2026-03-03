@@ -78,8 +78,12 @@ async function getAccounts(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
+    // Calculate aging from mock data
+    const mockAgingReceivables = { category: 'Receivables', current: 155000000, days1to30: 100000000, days31to60: 85000000, days61to90: 60000000, over90: 50000000 };
+    const mockAgingPayables = { category: 'Payables', current: 120000000, days1to30: 85000000, days31to60: 65000000, days61to90: 30000000, over90: 20000000 };
+
     return res.status(HttpStatus.OK).json(
-      successResponse({ summary: mockSummary, receivables: mockReceivables, payables: mockPayables })
+      successResponse({ summary: mockSummary, receivables: mockReceivables, payables: mockPayables, agingReceivables: mockAgingReceivables, agingPayables: mockAgingPayables })
     );
   } catch (error) {
     console.error('Error fetching accounts:', error);

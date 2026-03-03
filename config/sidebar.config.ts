@@ -164,7 +164,7 @@ export const hqSidebarConfig: SidebarConfig = {
     icon: Building2,
     title: 'Bedagang',
     subtitle: 'HQ Platform',
-    href: '/hq/dashboard'
+    href: '/hq/home'
   },
   groups: [
     {
@@ -172,10 +172,17 @@ export const hqSidebarConfig: SidebarConfig = {
       title: 'Utama',
       items: [
         { 
-          id: 'dashboard',
-          name: 'Dashboard', 
-          href: '/hq/dashboard', 
+          id: 'home',
+          name: 'Home', 
+          href: '/hq/home', 
           icon: LayoutDashboard,
+          modules: ['dashboard']
+        },
+        { 
+          id: 'dashboard',
+          name: 'Dashboard Operasional', 
+          href: '/hq/dashboard', 
+          icon: BarChart3,
           modules: ['dashboard']
         }
       ]

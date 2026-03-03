@@ -209,7 +209,13 @@ export default function HQInventoryDashboard() {
     else if (subTab === 'abc') fetchABC();
   }, [subTab, industry]);
 
-  if (!mounted) return null;
+  if (!mounted) return (
+    <HQLayout>
+      <div className="flex items-center justify-center h-96">
+        <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    </HQLayout>
+  );
 
   const formatCurrency = (value: number) => {
     if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)}M`;
@@ -306,6 +312,9 @@ export default function HQInventoryDashboard() {
             <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Sync
             </button>
+            <Link href="/hq/inventory/smart-warehouse" className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 text-sm">
+              <Zap className="w-4 h-4" /> Smart Warehouse
+            </Link>
             <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50">
               <Download className="w-4 h-4" /> {exporting ? 'Exporting...' : 'Export'}
             </button>

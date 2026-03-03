@@ -90,10 +90,12 @@ async function getExpenses(req: NextApiRequest, res: NextApiResponse) {
         const { Op } = require('sequelize');
         const where: any = { type: 'expense', transactionDate: { [Op.between]: [startDate, now] } };
 
-        const transactions = await FinanceTransaction.findAll({
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB query timeout')), 5000));
+        const queryPromise = FinanceTransaction.findAll({
           where, order: [['transactionDate', 'DESC']], limit: 50,
           include: Branch ? [{ model: Branch, as: 'branch', attributes: ['code', 'name'] }] : []
         });
+        const transactions = await Promise.race([queryPromise, timeoutPromise]) as any[];
 
         if (transactions.length > 0) {
           const totalExpenses = transactions.reduce((s: number, t: any) => s + parseFloat(t.amount || 0), 0);

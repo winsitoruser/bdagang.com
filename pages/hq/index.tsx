@@ -5,7 +5,7 @@ export default function HQIndex() {
   const router = useRouter();
   
   useEffect(() => {
-    router.replace('/hq/dashboard');
+    router.replace('/hq/home');
   }, [router]);
   
   return null;

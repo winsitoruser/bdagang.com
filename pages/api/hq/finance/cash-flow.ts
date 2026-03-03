@@ -80,17 +80,20 @@ async function getCashFlow(req: NextApiRequest, res: NextApiResponse) {
     if (FinanceTransaction) {
       try {
         const { Op } = require('sequelize');
-        const where: any = { transactionDate: { [Op.between]: [startDate, now] }, status: 'completed' };
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB query timeout')), 5000));
 
-        const incomeTotal = await FinanceTransaction.sum('amount', { where: { ...where, type: 'income' } }) || 0;
-        const expenseTotal = await FinanceTransaction.sum('amount', { where: { ...where, type: 'expense' } }) || 0;
+        const dbQuery = async () => {
+          const where: any = { transactionDate: { [Op.between]: [startDate, now] }, status: 'completed' };
+          const incomeTotal = await FinanceTransaction.sum('amount', { where: { ...where, type: 'income' } }) || 0;
+          const expenseTotal = await FinanceTransaction.sum('amount', { where: { ...where, type: 'expense' } }) || 0;
 
-        const recentItems = await FinanceTransaction.findAll({
-          where: { transactionDate: { [Op.between]: [startDate, now] } },
-          order: [['transactionDate', 'DESC']], limit: 20
-        });
+          const recentItems = await FinanceTransaction.findAll({
+            where: { transactionDate: { [Op.between]: [startDate, now] } },
+            order: [['transactionDate', 'DESC']], limit: 20
+          });
 
-        if (recentItems.length > 0) {
+          if (recentItems.length === 0) return null;
+
           const items = recentItems.map((t: any) => ({
             id: t.id, date: t.transactionDate, description: t.description,
             category: t.category || 'Operating',
@@ -112,7 +115,7 @@ async function getCashFlow(req: NextApiRequest, res: NextApiResponse) {
             } catch (e) {}
           }
 
-          return res.status(HttpStatus.OK).json(successResponse({
+          return {
             summary: {
               ...mockSummary,
               cashInflow: parseFloat(incomeTotal.toString()),
@@ -120,7 +123,12 @@ async function getCashFlow(req: NextApiRequest, res: NextApiResponse) {
               netChange: parseFloat(incomeTotal.toString()) - parseFloat(expenseTotal.toString())
             },
             items, accounts, forecast: mockForecast, period
-          }));
+          };
+        };
+
+        const result = await Promise.race([dbQuery(), timeoutPromise]) as any;
+        if (result) {
+          return res.status(HttpStatus.OK).json(successResponse(result));
         }
       } catch (e: any) { console.warn('Cash flow DB failed:', e.message); }
     }

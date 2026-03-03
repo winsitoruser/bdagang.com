@@ -105,12 +105,51 @@ export default function InvoiceManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/hq/finance/invoices?status=${filterStatus}`);
+      const response = await fetch(`/api/hq/finance/invoices?status=${filterStatus}&limit=100`);
       if (response.ok) {
         const json = await response.json();
-        const payload = json.data || json;
-        if (payload.summary) setSummary(payload.summary);
-        if (payload.invoices) setInvoices(payload.invoices);
+        const rawData = json.data || json;
+        const rows = Array.isArray(rawData) ? rawData : (rawData.invoices || []);
+        const paginationData = json.pagination || json.meta || {};
+
+        // Map DB rows to Invoice interface
+        const mappedInvoices: Invoice[] = rows.map((row: any) => ({
+          id: row.id,
+          invoiceNumber: row.invoice_number || row.invoiceNumber || '',
+          customer: row.customer_name || row.supplier_name || row.customer || '',
+          customerType: row.customer_id ? 'corporate' : 'individual',
+          branch: row.branch_name || '',
+          branchCode: row.branch_id || '',
+          issueDate: row.issue_date ? new Date(row.issue_date).toISOString().split('T')[0] : '',
+          dueDate: row.due_date ? new Date(row.due_date).toISOString().split('T')[0] : '',
+          items: [],
+          subtotal: parseFloat(row.subtotal || row.items_total || 0),
+          tax: parseFloat(row.tax_amount || 0),
+          discount: parseFloat(row.discount_amount || 0),
+          total: parseFloat(row.total_amount || 0),
+          status: row.status || 'draft',
+          paidAmount: parseFloat(row.paid_amount || 0),
+          notes: row.notes || ''
+        }));
+
+        setInvoices(mappedInvoices);
+
+        // Calculate summary from data
+        const totalAmount = mappedInvoices.reduce((s, i) => s + i.total, 0);
+        const paidAmount = mappedInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + i.total, 0);
+        const pendingAmount = mappedInvoices.filter(i => i.status === 'sent' || i.status === 'partial').reduce((s, i) => s + (i.total - i.paidAmount), 0);
+        const overdueAmount = mappedInvoices.filter(i => i.status === 'overdue').reduce((s, i) => s + (i.total - i.paidAmount), 0);
+        setSummary({
+          totalInvoices: paginationData.total || mappedInvoices.length,
+          totalAmount,
+          paidAmount,
+          pendingAmount,
+          overdueAmount,
+          draftCount: mappedInvoices.filter(i => i.status === 'draft').length,
+          sentCount: mappedInvoices.filter(i => i.status === 'sent' || i.status === 'partial').length,
+          paidCount: mappedInvoices.filter(i => i.status === 'paid').length,
+          overdueCount: mappedInvoices.filter(i => i.status === 'overdue').length,
+        });
       }
     } catch (error) {
       console.error('Error fetching invoices:', error);
@@ -184,44 +223,49 @@ export default function InvoiceManagement() {
     return calculateSubtotal() + calculateTax() - newInvoice.discount;
   };
 
-  const handleCreateInvoice = () => {
-    const invoiceNumber = `INV-2026-${String(invoices.length + 251).padStart(4, '0')}`;
-    const newInv: Invoice = {
-      id: String(invoices.length + 1),
-      invoiceNumber,
-      customer: newInvoice.customer,
-      customerType: newInvoice.customerType,
-      branch: newInvoice.branch || 'Cabang Pusat Jakarta',
-      branchCode: 'HQ-001',
-      issueDate: new Date().toISOString().split('T')[0],
-      dueDate: newInvoice.dueDate,
-      items: newInvoice.items.map((item, idx) => ({
-        id: String(idx + 1),
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        total: item.quantity * item.unitPrice
-      })),
-      subtotal: calculateSubtotal(),
-      tax: calculateTax(),
-      discount: newInvoice.discount,
-      total: calculateTotal(),
-      status: 'draft',
-      paidAmount: 0,
-      notes: newInvoice.notes
-    };
-    
-    setInvoices([newInv, ...invoices]);
-    setShowCreateModal(false);
-    setNewInvoice({
-      customer: '',
-      customerType: 'corporate',
-      branch: '',
-      dueDate: '',
-      items: [{ description: '', quantity: 1, unitPrice: 0 }],
-      discount: 0,
-      notes: ''
-    });
+  const handleCreateInvoice = async () => {
+    try {
+      const response = await fetch('/api/hq/finance/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'sales',
+          issue_date: new Date().toISOString().split('T')[0],
+          due_date: newInvoice.dueDate,
+          subtotal: calculateSubtotal(),
+          tax_amount: calculateTax(),
+          discount_amount: newInvoice.discount,
+          total_amount: calculateTotal(),
+          notes: newInvoice.notes,
+          items: newInvoice.items.map(item => ({
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            total: item.quantity * item.unitPrice
+          }))
+        })
+      });
+
+      if (response.ok) {
+        setShowCreateModal(false);
+        setNewInvoice({
+          customer: '',
+          customerType: 'corporate',
+          branch: '',
+          dueDate: '',
+          items: [{ description: '', quantity: 1, unitPrice: 0 }],
+          discount: 0,
+          notes: ''
+        });
+        fetchData();
+      } else {
+        const err = await response.json();
+        alert(err.error || 'Failed to create invoice');
+      }
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      alert('Failed to create invoice');
+    }
   };
 
   const viewInvoiceDetail = (invoice: Invoice) => {
