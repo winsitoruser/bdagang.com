@@ -14,6 +14,7 @@ import {
   LogOut,
   User,
   Settings,
+  CreditCard,
   AlertCircle,
   CheckCircle,
   Clock
@@ -33,9 +34,10 @@ interface HQLayoutProps {
   children: React.ReactNode;
   title?: string;
   subtitle?: string;
+  noPadding?: boolean;
 }
 
-function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
+function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
@@ -339,7 +341,7 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
       </button>
 
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}`}>
+      <div className={`flex-1 min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}`}>
         {/* Mobile Menu Button */}
         <button
           onClick={() => setSidebarOpen(true)}
@@ -428,12 +430,73 @@ function HQLayoutContent({ children, title, subtitle }: HQLayoutProps) {
                 )}
               </div>
 
+              {/* Profile / Account */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="relative flex items-center gap-2 p-1.5 rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  {session?.user?.name && (
+                    <span className="hidden md:block text-sm font-medium text-gray-700 max-w-[120px] truncate">
+                      {session.user.name}
+                    </span>
+                  )}
+                  <ChevronDown className="hidden md:block w-4 h-4 text-gray-400" />
+                </button>
+
+                {showUserMenu && (
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{session?.user?.name || 'User'}</p>
+                          <p className="text-xs text-gray-500 truncate">{session?.user?.email || ''}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="py-1">
+                      <Link
+                        href="/hq/billing-info"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <CreditCard className="w-4 h-4 text-gray-400" />
+                        Billing Information
+                      </Link>
+                      <Link
+                        href="/hq/settings"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <Settings className="w-4 h-4 text-gray-400" />
+                        Pengaturan Akun
+                      </Link>
+                    </div>
+                    <div className="border-t border-gray-100 py-1">
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Keluar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="p-6">
+        <main className={noPadding ? 'w-full overflow-x-hidden' : 'p-6'}>
           {(title || subtitle) && (
             <div className="mb-6">
               {title && <h1 className="text-2xl font-bold text-gray-900">{title}</h1>}

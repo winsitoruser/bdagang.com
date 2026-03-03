@@ -43,12 +43,81 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Get or create business type
     const businessTypeNames: Record<string, string> = {
+      // F&B
       fine_dining: 'Fine Dining',
-      cloud_kitchen: 'Cloud Kitchen',
+      casual_dining: 'Casual Dining',
       qsr: 'Quick Service Restaurant',
-      cafe: 'Cafe',
+      cafe: 'Cafe & Coffee Shop',
+      cloud_kitchen: 'Cloud Kitchen',
+      bakery: 'Bakery & Pastry',
+      catering: 'Catering',
+      bar_lounge: 'Bar & Lounge',
+      // Retail
+      retail_general: 'Toko Retail Umum',
+      minimarket: 'Minimarket & Supermarket',
+      fashion: 'Fashion & Apparel',
+      electronics: 'Elektronik & Gadget',
+      building_materials: 'Bahan Bangunan',
+      pharmacy: 'Apotek & Farmasi',
+      bookstore: 'Toko Buku & ATK',
+      cosmetics: 'Kosmetik & Skincare',
+      jewelry: 'Perhiasan & Aksesoris',
+      furniture: 'Furniture & Interior',
+      pet_shop: 'Pet Shop',
+      florist: 'Florist & Tanaman',
+      sporting_goods: 'Peralatan Olahraga',
+      toy_store: 'Toko Mainan',
+      // Services
+      salon_beauty: 'Salon & Kecantikan',
+      spa_wellness: 'Spa & Wellness',
+      automotive: 'Bengkel & Otomotif',
+      laundry: 'Laundry & Dry Cleaning',
+      printing: 'Percetakan & Digital Printing',
+      photography: 'Studio Foto & Video',
+      travel_agency: 'Travel Agent & Tour',
+      rental: 'Rental & Persewaan',
+      tailor: 'Penjahit / Tailor',
+      // Health
+      clinic: 'Klinik Kesehatan',
+      dental_clinic: 'Klinik Gigi',
+      therapy: 'Terapi & Rehabilitasi',
+      optical: 'Optik',
+      // Education
+      school: 'Sekolah & Bimbel',
+      training_center: 'Training Center & Kursus',
+      daycare: 'Daycare & Penitipan Anak',
+      // Hospitality
+      hotel: 'Hotel & Penginapan',
+      kost: 'Kos-kosan & Guest House',
+      coworking: 'Co-working Space',
+      event_venue: 'Venue & Event Organizer',
+      // Distribution
+      distributor: 'Distributor',
+      wholesale: 'Grosir / Wholesaler',
+      supplier: 'Supplier Bahan Baku',
+      // Manufacturing
+      manufacturing: 'Manufaktur Umum',
+      food_manufacturing: 'Manufaktur Makanan',
+      garment: 'Garment & Konveksi',
+      workshop: 'Workshop & Kerajinan',
+      // Agriculture
+      agriculture: 'Pertanian & Perkebunan',
+      livestock: 'Peternakan',
+      fishery: 'Perikanan',
+      // Digital
+      software_house: 'Software House / IT Services',
+      digital_agency: 'Digital Agency & Marketing',
+      ecommerce: 'E-Commerce / Online Store',
+      // Other
+      construction: 'Konstruksi & Kontraktor',
+      logistics: 'Logistik & Ekspedisi',
+      cleaning_service: 'Cleaning Service',
+      professional_services: 'Jasa Profesional',
+      other: 'Lainnya',
+      // Legacy codes
       retail: 'Retail',
       fnb: 'Food & Beverage',
+      hybrid: 'Hybrid',
       bengkel: 'Bengkel & Otomotif',
       salon: 'Salon & Kecantikan',
     };

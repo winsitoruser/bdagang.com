@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 interface TaxObligation {
   id: string;
@@ -53,7 +54,7 @@ const mockBranchTax: BranchTax[] = [
   { branchId: '4', branchName: 'Cabang Surabaya', branchCode: 'BR-003', revenue: 480000000, ppnOut: 48000000, ppnIn: 12000000, ppnPayable: 36000000, pph21: 7000000, pph23: 1000000 }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -75,6 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'finance_pro' });
 
 function getTaxData(req: NextApiRequest, res: NextApiResponse) {
   const { year, type, status } = req.query;

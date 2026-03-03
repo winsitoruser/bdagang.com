@@ -11,9 +11,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  // Only super_admin and admin can access
-  if (!['super_admin', 'admin'].includes(session.user.role || '')) {
-    return res.status(403).json({ message: 'Forbidden' });
+  const userRole = (session.user?.role as string)?.toLowerCase();
+  const allowedRoles = ['admin', 'super_admin', 'superadmin'];
+  if (!allowedRoles.includes(userRole)) {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
   const db = getDb();

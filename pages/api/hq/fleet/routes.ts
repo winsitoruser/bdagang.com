@@ -1,5 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
 // Mock routes data
 const mockRoutes: any[] = [
@@ -40,7 +45,7 @@ const mockRoutes: any[] = [
   }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -64,6 +69,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'fleet' });
 
 async function getRoutes(req: NextApiRequest, res: NextApiResponse) {
   const { status, vehicleId, driverId, origin, destination, search } = req.query;
@@ -111,6 +118,17 @@ async function getRoutes(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createRoute(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    routeName: V.required().string().minLength(2).maxLength(200),
+    origin: V.required().string(),
+    destination: V.required().string(),
+    distance: V.required().number().min(0.1),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+  const ctx = getTenantContext(req);
   const {
     routeName,
     routeCode,
@@ -123,13 +141,6 @@ async function createRoute(req: NextApiRequest, res: NextApiResponse) {
     stops,
     notes
   } = req.body;
-
-  // Validation
-  if (!routeName || !origin || !destination || !distance) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Route name, origin, destination, and distance are required')
-    );
-  }
 
   const newRoute = {
     id: `route-${Date.now()}`,
@@ -149,12 +160,17 @@ async function createRoute(req: NextApiRequest, res: NextApiResponse) {
 
   mockRoutes.push(newRoute);
 
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'fleet_route', entityId: newRoute.id, newValues: { routeName, origin, destination, distance }, req });
+
   return res.status(HttpStatus.CREATED).json(
     successResponse(newRoute, undefined, 'Route created successfully')
   );
 }
 
 async function updateRoute(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const ctx = getTenantContext(req);
   const { id, ...updates } = req.body;
 
   if (!id) {
@@ -170,7 +186,10 @@ async function updateRoute(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
+  const oldValues = { ...mockRoutes[routeIndex] };
   Object.assign(mockRoutes[routeIndex], updates);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'fleet_route', entityId: id, oldValues, newValues: updates, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(mockRoutes[routeIndex], undefined, 'Route updated successfully')
@@ -178,6 +197,8 @@ async function updateRoute(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function deleteRoute(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
   const { id } = req.body;
 
   if (!id) {
@@ -193,7 +214,10 @@ async function deleteRoute(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
+  const deleted = mockRoutes[routeIndex];
   mockRoutes.splice(routeIndex, 1);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'delete', entityType: 'fleet_route', entityId: id, oldValues: deleted, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(null, undefined, 'Route deleted successfully')

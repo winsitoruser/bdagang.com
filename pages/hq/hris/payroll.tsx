@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import * as XLSX from 'xlsx';
 import {
   DollarSign, Users, Calculator, FileText, Clock, CheckCircle, XCircle,
@@ -1309,7 +1310,18 @@ export default function PayrollPage() {
                 <h3 className="text-lg font-semibold">Slip Gaji - {selectedRun.name || selectedRun.run_code}</h3>
                 <p className="text-xs text-gray-500">{selectedRun.period_start} s/d {selectedRun.period_end} · {payslipItems.length} karyawan</p>
               </div>
-              <button onClick={() => setShowPayslipModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              <div className="flex items-center gap-2">
+                <DocumentExportButton
+                  documentType="payroll-summary"
+                  variant="button"
+                  size="sm"
+                  label="Rekap"
+                  data={{ items: payslipItems.map((item: any) => ({ employeeId: item.employee_code || item.employee_id, employeeName: item.employee_name, position: item.employee_position, department: item.department, baseSalary: parseFloat(item.base_salary || 0), allowances: parseFloat(item.total_earnings || 0) - parseFloat(item.base_salary || 0), deductions: parseFloat(item.total_deductions || 0), tax: parseFloat(item.tax_amount || 0), netPay: parseFloat(item.net_salary || 0) })) }}
+                  meta={{ period: `${selectedRun.period_start} - ${selectedRun.period_end}`, documentNumber: selectedRun.run_code }}
+                  showFormats={['excel']}
+                />
+                <button onClick={() => setShowPayslipModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+              </div>
             </div>
             <div className="divide-y">
               {payslipItems.length === 0 ? (
@@ -1325,9 +1337,30 @@ export default function PayrollPage() {
                           <p className="font-semibold">{item.employee_name}</p>
                           <p className="text-xs text-gray-500">{item.employee_position} · {item.department} · {PAY_TYPES[item.pay_type]?.label}</p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-green-600">{fmtCurrency(parseFloat(item.net_salary))}</p>
-                          <p className="text-xs text-gray-500">Take Home Pay</p>
+                        <div className="text-right flex items-start gap-2">
+                          <div>
+                            <p className="text-lg font-bold text-green-600">{fmtCurrency(parseFloat(item.net_salary))}</p>
+                            <p className="text-xs text-gray-500">Take Home Pay</p>
+                          </div>
+                          <DocumentExportButton
+                            documentType="payslip"
+                            variant="icon"
+                            data={{
+                              employeeName: item.employee_name,
+                              employeeId: item.employee_code || item.employee_id,
+                              position: item.employee_position,
+                              department: item.department,
+                              employmentStatus: PAY_TYPES[item.pay_type]?.label || item.pay_type,
+                              period: `${selectedRun.period_start} s/d ${selectedRun.period_end}`,
+                              earnings: typeof item.earnings === 'string' ? JSON.parse(item.earnings) : (item.earnings || []),
+                              deductions: typeof item.deductions === 'string' ? JSON.parse(item.deductions) : (item.deductions || []),
+                              totalEarnings: parseFloat(item.total_earnings || 0),
+                              totalDeductions: parseFloat(item.total_deductions || 0),
+                              netPay: parseFloat(item.net_salary || 0),
+                            }}
+                            meta={{ documentNumber: `PSL-${selectedRun.run_code}-${item.employee_code || item.employee_id}`, period: `${selectedRun.period_start} - ${selectedRun.period_end}` }}
+                            showFormats={['pdf']}
+                          />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-xs">

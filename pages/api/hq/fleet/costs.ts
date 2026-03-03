@@ -1,5 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
 // Mock cost data
 const mockCosts: any[] = [
@@ -35,7 +40,7 @@ const mockCosts: any[] = [
   }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -59,6 +64,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'fleet' });
 
 async function getCosts(req: NextApiRequest, res: NextApiResponse) {
   const { vehicleId, costType, category, startDate, endDate, search } = req.query;
@@ -113,6 +120,17 @@ async function getCosts(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createCost(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    vehicleId: V.required().string(),
+    costType: V.required().oneOf(['fuel', 'maintenance', 'insurance', 'toll', 'parking', 'other']),
+    amount: V.required().number().min(0),
+    date: V.required().date(),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+  const ctx = getTenantContext(req);
   const {
     vehicleId,
     costType,
@@ -121,13 +139,6 @@ async function createCost(req: NextApiRequest, res: NextApiResponse) {
     description,
     category
   } = req.body;
-
-  // Validation
-  if (!vehicleId || !costType || !amount || !date) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Vehicle ID, cost type, amount, and date are required')
-    );
-  }
 
   const newCost = {
     id: `cost-${Date.now()}`,
@@ -142,12 +153,17 @@ async function createCost(req: NextApiRequest, res: NextApiResponse) {
 
   mockCosts.push(newCost);
 
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'fleet_cost', entityId: newCost.id, newValues: { vehicleId, costType, amount }, req });
+
   return res.status(HttpStatus.CREATED).json(
     successResponse(newCost, undefined, 'Cost record created successfully')
   );
 }
 
 async function updateCost(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const ctx = getTenantContext(req);
   const { id, ...updates } = req.body;
 
   if (!id) {
@@ -163,7 +179,10 @@ async function updateCost(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
+  const oldValues = { ...mockCosts[costIndex] };
   Object.assign(mockCosts[costIndex], updates);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'fleet_cost', entityId: id, oldValues, newValues: updates, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(mockCosts[costIndex], undefined, 'Cost record updated successfully')
@@ -171,6 +190,8 @@ async function updateCost(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function deleteCost(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
   const { id } = req.body;
 
   if (!id) {
@@ -186,7 +207,10 @@ async function deleteCost(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
+  const deleted = mockCosts[costIndex];
   mockCosts.splice(costIndex, 1);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'delete', entityType: 'fleet_cost', entityId: id, oldValues: deleted, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(null, undefined, 'Cost record deleted successfully')

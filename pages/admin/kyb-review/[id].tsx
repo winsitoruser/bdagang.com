@@ -11,6 +11,7 @@ import {
   Globe, Briefcase, DollarSign, Image
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 const categoryLabels: Record<string, string> = {
   fnb: 'F&B / Restoran', retail: 'Retail / Toko', fashion: 'Fashion',
@@ -116,17 +117,21 @@ export default function KybReviewDetail() {
 
   if (loading || sessionStatus === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
+        </div>
+      </AdminLayout>
     );
   }
 
   if (!kyb) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500">Data tidak ditemukan</p>
-      </div>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <p className="text-gray-500">Data tidak ditemukan</p>
+        </div>
+      </AdminLayout>
     );
   }
 
@@ -150,10 +155,10 @@ export default function KybReviewDetail() {
         <title>Review KYB: {kyb.businessName} | Admin BEDAGANG</title>
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <AdminLayout>
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link href="/admin/kyb-review" className="flex items-center space-x-1 text-gray-500 hover:text-gray-700 transition">
                 <ChevronLeft className="w-5 h-5" />
@@ -161,7 +166,7 @@ export default function KybReviewDetail() {
               </Link>
               <div className="h-6 w-px bg-gray-300" />
               <div>
-                <h1 className="font-bold text-gray-900">{kyb.businessName}</h1>
+                <h1 className="text-xl font-bold text-gray-900">{kyb.businessName}</h1>
                 <div className="flex items-center space-x-2 mt-0.5">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColors[kyb.status] || ''}`}>
                     {statusLabels[kyb.status] || kyb.status}
@@ -215,9 +220,9 @@ export default function KybReviewDetail() {
               )}
             </div>
           </div>
-        </header>
+        </div>
 
-        <main className="max-w-6xl mx-auto px-6 py-6">
+        <div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
@@ -411,7 +416,7 @@ export default function KybReviewDetail() {
               </div>
             </div>
           </div>
-        </main>
+        </div>
 
         {/* Action Modal */}
         {actionModal && (
@@ -484,7 +489,7 @@ export default function KybReviewDetail() {
             </motion.div>
           </div>
         )}
-      </div>
+      </AdminLayout>
     </>
   );
 }

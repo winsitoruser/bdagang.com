@@ -16,7 +16,7 @@ interface AuditParams {
   tenantId: string | null;
   userId: number | string | null;
   userName?: string;
-  action: 'create' | 'update' | 'delete' | 'convert' | 'assign' | 'status_change' | 'import' | 'export' | 'approve' | 'reject' | 'link';
+  action: 'create' | 'update' | 'delete' | 'convert' | 'assign' | 'status_change' | 'import' | 'export' | 'approve' | 'reject' | 'link' | 'resolve';
   entityType: string;
   entityId?: string | number | null;
   oldValues?: Record<string, any> | null;

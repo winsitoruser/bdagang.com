@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 const sequelize = require('../../../../lib/sequelize');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json(errorResponse('METHOD_NOT_ALLOWED', 'GET only'));
 
   const action = (req.query.action as string) || 'analytics';
@@ -27,6 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json(errorResponse('INTERNAL_ERROR', error.message));
   }
 }
+
+export default withHQAuth(handler);
 
 // Comprehensive Analytics
 async function getAnalytics(req: NextApiRequest, res: NextApiResponse) {

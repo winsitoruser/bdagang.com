@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Modal, { ConfirmDialog } from '../../../components/hq/ui/Modal';
 import { StatusBadge } from '../../../components/hq/ui/Badge';
+import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import { toast } from 'react-hot-toast';
 import {
   ShoppingCart, Save, RefreshCw, Plus, Edit, Trash2, Search, Eye, Truck, Package,
@@ -340,10 +341,13 @@ export default function PurchaseOrders() {
                   <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   Refresh
                 </button>
-                <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                  <Download className="w-4 h-4" />
-                  Export
-                </button>
+                <DocumentExportButton
+                  documentType="purchase-order"
+                  data={{ items: filteredPOs.map(p => ({ poNumber: p.poNumber, supplierName: p.supplier.name, supplierCode: p.supplier.code, status: p.status, totalItems: p.totalItems, totalQuantity: p.totalQuantity, totalAmount: p.totalAmount, expectedDelivery: p.expectedDelivery || '-', createdAt: p.createdAt })) }}
+                  meta={{ documentNumber: `PO-LIST-${new Date().toISOString().slice(0,10)}` }}
+                  showFormats={['excel', 'csv', 'pdf']}
+                  label="Export PO"
+                />
                 <button
                   onClick={() => setShowCreateModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

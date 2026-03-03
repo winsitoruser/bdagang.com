@@ -202,16 +202,20 @@ export default function AdminDashboard() {
     return null;
   }
 
+  const kybPendingCount = (stats as any)?.kyb?.pending || 0;
+
   const menuItems = [
     { icon: Activity, label: 'Dasbor', path: '/admin/dashboard', active: true },
-    { icon: Users, label: 'Tenant', path: '/admin/partners' },
-    { icon: Store, label: 'Cabang', path: '/admin/branches', badge: stats.branches?.total },
-    { icon: FileCheck, label: 'Aktivasi', path: '/admin/activations', badge: stats.activations.pending },
-    { icon: Package, label: 'Outlet', path: '/admin/outlets' },
+    { icon: FileCheck, label: 'KYB Review', path: '/admin/kyb-review', badge: kybPendingCount > 0 ? kybPendingCount : undefined },
+    { icon: Users, label: 'Tenant', path: '/admin/tenants' },
+    { icon: Package, label: 'Jenis Bisnis', path: '/admin/business-types' },
+    { icon: Store, label: 'Cabang', path: '/admin/branches' },
+    { icon: Boxes, label: 'Modul', path: '/admin/modules' },
+    { icon: Users, label: 'Mitra', path: '/admin/partners' },
+    { icon: Store, label: 'Outlet', path: '/admin/outlets' },
     { icon: DollarSign, label: 'Transaksi', path: '/admin/transactions' },
     { icon: CreditCard, label: 'Langganan', path: '/admin/subscriptions', badge: stats.subscriptions?.expiring },
     { icon: BarChart3, label: 'Analitik', path: '/admin/analytics' },
-    { icon: Boxes, label: 'Modul', path: '/admin/modules' },
     { icon: Brain, label: 'AI Models', path: '/admin/ai-models' },
     { icon: Settings, label: 'Pengaturan', path: '/admin/settings' },
   ];
@@ -680,10 +684,25 @@ export default function AdminDashboard() {
 
                   {/* Quick Actions */}
                   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">Aksi Cepat</h3>
                     <div className="grid grid-cols-2 gap-4">
                       <button
-                        onClick={() => router.push('/api/hq/tenants')}
+                        onClick={() => router.push('/admin/kyb-review')}
+                        className="relative overflow-hidden p-5 bg-gradient-to-br from-sky-500 to-sky-600 hover:from-sky-600 hover:to-sky-700 rounded-xl transition-all transform hover:scale-105 hover:shadow-lg group"
+                      >
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
+                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full -ml-8 -mb-8"></div>
+                        <div className="relative">
+                          <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg inline-block mb-3">
+                            <FileCheck className="h-6 w-6 text-white" />
+                          </div>
+                          <p className="text-white font-semibold text-sm">Review KYB</p>
+                          <p className="text-sky-100 text-xs mt-1">{kybPendingCount} menunggu</p>
+                        </div>
+                      </button>
+                      
+                      <button
+                        onClick={() => router.push('/admin/tenants')}
                         className="relative overflow-hidden p-5 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-xl transition-all transform hover:scale-105 hover:shadow-lg group"
                       >
                         <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
@@ -692,38 +711,23 @@ export default function AdminDashboard() {
                           <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg inline-block mb-3">
                             <Users className="h-6 w-6 text-white" />
                           </div>
-                          <p className="text-white font-semibold text-sm">Manage Tenants</p>
-                          <p className="text-blue-100 text-xs mt-1">{stats.partners.total} tenants</p>
+                          <p className="text-white font-semibold text-sm">Kelola Tenant</p>
+                          <p className="text-blue-100 text-xs mt-1">{stats.partners.total} tenant</p>
                         </div>
                       </button>
                       
                       <button
-                        onClick={() => router.push('/admin/activations')}
-                        className="relative overflow-hidden p-5 bg-gradient-to-br from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 rounded-xl transition-all transform hover:scale-105 hover:shadow-lg group"
-                      >
-                        <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
-                        <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full -ml-8 -mb-8"></div>
-                        <div className="relative">
-                          <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg inline-block mb-3">
-                            <FileCheck className="h-6 w-6 text-white" />
-                          </div>
-                          <p className="text-white font-semibold text-sm">Review Requests</p>
-                          <p className="text-yellow-100 text-xs mt-1">{stats.activations.pending} pending</p>
-                        </div>
-                      </button>
-                      
-                      <button
-                        onClick={() => router.push('/admin/transactions')}
+                        onClick={() => router.push('/admin/business-types')}
                         className="relative overflow-hidden p-5 bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl transition-all transform hover:scale-105 hover:shadow-lg group"
                       >
                         <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10"></div>
                         <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full -ml-8 -mb-8"></div>
                         <div className="relative">
                           <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg inline-block mb-3">
-                            <Activity className="h-6 w-6 text-white" />
+                            <Package className="h-6 w-6 text-white" />
                           </div>
-                          <p className="text-white font-semibold text-sm">View Transactions</p>
-                          <p className="text-green-100 text-xs mt-1">All transactions</p>
+                          <p className="text-white font-semibold text-sm">Jenis Bisnis</p>
+                          <p className="text-green-100 text-xs mt-1">Kelola modul per tipe</p>
                         </div>
                       </button>
                       
@@ -737,8 +741,8 @@ export default function AdminDashboard() {
                           <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg inline-block mb-3">
                             <BarChart3 className="h-6 w-6 text-white" />
                           </div>
-                          <p className="text-white font-semibold text-sm">Analytics Dashboard</p>
-                          <p className="text-purple-100 text-xs mt-1">View insights</p>
+                          <p className="text-white font-semibold text-sm">Analitik</p>
+                          <p className="text-purple-100 text-xs mt-1">Lihat insight</p>
                         </div>
                       </button>
                     </div>

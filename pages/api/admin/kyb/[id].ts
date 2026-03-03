@@ -10,8 +10,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  if (!['super_admin', 'admin'].includes(session.user.role || '')) {
-    return res.status(403).json({ message: 'Forbidden' });
+  const userRole = (session.user?.role as string)?.toLowerCase();
+  const allowedRoles = ['admin', 'super_admin', 'superadmin'];
+  if (!allowedRoles.includes(userRole)) {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
   }
 
   const db = getDb();
@@ -301,23 +303,38 @@ async function provisionTenant(db: any, kyb: any, adminUserId: string) {
     // Step 7: Service Provisioning - assign modules based on business type
     const businessType = await db.BusinessType.findOne({
       where: { code: kyb.businessCategory },
-      include: [{ model: db.Module, as: 'modules' }]
+      include: [{
+        model: db.BusinessTypeModule,
+        as: 'businessTypeModules',
+        where: { isDefault: true },
+        required: false,
+        include: [{ model: db.Module, as: 'module' }]
+      }]
     });
 
-    if (businessType?.modules?.length) {
-      for (const mod of businessType.modules) {
-        await db.TenantModule.findOrCreate({
-          where: { tenantId: tenant.id, moduleId: mod.id },
-          defaults: { tenantId: tenant.id, moduleId: mod.id, isActive: true }
-        });
+    if (businessType) {
+      // Link tenant to business type
+      await tenant.update({ businessTypeId: businessType.id });
+
+      if (businessType.businessTypeModules?.length) {
+        for (const btm of businessType.businessTypeModules) {
+          if (btm.module) {
+            await db.TenantModule.findOrCreate({
+              where: { tenantId: tenant.id, moduleId: btm.module.id },
+              defaults: { tenantId: tenant.id, moduleId: btm.module.id, isEnabled: true }
+            });
+          }
+        }
+        console.log(`[Provisioning] Assigned ${businessType.businessTypeModules.length} default modules from business type "${businessType.code}"`);
       }
     } else {
       // Assign all core modules if no business type match
+      console.log(`[Provisioning] No business type found for "${kyb.businessCategory}", assigning core modules`);
       const coreModules = await db.Module.findAll({ where: { isCore: true, isActive: true } });
       for (const mod of coreModules) {
         await db.TenantModule.findOrCreate({
           where: { tenantId: tenant.id, moduleId: mod.id },
-          defaults: { tenantId: tenant.id, moduleId: mod.id, isActive: true }
+          defaults: { tenantId: tenant.id, moduleId: mod.id, isEnabled: true }
         });
       }
     }

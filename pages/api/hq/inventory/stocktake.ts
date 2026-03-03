@@ -1,9 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext, buildTenantFilter } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
 const sequelize = require('../../../../lib/sequelize');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET': return await getStocktakes(req, res);
@@ -20,13 +25,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
+export default withHQAuth(handler, { module: 'inventory' });
+
 async function getStocktakes(req: NextApiRequest, res: NextApiResponse) {
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId, 'o');
   const { status, search } = req.query;
-  let where = '';
-  const params: any = {};
-  if (status && status !== 'all') { where = 'WHERE o.status=:status'; params.status = status; }
+  let where = 'WHERE 1=1' + tf.condition;
+  const params: any = { ...tf.replacements };
+  if (status && status !== 'all') { where += ' AND o.status=:status'; params.status = status; }
   if (search) {
-    where += (where ? ' AND' : 'WHERE') + ' (o.opname_number ILIKE :search OR w.name ILIKE :search)';
+    where += ' AND (o.opname_number ILIKE :search OR w.name ILIKE :search)';
     params.search = `%${search}%`;
   }
 
@@ -36,7 +45,7 @@ async function getStocktakes(req: NextApiRequest, res: NextApiResponse) {
     ${where} ORDER BY o.created_at DESC
   `, { replacements: params });
 
-  const [statsRows] = await sequelize.query("SELECT status, COUNT(*)::int as count FROM stock_opnames GROUP BY status");
+  const [statsRows] = await sequelize.query(`SELECT status, COUNT(*)::int as count FROM stock_opnames o WHERE 1=1 ${tf.condition} GROUP BY status`, { replacements: tf.replacements });
   const stats: Record<string, any> = { draft: 0, in_progress: 0, completed: 0, cancelled: 0 };
   statsRows.forEach((s: any) => { stats[s.status] = s.count; });
 
@@ -58,16 +67,24 @@ async function getStocktakes(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createStocktake(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    warehouseId: V.required().integer(),
+    scheduledDate: V.required().date(),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+  const ctx = getTenantContext(req);
   const { warehouseId, type, scheduledDate, notes } = req.body;
-  if (!warehouseId || !scheduledDate) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'warehouseId and scheduledDate required'));
 
   const [seqResult] = await sequelize.query("SELECT COALESCE(MAX(id),0)+1 as nid FROM stock_opnames");
   const soNum = `SO-2026-${String(seqResult[0].nid).padStart(4, '0')}`;
 
   const [result] = await sequelize.query(`
     INSERT INTO stock_opnames (tenant_id, opname_number, opname_type, warehouse_id, scheduled_date, notes, status)
-    VALUES ((SELECT tenant_id FROM warehouses LIMIT 1), :num, :type, :whId, :date, :notes, 'draft') RETURNING id
-  `, { replacements: { num: soNum, type: type || 'full', whId: warehouseId, date: scheduledDate, notes: notes || null } });
+    VALUES (:tenantId, :num, :type, :whId, :date, :notes, 'draft') RETURNING id
+  `, { replacements: { tenantId: ctx.tenantId, num: soNum, type: type || 'full', whId: warehouseId, date: scheduledDate, notes: notes || null } });
 
   // Auto-populate items
   const opnameId = result[0].id;
@@ -80,15 +97,20 @@ async function createStocktake(req: NextApiRequest, res: NextApiResponse) {
   const [itemCount] = await sequelize.query("SELECT COUNT(*)::int as c FROM stock_opname_items WHERE stock_opname_id=:opnameId", { replacements: { opnameId } });
   await sequelize.query("UPDATE stock_opnames SET total_items=:count WHERE id=:opnameId", { replacements: { count: itemCount[0].c, opnameId } });
 
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'stock_opname', entityId: opnameId, newValues: { soNum, warehouseId, type: type || 'full', totalItems: itemCount[0].c }, req });
+
   return res.status(HttpStatus.CREATED).json(successResponse({ id: opnameId, stocktakeNumber: soNum, totalItems: itemCount[0].c }, undefined, 'Stocktake created'));
 }
 
 async function updateStocktake(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
   const { id, action } = req.body;
   if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Stocktake ID required'));
 
   if (action === 'start') {
-    await sequelize.query("UPDATE stock_opnames SET status='in_progress', start_date=NOW(), updated_at=NOW() WHERE id=:id", { replacements: { id } });
+    await sequelize.query(`UPDATE stock_opnames SET status='in_progress', start_date=NOW(), updated_at=NOW() WHERE id=:id ${tf.condition}`, { replacements: { id, ...tf.replacements } });
   } else if (action === 'complete') {
     // Calculate variance
     const [variance] = await sequelize.query(`
@@ -98,18 +120,27 @@ async function updateStocktake(req: NextApiRequest, res: NextApiResponse) {
       FROM stock_opname_items WHERE stock_opname_id=:id
     `, { replacements: { id } });
     const v = variance[0] || {};
-    await sequelize.query("UPDATE stock_opnames SET status='completed', end_date=NOW(), counted_items=:counted, items_with_variance=:variance, total_variance_value=:val, updated_at=NOW() WHERE id=:id",
-      { replacements: { id, counted: v.counted || 0, variance: v.with_variance || 0, val: v.variance_value || 0 } });
+    await sequelize.query(`UPDATE stock_opnames SET status='completed', end_date=NOW(), counted_items=:counted, items_with_variance=:variance, total_variance_value=:val, updated_at=NOW() WHERE id=:id ${tf.condition}`,
+      { replacements: { id, counted: v.counted || 0, variance: v.with_variance || 0, val: v.variance_value || 0, ...tf.replacements } });
   } else if (action === 'cancel') {
-    await sequelize.query("UPDATE stock_opnames SET status='cancelled', updated_at=NOW() WHERE id=:id", { replacements: { id } });
+    await sequelize.query(`UPDATE stock_opnames SET status='cancelled', updated_at=NOW() WHERE id=:id ${tf.condition}`, { replacements: { id, ...tf.replacements } });
   }
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'status_change', entityType: 'stock_opname', entityId: id, newValues: { action }, req });
+
   return res.status(HttpStatus.OK).json(successResponse({ id }, undefined, `Stocktake ${action}`));
 }
 
 async function deleteStocktake(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
   const id = req.query.id || req.body?.id;
   if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'ID required'));
   await sequelize.query("DELETE FROM stock_opname_items WHERE stock_opname_id=:id", { replacements: { id } });
-  await sequelize.query("DELETE FROM stock_opnames WHERE id=:id AND status='draft'", { replacements: { id } });
+  await sequelize.query(`DELETE FROM stock_opnames WHERE id=:id AND status='draft' ${tf.condition}`, { replacements: { id, ...tf.replacements } });
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'delete', entityType: 'stock_opname', entityId: id as string, req });
+
   return res.status(HttpStatus.OK).json(successResponse(null, undefined, 'Stocktake deleted'));
 }

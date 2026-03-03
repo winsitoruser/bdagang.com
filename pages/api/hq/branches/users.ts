@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { getPaginationParams, getPaginationMeta } from '../../../../lib/api/pagination';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 let User: any, Branch: any;
 try {
@@ -11,7 +12,7 @@ try {
   console.warn('User/Branch models not available');
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -33,6 +34,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'branches' });
 
 async function getBranchUsers(req: NextApiRequest, res: NextApiResponse) {
   const { branchId, role, status } = req.query;

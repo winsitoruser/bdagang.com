@@ -205,7 +205,7 @@ const SelectField = ({ label, name, options, required = false, placeholder = 'Pi
 
 export default function KybForm() {
   const router = useRouter();
-  const { data: session, status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus, update: updateSession } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -422,7 +422,9 @@ export default function KybForm() {
       const json = await res.json();
       if (json.success) {
         toast.success('KYB berhasil disubmit! Tim kami akan mereview data Anda.');
-        router.push('/onboarding');
+        // Refresh session token so middleware sees updated kybStatus
+        await updateSession();
+        router.push('/hq/home');
       } else {
         toast.error(json.message || 'Gagal submit KYB');
       }
@@ -532,6 +534,7 @@ export default function KybForm() {
 
                   <InputField label="Nama Bisnis / Usaha" name="businessName" placeholder="Contoh: Warung Makan Berkah" required icon={Building2} value={formData.businessName} onChange={handleChange} error={errors.businessName} />
 
+                  {/* Business Category Selection */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Kategori Bisnis <span className="text-red-500">*</span>
@@ -542,19 +545,27 @@ export default function KybForm() {
                           key={cat.value}
                           type="button"
                           onClick={() => setField('businessCategory', cat.value)}
-                          className={`p-3 rounded-xl border-2 text-left transition-all text-sm ${
+                          className={`p-3 rounded-xl border-2 text-left transition-all ${
                             formData.businessCategory === cat.value
-                              ? 'border-sky-500 bg-sky-50 shadow'
+                              ? 'border-sky-500 bg-sky-50 shadow-sm'
                               : 'border-gray-200 hover:border-sky-300'
                           }`}
                         >
-                          <span className="text-lg mr-1.5">{cat.icon}</span>
-                          <span className="font-medium text-gray-900">{cat.label}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xl">{cat.icon}</span>
+                            <span className="text-xs font-medium text-gray-800">{cat.label}</span>
+                          </div>
+                          {formData.businessCategory === cat.value && (
+                            <Check className="w-4 h-4 text-sky-600 absolute top-2 right-2" />
+                          )}
                         </button>
                       ))}
                     </div>
                     {errors.businessCategory && (
-                      <p className="mt-1 text-xs text-red-600"><AlertCircle className="w-3 h-3 inline mr-1" />{errors.businessCategory}</p>
+                      <p className="mt-1 text-xs text-red-600 flex items-center space-x-1">
+                        <AlertCircle className="w-3 h-3" />
+                        <span>{errors.businessCategory}</span>
+                      </p>
                     )}
                   </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Link from 'next/link';
+import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import {
   FileText,
   Plus,
@@ -428,9 +429,29 @@ export default function InvoiceManagement() {
                       <button className="p-1.5 hover:bg-gray-100 rounded" title="Send">
                         <Mail className="w-4 h-4 text-gray-500" />
                       </button>
-                      <button className="p-1.5 hover:bg-gray-100 rounded" title="Print">
-                        <Printer className="w-4 h-4 text-gray-500" />
-                      </button>
+                      <DocumentExportButton
+                        documentType="invoice"
+                        variant="icon"
+                        data={{
+                          customerName: invoice.customer,
+                          customerType: invoice.customerType,
+                          items: invoice.items,
+                          subtotal: invoice.subtotal,
+                          tax: invoice.tax,
+                          discount: invoice.discount,
+                          total: invoice.total,
+                          dueDate: invoice.dueDate,
+                          status: invoice.status,
+                          paidAmount: invoice.paidAmount,
+                          notes: invoice.notes,
+                        }}
+                        meta={{
+                          documentNumber: invoice.invoiceNumber,
+                          documentDate: invoice.issueDate,
+                          branchId: invoice.branchCode,
+                        }}
+                        showFormats={['pdf', 'html']}
+                      />
                     </div>
                   </td>
                 </tr>

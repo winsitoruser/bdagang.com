@@ -11,6 +11,7 @@ import {
   XCircle,
   Building2
 } from 'lucide-react';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 interface Module {
   id: string;
@@ -49,7 +50,8 @@ export default function TenantModulesManagement() {
       return;
     }
 
-    if (session && !['ADMIN', 'SUPER_ADMIN', 'super_admin'].includes(session.user?.role as string)) {
+    const userRole = (session?.user?.role as string)?.toLowerCase();
+    if (session && !['admin', 'super_admin', 'superadmin'].includes(userRole)) {
       router.push('/admin/login');
       return;
     }
@@ -134,24 +136,25 @@ export default function TenantModulesManagement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading modules...</p>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading modules...</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <AdminLayout>
       <Head>
         <title>Manage Modules - {tenant?.businessName} - Admin Panel</title>
       </Head>
 
       {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link
@@ -180,7 +183,6 @@ export default function TenantModulesManagement() {
               {saving ? 'Saving...' : `Save Changes ${hasChanges ? `(${changes.size})` : ''}`}
             </button>
           </div>
-        </div>
       </div>
 
       {/* Modules Grid */}
@@ -292,6 +294,6 @@ export default function TenantModulesManagement() {
           </div>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 }

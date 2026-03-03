@@ -43,9 +43,13 @@ const Login: React.FC = () => {
 
       if (result?.error) {
         toast.error('Email atau password salah');
-      } else {
+      } else if (result?.ok) {
         toast.success('Login berhasil!');
-        router.push('/dashboard');
+        const callbackUrl = router.query.callbackUrl as string;
+        const target = (callbackUrl && !callbackUrl.includes('/auth/'))
+          ? callbackUrl
+          : '/hq/dashboard';
+        window.location.href = target;
       }
     } catch (error) {
       console.error('Login error:', error);

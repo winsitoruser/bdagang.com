@@ -1,5 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
 // Mock maintenance data
 const mockMaintenanceRecords: any[] = [
@@ -39,7 +44,7 @@ const mockMaintenanceRecords: any[] = [
   }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -63,6 +68,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'fleet' });
 
 async function getMaintenanceRecords(req: NextApiRequest, res: NextApiResponse) {
   const { vehicleId, status, maintenanceType, startDate, endDate, search } = req.query;
@@ -110,6 +117,18 @@ async function getMaintenanceRecords(req: NextApiRequest, res: NextApiResponse) 
 }
 
 async function createMaintenanceRecord(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    vehicleId: V.required().string(),
+    maintenanceType: V.required().oneOf(['scheduled', 'repair', 'inspection', 'emergency']),
+    serviceType: V.required().string(),
+    scheduledDate: V.required().date(),
+    cost: V.optional().number().min(0),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+  const ctx = getTenantContext(req);
   const {
     vehicleId,
     maintenanceType,
@@ -122,13 +141,6 @@ async function createMaintenanceRecord(req: NextApiRequest, res: NextApiResponse
     technician,
     notes
   } = req.body;
-
-  // Validation
-  if (!vehicleId || !maintenanceType || !serviceType || !scheduledDate) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Vehicle ID, maintenance type, service type, and scheduled date are required')
-    );
-  }
 
   const newRecord = {
     id: `maint-${Date.now()}`,
@@ -149,12 +161,17 @@ async function createMaintenanceRecord(req: NextApiRequest, res: NextApiResponse
 
   mockMaintenanceRecords.push(newRecord);
 
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'fleet_maintenance', entityId: newRecord.id, newValues: { vehicleId, maintenanceType, serviceType, cost }, req });
+
   return res.status(HttpStatus.CREATED).json(
     successResponse(newRecord, undefined, 'Maintenance record created successfully')
   );
 }
 
 async function updateMaintenanceRecord(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const ctx = getTenantContext(req);
   const { id, ...updates } = req.body;
 
   if (!id) {
@@ -170,7 +187,10 @@ async function updateMaintenanceRecord(req: NextApiRequest, res: NextApiResponse
     );
   }
 
+  const oldValues = { ...mockMaintenanceRecords[recordIndex] };
   Object.assign(mockMaintenanceRecords[recordIndex], updates);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'fleet_maintenance', entityId: id, oldValues, newValues: updates, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(mockMaintenanceRecords[recordIndex], undefined, 'Maintenance record updated successfully')
@@ -178,6 +198,8 @@ async function updateMaintenanceRecord(req: NextApiRequest, res: NextApiResponse
 }
 
 async function deleteMaintenanceRecord(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
   const { id } = req.body;
 
   if (!id) {
@@ -193,7 +215,10 @@ async function deleteMaintenanceRecord(req: NextApiRequest, res: NextApiResponse
     );
   }
 
+  const deleted = mockMaintenanceRecords[recordIndex];
   mockMaintenanceRecords.splice(recordIndex, 1);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'delete', entityType: 'fleet_maintenance', entityId: id, oldValues: deleted, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(null, undefined, 'Maintenance record deleted successfully')

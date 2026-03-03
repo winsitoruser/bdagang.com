@@ -1,8 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 import { mockFuelTransactions } from '../../../../lib/mockData/fleetAdvanced';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -26,6 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'fleet' });
 
 async function getFuelTransactions(req: NextApiRequest, res: NextApiResponse) {
   const { vehicleId, driverId, startDate, endDate, fuelType, search } = req.query;
@@ -75,6 +82,18 @@ async function getFuelTransactions(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createFuelTransaction(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    vehicleId: V.required().string(),
+    transactionDate: V.required().date(),
+    fuelType: V.required().oneOf(['pertalite', 'pertamax', 'pertamax_turbo', 'solar', 'dexlite', 'pertamina_dex']),
+    quantityLiters: V.required().number().min(0.1),
+    totalCost: V.required().number().min(0),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+  const ctx = getTenantContext(req);
   const {
     vehicleId,
     driverId,
@@ -87,13 +106,6 @@ async function createFuelTransaction(req: NextApiRequest, res: NextApiResponse) 
     odometerReading,
     notes
   } = req.body;
-
-  // Validation
-  if (!vehicleId || !transactionDate || !fuelType || !quantityLiters || !totalCost) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Vehicle ID, date, fuel type, quantity, and total cost are required')
-    );
-  }
 
   const newTransaction: any = {
     id: `fuel-${Date.now()}`,
@@ -115,12 +127,17 @@ async function createFuelTransaction(req: NextApiRequest, res: NextApiResponse) 
 
   mockFuelTransactions.push(newTransaction);
 
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'fleet_fuel', entityId: newTransaction.id, newValues: { vehicleId, fuelType, quantityLiters, totalCost }, req });
+
   return res.status(HttpStatus.CREATED).json(
     successResponse(newTransaction, undefined, 'Fuel transaction created successfully')
   );
 }
 
 async function updateFuelTransaction(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const ctx = getTenantContext(req);
   const { id, ...updates } = req.body;
 
   if (!id) {
@@ -136,7 +153,10 @@ async function updateFuelTransaction(req: NextApiRequest, res: NextApiResponse) 
     );
   }
 
+  const oldValues = { ...mockFuelTransactions[transactionIndex] };
   Object.assign(mockFuelTransactions[transactionIndex], updates);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'fleet_fuel', entityId: id, oldValues, newValues: updates, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(mockFuelTransactions[transactionIndex], undefined, 'Fuel transaction updated successfully')
@@ -144,6 +164,8 @@ async function updateFuelTransaction(req: NextApiRequest, res: NextApiResponse) 
 }
 
 async function deleteFuelTransaction(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
   const { id } = req.body;
 
   if (!id) {
@@ -159,7 +181,10 @@ async function deleteFuelTransaction(req: NextApiRequest, res: NextApiResponse) 
     );
   }
 
+  const deleted = mockFuelTransactions[transactionIndex];
   mockFuelTransactions.splice(transactionIndex, 1);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'delete', entityType: 'fleet_fuel', entityId: id, oldValues: deleted, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(null, undefined, 'Fuel transaction deleted successfully')

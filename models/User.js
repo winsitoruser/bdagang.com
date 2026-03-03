@@ -48,8 +48,14 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     role: {
-      type: DataTypes.ENUM('super_admin', 'owner', 'admin', 'manager', 'cashier', 'staff'),
+      type: DataTypes.ENUM('super_admin', 'owner', 'admin', 'manager', 'cashier', 'staff', 'hq_admin', 'branch_manager', 'inventory_staff', 'kitchen_staff', 'finance_staff', 'hr_staff'),
       defaultValue: 'staff'
+    },
+    dataScope: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'own_branch',
+      field: 'data_scope',
+      comment: 'own_branch = sees own branch only, all_branches = HQ/aggregation access'
     },
     isActive: {
       type: DataTypes.BOOLEAN,

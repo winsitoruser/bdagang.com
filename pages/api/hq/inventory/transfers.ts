@@ -1,15 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext, buildTenantFilter } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
 const sequelize = require('../../../../lib/sequelize');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     if (req.method === 'GET') {
+      const ctx = getTenantContext(req);
+      const tf = buildTenantFilter(ctx.tenantId, 't');
       const { status } = req.query;
-      let where = '';
-      const params: any = {};
-      if (status && status !== 'all') { where = 'WHERE t.status=:status'; params.status = status; }
+      let where = 'WHERE 1=1' + tf.condition;
+      const params: any = { ...tf.replacements };
+      if (status && status !== 'all') { where += ' AND t.status=:status'; params.status = status; }
 
       const [transfers] = await sequelize.query(`
         SELECT t.*, fw.name as from_name, fw.code as from_code, tw.name as to_name, tw.code as to_code
@@ -29,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         `, { replacements: { ids: tfIds } });
       }
 
-      const [statsRows] = await sequelize.query("SELECT status, COUNT(*)::int as count FROM stock_transfers GROUP BY status");
+      const [statsRows] = await sequelize.query(`SELECT status, COUNT(*)::int as count FROM stock_transfers t WHERE 1=1 ${tf.condition} GROUP BY status`, { replacements: tf.replacements });
       const stats: Record<string, number> = { pending: 0, approved: 0, in_transit: 0, received: 0, cancelled: 0 };
       statsRows.forEach((s: any) => { stats[s.status] = s.count; });
 
@@ -57,10 +64,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'POST') {
+      if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+      sanitizeBody(req);
+      const errors = validateBody(req, {
+        fromWarehouseId: V.required().integer(),
+        toWarehouseId: V.required().integer(),
+        items: V.required().array().arrayMinLength(1),
+      });
+      if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+      const ctx = getTenantContext(req);
       const { fromWarehouseId, toWarehouseId, items: reqItems, notes } = req.body;
-      if (!fromWarehouseId || !toWarehouseId || !reqItems?.length) {
-        return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'fromWarehouseId, toWarehouseId, and items required'));
-      }
 
       const [seqResult] = await sequelize.query("SELECT COALESCE(MAX(id),0)+1 as nid FROM stock_transfers");
       const tfNum = `TF-2026-${String(seqResult[0].nid).padStart(4, '0')}`;
@@ -68,14 +82,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const [result] = await sequelize.query(`
         INSERT INTO stock_transfers (tenant_id, transfer_number, from_warehouse_id, to_warehouse_id, status, total_items, total_quantity, notes, requested_by_name)
-        VALUES ((SELECT tenant_id FROM warehouses LIMIT 1), :num, :from, :to, 'pending', :items, :qty, :notes, 'Admin')
+        VALUES (:tenantId, :num, :from, :to, 'pending', :items, :qty, :notes, :userName)
         RETURNING id
-      `, { replacements: { num: tfNum, from: fromWarehouseId, to: toWarehouseId, items: reqItems.length, qty: totalQty, notes: notes || null } });
+      `, { replacements: { tenantId: ctx.tenantId, num: tfNum, from: fromWarehouseId, to: toWarehouseId, items: reqItems.length, qty: totalQty, notes: notes || null, userName: ctx.userName } });
 
       for (const item of reqItems) {
         await sequelize.query(`INSERT INTO stock_transfer_items (transfer_id, product_id, requested_qty, unit_cost) VALUES (:tfId, :pid, :qty, :cost)`,
           { replacements: { tfId: result[0].id, pid: item.productId, qty: item.quantity, cost: item.unitCost || 0 } });
       }
+
+      await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'stock_transfer', entityId: result[0]?.id, newValues: { tfNum, fromWarehouseId, toWarehouseId, totalItems: reqItems.length, totalQty }, req });
 
       return res.status(HttpStatus.CREATED).json(
         successResponse({ id: result[0].id, transferNumber: tfNum, status: 'pending' }, undefined, 'Transfer created')
@@ -83,18 +99,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'PUT') {
+      if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+      const ctx = getTenantContext(req);
+      const tf = buildTenantFilter(ctx.tenantId);
       const { id, operation } = req.query;
       if (!id) return res.status(HttpStatus.BAD_REQUEST).json(errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'Transfer ID required'));
 
       if (operation === 'approve') {
-        await sequelize.query("UPDATE stock_transfers SET status='approved', approved_by_name='Admin', approved_at=NOW(), updated_at=NOW() WHERE id=:id AND status IN ('draft','pending')", { replacements: { id } });
+        await sequelize.query(`UPDATE stock_transfers SET status='approved', approved_by_name=:userName, approved_at=NOW(), updated_at=NOW() WHERE id=:id AND status IN ('draft','pending') ${tf.condition}`, { replacements: { id, userName: ctx.userName, ...tf.replacements } });
       } else if (operation === 'ship') {
-        await sequelize.query("UPDATE stock_transfers SET status='in_transit', shipped_at=NOW(), updated_at=NOW() WHERE id=:id AND status='approved'", { replacements: { id } });
+        await sequelize.query(`UPDATE stock_transfers SET status='in_transit', shipped_at=NOW(), updated_at=NOW() WHERE id=:id AND status='approved' ${tf.condition}`, { replacements: { id, ...tf.replacements } });
       } else if (operation === 'receive') {
-        await sequelize.query("UPDATE stock_transfers SET status='received', received_at=NOW(), received_by_name='Admin', updated_at=NOW() WHERE id=:id", { replacements: { id } });
+        await sequelize.query(`UPDATE stock_transfers SET status='received', received_at=NOW(), received_by_name=:userName, updated_at=NOW() WHERE id=:id ${tf.condition}`, { replacements: { id, userName: ctx.userName, ...tf.replacements } });
       } else if (operation === 'cancel') {
-        await sequelize.query("UPDATE stock_transfers SET status='cancelled', cancelled_at=NOW(), cancellation_reason=:reason, updated_at=NOW() WHERE id=:id", { replacements: { id, reason: req.body?.reason || '' } });
+        await sequelize.query(`UPDATE stock_transfers SET status='cancelled', cancelled_at=NOW(), cancellation_reason=:reason, updated_at=NOW() WHERE id=:id ${tf.condition}`, { replacements: { id, reason: req.body?.reason || '', ...tf.replacements } });
       }
+
+      await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'status_change', entityType: 'stock_transfer', entityId: id as string, newValues: { operation }, req });
       return res.status(HttpStatus.OK).json(successResponse({ id }, undefined, `Transfer ${operation}`));
     }
 
@@ -105,3 +126,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, error.message));
   }
 }
+
+export default withHQAuth(handler, { module: 'inventory' });

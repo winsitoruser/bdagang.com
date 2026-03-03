@@ -1,12 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 import { 
   mockVehicles, 
   createMockVehicle,
   MockVehicle 
 } from '../../../../lib/mockData/fleet';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -30,6 +35,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'fleet' });
 
 async function getVehicles(req: NextApiRequest, res: NextApiResponse) {
   const { status, type, branch, search } = req.query;
@@ -70,6 +77,15 @@ async function getVehicles(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createVehicle(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    licensePlate: V.required().string().minLength(3).maxLength(20),
+    vehicleType: V.required().oneOf(['truck', 'van', 'pickup', 'motorcycle', 'car', 'bus']),
+  });
+  if (errors) return res.status(HttpStatus.BAD_REQUEST).json(errors);
+
+  const ctx = getTenantContext(req);
   const {
     licensePlate,
     vehicleType,
@@ -91,13 +107,6 @@ async function createVehicle(req: NextApiRequest, res: NextApiResponse) {
     assignedBranchId,
     notes
   } = req.body;
-
-  // Validation
-  if (!licensePlate || !vehicleType) {
-    return res.status(HttpStatus.BAD_REQUEST).json(
-      errorResponse(ErrorCodes.MISSING_REQUIRED_FIELDS, 'License plate and vehicle type are required')
-    );
-  }
 
   // Check duplicate license plate
   const existing = mockVehicles.find(v => v.licensePlate === licensePlate);
@@ -132,12 +141,17 @@ async function createVehicle(req: NextApiRequest, res: NextApiResponse) {
   // TODO: When database is ready, replace with:
   // const vehicle = await db.FleetVehicle.create({...});
 
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'fleet_vehicle', entityId: newVehicle.id, newValues: { licensePlate, vehicleType, brand, model }, req });
+
   return res.status(HttpStatus.CREATED).json(
     successResponse(newVehicle, undefined, 'Vehicle created successfully')
   );
 }
 
 async function updateVehicle(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const ctx = getTenantContext(req);
   const { id, ...updates } = req.body;
 
   if (!id) {
@@ -153,7 +167,10 @@ async function updateVehicle(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
+  const oldValues = { ...mockVehicles[vehicleIndex] };
   Object.assign(mockVehicles[vehicleIndex], updates);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'fleet_vehicle', entityId: id, oldValues, newValues: updates, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(mockVehicles[vehicleIndex], undefined, 'Vehicle updated successfully')
@@ -161,6 +178,8 @@ async function updateVehicle(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function deleteVehicle(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
   const { id } = req.body;
 
   if (!id) {
@@ -176,7 +195,10 @@ async function deleteVehicle(req: NextApiRequest, res: NextApiResponse) {
     );
   }
 
+  const deleted = mockVehicles[vehicleIndex];
   mockVehicles.splice(vehicleIndex, 1);
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'delete', entityType: 'fleet_vehicle', entityId: id, oldValues: deleted, req });
 
   return res.status(HttpStatus.OK).json(
     successResponse(null, undefined, 'Vehicle deleted successfully')

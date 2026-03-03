@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 const sequelize = require('../../../../lib/sequelize');
 
@@ -7,7 +8,7 @@ const sequelize = require('../../../../lib/sequelize');
  * Manufacturing Integration API
  * Cross-module integrations: Inventory, Procurement, HRIS, Finance
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json(errorResponse('METHOD_NOT_ALLOWED', 'GET/POST only'));
   }
@@ -54,6 +55,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json(errorResponse('INTERNAL_ERROR', error.message));
   }
 }
+
+export default withHQAuth(handler);
 
 // Check material availability for a work order
 async function checkMaterialAvailability(req: NextApiRequest, res: NextApiResponse) {

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 // Webhook event types
 export type WebhookEventType = 
@@ -50,7 +51,7 @@ const webhooks: WebhookConfig[] = [
   }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -66,6 +67,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withHQAuth(handler);
 
 function getWebhooks(req: NextApiRequest, res: NextApiResponse) {
   return res.status(200).json({ webhooks });

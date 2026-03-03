@@ -56,9 +56,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'PUT') {
-      // Only super_admin can update business types
-      if (session.user?.role !== 'super_admin') {
-        return res.status(403).json({ success: false, message: 'Only super admin can update business types' });
+      // Only admin/super_admin can update business types
+      if (!allowedRoles.includes(userRole)) {
+        return res.status(403).json({ success: false, message: 'Hanya admin yang dapat mengubah jenis bisnis' });
       }
 
       const { name, description, icon, isActive } = req.body;
@@ -99,8 +99,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method === 'DELETE') {
       // Only super_admin can delete business types
-      if (session.user?.role !== 'super_admin') {
-        return res.status(403).json({ success: false, message: 'Only super admin can delete business types' });
+      if (userRole !== 'super_admin') {
+        return res.status(403).json({ success: false, message: 'Hanya super admin yang dapat menghapus jenis bisnis' });
       }
 
       const businessType = await db.BusinessType.findByPk(id);

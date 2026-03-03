@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Link from 'next/link';
+import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import {
   FileText,
   Calculator,
@@ -188,10 +189,13 @@ export default function TaxManagement() {
               <Calculator className="w-4 h-4" />
               Calculate Tax
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-              <Download className="w-4 h-4" />
-              Export
-            </button>
+            <DocumentExportButton
+              documentType="tax-report"
+              data={{ items: obligations.map(o => ({ 'Jenis Pajak': o.type, 'Periode': o.period, 'Jatuh Tempo': o.dueDate, 'Jumlah': o.amount, 'Status': o.status, 'Referensi': o.reference || '-' })), summary }}
+              meta={{ period: `${year}` }}
+              showFormats={['pdf', 'excel', 'csv']}
+              label="Export Pajak"
+            />
           </div>
         </div>
 

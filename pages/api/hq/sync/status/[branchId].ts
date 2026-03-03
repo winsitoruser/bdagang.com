@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withHQAuth } from '../../../../../lib/middleware/withHQAuth';
 const { tenantContext, requireTenant } = require('../../../../../middleware/tenantContext');
 const { validateBranchAccess } = require('../../../../../middleware/branchAccess');
 const BranchSyncService = require('../../../../../services/BranchSyncService');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Apply middleware
     await new Promise((resolve, reject) => {
@@ -57,3 +58,5 @@ async function getSyncStatus(req: NextApiRequest, res: NextApiResponse) {
     });
   }
 }
+
+export default withHQAuth(handler);

@@ -148,7 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Calculate completion percentage
       const stepFields: Record<number, string[]> = {
-        1: ['businessName', 'businessCategory', 'businessDuration'],
+        1: ['businessName', 'businessDuration'],
         2: ['legalEntityType', 'ktpNumber', 'ktpName'],
         3: [],
         4: ['picName', 'picPhone', 'businessAddress', 'businessCity', 'businessProvince'],

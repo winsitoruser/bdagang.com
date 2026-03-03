@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 /**
  * Webhook endpoint for receiving real-time branch updates
@@ -29,7 +30,7 @@ interface WebhookPayload {
 // In-memory store for real-time metrics (would be Redis in production)
 const branchMetricsCache: Map<string, any> = new Map();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
@@ -268,6 +269,8 @@ function calculateSLACompliance(metrics: any): number {
   const breachCount = metrics.sla.breaches.length;
   return Math.round(((totalOrders - breachCount) / totalOrders) * 100);
 }
+
+export default withHQAuth(handler);
 
 // Export for use in other modules
 export { branchMetricsCache };

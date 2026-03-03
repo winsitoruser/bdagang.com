@@ -3,11 +3,12 @@ import { Branch, User, Store } from '../../../../models';
 import { Op } from 'sequelize';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { getPaginationParams, getPaginationMeta } from '../../../../lib/api/pagination';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 const { tenantContext, requireTenant, addTenantFilter } = require('../../../../middleware/tenantContext');
 
 const getDb = () => require('../../../../models');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Apply tenant context middleware
     await new Promise((resolve, reject) => {
@@ -42,6 +43,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'branches' });
 
 async function getBranches(req: NextApiRequest, res: NextApiResponse) {
   const { search, type, status } = req.query;

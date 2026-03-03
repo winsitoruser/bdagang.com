@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../auth/[...nextauth]';
 
 interface BranchSalesData {
   branchId: string;
@@ -60,6 +62,12 @@ export default async function handler(
   }
 
   try {
+    const session = await getServerSession(req, res, authOptions);
+    const userRole = (session?.user?.role as string)?.toLowerCase();
+    if (!session || !['admin', 'super_admin', 'superadmin'].includes(userRole)) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     const { 
       period = 'daily',
       startDate,

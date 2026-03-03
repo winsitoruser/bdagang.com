@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 const sequelize = require('../../../../lib/sequelize');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method } = req;
   const action = (req.query.action as string) || 'dashboard';
 
@@ -25,6 +26,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json(errorResponse('INTERNAL_ERROR', error.message));
   }
 }
+
+export default withHQAuth(handler);
 
 // ==========================================
 // GET HANDLERS

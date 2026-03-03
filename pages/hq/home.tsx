@@ -7,7 +7,7 @@ import {
   Briefcase, Megaphone, Layers, Send, Shield,
   Clock, Bell, ChevronRight, RefreshCw, Activity, TrendingUp,
   CheckCircle, XCircle, Zap, Sparkles, Monitor, Search, Lock,
-  ArrowRight, ExternalLink, Cpu, Server
+  ArrowRight, ExternalLink, Cpu, Server, AlertCircle, Hourglass
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -93,6 +93,7 @@ export default function UnifiedDashboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [kybStatus, setKybStatus] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -102,6 +103,17 @@ export default function UnifiedDashboard() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    // Fetch KYB / onboarding status
+    try {
+      const statusRes = await fetch('/api/onboarding/status');
+      if (statusRes.ok) {
+        const statusJson = await statusRes.json();
+        const status = statusJson.data?.tenant?.kybStatus || statusJson.data?.statusInfo?.status || null;
+        setKybStatus(status);
+      }
+    } catch {
+      // Ignore - assume active if can't fetch
+    }
     try {
       const modRes = await fetch('/api/hq/modules');
       if (modRes.ok) {
@@ -180,15 +192,26 @@ export default function UnifiedDashboard() {
   };
 
   const activeCategories = CATEGORY_ORDER.filter(cat => groupedModules[cat]?.length > 0);
+  const isUnderReview = kybStatus === 'in_review' || kybStatus === 'pending_kyb';
+
+  const handleReviewClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toast('Akun Anda masih dalam proses review oleh tim Naincode. Modul akan segera dapat diakses setelah review selesai.', {
+      icon: '⏳',
+      duration: 4000,
+      style: { background: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A', fontWeight: 500 },
+    });
+  };
 
   return (
     <HQLayout>
-      <div className="max-w-[1440px] mx-auto">
+      <div className="w-full">
 
         {/* ════════════════════════════════════════════════
             HERO BANNER
         ════════════════════════════════════════════════ */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950 mb-8">
+        <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950 mb-6 sm:mb-8">
           {/* Decorative elements */}
           <div className="absolute inset-0 overflow-hidden">
             <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-indigo-500/10 blur-3xl" />
@@ -198,12 +221,16 @@ export default function UnifiedDashboard() {
             <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
           </div>
 
-          <div className="relative z-10 px-8 py-8">
+          <div className="relative z-10 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.08] border border-white/[0.08] text-xs text-white/60 mb-4">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Sistem Online &middot; v3.8.0
+                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs mb-4 ${
+                  isUnderReview
+                    ? 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+                    : 'bg-white/[0.08] border-white/[0.08] text-white/60'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isUnderReview ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+                  {isUnderReview ? 'Akun Inactive · Menunggu Review' : 'Sistem Online · v3.8.0'}
                 </div>
                 <h1 className="text-3xl font-bold text-white tracking-tight mb-1">{getGreeting()}</h1>
                 <p className="text-white/40 text-sm">
@@ -212,16 +239,16 @@ export default function UnifiedDashboard() {
               </div>
 
               {/* Hero Stats */}
-              <div className="flex gap-8">
+              <div className="grid grid-cols-2 sm:flex gap-4 sm:gap-6 lg:gap-8">
                 {[
                   { label: 'Modul Aktif', val: enabledCount, total: MODULE_REGISTRY.length },
                   { label: 'Cabang Online', val: systemStats?.onlineBranches || 0, total: systemStats?.totalBranches || 0 },
                   { label: 'Pengguna', val: systemStats?.totalUsers || 0, total: null },
                   { label: 'Sales Hari Ini', val: formatCurrency(systemStats?.todaySales || 0), total: null },
                 ].map((s, i) => (
-                  <div key={i} className="text-right">
+                  <div key={i} className="text-left sm:text-right">
                     <p className="text-[11px] uppercase tracking-wider text-white/30 mb-1">{s.label}</p>
-                    <p className="text-xl font-bold text-white tabular-nums">
+                    <p className="text-lg sm:text-xl font-bold text-white tabular-nums">
                       {typeof s.val === 'number' ? s.val : s.val}
                       {s.total !== null && <span className="text-sm font-normal text-white/30">/{s.total}</span>}
                     </p>
@@ -231,7 +258,7 @@ export default function UnifiedDashboard() {
             </div>
 
             {/* Quick Access Bar */}
-            <div className="flex items-center gap-2 mt-7 pt-6 border-t border-white/[0.06]">
+            <div className="flex items-center gap-2 mt-5 sm:mt-7 pt-4 sm:pt-6 border-t border-white/[0.06] overflow-x-auto pb-1 scrollbar-hide">
               {[
                 { label: 'Dashboard Operasional', href: '/hq/dashboard', icon: LayoutDashboard },
                 { label: 'Laporan', href: '/hq/reports/consolidated', icon: BarChart3 },
@@ -240,8 +267,12 @@ export default function UnifiedDashboard() {
               ].map(q => (
                 <button
                   key={q.href}
-                  onClick={() => router.push(q.href)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.06] text-sm text-white/70 hover:text-white transition-all duration-200"
+                  onClick={(e) => isUnderReview ? handleReviewClick(e) : router.push(q.href)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border border-white/[0.06] text-sm transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                    isUnderReview
+                      ? 'bg-white/[0.04] text-white/30 cursor-not-allowed'
+                      : 'bg-white/[0.06] hover:bg-white/[0.12] text-white/70 hover:text-white'
+                  }`}
                 >
                   <q.icon className="w-3.5 h-3.5" />
                   <span>{q.label}</span>
@@ -251,16 +282,52 @@ export default function UnifiedDashboard() {
           </div>
         </div>
 
+        {/* ═══ REVIEW BANNER ═══ */}
+        {isUnderReview && (
+          <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-200/60 p-5 sm:p-6 mb-6 sm:mb-8">
+            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #f59e0b 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+            <div className="relative flex flex-col sm:flex-row items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Hourglass className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base font-bold text-amber-900">Akun Dalam Proses Review</h3>
+                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-200/60 text-amber-800 rounded-full">Under Review</span>
+                </div>
+                <p className="text-sm text-amber-700 leading-relaxed">
+                  Data bisnis Anda sedang direview oleh tim <strong>Naincode</strong>. Seluruh modul akan dapat diakses setelah proses verifikasi selesai.
+                  Estimasi waktu review: <strong>1–2 hari kerja</strong>.
+                </p>
+                <div className="flex items-center gap-4 mt-3">
+                  <div className="flex items-center gap-1.5 text-xs text-amber-600">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span>KYB Tersubmit</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-amber-600">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Menunggu Verifikasi</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-amber-400">
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Aktivasi Modul</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ════════════════════════════════════════════════
             MAIN CONTENT
         ════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 sm:gap-8">
 
           {/* ── LEFT: Module Grid ── */}
           <div className="xl:col-span-8 space-y-6">
 
             {/* Search & Filter Bar */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -271,7 +338,7 @@ export default function UnifiedDashboard() {
                   className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200/80 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 shadow-sm transition-all"
                 />
               </div>
-              <div className="flex items-center bg-white border border-gray-200/80 rounded-xl shadow-sm overflow-hidden">
+              <div className="flex items-center bg-white border border-gray-200/80 rounded-xl shadow-sm overflow-x-auto scrollbar-hide">
                 <button
                   onClick={() => setSelectedCategory('all')}
                   className={`px-4 py-3 text-xs font-medium transition-colors ${selectedCategory === 'all' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
@@ -298,7 +365,7 @@ export default function UnifiedDashboard() {
                   ))}
                 </select>
               </div>
-              <button onClick={fetchData} disabled={loading} className="p-3 bg-white border border-gray-200/80 rounded-xl shadow-sm hover:bg-gray-50 transition-colors">
+              <button onClick={fetchData} disabled={loading} className="p-3 bg-white border border-gray-200/80 rounded-xl shadow-sm hover:bg-gray-50 transition-colors flex-shrink-0 self-end sm:self-auto">
                 <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? 'animate-spin' : ''}`} />
               </button>
             </div>
@@ -314,48 +381,65 @@ export default function UnifiedDashboard() {
                     <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{meta?.label}</h2>
                     <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                     {groupedModules[cat].map(mod => {
                       const enabled = isModuleEnabled(mod.code);
                       const Icon = mod.icon;
                       return (
                         <Link
                           key={mod.code}
-                          href={enabled ? mod.href : '#'}
-                          onClick={(e) => { if (!enabled) { e.preventDefault(); toast.error(`Modul ${mod.name} belum diaktifkan`); }}}
-                          className={`group relative rounded-2xl p-5 transition-all duration-200 ${
-                            enabled
-                              ? 'bg-white border border-gray-200/60 hover:border-gray-300/80 hover:shadow-lg hover:shadow-gray-200/50 hover:-translate-y-0.5 cursor-pointer'
-                              : 'bg-gray-50 border border-gray-100 opacity-40 cursor-not-allowed'
+                          href={!isUnderReview && enabled ? `/hq/modules/${mod.code}` : '#'}
+                          onClick={(e) => {
+                            if (isUnderReview) {
+                              handleReviewClick(e);
+                            } else if (!enabled) {
+                              e.preventDefault();
+                              toast.error(`Modul ${mod.name} belum diaktifkan`);
+                            }
+                          }}
+                          className={`group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 transition-all duration-200 ${
+                            isUnderReview
+                              ? 'bg-white border border-gray-200/60 cursor-not-allowed'
+                              : enabled
+                                ? 'bg-white border border-gray-200/60 hover:border-gray-300/80 hover:shadow-lg hover:shadow-gray-200/50 hover:-translate-y-0.5 cursor-pointer'
+                                : 'bg-gray-50 border border-gray-100 opacity-40 cursor-not-allowed'
                           }`}
                         >
                           {/* Gradient accent on hover */}
-                          {enabled && (
+                          {!isUnderReview && enabled && (
                             <div className={`absolute inset-x-0 top-0 h-0.5 rounded-t-2xl bg-gradient-to-r ${mod.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-200`} />
                           )}
 
                           <div className="flex items-start justify-between mb-4">
                             <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                              isUnderReview ? `bg-gradient-to-br ${mod.gradient} shadow-sm opacity-50` :
                               enabled ? `bg-gradient-to-br ${mod.gradient} shadow-sm` : 'bg-gray-200'
-                            } ${enabled ? 'group-hover:scale-110 group-hover:shadow-md' : ''}`}>
-                              <Icon className={`w-5 h-5 ${enabled ? 'text-white' : 'text-gray-400'}`} />
+                            } ${!isUnderReview && enabled ? 'group-hover:scale-110 group-hover:shadow-md' : ''}`}>
+                              <Icon className={`w-5 h-5 ${isUnderReview || enabled ? 'text-white' : 'text-gray-400'}`} />
                             </div>
-                            {enabled ? (
+                            {isUnderReview ? (
+                              <Clock className="w-3.5 h-3.5 text-amber-400" />
+                            ) : enabled ? (
                               <ArrowRight className="w-4 h-4 text-gray-300 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                             ) : (
                               <Lock className="w-3.5 h-3.5 text-gray-300" />
                             )}
                           </div>
 
-                          <h3 className={`text-sm font-semibold mb-1 ${enabled ? 'text-gray-900' : 'text-gray-400'}`}>{mod.name}</h3>
-                          <p className={`text-xs leading-relaxed ${enabled ? 'text-gray-500' : 'text-gray-300'}`}>{mod.description}</p>
+                          <h3 className={`text-sm font-semibold mb-1 ${isUnderReview ? 'text-gray-600' : enabled ? 'text-gray-900' : 'text-gray-400'}`}>{mod.name}</h3>
+                          <p className={`text-xs leading-relaxed ${isUnderReview ? 'text-gray-400' : enabled ? 'text-gray-500' : 'text-gray-300'}`}>{mod.description}</p>
 
-                          {enabled && (
+                          {isUnderReview ? (
+                            <div className="flex items-center gap-1.5 mt-3">
+                              <Hourglass className="w-3 h-3 text-amber-400" />
+                              <span className="text-[11px] font-medium text-amber-500">Menunggu review</span>
+                            </div>
+                          ) : enabled ? (
                             <div className="flex items-center gap-1.5 mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                              <span className="text-[11px] font-medium text-indigo-500">Buka modul</span>
+                              <span className="text-[11px] font-medium text-indigo-500">Lihat detail</span>
                               <ArrowRight className="w-3 h-3 text-indigo-400" />
                             </div>
-                          )}
+                          ) : null}
                         </Link>
                       );
                     })}
@@ -389,10 +473,17 @@ export default function UnifiedDashboard() {
                       <p className="text-[11px] text-gray-400">Real-time overview</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-semibold text-emerald-600">HEALTHY</span>
-                  </div>
+                  {isUnderReview ? (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-100">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      <span className="text-[10px] font-semibold text-amber-600">UNDER REVIEW</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[10px] font-semibold text-emerald-600">HEALTHY</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -502,8 +593,9 @@ export default function UnifiedDashboard() {
                 ].map(lnk => (
                   <Link
                     key={lnk.href}
-                    href={lnk.href}
-                    className="group flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 transition-colors"
+                    href={isUnderReview ? '#' : lnk.href}
+                    onClick={(e) => { if (isUnderReview) handleReviewClick(e); }}
+                    className={`group flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${isUnderReview ? 'cursor-not-allowed opacity-50' : 'hover:bg-gray-50'}`}
                   >
                     <div className="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-indigo-50 flex items-center justify-center flex-shrink-0 transition-colors">
                       <lnk.icon className="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-colors" />

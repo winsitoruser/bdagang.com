@@ -1,9 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 const { tenantContext, requireSuperAdmin } = require('../../../../middleware/tenantContext');
 
 const getDb = () => require('../../../../models');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Apply tenant context middleware
     await new Promise((resolve, reject) => {
@@ -188,3 +189,5 @@ async function createTenant(req: NextApiRequest, res: NextApiResponse) {
     return res.status(500).json({ error: 'Failed to create tenant' });
   }
 }
+
+export default withHQAuth(handler);

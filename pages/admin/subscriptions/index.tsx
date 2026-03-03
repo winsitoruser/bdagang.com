@@ -16,6 +16,7 @@ import {
   Calendar,
   DollarSign
 } from 'lucide-react';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 interface Subscription {
   id: string;
@@ -144,12 +145,14 @@ export default function SubscriptionsManagement() {
 
   if (loading && subscriptions.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Memuat langganan...</p>
+      <AdminLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Memuat langganan...</p>
+          </div>
         </div>
-      </div>
+      </AdminLayout>
     );
   }
 
@@ -159,28 +162,14 @@ export default function SubscriptionsManagement() {
         <title>Langganan - Panel Admin</title>
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <AdminLayout>
         {/* Header */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Langganan</h1>
-                <p className="mt-1 text-sm text-gray-500">
-                  Kelola langganan tenant dan paket
-                </p>
-              </div>
-              <Link
-                href="/admin/dashboard"
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Kembali ke Dashboard
-              </Link>
-            </div>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Langganan</h1>
+          <p className="text-sm text-gray-500">Kelola langganan tenant dan paket</p>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -425,7 +414,7 @@ export default function SubscriptionsManagement() {
             </div>
           )}
         </div>
-      </div>
+      </AdminLayout>
     </>
   );
 }

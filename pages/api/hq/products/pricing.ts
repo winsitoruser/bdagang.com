@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 interface PriceTier {
   id: string;
@@ -48,7 +49,7 @@ const productPrices: ProductPrice[] = [
   ], isLocked: false, lockedBy: null, lockedAt: null }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -66,6 +67,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+export default withHQAuth(handler, { module: 'products' });
 
 function getPricing(req: NextApiRequest, res: NextApiResponse) {
   const { type } = req.query;

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Branch, KitchenOrder, KitchenStaff, Employee, Table, PosTransaction } from '../../../../../models';
 import { Op } from 'sequelize';
+import { withHQAuth } from '../../../../../lib/middleware/withHQAuth';
 
 // Mock data for when database is not available
 const getMockRealtimeData = (branchId: string) => ({
@@ -181,7 +182,7 @@ const getMockRealtimeData = (branchId: string) => ({
   }
 });
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
 
   if (req.method !== 'GET') {
@@ -262,3 +263,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json(getMockRealtimeData(id as string));
   }
 }
+
+export default withHQAuth(handler, { module: 'branches' });

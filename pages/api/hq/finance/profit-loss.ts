@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 let PosTransaction: any, Branch: any, FinanceTransaction: any;
 try {
@@ -49,7 +50,7 @@ const mockBranchPL = [
   { id: '5', name: 'Cabang Yogyakarta', code: 'BR-005', revenue: 520000000, cogs: 312000000, grossProfit: 208000000, opex: 78000000, netIncome: 104000000, margin: 20 }
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET':
@@ -67,6 +68,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
   }
 }
+
+export default withHQAuth(handler, { module: 'finance_pro' });
 
 async function getProfitLoss(req: NextApiRequest, res: NextApiResponse) {
   try {

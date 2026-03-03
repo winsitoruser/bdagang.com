@@ -1,8 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 const sequelize = require('../../../../lib/sequelize');
 import { successResponse, errorResponse } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext, buildTenantFilter } from '../../../../lib/middleware/tenantIsolation';
+import { logAudit } from '../../../../lib/audit/auditLogger';
+import { validateBody, V, sanitizeBody } from '../../../../lib/middleware/withValidation';
+import { checkLimit, RateLimitTier } from '../../../../lib/middleware/rateLimit';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (req.method) {
       case 'GET': return await getInvoices(req, res);
@@ -19,10 +24,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
+export default withHQAuth(handler, { module: 'finance_pro' });
+
 async function getInvoices(req: NextApiRequest, res: NextApiResponse) {
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId, 'fi');
   const { search, status, branchId, startDate, endDate, type, page = '1', limit = '20' } = req.query;
-  let where = 'WHERE 1=1';
-  const replacements: any = {};
+  let where = 'WHERE 1=1' + tf.condition;
+  const replacements: any = { ...tf.replacements };
 
   if (search) { where += ' AND (fi.invoice_number ILIKE :search OR s.name ILIKE :search)'; replacements.search = `%${search}%`; }
   if (status && status !== 'all') { where += ' AND fi.status = :status'; replacements.status = status; }
@@ -56,21 +65,31 @@ async function getInvoices(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createInvoice(req: NextApiRequest, res: NextApiResponse) {
-  const { tenant_id, branch_id, type, customer_id, supplier_id, issue_date, due_date, subtotal, tax_amount, discount_amount, total_amount, notes, created_by, items } = req.body;
-  if (!type || !issue_date || !total_amount) return res.status(400).json(errorResponse('VALIDATION', 'type, issue_date, total_amount required'));
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const errors = validateBody(req, {
+    type: V.required().oneOf(['sales', 'purchase', 'internal']),
+    issue_date: V.required().date(),
+    total_amount: V.required().number().min(0),
+  });
+  if (errors) return res.status(400).json(errors);
+
+  const ctx = getTenantContext(req);
+  const { branch_id, type, customer_id, supplier_id, issue_date, due_date, subtotal, tax_amount, discount_amount, total_amount, notes, items } = req.body;
 
   const t = await sequelize.transaction();
   try {
     const prefix = type === 'sales' ? 'INV' : type === 'purchase' ? 'PINV' : 'IBINV';
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const [countRes] = await sequelize.query(`SELECT COUNT(*) as c FROM finance_invoices WHERE invoice_number LIKE '${prefix}-${dateStr}%'`, { transaction: t });
+    const tf = buildTenantFilter(ctx.tenantId);
+    const [countRes] = await sequelize.query(`SELECT COUNT(*) as c FROM finance_invoices WHERE invoice_number LIKE :prefix ${tf.condition}`, { replacements: { prefix: `${prefix}-${dateStr}%`, ...tf.replacements }, transaction: t });
     const invoiceNumber = `${prefix}-${dateStr}-${String(parseInt(countRes[0]?.c || '0') + 1).padStart(4, '0')}`;
 
     const [inv] = await sequelize.query(`
       INSERT INTO finance_invoices (tenant_id, branch_id, invoice_number, type, customer_id, supplier_id, issue_date, due_date, subtotal, tax_amount, discount_amount, total_amount, paid_amount, status, notes, created_by)
       VALUES (:tenant_id, :branch_id, :invoice_number, :type, :customer_id, :supplier_id, :issue_date, :due_date, :subtotal, :tax_amount, :discount_amount, :total_amount, 0, 'draft', :notes, :created_by)
       RETURNING *
-    `, { replacements: { tenant_id: tenant_id || null, branch_id: branch_id || null, invoice_number: invoiceNumber, type, customer_id: customer_id || null, supplier_id: supplier_id || null, issue_date, due_date: due_date || null, subtotal: subtotal || 0, tax_amount: tax_amount || 0, discount_amount: discount_amount || 0, total_amount, notes: notes || null, created_by: created_by || null }, transaction: t });
+    `, { replacements: { tenant_id: ctx.tenantId, branch_id: branch_id || null, invoice_number: invoiceNumber, type, customer_id: customer_id || null, supplier_id: supplier_id || null, issue_date, due_date: due_date || null, subtotal: subtotal || 0, tax_amount: tax_amount || 0, discount_amount: discount_amount || 0, total_amount, notes: notes || null, created_by: ctx.userId }, transaction: t });
 
     if (items && items.length > 0) {
       for (const item of items) {
@@ -82,6 +101,7 @@ async function createInvoice(req: NextApiRequest, res: NextApiResponse) {
     }
 
     await t.commit();
+    await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'finance_invoice', entityId: inv[0]?.id, newValues: { invoiceNumber, type, total_amount, items: items?.length || 0 }, req });
     return res.status(201).json(successResponse(inv[0], undefined, 'Invoice created'));
   } catch (error: any) {
     await t.rollback();
@@ -90,12 +110,19 @@ async function createInvoice(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function updateInvoice(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  sanitizeBody(req);
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
   const { id } = req.query;
   if (!id) return res.status(400).json(errorResponse('VALIDATION', 'ID required'));
 
+  const [oldRows] = await sequelize.query(`SELECT * FROM finance_invoices WHERE id = :id ${tf.condition}`, { replacements: { id, ...tf.replacements } });
+  if (!oldRows[0]) return res.status(404).json(errorResponse('NOT_FOUND', 'Invoice not found'));
+
   const { status, paid_amount, notes, due_date } = req.body;
   const sets: string[] = [];
-  const replacements: any = { id };
+  const replacements: any = { id, ...tf.replacements };
 
   if (status) { sets.push('status = :status'); replacements.status = status; }
   if (paid_amount !== undefined) { sets.push('paid_amount = :paid_amount'); replacements.paid_amount = paid_amount; }
@@ -103,16 +130,23 @@ async function updateInvoice(req: NextApiRequest, res: NextApiResponse) {
   if (due_date) { sets.push('due_date = :due_date'); replacements.due_date = due_date; }
   sets.push('updated_at = NOW()');
 
-  const [rows] = await sequelize.query(`UPDATE finance_invoices SET ${sets.join(', ')} WHERE id = :id RETURNING *`, { replacements });
+  const [rows] = await sequelize.query(`UPDATE finance_invoices SET ${sets.join(', ')} WHERE id = :id ${tf.condition} RETURNING *`, { replacements });
   if (!rows[0]) return res.status(404).json(errorResponse('NOT_FOUND', 'Invoice not found'));
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'finance_invoice', entityId: id as string, oldValues: oldRows[0], newValues: { status, paid_amount, notes, due_date }, req });
   return res.status(200).json(successResponse(rows[0], undefined, 'Invoice updated'));
 }
 
 async function deleteInvoice(req: NextApiRequest, res: NextApiResponse) {
+  if (!checkLimit(req, res, RateLimitTier.SENSITIVE)) return;
+  const ctx = getTenantContext(req);
+  const tf = buildTenantFilter(ctx.tenantId);
   const { id } = req.query;
   if (!id) return res.status(400).json(errorResponse('VALIDATION', 'ID required'));
 
-  const [rows] = await sequelize.query(`UPDATE finance_invoices SET status = 'cancelled', updated_at = NOW() WHERE id = :id AND status != 'paid' RETURNING *`, { replacements: { id } });
+  const [rows] = await sequelize.query(`UPDATE finance_invoices SET status = 'cancelled', updated_at = NOW() WHERE id = :id AND status != 'paid' ${tf.condition} RETURNING *`, { replacements: { id, ...tf.replacements } });
   if (!rows[0]) return res.status(404).json(errorResponse('NOT_FOUND', 'Invoice not found or already paid'));
+
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'delete', entityType: 'finance_invoice', entityId: id as string, oldValues: rows[0], req });
   return res.status(200).json(successResponse(rows[0], undefined, 'Invoice cancelled'));
 }
