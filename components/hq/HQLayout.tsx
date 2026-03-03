@@ -17,7 +17,8 @@ import {
   CreditCard,
   AlertCircle,
   CheckCircle,
-  Clock
+  Clock,
+  BookOpen
 } from 'lucide-react';
 import {
   hqSidebarConfig,
@@ -476,6 +477,14 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
                       >
                         <Settings className="w-4 h-4 text-gray-400" />
                         Pengaturan Akun
+                      </Link>
+                      <Link
+                        href="/hq/knowledge-base"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <BookOpen className="w-4 h-4 text-gray-400" />
+                        Knowledge Base
                       </Link>
                     </div>
                     <div className="border-t border-gray-100 py-1">
