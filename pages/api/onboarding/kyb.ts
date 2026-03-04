@@ -5,7 +5,7 @@ import { authOptions } from '../auth/[...nextauth]';
 const getDb = () => require('../../../models');
 
 // Helper: resolve tenantId from session or user record
-async function resolveTenantId(db: any, userId: number, sessionTenantId: string | null): Promise<string | null> {
+async function resolveTenantId(db: any, userId: string, sessionTenantId: string | null): Promise<string | null> {
   if (sessionTenantId) return sessionTenantId;
   
   // Lookup from user record
@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const db = getDb();
-    const userId = parseInt(session.user.id);
+    const userId = session.user.id;
     const tenantId = await resolveTenantId(db, userId, session.user.tenantId || null);
 
     console.log('[KYB API]', req.method, '- userId:', userId, 'tenantId:', tenantId);

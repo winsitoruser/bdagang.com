@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const db = getDb();
-  const userId = parseInt(session.user.id);
+  const userId = session.user.id;
   const tenantId = session.user.tenantId;
 
   // GET - List documents for user's KYB application

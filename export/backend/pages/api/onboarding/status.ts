@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const db = getDb();
-    const userId = parseInt(session.user.id);
+    const userId = session.user.id;
     const tenantId = session.user.tenantId;
 
     // Get tenant info

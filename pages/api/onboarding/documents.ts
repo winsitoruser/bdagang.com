@@ -48,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const db = getDb();
-  const userId = parseInt(session.user.id);
+  const userId = session.user.id;
   const tenantId = await resolveTenantId(db, userId, session.user.tenantId || null);
   
   console.log('[Documents API]', req.method, '- userId:', userId, 'tenantId:', tenantId);

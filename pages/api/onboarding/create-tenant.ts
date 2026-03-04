@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Check if user already has a tenant
-    const userId = parseInt(session.user.id);
+    const userId = session.user.id;
     const existingUser = await db.User.findByPk(userId);
     
     if (existingUser.tenantId) {
