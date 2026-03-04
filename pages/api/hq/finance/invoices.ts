@@ -29,7 +29,8 @@ export default withHQAuth(handler, { module: 'finance_pro' });
 async function getInvoices(req: NextApiRequest, res: NextApiResponse) {
   const ctx = getTenantContext(req);
   const tf = buildTenantFilter(ctx.tenantId, 'fi');
-  const { search, status, branchId, startDate, endDate, type, page = '1', limit = '20' } = req.query;
+  const { search, status, branchId, startDate, endDate, type, page = '1', limit: rawLimit = '20' } = req.query;
+  const limit = String(Math.min(parseInt(rawLimit as string) || 20, 100));
   let where = 'WHERE 1=1' + tf.condition;
   const replacements: any = { ...tf.replacements };
 
@@ -120,12 +121,58 @@ async function updateInvoice(req: NextApiRequest, res: NextApiResponse) {
   const [oldRows] = await sequelize.query(`SELECT * FROM finance_invoices WHERE id = :id ${tf.condition}`, { replacements: { id, ...tf.replacements } });
   if (!oldRows[0]) return res.status(404).json(errorResponse('NOT_FOUND', 'Invoice not found'));
 
-  const { status, paid_amount, notes, due_date } = req.body;
+  const oldInvoice = oldRows[0];
+  const { status, payment_amount, paid_amount, notes, due_date, idempotency_key } = req.body;
+
+  // Idempotency check for payment operations (scoped to tenant)
+  if (idempotency_key) {
+    const [existing] = await sequelize.query(
+      `SELECT fip.id FROM finance_invoice_payments fip
+       JOIN finance_invoices fi ON fip.invoice_id = fi.id
+       WHERE fip.idempotency_key = :key ${tf.condition.replace(/tenant_id/g, 'fi.tenant_id')} LIMIT 1`,
+      { replacements: { key: idempotency_key, ...tf.replacements } }
+    );
+    if (existing && existing.length > 0) {
+      return res.status(200).json(successResponse(oldInvoice, undefined, 'Payment already processed (idempotent)'));
+    }
+  }
+
   const sets: string[] = [];
   const replacements: any = { id, ...tf.replacements };
 
-  if (status) { sets.push('status = :status'); replacements.status = status; }
-  if (paid_amount !== undefined) { sets.push('paid_amount = :paid_amount'); replacements.paid_amount = paid_amount; }
+  // Handle payment: accumulate paid_amount instead of overwriting
+  if (payment_amount !== undefined && payment_amount > 0) {
+    if (oldInvoice.status === 'paid') {
+      return res.status(400).json(errorResponse('VALIDATION', 'Invoice already fully paid'));
+    }
+    if (oldInvoice.status === 'cancelled') {
+      return res.status(400).json(errorResponse('VALIDATION', 'Cannot pay a cancelled invoice'));
+    }
+
+    const currentPaid = parseFloat(oldInvoice.paid_amount || '0');
+    const totalAmount = parseFloat(oldInvoice.total_amount || '0');
+    const newPaidTotal = currentPaid + parseFloat(payment_amount);
+
+    if (newPaidTotal > totalAmount) {
+      return res.status(400).json(errorResponse('VALIDATION', `Payment of ${payment_amount} exceeds remaining balance of ${totalAmount - currentPaid}`));
+    }
+
+    sets.push('paid_amount = paid_amount + :payment_amount');
+    replacements.payment_amount = parseFloat(payment_amount);
+
+    // Auto-detect status based on accumulated payment
+    if (newPaidTotal >= totalAmount) {
+      sets.push("status = 'paid'");
+    } else if (newPaidTotal > 0) {
+      sets.push("status = 'partial'");
+    }
+  } else if (paid_amount !== undefined) {
+    // Legacy: direct set (for backward compatibility, but prefer payment_amount)
+    sets.push('paid_amount = :paid_amount');
+    replacements.paid_amount = paid_amount;
+  }
+
+  if (status && payment_amount === undefined) { sets.push('status = :status'); replacements.status = status; }
   if (notes !== undefined) { sets.push('notes = :notes'); replacements.notes = notes; }
   if (due_date) { sets.push('due_date = :due_date'); replacements.due_date = due_date; }
   sets.push('updated_at = NOW()');
@@ -133,7 +180,7 @@ async function updateInvoice(req: NextApiRequest, res: NextApiResponse) {
   const [rows] = await sequelize.query(`UPDATE finance_invoices SET ${sets.join(', ')} WHERE id = :id ${tf.condition} RETURNING *`, { replacements });
   if (!rows[0]) return res.status(404).json(errorResponse('NOT_FOUND', 'Invoice not found'));
 
-  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'finance_invoice', entityId: id as string, oldValues: oldRows[0], newValues: { status, paid_amount, notes, due_date }, req });
+  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'update', entityType: 'finance_invoice', entityId: id as string, oldValues: oldInvoice, newValues: { status: rows[0].status, paid_amount: rows[0].paid_amount, payment_amount, notes, due_date }, req });
   return res.status(200).json(successResponse(rows[0], undefined, 'Invoice updated'));
 }
 

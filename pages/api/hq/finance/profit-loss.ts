@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
 
 let PosTransaction: any, Branch: any, FinanceTransaction: any;
 try {
@@ -74,6 +75,8 @@ export default withHQAuth(handler, { module: 'finance_pro' });
 async function getProfitLoss(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { period = 'month' } = req.query;
+    const ctx = getTenantContext(req);
+    const tenantWhere: any = ctx.tenantId ? { tenantId: ctx.tenantId } : {};
 
     const now = new Date();
     let startDate = new Date();
@@ -90,18 +93,29 @@ async function getProfitLoss(req: NextApiRequest, res: NextApiResponse) {
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB query timeout')), 5000));
 
         const dbQuery = async () => {
-          const branches = await Branch.findAll({ where: { isActive: true }, attributes: ['id', 'code', 'name'] });
+          const branches = await Branch.findAll({ where: { isActive: true, ...tenantWhere }, attributes: ['id', 'code', 'name'] });
           if (branches.length === 0) return null;
 
+          const cogsCategories = ['COGS', 'HPP', 'Bahan Baku', 'Raw Materials', 'Cost of Goods'];
           const branchPL = await Promise.all(branches.map(async (b: any) => {
             const revenue = await PosTransaction.sum('total', { where: { branchId: b.id, status: 'closed', createdAt: { [Op.between]: [startDate, now] } } }) || 0;
-            let expenses = 0;
+            let cogs = 0;
+            let opex = 0;
             if (FinanceTransaction) {
-              try { expenses = await FinanceTransaction.sum('amount', { where: { branchId: b.id, type: 'expense', status: 'completed', transactionDate: { [Op.between]: [startDate, now] } } }) || 0; } catch (e) {}
+              try {
+                const expenseWhere = { ...tenantWhere, branchId: b.id, type: 'expense', status: 'completed', transactionDate: { [Op.between]: [startDate, now] } };
+                // COGS: sum expenses in COGS-related categories
+                cogs = await FinanceTransaction.sum('amount', { where: { ...expenseWhere, category: { [Op.in]: cogsCategories } } }) || 0;
+                // OpEx: sum all other expenses (non-COGS)
+                opex = await FinanceTransaction.sum('amount', { where: { ...expenseWhere, category: { [Op.notIn]: cogsCategories } } }) || 0;
+              } catch (e) {}
             }
-            const cogs = revenue * 0.6;
+            // Fallback to estimates only when no expense data exists at all
+            if (cogs === 0 && opex === 0 && revenue > 0) {
+              cogs = revenue * 0.6;
+              opex = revenue * 0.15;
+            }
             const grossProfit = revenue - cogs;
-            const opex = expenses > 0 ? expenses : revenue * 0.15;
             const netIncome = grossProfit - opex;
             return { id: b.id, name: b.name, code: b.code, revenue, cogs, grossProfit, opex, netIncome, margin: revenue > 0 ? Math.round(netIncome / revenue * 100) : 0 };
           }));

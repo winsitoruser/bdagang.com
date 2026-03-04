@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
+import { FinancePageSkeleton } from '../../../components/finance/FinanceSkeleton';
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -83,7 +85,7 @@ const formatCurrency = (value: number) => {
 export default function CashFlowManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
+  const { period } = useFinancePeriod();
   const [summary, setSummary] = useState<CashFlowSummary>(defaultCFSummary);
   const [cashFlowItems, setCashFlowItems] = useState<CashFlowItem[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
@@ -256,16 +258,7 @@ export default function CashFlowManagement() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              <option value="week">Minggu Ini</option>
-              <option value="month">Bulan Ini</option>
-              <option value="quarter">Kuartal Ini</option>
-              <option value="year">Tahun Ini</option>
-            </select>
+            <PeriodSelector />
             <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>

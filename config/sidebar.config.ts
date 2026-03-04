@@ -66,6 +66,9 @@ import {
   Gauge,
   Factory,
   Cog,
+  Brain,
+  HardHat,
+  Scan,
   type LucideIcon
 } from 'lucide-react';
 
@@ -115,7 +118,8 @@ export type ModuleCode =
   | 'marketing'
   | 'tms'
   | 'fms'
-  | 'manufacturing';
+  | 'manufacturing'
+  | 'asset_management';
 
 export type LayoutType = 'hq' | 'branch' | 'admin';
 
@@ -279,6 +283,31 @@ export const hqSidebarConfig: SidebarConfig = {
       ]
     },
     {
+      id: 'asset-management',
+      title: 'Asset Management',
+      items: [
+        {
+          id: 'assets',
+          name: 'Asset Management',
+          icon: HardHat,
+          modules: ['asset_management'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'],
+          children: [
+            { id: 'asset-dashboard', name: 'Dashboard', href: '/hq/assets', icon: LayoutDashboard },
+            { id: 'asset-registry', name: 'Daftar Aset', href: '/hq/assets?tab=registry', icon: Package },
+            { id: 'asset-categories', name: 'Kategori', href: '/hq/assets?tab=categories', icon: Layers },
+            { id: 'asset-movements', name: 'Mutasi & Transfer', href: '/hq/assets?tab=movements', icon: ArrowRightLeft },
+            { id: 'asset-depreciation', name: 'Penyusutan', href: '/hq/assets?tab=depreciation', icon: TrendingUp },
+            { id: 'asset-maintenance', name: 'Maintenance', href: '/hq/assets?tab=maintenance', icon: Wrench },
+            { id: 'asset-licenses', name: 'Lisensi Software', href: '/hq/assets?tab=licenses', icon: Shield },
+            { id: 'asset-tenancy', name: 'Penyewaan', href: '/hq/assets?tab=tenancy', icon: Building2 },
+            { id: 'asset-alerts', name: 'Alerts', href: '/hq/assets?tab=alerts', icon: AlertCircle },
+            { id: 'asset-settings', name: 'Pengaturan', href: '/hq/assets?tab=settings', icon: Settings },
+          ]
+        }
+      ]
+    },
+    {
       id: 'manufacturing',
       title: 'Manufaktur',
       items: [
@@ -299,6 +328,10 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'mfg-planning', name: 'Production Plan', href: '/hq/manufacturing?tab=planning', icon: Calendar },
             { id: 'mfg-oee', name: 'OEE Analytics', href: '/hq/manufacturing?tab=oee', icon: Gauge },
             { id: 'mfg-costs', name: 'Production Costing', href: '/hq/manufacturing?tab=costs', icon: DollarSign },
+            { id: 'mfg-maintenance', name: 'Maintenance', href: '/hq/manufacturing?tab=maintenance', icon: Wrench },
+            { id: 'mfg-plm', name: 'PLM (Lifecycle)', href: '/hq/manufacturing?tab=plm', icon: Layers },
+            { id: 'mfg-cogm', name: 'COGM', href: '/hq/manufacturing?tab=cogm', icon: DollarSign },
+            { id: 'mfg-subcontract', name: 'Subkontrak', href: '/hq/manufacturing?tab=subcontracting', icon: Truck },
             { id: 'mfg-waste', name: 'Waste & Scrap', href: '/hq/manufacturing?tab=waste', icon: AlertTriangle },
             { id: 'mfg-settings', name: 'Pengaturan', href: '/hq/manufacturing?tab=settings', icon: Settings },
           ]
@@ -427,6 +460,7 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'fin-accounts', name: 'Piutang & Hutang', href: '/hq/finance/accounts', icon: Receipt },
             { id: 'fin-budget', name: 'Anggaran', href: '/hq/finance/budget', icon: PiggyBank },
             { id: 'fin-tax', name: 'Pajak', href: '/hq/finance/tax', icon: Calculator },
+            { id: 'fin-ai-guardian', name: 'AI Guardian', href: '/hq/finance/ai-guardian', icon: Brain },
           ]
         }
       ]

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, DollarSign, Calendar, FileText, Building2, Tag, CreditCard } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { X, DollarSign, Calendar, FileText, Building2, Tag, CreditCard, ShieldAlert, AlertTriangle, Info, Brain, RefreshCw } from 'lucide-react';
 
 interface TransactionFormModalProps {
   isOpen: boolean;
@@ -33,6 +33,34 @@ export default function TransactionFormModal({
   });
 
   const [errors, setErrors] = useState<any>({});
+  const [aiWarnings, setAiWarnings] = useState<any[]>([]);
+  const [aiValidating, setAiValidating] = useState(false);
+  const aiDebounceRef = useRef<any>(null);
+
+  const runAiValidation = useCallback(async (data: typeof formData) => {
+    if (!data.amount || parseFloat(data.amount) <= 0) { setAiWarnings([]); return; }
+    setAiValidating(true);
+    try {
+      const res = await fetch('/api/hq/finance/ai-guardian?action=validate-transaction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: parseFloat(data.amount),
+          category: data.category,
+          transactionType: data.type,
+          contactName: data.description,
+          description: data.description,
+          accountId: data.accountId,
+        }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const result = json.data || json;
+        setAiWarnings(result.warnings || []);
+      }
+    } catch (e) { /* silent */ }
+    setAiValidating(false);
+  }, []);
 
   useEffect(() => {
     if (transaction) {
@@ -68,9 +96,15 @@ export default function TransactionFormModal({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const newData = { ...formData, [name]: value };
+    setFormData(newData);
     if (errors[name]) {
       setErrors((prev: any) => ({ ...prev, [name]: '' }));
+    }
+    // Debounced AI validation on key fields
+    if (['amount', 'accountId', 'type', 'description'].includes(name)) {
+      if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+      aiDebounceRef.current = setTimeout(() => runAiValidation(newData), 800);
     }
   };
 
@@ -340,6 +374,35 @@ export default function TransactionFormModal({
               <option value="completed">Completed</option>
             </select>
           </div>
+
+          {/* AI Guardian Warnings */}
+          {(aiWarnings.length > 0 || aiValidating) && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <ShieldAlert className="w-4 h-4 text-violet-500" />
+                <span>AI Guardian</span>
+                {aiValidating && <RefreshCw className="w-3.5 h-3.5 animate-spin text-violet-500" />}
+              </div>
+              {aiWarnings.map((w: any, i: number) => (
+                <div key={i} className={`flex items-start gap-2 p-3 rounded-lg text-sm ${
+                  w.severity === 'high' || w.severity === 'critical'
+                    ? 'bg-red-50 border border-red-200 text-red-800'
+                    : w.severity === 'medium'
+                    ? 'bg-amber-50 border border-amber-200 text-amber-800'
+                    : 'bg-blue-50 border border-blue-200 text-blue-800'
+                }`}>
+                  {w.severity === 'high' || w.severity === 'critical'
+                    ? <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    : <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />}
+                  <div>
+                    <p className="font-medium text-xs">{w.title}</p>
+                    <p className="text-xs mt-0.5 opacity-90">{w.message}</p>
+                    {w.suggestedAction && <p className="text-xs mt-1 opacity-70">→ {w.suggestedAction}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-3 pt-4 border-t">

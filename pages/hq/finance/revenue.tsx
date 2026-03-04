@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import TransactionFormModal from '../../../components/hq/finance/TransactionFormModal';
 import Link from 'next/link';
+import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
+import { FinancePageSkeleton } from '../../../components/finance/FinanceSkeleton';
+import FinanceErrorModal from '../../../components/finance/FinanceErrorModal';
 import {
   TrendingUp,
   ArrowUpRight,
@@ -86,7 +89,8 @@ const formatFullCurrency = (value: number) => {
 export default function RevenueAnalysis() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'quarter' | 'year'>('month');
+  const { period } = useFinancePeriod();
+  const [apiError, setApiError] = useState<{ show: boolean; message: string; details?: string }>({ show: false, message: '' });
   const [dateRange, setDateRange] = useState({ start: '2026-02-01', end: '2026-02-22' });
   const [revenueData, setRevenueData] = useState<RevenueData>(defaultRevData);
   const [branchRevenue, setBranchRevenue] = useState<BranchRevenue[]>([]);
@@ -271,8 +275,19 @@ export default function RevenueAnalysis() {
     data: branchRevenue.map(b => ({ x: b.code, y: b.revenue }))
   }];
 
+  if (loading && !mounted) {
+    return <HQLayout><FinancePageSkeleton /></HQLayout>;
+  }
+
   return (
     <HQLayout>
+      <FinanceErrorModal
+        isOpen={apiError.show}
+        onClose={() => setApiError({ show: false, message: '' })}
+        message={apiError.message}
+        details={apiError.details}
+        type="error"
+      />
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -286,19 +301,7 @@ export default function RevenueAnalysis() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-              {['day', 'week', 'month', 'quarter', 'year'].map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPeriod(p as any)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    period === p ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {p.charAt(0).toUpperCase() + p.slice(1)}
-                </button>
-              ))}
-            </div>
+            <PeriodSelector />
             <button
               onClick={fetchData}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"

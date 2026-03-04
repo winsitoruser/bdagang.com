@@ -43,7 +43,7 @@ const CashierPage: React.FC = () => {
   const [newMember, setNewMember] = useState({ name: '', phone: '', discount: 10 });
   const [membersList, setMembersList] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<string[]>(['Semua']);
+  const [categories, setCategories] = useState<(string | { id: number; name: string })[]>(['Semua']);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
   
@@ -565,39 +565,52 @@ const CashierPage: React.FC = () => {
                 {filteredProducts.length} items
               </span>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-              {filteredProducts.map((product) => (
-                <button
-                  key={product.id}
-                  onClick={() => addToCart(product)}
-                  className="group bg-white border-2 border-gray-200 rounded-xl p-3 hover:border-indigo-400 hover:shadow-xl transition-all duration-300 text-left transform hover:-translate-y-1"
-                >
-                  <div className="aspect-square bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 rounded-lg mb-2 flex items-center justify-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 group-hover:scale-110 transition-transform duration-300"></div>
-                    <FaBox className="w-8 h-8 text-indigo-600 relative z-10 group-hover:scale-110 transition-transform" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-xs text-gray-900 line-clamp-2 group-hover:text-indigo-600 transition-colors leading-tight">
-                      {product.name}
-                    </h3>
-                    <div>
-                      <p className="text-indigo-600 font-bold text-sm">
-                        Rp {product.price.toLocaleString('id-ID')}
-                      </p>
-                      <p className="text-xs text-gray-500 flex items-center mt-0.5">
-                        <span className={`w-1.5 h-1.5 rounded-full mr-1 ${product.stock > 20 ? 'bg-green-500' : product.stock > 10 ? 'bg-yellow-500' : 'bg-red-500'}`}></span>
-                        Stok: {product.stock}
-                      </p>
+            {isLoadingProducts ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-4"></div>
+                <p className="text-gray-500 text-sm">Memuat produk...</p>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                <FaBox className="w-12 h-12 mb-3 opacity-30" />
+                <p className="font-semibold text-gray-500">Tidak ada produk ditemukan</p>
+                <p className="text-sm mt-1">Coba ubah kata kunci atau filter kategori</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                {filteredProducts.map((product) => (
+                  <button
+                    key={product.id}
+                    onClick={() => addToCart(product)}
+                    className="group bg-white border-2 border-gray-200 rounded-xl p-3 hover:border-indigo-400 hover:shadow-xl transition-all duration-300 text-left transform hover:-translate-y-1"
+                  >
+                    <div className="aspect-square bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 rounded-lg mb-2 flex items-center justify-center relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 group-hover:scale-110 transition-transform duration-300"></div>
+                      <FaBox className="w-8 h-8 text-indigo-600 relative z-10 group-hover:scale-110 transition-transform" />
                     </div>
-                  </div>
-                  <div className="mt-2 pt-2 border-t border-gray-100">
-                    <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                      {product.category}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-xs text-gray-900 line-clamp-2 group-hover:text-indigo-600 transition-colors leading-tight">
+                        {product.name}
+                      </h3>
+                      <div>
+                        <p className="text-indigo-600 font-bold text-sm">
+                          Rp {product.price.toLocaleString('id-ID')}
+                        </p>
+                        <p className="text-xs text-gray-500 flex items-center mt-0.5">
+                          <span className={`w-1.5 h-1.5 rounded-full mr-1 ${product.stock > 20 ? 'bg-green-500' : product.stock > 10 ? 'bg-yellow-500' : 'bg-red-500'}`}></span>
+                          Stok: {product.stock}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {product.category}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

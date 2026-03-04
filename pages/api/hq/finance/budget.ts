@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
 
 let FinanceBudget: any;
 try {
@@ -134,24 +135,46 @@ export default withHQAuth(handler, { module: 'finance_pro' });
 
 async function getBudgets(req: NextApiRequest, res: NextApiResponse) {
   const { year, month, status, branchId } = req.query;
+  const ctx = getTenantContext(req);
+  const tenantWhere: any = ctx.tenantId ? { tenantId: ctx.tenantId } : {};
 
   if (FinanceBudget) {
     try {
-      const where: any = {};
+      const where: any = { ...tenantWhere };
       if (year) where.year = parseInt(year as string);
       if (month) where.month = parseInt(month as string);
       if (status && status !== 'all') where.status = status;
 
       const budgets = await FinanceBudget.findAll({ where, order: [['year', 'DESC'], ['month', 'DESC']] });
       if (budgets.length > 0) {
+        // Compute alert levels based on utilization
+        const enriched = budgets.map((b: any) => {
+          const raw = b.toJSON ? b.toJSON() : b;
+          const budgetAmt = parseFloat(raw.totalBudget || raw.budgetAmount || 0);
+          const spentAmt = parseFloat(raw.totalActual || raw.spentAmount || 0);
+          const utilization = budgetAmt > 0 ? Math.round((spentAmt / budgetAmt) * 10000) / 100 : 0;
+          const alertThreshold = raw.alertThreshold || 80;
+          const criticalThreshold = raw.critical_threshold || raw.criticalThreshold || 90;
+          let alert_level = 'none';
+          if (utilization >= 100) alert_level = 'exceeded';
+          else if (utilization >= criticalThreshold) alert_level = 'critical';
+          else if (utilization >= alertThreshold) alert_level = 'warning';
+          return { ...raw, utilization, alert_level };
+        });
+
+        const alerts = enriched.filter((b: any) => b.alert_level !== 'none');
+
         const summary = {
-          totalBudget: budgets.reduce((s: number, b: any) => s + parseFloat(b.totalBudget || 0), 0),
-          totalActual: budgets.reduce((s: number, b: any) => s + parseFloat(b.totalActual || 0), 0),
+          totalBudget: budgets.reduce((s: number, b: any) => s + parseFloat(b.totalBudget || b.budgetAmount || 0), 0),
+          totalActual: budgets.reduce((s: number, b: any) => s + parseFloat(b.totalActual || b.spentAmount || 0), 0),
           totalVariance: budgets.reduce((s: number, b: any) => s + parseFloat(b.variance || 0), 0),
           activeBudgets: budgets.filter((b: any) => b.status === 'active').length,
-          draftBudgets: budgets.filter((b: any) => b.status === 'draft').length
+          draftBudgets: budgets.filter((b: any) => b.status === 'draft').length,
+          warningCount: alerts.filter((a: any) => a.alert_level === 'warning').length,
+          criticalCount: alerts.filter((a: any) => a.alert_level === 'critical').length,
+          exceededCount: alerts.filter((a: any) => a.alert_level === 'exceeded').length,
         };
-        return res.status(HttpStatus.OK).json(successResponse({ budgets, summary }));
+        return res.status(HttpStatus.OK).json(successResponse({ budgets: enriched, summary, alerts }));
       }
     } catch (e: any) { console.warn('Budget DB failed:', e.message); }
   }

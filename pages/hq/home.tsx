@@ -192,7 +192,7 @@ export default function UnifiedDashboard() {
   };
 
   const activeCategories = CATEGORY_ORDER.filter(cat => groupedModules[cat]?.length > 0);
-  const isUnderReview = kybStatus === 'in_review' || kybStatus === 'pending_kyb';
+  const isUnderReview = kybStatus === 'in_review';
 
   const handleReviewClick = (e: React.MouseEvent) => {
     e.preventDefault();

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import TransactionFormModal from '../../../components/hq/finance/TransactionFormModal';
 import Link from 'next/link';
+import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
+import { FinancePageSkeleton } from '../../../components/finance/FinanceSkeleton';
+import FinanceErrorModal from '../../../components/finance/FinanceErrorModal';
 import {
   TrendingDown,
   ArrowUpRight,
@@ -111,7 +114,8 @@ const getCategoryIcon = (icon: string) => {
 export default function ExpenseManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'quarter' | 'year'>('month');
+  const { period } = useFinancePeriod();
+  const [apiError, setApiError] = useState<{ show: boolean; message: string; details?: string }>({ show: false, message: '' });
   const [summary, setSummary] = useState<ExpenseSummary>(defaultExpSummary);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
@@ -309,17 +313,7 @@ export default function ExpenseManagement() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              <option value="day">Hari Ini</option>
-              <option value="week">Minggu Ini</option>
-              <option value="month">Bulan Ini</option>
-              <option value="quarter">Kuartal Ini</option>
-              <option value="year">Tahun Ini</option>
-            </select>
+            <PeriodSelector />
             <button
               onClick={fetchData}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"

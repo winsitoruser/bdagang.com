@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
+import { FinancePageSkeleton } from '../../../components/finance/FinanceSkeleton';
 import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, RefreshCw, Download,
@@ -81,7 +83,7 @@ const formatFullCurrency = (value: number) => {
 export default function ProfitLossReport() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
+  const { period } = useFinancePeriod();
   const [comparePeriod, setComparePeriod] = useState<'previous' | 'yoy'>('previous');
   const [industry, setIndustry] = useState('general');
   const [summary, setSummary] = useState<PLSummary>(defaultPLSummary);
@@ -187,11 +189,7 @@ export default function ProfitLossReport() {
             <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <select value={period} onChange={(e) => setPeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-              <option value="month">Bulan Ini</option>
-              <option value="quarter">Kuartal Ini</option>
-              <option value="year">Tahun Ini</option>
-            </select>
+            <PeriodSelector />
             <select value={comparePeriod} onChange={(e) => setComparePeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               <option value="previous">vs Periode Sebelumnya</option>
               <option value="yoy">vs Tahun Lalu</option>
