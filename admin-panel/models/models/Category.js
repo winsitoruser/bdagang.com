@@ -16,10 +16,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(100),
       allowNull: false
     },
-    type: {
-      type: DataTypes.ENUM('income', 'expense'),
-      allowNull: false
-    },
+    // type: {
+    //   type: DataTypes.ENUM('income', 'expense'),
+    //   allowNull: false
+    // },
     description: {
       type: DataTypes.TEXT
     },
