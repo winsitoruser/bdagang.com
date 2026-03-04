@@ -7,6 +7,11 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true
     },
+    parent_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'parent_id'
+    },
     name: {
       type: DataTypes.STRING(100),
       allowNull: false
@@ -36,6 +41,21 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     underscored: true
   });
+
+  Category.associate = (models) => {
+    Category.belongsTo(models.Category, {
+      as: 'parent',
+      foreignKey: 'parent_id'
+    });
+    Category.hasMany(models.Category, {
+      as: 'children',
+      foreignKey: 'parent_id'
+    });
+    Category.belongsTo(models.Tenant, {
+      foreignKey: 'tenantId',
+      as: 'tenant'
+    });
+  };
 
   return Category;
 };
