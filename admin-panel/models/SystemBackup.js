@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const sequelize = require('../lib/sequelize');
 
 const SystemBackup = sequelize.define('SystemBackup', {
   id: {
@@ -36,7 +36,7 @@ const SystemBackup = sequelize.define('SystemBackup', {
   },
   createdBy: {
     type: DataTypes.UUID,
-    allowNull: true,
+      allowNull: true,
     references: {
       model: 'users',
       key: 'id'

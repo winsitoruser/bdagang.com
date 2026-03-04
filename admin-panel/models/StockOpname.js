@@ -3,9 +3,10 @@ const sequelize = require('../lib/sequelize');
 
 const StockOpname = sequelize.define('StockOpname', {
   id: {
-    type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
-    autoIncrement: true
+    
   },
   opname_number: {
     type: DataTypes.STRING(50),
@@ -18,7 +19,7 @@ const StockOpname = sequelize.define('StockOpname', {
     comment: 'full=Full Count, cycle=Cycle Count, spot=Spot Check'
   },
   warehouse_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true,
     references: {
       model: 'warehouses',
@@ -26,7 +27,7 @@ const StockOpname = sequelize.define('StockOpname', {
     }
   },
   location_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true,
     references: {
       model: 'locations',
@@ -91,8 +92,8 @@ const StockOpname = sequelize.define('StockOpname', {
     allowNull: true
   },
   created_by: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
+    type: DataTypes.UUID,
+      allowNull: true,
     references: {
       model: 'users',
       key: 'id'

@@ -3,9 +3,10 @@ const sequelize = require('../lib/sequelize');
 
 const Warehouse = sequelize.define('Warehouse', {
   id: {
-    type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
-    autoIncrement: true
+    
   },
   code: {
     type: DataTypes.STRING(50),

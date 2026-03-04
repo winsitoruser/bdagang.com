@@ -3,12 +3,13 @@
 module.exports = (sequelize, DataTypes) => {
   const ProductVariant = sequelize.define('ProductVariant', {
     id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-      autoIncrement: true
+      
     },
     product_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: false
     },
     variant_name: {

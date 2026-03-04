@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const sequelize = require('../lib/sequelize');
 
 const NotificationSetting = sequelize.define('NotificationSetting', {
   id: {
@@ -9,7 +9,7 @@ const NotificationSetting = sequelize.define('NotificationSetting', {
   },
   userId: {
     type: DataTypes.UUID,
-    allowNull: false,
+      allowNull: false,
     references: {
       model: 'users',
       key: 'id'

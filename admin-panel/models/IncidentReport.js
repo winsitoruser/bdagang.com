@@ -3,9 +3,10 @@ const sequelize = require('../lib/sequelize');
 
 const IncidentReport = sequelize.define('IncidentReport', {
   id: {
-    type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
-    autoIncrement: true
+    
   },
   incident_number: {
     type: DataTypes.STRING(50),
@@ -13,7 +14,7 @@ const IncidentReport = sequelize.define('IncidentReport', {
     unique: true
   },
   stock_opname_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true,
     references: {
       model: 'stock_opnames',
@@ -21,7 +22,7 @@ const IncidentReport = sequelize.define('IncidentReport', {
     }
   },
   stock_opname_item_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true,
     references: {
       model: 'stock_opname_items',
@@ -29,7 +30,7 @@ const IncidentReport = sequelize.define('IncidentReport', {
     }
   },
   product_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
     references: {
       model: 'products',
@@ -125,8 +126,8 @@ const IncidentReport = sequelize.define('IncidentReport', {
   },
   // Metadata
   created_by: {
-    type: DataTypes.INTEGER,
-    allowNull: true,
+    type: DataTypes.UUID,
+      allowNull: true,
     references: {
       model: 'users',
       key: 'id'

@@ -12,7 +12,7 @@ const FinanceInvoiceItem = sequelize.define('FinanceInvoiceItem', {
     allowNull: false
   },
   productId: {
-    type: DataTypes.INTEGER,
+type: DataTypes.UUID,
     allowNull: true
   },
   productName: {

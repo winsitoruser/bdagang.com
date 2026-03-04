@@ -3,12 +3,13 @@
 module.exports = (sequelize, DataTypes) => {
   const RecipeHistory = sequelize.define('RecipeHistory', {
     id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-      autoIncrement: true
+      
     },
     recipe_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: false
     },
     version: {
@@ -21,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     changed_by: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: true
     },
     changes_summary: {

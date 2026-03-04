@@ -3,12 +3,12 @@
 module.exports = (sequelize, DataTypes) => {
   const Stock = sequelize.define('Stock', {
   id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
     primaryKey: true
   },
   product_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
     field: 'product_id',
     references: {
@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   },
   location_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true,
     field: 'location_id',
     references: {

@@ -3,9 +3,10 @@
 module.exports = (sequelize, DataTypes) => {
   const ProductionWaste = sequelize.define('ProductionWaste', {
     id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-      autoIncrement: true
+      
     },
     waste_number: {
       type: DataTypes.STRING(50),
@@ -13,11 +14,11 @@ module.exports = (sequelize, DataTypes) => {
       unique: true
     },
     production_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: true
     },
     product_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: true
     },
     waste_type: {
@@ -64,7 +65,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     recorded_by: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: true
     },
     waste_date: {

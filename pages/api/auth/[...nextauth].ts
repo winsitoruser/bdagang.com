@@ -62,7 +62,7 @@ export const authOptions: NextAuthOptions = {
 
           // Return user object (without password)
           return {
-            id: user.id.toString(),
+            id: user.id,
             email: user.email,
             name: user.name,
             role: user.role,

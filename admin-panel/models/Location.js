@@ -3,12 +3,13 @@ const sequelize = require('../lib/sequelize');
 
 const Location = sequelize.define('Location', {
   id: {
-    type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
-    autoIncrement: true
+    
   },
   warehouse_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
     references: {
       model: 'warehouses',

@@ -15,13 +15,13 @@ export default function AdminLogin() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      if (session.user?.role === 'ADMIN' || session.user?.role === 'SUPER_ADMIN') {
+      if (session.user?.role === 'ADMIN' || session.user?.role === 'SUPER_ADMIN', session.user?.role === 'admin' || session.user?.role === 'super_admin') {
         router.push('/dashboard');
       } else {
         setError('Anda tidak memiliki akses ke Admin Panel');
-        setTimeout(() => {
-          signIn(undefined, { callbackUrl: '/' });
-        }, 2000);
+        // setTimeout(() => {
+        //   signIn(undefined, { callbackUrl: '/' });
+        // }, 2000);
       }
     }
   }, [status, session, router]);

@@ -3,9 +3,10 @@
 module.exports = (sequelize, DataTypes) => {
   const Recipe = sequelize.define('Recipe', {
     id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-      autoIncrement: true
+      
     },
     code: {
       type: DataTypes.STRING(50),
@@ -21,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     product_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: true
     },
     batch_size: {
@@ -99,7 +100,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     created_by: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: true
     }
   }, {

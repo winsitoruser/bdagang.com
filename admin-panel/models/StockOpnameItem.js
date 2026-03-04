@@ -3,12 +3,13 @@ const sequelize = require('../lib/sequelize');
 
 const StockOpnameItem = sequelize.define('StockOpnameItem', {
   id: {
-    type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
-    autoIncrement: true
+    
   },
   stock_opname_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
     references: {
       model: 'stock_opnames',
@@ -16,7 +17,7 @@ const StockOpnameItem = sequelize.define('StockOpnameItem', {
     }
   },
   product_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: false,
     references: {
       model: 'products',
@@ -24,7 +25,7 @@ const StockOpnameItem = sequelize.define('StockOpnameItem', {
     }
   },
   location_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.UUID,
     allowNull: true,
     references: {
       model: 'locations',

@@ -3,16 +3,17 @@
 module.exports = (sequelize, DataTypes) => {
   const ProductionMaterial = sequelize.define('ProductionMaterial', {
     id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-      autoIncrement: true
+      
     },
     production_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: false
     },
     product_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: false
     },
     planned_quantity: {

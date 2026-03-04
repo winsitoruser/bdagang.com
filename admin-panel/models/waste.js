@@ -1,11 +1,12 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/database');
+const sequelize = require('../lib/sequelize');
 
 const Waste = sequelize.define('Waste', {
   id: {
-    type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
     primaryKey: true,
-    autoIncrement: true
+    
   },
   wasteNumber: {
     type: DataTypes.STRING(50),
@@ -14,7 +15,7 @@ const Waste = sequelize.define('Waste', {
     field: 'waste_number'
   },
   productId: {
-    type: DataTypes.INTEGER,
+type: DataTypes.UUID,
     allowNull: true,
     field: 'product_id'
   },

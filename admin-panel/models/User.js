@@ -1,9 +1,9 @@
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
     id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
     },
     name: {
       type: DataTypes.STRING,
@@ -29,9 +29,33 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
+    tenantId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'tenant_id',
+      references: {
+        model: 'tenants',
+        key: 'id'
+      }
+    },
+    assignedBranchId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'assigned_branch_id',
+      references: {
+        model: 'branches',
+        key: 'id'
+      }
+    },
     role: {
-      type: DataTypes.ENUM('owner', 'admin', 'manager', 'cashier', 'staff'),
-      defaultValue: 'owner'
+      type: DataTypes.ENUM('super_admin', 'owner', 'admin', 'manager', 'cashier', 'staff', 'hq_admin', 'branch_manager', 'inventory_staff', 'kitchen_staff', 'finance_staff', 'hr_staff'),
+      defaultValue: 'staff'
+    },
+    dataScope: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'own_branch',
+      field: 'data_scope',
+      comment: 'own_branch = sees own branch only, all_branches = HQ/aggregation access'
     },
     isActive: {
       type: DataTypes.BOOLEAN,
@@ -55,6 +79,31 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'users',
     timestamps: true
   });
+
+  // Add instance method to check if user is super admin
+  User.prototype.isSuperAdmin = function () {
+    return this.role === 'super_admin';
+  };
+
+  User.associate = (models) => {
+    // User belongs to a tenant
+    User.belongsTo(models.Tenant, {
+      foreignKey: 'tenantId',
+      as: 'tenant'
+    });
+
+    // User belongs to an assigned branch
+    User.belongsTo(models.Branch, {
+      foreignKey: 'assignedBranchId',
+      as: 'assignedBranch'
+    });
+
+    // User has many Branches (as manager)
+    User.hasMany(models.Branch, {
+      foreignKey: 'managerId',
+      as: 'managedBranches'
+    });
+  };
 
   return User;
 };

@@ -3,16 +3,17 @@
 module.exports = (sequelize, DataTypes) => {
   const RecipeIngredient = sequelize.define('RecipeIngredient', {
     id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-      autoIncrement: true
+      
     },
     recipe_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: false
     },
     product_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: false
     },
     quantity: {

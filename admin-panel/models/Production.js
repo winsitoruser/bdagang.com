@@ -3,9 +3,10 @@
 module.exports = (sequelize, DataTypes) => {
   const Production = sequelize.define('Production', {
     id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-      autoIncrement: true
+      
     },
     batch_number: {
       type: DataTypes.STRING(50),
@@ -13,11 +14,11 @@ module.exports = (sequelize, DataTypes) => {
       unique: true
     },
     recipe_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: false
     },
     product_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: true
     },
     planned_quantity: {
@@ -73,12 +74,21 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     produced_by: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: true
     },
     supervisor_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: true
+    },
+    branchId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'branch_id',
+      references: {
+        model: 'branches',
+        key: 'id'
+      }
     },
     notes: {
       type: DataTypes.TEXT,
@@ -91,7 +101,22 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     tableName: 'productions',
     timestamps: true,
-    underscored: true
+    underscored: true,
+    indexes: [
+      {
+        fields: ['batch_number'],
+        unique: true
+      },
+      {
+        fields: ['production_date']
+      },
+      {
+        fields: ['status']
+      },
+      {
+        fields: ['branch_id']
+      }
+    ]
   });
 
   Production.associate = (models) => {
@@ -121,6 +146,13 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'production_id',
       as: 'materials'
     });
+    
+    if (models.Branch) {
+      Production.belongsTo(models.Branch, {
+        foreignKey: 'branchId',
+        as: 'branch'
+      });
+    }
   };
 
   return Production;

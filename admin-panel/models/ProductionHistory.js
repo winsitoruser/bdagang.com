@@ -3,12 +3,13 @@
 module.exports = (sequelize, DataTypes) => {
   const ProductionHistory = sequelize.define('ProductionHistory', {
     id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
-      autoIncrement: true
+      
     },
     production_id: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: false
     },
     action_type: {
@@ -24,7 +25,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     changed_by: {
-      type: DataTypes.INTEGER,
+type: DataTypes.UUID,
       allowNull: true
     },
     changes_summary: {

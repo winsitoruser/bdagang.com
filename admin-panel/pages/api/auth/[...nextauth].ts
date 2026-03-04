@@ -24,6 +24,8 @@ export const authOptions: NextAuthOptions = {
             where: { email: credentials.email }
           });
 
+          console.log('[NEXTAUTH] User:', user);
+
           if (!user) {
             throw new Error('Email atau password salah');
           }
@@ -33,7 +35,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           // Verify admin role
-          if (!['ADMIN', 'SUPER_ADMIN'].includes(user.role)) {
+          if (!['ADMIN', 'SUPER_ADMIN', 'admin', 'super_admin'].includes(user.role)) {
             throw new Error('Anda tidak memiliki akses ke Admin Panel');
           }
 
