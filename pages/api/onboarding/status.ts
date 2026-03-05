@@ -65,6 +65,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Determine overall status
+    console.log('tenant detail', tenant); 
+    console.log('this tenantId', tenantId);
+    console.log('session detail', session);
     const kybStatus = tenant?.kybStatus || 'pending_kyb';
     let statusInfo = {
       status: kybStatus,

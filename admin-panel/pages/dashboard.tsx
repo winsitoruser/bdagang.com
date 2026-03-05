@@ -58,7 +58,7 @@ export default function AdminDashboard() {
     }
 
     if (session && !['ADMIN', 'SUPER_ADMIN', 'admin', 'super_admin'].includes(session.user.role)) {
-      // router.push('/admin/login');
+      // router.push('/login');
       return;
     }
 
@@ -164,21 +164,21 @@ export default function AdminDashboard() {
           <aside className="w-64 bg-white min-h-screen shadow-sm">
             <nav className="p-4 space-y-2">
               <button
-                onClick={() => router.push('/admin/dashboard')}
+                onClick={() => router.push('/dashboard')}
                 className="w-full flex items-center space-x-3 px-4 py-3 text-blue-600 bg-blue-50 rounded-lg font-medium"
               >
                 <Activity className="h-5 w-5" />
                 <span>Dashboard</span>
               </button>
               <button
-                onClick={() => router.push('/admin/partners')}
+                onClick={() => router.push('/partners')}
                 className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 <Users className="h-5 w-5" />
                 <span>Partners</span>
               </button>
               <button
-                onClick={() => router.push('/admin/activations')}
+                onClick={() => router.push('/activations')}
                 className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 <FileCheck className="h-5 w-5" />
@@ -190,14 +190,14 @@ export default function AdminDashboard() {
                 )}
               </button>
               <button
-                onClick={() => router.push('/admin/outlets')}
+                onClick={() => router.push('/outlets')}
                 className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 <Store className="h-5 w-5" />
                 <span>Outlets</span>
               </button>
               <button
-                onClick={() => router.push('/admin/transactions')}
+                onClick={() => router.push('/transactions')}
                 className="w-full flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 <DollarSign className="h-5 w-5" />
@@ -327,7 +327,7 @@ export default function AdminDashboard() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                   <div className="space-y-2">
                     <button
-                      onClick={() => router.push('/admin/partners')}
+                      onClick={() => router.push('/partners')}
                       className="w-full text-left px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
                     >
                       <div className="flex items-center justify-between">
@@ -336,7 +336,7 @@ export default function AdminDashboard() {
                       </div>
                     </button>
                     <button
-                      onClick={() => router.push('/admin/activations')}
+                      onClick={() => router.push('/activations')}
                       className="w-full text-left px-4 py-3 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors"
                     >
                       <div className="flex items-center justify-between">
@@ -347,7 +347,7 @@ export default function AdminDashboard() {
                       </div>
                     </button>
                     <button
-                      onClick={() => router.push('/admin/transactions')}
+                      onClick={() => router.push('/transactions')}
                       className="w-full text-left px-4 py-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
                     >
                       <div className="flex items-center justify-between">

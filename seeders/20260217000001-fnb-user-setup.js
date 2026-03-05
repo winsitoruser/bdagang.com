@@ -65,9 +65,9 @@ module.exports = {
         email: 'winsitoruser@gmail.com',
         password: hashedPassword,
         role: 'owner',
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date()
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
       }]);
 
       console.log('✅ Created F&B user: winsitoruser@gmail.com with password: winsitor123');
@@ -126,7 +126,7 @@ module.exports = {
       module_id: module.id,
       is_enabled: true,
       created_at: new Date(),
-      updated_at: new Date()
+      // updated_at: new Date()
     }));
 
     // Delete existing tenant modules first
