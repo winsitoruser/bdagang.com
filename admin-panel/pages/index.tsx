@@ -15,7 +15,7 @@ export default function Home() {
     }
 
     if (session) {
-      if (['ADMIN', 'SUPER_ADMIN'].includes(session.user?.role as string)) {
+      if (['ADMIN', 'SUPER_ADMIN', 'admin', 'super_admin'].includes(session.user?.role as string)) {
         router.replace('/dashboard');
       } else {
         router.replace('/login');

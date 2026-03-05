@@ -5,12 +5,20 @@ const bcrypt = require('bcryptjs');
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'farmanesia_dev',
+  database: process.env.DB_NAME || 'bedagang_dev',
   user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres'
+  password: process.env.DB_PASSWORD || 'password'
 });
 
 async function createAdminSuperUser() {
+
+  console.log('[Pool] Connecting to database...\n');
+  console.log('[Pool] Database:', process.env.DB_NAME);
+  console.log('[Pool] User:', process.env.DB_USER);
+  console.log('[Pool] Password:', process.env.DB_PASSWORD);
+  console.log('[Pool] Host:', process.env.DB_HOST);
+  console.log('[Pool] Port:', process.env.DB_PORT);
+
   const client = await pool.connect();
   
   try {

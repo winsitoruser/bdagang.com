@@ -17,22 +17,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Check authentication
     const session = await getServerSession(req, res, authOptions);
-    if (!session || !['ADMIN', 'SUPER_ADMIN'].includes(session.user?.role as string)) {
+    if (!session || !['ADMIN', 'SUPER_ADMIN', 'admin', 'super_admin'].includes(session.user?.role as string)) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const {
       page = 1,
       limit = 20,
-      status = 'pending',
+      // status = 'pending',
+      status = 'in_review',
       sort_by = 'created_at',
       sort_order = 'DESC'
     } = req.query;
 
     const where: any = {};
     if (status) {
-      where.status = status;
+      where.status = 'in_review';
     }
+
+    console.log('where', where);
+
 
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string);
 
@@ -42,12 +46,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         {
           model: Partner,
           as: 'partner',
-          attributes: ['id', 'business_name', 'owner_name', 'email', 'phone', 'city']
+          attributes: ['id', 'business_name', 'owner_name', 'email', 'phone', 'city'],
+          required: false
         },
         {
           model: SubscriptionPackage,
           as: 'package',
-          attributes: ['id', 'name', 'price_monthly', 'max_outlets', 'max_users']
+          attributes: ['id', 'name', 'price_monthly', 'max_outlets', 'max_users'],
+          required: false
         }
       ],
       order: [[sort_by as string, sort_order as string]],
