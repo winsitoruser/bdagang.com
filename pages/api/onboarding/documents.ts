@@ -24,7 +24,7 @@ function ensureDir(dir: string) {
 }
 
 // Helper: resolve tenantId from session or user/kyb record
-async function resolveTenantId(db: any, userId: number, sessionTenantId: string | null): Promise<string | null> {
+async function resolveTenantId(db: any, userId: any, sessionTenantId: string | null): Promise<string | null> {
   if (sessionTenantId) return sessionTenantId;
   try {
     const user = await db.User.findByPk(userId, { attributes: ['id', 'tenantId'] });

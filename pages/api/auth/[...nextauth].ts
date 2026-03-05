@@ -67,7 +67,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role,
             businessName: user.businessName,
-            tenantId: user.tenant_id,
+            tenantId: user.tenant?.id || null,
             branchId: user.assignedBranch?.id || null,
             branchName: user.assignedBranch?.name || null,
             branchCode: user.assignedBranch?.code || null,

@@ -19,6 +19,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
 
+    console.log('[Status] session:', session);
+    console.log('[Status] TenantId:', tenantId);
+
     // Get tenant info (with safe include)
     let tenant = null;
     if (tenantId) {
