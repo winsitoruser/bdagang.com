@@ -17,6 +17,7 @@ COPY . .
 
 # Next.js standalone requires NODE_ENV production
 ENV NODE_ENV production
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build
 
 # Production image, copy all the files and run next
