@@ -40,9 +40,6 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
 
-  // Enable SWC minification for faster builds
-  swcMinify: true,
-
   // Webpack config to fix EMFILE (too many open files) on large projects
   webpack: (config, { dev }) => {
     if (dev) {
