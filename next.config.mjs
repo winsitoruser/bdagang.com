@@ -33,13 +33,13 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  
+
   // Performance optimizations
   compiler: {
     // Remove console.log in production
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
-  
+
   // Enable SWC minification for faster builds
   swcMinify: true,
 
@@ -64,13 +64,13 @@ const nextConfig = {
     }
     return config;
   },
-  
+
   // Experimental features for better performance
   experimental: {
     // Optimize package imports
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', 'recharts', 'apexcharts', 'react-apexcharts'],
   },
-  
+
   // Transpile Radix UI and other ESM packages
   transpilePackages: [
     '@radix-ui/react-tabs',
@@ -95,7 +95,7 @@ const nextConfig = {
     })),
     unoptimized: true, // Disable Image Optimization for export
   },
-  
+
   /**
   * Set custom website headers with next-secure-headers.
   * @see https://github.com/jagaapple/next-secure-headers

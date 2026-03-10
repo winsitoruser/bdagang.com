@@ -1,23 +1,7 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/pages/api/auth/[...nextauth]';
-
-export async function requireAuth(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions);
-  if (!session) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return null;
-  }
-  return session;
-}
-
-export function withAuth(handler: any) {
-  return async (req: NextApiRequest, res: NextApiResponse) => {
-    const session = await requireAuth(req, res);
-    if (!session) return;
-    return handler(req, res, session);
-  };
-}
+/**
+ * Client-side utility functions for access control
+ * This file is safe to import in client components
+ */
 
 /**
  * Check if user has access to a specific module
@@ -25,10 +9,10 @@ export function withAuth(handler: any) {
  */
 export function checkAccess(user: any, moduleCode: string): boolean {
   if (!user) return false;
-
+  
   // Super admin has access to everything
   if (user.role === 'super_admin') return true;
-
+  
   // Role-based module access
   const roleModuleAccess: Record<string, string[]> = {
     admin: ['finance', 'inventory', 'pos', 'purchasing', 'hr', 'reports'],
@@ -37,7 +21,7 @@ export function checkAccess(user: any, moduleCode: string): boolean {
     warehouse: ['inventory', 'purchasing'],
     accountant: ['finance', 'reports'],
   };
-
+  
   const allowedModules = roleModuleAccess[user.role] || [];
   return allowedModules.includes(moduleCode);
 }
@@ -54,6 +38,6 @@ export function getRedirectPathByRole(role: string): string {
     warehouse: '/inventory',
     accountant: '/finance',
   };
-
+  
   return redirectPaths[role] || '/dashboard';
 }

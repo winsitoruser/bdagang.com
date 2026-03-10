@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import FinanceLayout from "@/components/layouts/finance-layout";
 import TransfersComponent from "@/components/finance/TransfersComponent";
 import { useAuth } from "@/hooks/useAuth";
-import { checkAccess, getRedirectPathByRole } from "@/middleware/auth";
+import { checkAccess, getRedirectPathByRole } from "@/lib/auth/access-control";
 import { Toaster } from "react-hot-toast";
 
 const FinanceTransfersPage: NextPage = () => {
