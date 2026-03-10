@@ -6,9 +6,9 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json package-lock.json ./
+COPY package.json ./
 
-RUN npm ci --legacy-peer-deps --omit=dev --no-audit --no-fund
+RUN npm install --legacy-peer-deps --omit=dev --no-audit --no-fund
 
 # Rebuild the source code only when needed
 FROM base AS builder
