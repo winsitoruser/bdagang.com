@@ -14,13 +14,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
 
-    const Employee = require('@/models/Employee');
+    const { Employee } = require('@/models');
 
-    const { 
-      search, 
+    const {
+      search,
       status = 'active',
       limit = 50,
-      offset = 0 
+      offset = 0
     } = req.query;
 
     const where: any = {};
@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (search) {
       where[Op.or] = [
         { name: { [Op.like]: `%${search}%` } },
-        { employeeNumber: { [Op.like]: `%${search}%` } },
+        { employeeId: { [Op.like]: `%${search}%` } },
         { email: { [Op.like]: `%${search}%` } }
       ];
     }
@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where,
         attributes: [
           'id',
-          'employeeNumber',
+          ['employeeId', 'employeeNumber'],
           'name',
           'email',
           'phone',
@@ -68,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     } catch (dbError: any) {
       console.error('Database error:', dbError);
-      
+
       // Return empty array if database not ready
       return res.status(200).json({
         success: true,

@@ -10,9 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { id } = req.query;
-    const EmployeeSchedule = require('@/models/EmployeeSchedule');
-    const Employee = require('@/models/Employee');
-    const Location = require('@/models/Location');
+    const { EmployeeSchedule, Employee, Location } = require('@/models');
 
     if (req.method === 'GET') {
       const schedule = await EmployeeSchedule.findByPk(id, {
@@ -20,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           {
             model: Employee,
             as: 'employee',
-            attributes: ['id', 'name', 'employeeNumber', 'position']
+            attributes: ['id', 'name', ['employeeId', 'employeeNumber'], 'position']
           },
           {
             model: Location,
@@ -77,7 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           {
             model: Employee,
             as: 'employee',
-            attributes: ['id', 'name', 'employeeNumber', 'position']
+            attributes: ['id', 'name', ['employeeId', 'employeeNumber'], 'position']
           },
           {
             model: Location,

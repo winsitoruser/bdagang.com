@@ -3,9 +3,9 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 export async function middleware(request: NextRequest) {
-  const token = await getToken({ 
-    req: request, 
-    secret: process.env.NEXTAUTH_SECRET 
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET
   });
 
   const { pathname } = request.nextUrl;
@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
 
   // Check if tenant needs onboarding (for non-admin users)
   const userRole = (token.role as string)?.toLowerCase();
-  if (!['admin', 'super_admin', 'superadmin'].includes(userRole)) {
+  if (!['admin', 'super_admin', 'superadmin', 'owner'].includes(userRole)) {
     // Allow onboarding pages
     if (pathname.startsWith('/onboarding')) {
       return NextResponse.next();

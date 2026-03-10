@@ -28,6 +28,8 @@ export function withModuleGuard(
       }
 
       const userRole = (session.user as any).role;
+      console.log('this is user role', userRole);
+      console.log('this is session user', session.user);
 
       // Super admin and owner bypass module checks
       if (userRole === 'super_admin' || userRole === 'owner') {

@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  output: 'standalone',
   env: {
     NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3002',
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'bedagang-admin-secret-key',

@@ -28,9 +28,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { id } = req.query;
+    let tenantId: string | undefined;
+
+    if (typeof id === "string") {
+      tenantId = id.startsWith("tenant-") ? id.slice(7) : id;
+    }
     const { review_notes, subscription_months = 1 } = req.body;
 
-    const activationRequest = await ActivationRequest.findByPk(id as string, {
+    const activationRequest = await ActivationRequest.findByPk(tenantId as string, {
       include: [
         {
           model: Partner,

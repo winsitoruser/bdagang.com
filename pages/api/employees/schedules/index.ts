@@ -10,19 +10,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
-    const EmployeeSchedule = require('@/models/EmployeeSchedule');
-    const Employee = require('@/models/Employee');
-    const Location = require('@/models/Location');
+    const { EmployeeSchedule, Employee, Location } = require('@/models');
 
     if (req.method === 'GET') {
-      const { 
-        employeeId, 
-        startDate, 
-        endDate, 
-        status, 
+      const {
+        employeeId,
+        startDate,
+        endDate,
+        status,
         shiftType,
         limit = 100,
-        offset = 0 
+        offset = 0
       } = req.query;
 
       const where: any = {};
@@ -59,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           {
             model: Employee,
             as: 'employee',
-            attributes: ['id', 'name', 'employeeNumber', 'position']
+            attributes: ['id', 'name', ['employeeId', 'employeeNumber'], 'position']
           },
           {
             model: Location,
@@ -189,7 +187,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           {
             model: Employee,
             as: 'employee',
-            attributes: ['id', 'name', 'employeeNumber', 'position']
+            attributes: ['id', 'name', ['employeeId', 'employeeNumber'], 'position']
           },
           {
             model: Location,
