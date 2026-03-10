@@ -40,24 +40,24 @@ services:
       db:
         condition: service_healthy
 
-  admin:
-    build:
-      context: ./admin-panel
-      dockerfile: Dockerfile
-    container_name: bedagang-admin
-    restart: always
-    ports:
-      - "3002:3002"
-    environment:
-      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-bedagang}
-      - NODE_ENV=production
-      - PORT=3002
-      - NEXTAUTH_URL=${ADMIN_URL:-http://localhost:3002}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-bedagang-admin-secret-key}
-      - APP_NAME=BEDAGANG-ADMIN
-    depends_on:
-      db:
-        condition: service_healthy
+  # admin:
+  #   build:
+  #     context: ./admin-panel
+  #     dockerfile: Dockerfile
+  #   container_name: bedagang-admin
+  #   restart: always
+  #   ports:
+  #     - "3002:3002"
+  #   environment:
+  #     - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-bedagang}
+  #     - NODE_ENV=production
+  #     - PORT=3002
+  #     - NEXTAUTH_URL=${ADMIN_URL:-http://localhost:3002}
+  #     - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-bedagang-admin-secret-key}
+  #     - APP_NAME=BEDAGANG-ADMIN
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
 
 volumes:
   postgres_data:
