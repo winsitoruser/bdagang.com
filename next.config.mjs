@@ -64,6 +64,7 @@ const nextConfig = {
 
   // Experimental features for better performance
   experimental: {
+    cpus: 1,
     // Optimize package imports
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons', 'recharts', 'apexcharts', 'react-apexcharts'],
   },
