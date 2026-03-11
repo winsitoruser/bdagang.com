@@ -28,6 +28,11 @@ services:
     ports:
       - "3001:3001"
     environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-bedagang_dev}
       - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-bedagang_dev}
       - NODE_ENV=production
       - PORT=3001
