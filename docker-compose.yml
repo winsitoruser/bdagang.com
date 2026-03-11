@@ -29,6 +29,7 @@ services:
       - "3001:3001"
     environment:
       - DB_HOST=db
+      - DB_SSL=false
       - DB_PORT=5432
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-postgres}
