@@ -4,17 +4,17 @@ services:
   db:
     image: postgres:15-alpine
     container_name: bedagang-db
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-bedagang_dev}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: supersecurepassword
+      POSTGRES_DB: bedagang_dev
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-bedagang_dev}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bedagang_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,47 +24,29 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: bedagang-store
-    restart: always
+    restart: unless-stopped
     ports:
       - "3001:3001"
     environment:
-      - DB_HOST=db
-      - DB_SSL=false
-      - DB_PORT=5432
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
-      - DB_NAME=${DB_NAME:-bedagang_dev}
-      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-bedagang_dev}
-      - NODE_ENV=production
-      - PORT=3001
-      - NEXTAUTH_URL=${STORE_URL:-http://localhost:3001}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-bedagang-dev-secret-key-change-in-production}
-      - APP_NAME=BEDAGANG-STORE
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: supersecurepassword
+      DB_NAME: bedagang_dev
+      DATABASE_URL: postgresql://postgres:supersecurepassword@db:5432/bedagang_dev
+      NODE_ENV: production
+      PORT: 3001
+      NEXTAUTH_URL: http://localhost:3001
+      NEXTAUTH_SECRET: change-this-secret
+      APP_NAME: BEDAGANG-STORE
     volumes:
       - store_uploads:/app/public/uploads
     depends_on:
       db:
         condition: service_healthy
 
-  # admin:
-  #   build:
-  #     context: ./admin-panel
-  #     dockerfile: Dockerfile
-  #   container_name: bedagang-admin
-  #   restart: always
-  #   ports:
-  #     - "3002:3002"
-  #   environment:
-  #     - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-bedagang}
-  #     - NODE_ENV=production
-  #     - PORT=3002
-  #     - NEXTAUTH_URL=${ADMIN_URL:-http://localhost:3002}
-  #     - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-bedagang-admin-secret-key}
-  #     - APP_NAME=BEDAGANG-ADMIN
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-
 volumes:
   postgres_data:
+    name: bedagang_postgres_data
   store_uploads:
+    name: bedagang_store_uploads
