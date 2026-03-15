@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { X, Search, Plus, Check, LayoutGrid } from 'lucide-react';
 import { widgetRegistry } from '../../../lib/widgets/registry';
-import { WidgetModule, MODULE_LABELS, MODULE_COLORS, WidgetLayoutItem } from '../../../lib/widgets/types';
+import { WidgetModule, MODULE_COLORS, WidgetLayoutItem } from '../../../lib/widgets/types';
+import { useTranslation } from '@/lib/i18n';
 
 interface WidgetPickerProps {
   isOpen: boolean;
@@ -14,8 +15,25 @@ interface WidgetPickerProps {
 const ALL_MODULES: WidgetModule[] = ['core', 'sales', 'branches', 'finance', 'hris', 'inventory', 'sfa', 'manufacturing', 'fleet', 'marketing'];
 
 export default function WidgetPicker({ isOpen, onClose, activeWidgets, onAddWidget, onRemoveWidget }: WidgetPickerProps) {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [selectedModule, setSelectedModule] = useState<WidgetModule | 'all'>('all');
+
+  const getWidgetTitle = (id: string, fallback: string) => {
+    const key = `dashboard.widgets.${id}`;
+    const val = t(key);
+    return val !== key ? val : fallback;
+  };
+  const getWidgetDesc = (id: string, fallback: string) => {
+    const key = `dashboard.widgetDesc.${id}`;
+    const val = t(key);
+    return val !== key ? val : fallback;
+  };
+  const getModuleLabel = (mod: string) => {
+    const key = `dashboard.moduleLabels.${mod}`;
+    const val = t(key);
+    return val !== key ? val : mod;
+  };
 
   const activeIds = useMemo(() => new Set(activeWidgets.map(w => w.widgetId)), [activeWidgets]);
 
@@ -24,7 +42,7 @@ export default function WidgetPicker({ isOpen, onClose, activeWidgets, onAddWidg
       if (selectedModule !== 'all' && w.module !== selectedModule) return false;
       if (search) {
         const q = search.toLowerCase();
-        return w.title.toLowerCase().includes(q) || w.description.toLowerCase().includes(q) || MODULE_LABELS[w.module].toLowerCase().includes(q);
+        return getWidgetTitle(w.id, w.title).toLowerCase().includes(q) || getWidgetDesc(w.id, w.description).toLowerCase().includes(q) || getModuleLabel(w.module).toLowerCase().includes(q);
       }
       return true;
     });
@@ -51,8 +69,8 @@ export default function WidgetPicker({ isOpen, onClose, activeWidgets, onAddWidg
               <LayoutGrid className="w-5 h-5 text-indigo-600" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Widget Gallery</h2>
-              <p className="text-xs text-gray-500">{widgetRegistry.length} widget tersedia • {activeIds.size} aktif</p>
+              <h2 className="text-lg font-bold text-gray-900">{t('dashboard.addWidget')}</h2>
+              <p className="text-xs text-gray-500">{widgetRegistry.length} widget • {activeIds.size} {t('dashboard.activeWidgets', { count: activeIds.size }).replace(String(activeIds.size) + ' ', '')}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
@@ -68,7 +86,7 @@ export default function WidgetPicker({ isOpen, onClose, activeWidgets, onAddWidg
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari widget..."
+              placeholder={t('dashboard.searchWidget')}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white"
             />
           </div>
@@ -79,7 +97,7 @@ export default function WidgetPicker({ isOpen, onClose, activeWidgets, onAddWidg
                 selectedModule === 'all' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              Semua ({widgetRegistry.length})
+              {t('branches.all')} ({widgetRegistry.length})
             </button>
             {ALL_MODULES.map(m => {
               const count = widgetRegistry.filter(w => w.module === m).length;
@@ -91,7 +109,7 @@ export default function WidgetPicker({ isOpen, onClose, activeWidgets, onAddWidg
                     selectedModule === m ? MODULE_COLORS[m] : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  {MODULE_LABELS[m]} ({count})
+                  {getModuleLabel(m)} ({count})
                 </button>
               );
             })}
@@ -103,14 +121,14 @@ export default function WidgetPicker({ isOpen, onClose, activeWidgets, onAddWidg
           {Object.keys(grouped).length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <Search className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p className="text-sm">Tidak ditemukan widget yang cocok</p>
+              <p className="text-sm">{t('dashboard.noWidgetMatch')}</p>
             </div>
           ) : (
             Object.entries(grouped).map(([module, widgets]) => (
               <div key={module} className="mb-6 last:mb-0">
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                   <span className={`px-2 py-0.5 rounded-full ${MODULE_COLORS[module as WidgetModule]}`}>
-                    {MODULE_LABELS[module as WidgetModule]}
+                    {getModuleLabel(module)}
                   </span>
                   <span className="text-gray-400">{widgets.length} widget</span>
                 </h3>
@@ -131,8 +149,8 @@ export default function WidgetPicker({ isOpen, onClose, activeWidgets, onAddWidg
                           <w.icon className="w-4 h-4" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">{w.title}</p>
-                          <p className="text-xs text-gray-500 truncate">{w.description}</p>
+                          <p className="text-sm font-medium text-gray-900">{getWidgetTitle(w.id, w.title)}</p>
+                          <p className="text-xs text-gray-500 truncate">{getWidgetDesc(w.id, w.description)}</p>
                         </div>
                         <div className="flex-shrink-0">
                           {isActive ? (
@@ -157,13 +175,13 @@ export default function WidgetPicker({ isOpen, onClose, activeWidgets, onAddWidg
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
           <p className="text-xs text-gray-500">
-            {activeIds.size} widget aktif di dashboard
+            {t('dashboard.activeWidgets', { count: activeIds.size })}
           </p>
           <button
             onClick={onClose}
             className="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
           >
-            Selesai
+            {t('dashboard.done')}
           </button>
         </div>
       </div>

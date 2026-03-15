@@ -26,6 +26,18 @@ interface BranchRealtimeData {
   sla: any;
 }
 
+const MOCK_BRANCH_DETAIL = { id: 'b1', name: 'Cabang Jakarta Pusat', code: 'HQ-001', city: 'Jakarta', address: 'Jl. Sudirman No.1', phone: '021-1234567', email: 'jakarta@bedagang.co.id', manager: 'Budi Santoso', status: 'active', type: 'flagship', employeeCount: 25, openingDate: '2024-01-15' };
+const MOCK_REALTIME: BranchRealtimeData = {
+  branchId: 'b1', lastUpdated: new Date().toISOString(),
+  kitchen: { activeOrders: 5, avgPrepTime: 12, pendingOrders: 3 },
+  queue: { currentQueue: 8, avgWaitTime: 6, served: 142 },
+  orders: { today: 185, completed: 172, cancelled: 3, avgValue: 125000 },
+  occupancy: { current: 42, capacity: 60, percentage: 70 },
+  employees: { present: 22, absent: 2, late: 1, onBreak: 3 },
+  sales: { today: 23125000, target: 25000000, achievement: 92.5, transactions: 185 },
+  sla: { onTime: 92, avgFulfillment: 8.5, breached: 3 },
+};
+
 export default function BranchDetailPage() {
   const router = useRouter();
   const { id } = router.query;
@@ -33,8 +45,8 @@ export default function BranchDetailPage() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
-  const [data, setData] = useState<BranchRealtimeData | null>(null);
-  const [branch, setBranch] = useState<any>(null);
+  const [data, setData] = useState<BranchRealtimeData | null>(MOCK_REALTIME);
+  const [branch, setBranch] = useState<any>(MOCK_BRANCH_DETAIL);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
@@ -57,6 +69,8 @@ export default function BranchDetailPage() {
       }
     } catch (error) {
       console.error('Error fetching branch data:', error);
+      setBranch(MOCK_BRANCH_DETAIL);
+      setData(MOCK_REALTIME);
     } finally {
       setLoading(false);
       setLastRefresh(new Date());
@@ -104,7 +118,7 @@ export default function BranchDetailPage() {
 
   const tabs = [
     { id: 'overview', label: 'Ringkasan', icon: BarChart3 },
-    { id: 'kitchen', label: 'Kitchen', icon: ChefHat },
+    { id: 'kitchen', label: 'Dapur', icon: ChefHat },
     { id: 'orders', label: 'Pesanan', icon: ShoppingCart },
     { id: 'occupancy', label: 'Okupansi', icon: Table2 },
     { id: 'employees', label: 'Karyawan', icon: Users },

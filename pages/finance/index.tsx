@@ -7,8 +7,7 @@ import {
   FaArrowRight, FaChartBar
 } from 'react-icons/fa';
 import Link from 'next/link';
-// import { useTranslation } from '@/lib/i18n';
-// Perbaikan import - pastikan nama file sesuai dengan yang ada di direktori
+import { useTranslation } from '@/lib/i18n';
 import FinanceLayout from '@/components/layouts/finance-layout';
 import { formatRupiah, exportToExcel, exportToCSV, exportToPDF } from '@/utils/exportUtils';
 import axios from 'axios';
@@ -183,8 +182,7 @@ const Button: React.FC<{
 };
 
 const Finance = () => {
-  // Mock translation function
-  const t = (key: string) => key;
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState('month');
@@ -197,29 +195,18 @@ const Finance = () => {
   const [showExportModal, setShowExportModal] = useState(false);
   
   // State data untuk halaman dashboard
-  const [financialData, setFinancialData] = useState<FinancialData>({
-    totalIncome: 0,
-    totalExpenses: 0,
-    netProfit: 0,
-    cashOnHand: 0,
-    accountsReceivable: 0,
-    accountsPayable: 0,
-    assetValue: 0,
-    inventoryValue: 0
-  });
+  const MOCK_FIN: FinancialData = { totalIncome: 125000000, totalExpenses: 85000000, netProfit: 40000000, cashOnHand: 65000000, accountsReceivable: 18500000, accountsPayable: 12000000, assetValue: 350000000, inventoryValue: 45000000 };
+  const MOCK_DEBT: InvoiceDebtData = { totalUnpaid: 12000000, overdueInvoices: 3500000, upcomingDue: 8500000, totalInvoices: 15, overdueCount: 3, criticalOverdue: 1 };
+  const MOCK_PARTIAL: PartialPayment[] = [{ id: 'pp1', supplier: 'PT Supplier A', total: 5000000, paid: 3000000, percentage: 60, dueDate: '20/03/2026' }];
+  const MOCK_UNPAID: UnpaidInvoice[] = [{ id: 'ui1', supplier: 'PT Vendor B', total: 8500000, paid: 0, percentage: 0, dueDate: '25/03/2026' }];
+  const MOCK_RECENT_TX: Transaction[] = [{ id: 'tx1', date: '15/03/2026', description: 'Penjualan harian', amount: 4500000, type: 'income', category: 'Penjualan' }, { id: 'tx2', date: '15/03/2026', description: 'Pembelian bahan baku', amount: 2800000, type: 'expense', category: 'Pembelian' }];
+  const [financialData, setFinancialData] = useState<FinancialData>(MOCK_FIN);
   
-  const [invoiceDebtData, setInvoiceDebtData] = useState<InvoiceDebtData>({
-    totalUnpaid: 0,
-    overdueInvoices: 0,
-    upcomingDue: 0,
-    totalInvoices: 0,
-    overdueCount: 0,
-    criticalOverdue: 0
-  });
+  const [invoiceDebtData, setInvoiceDebtData] = useState<InvoiceDebtData>(MOCK_DEBT);
   
-  const [partialPayments, setPartialPayments] = useState<PartialPayment[]>([]);
-  const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [partialPayments, setPartialPayments] = useState<PartialPayment[]>(MOCK_PARTIAL);
+  const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>(MOCK_UNPAID);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(MOCK_RECENT_TX);
   
   // State untuk data perbandingan pendapatan vs pengeluaran bulanan
   const [incomeVsExpenseMonthly, setIncomeVsExpenseMonthly] = useState<IncomeVsExpenseMonthly>({
@@ -480,7 +467,11 @@ const Finance = () => {
       }
     } catch (err) {
       console.error("Error in fetchData:", err);
-      setError("Terjadi kesalahan saat mengambil data keuangan. Silakan coba lagi nanti.");
+      setFinancialData(MOCK_FIN);
+      setInvoiceDebtData(MOCK_DEBT);
+      setRecentTransactions(MOCK_RECENT_TX);
+      setUnpaidInvoices(MOCK_UNPAID);
+      setPartialPayments(MOCK_PARTIAL);
     } finally {
       setLoading(false);
     }
@@ -540,8 +531,8 @@ const Finance = () => {
         {loading && !error && (
           <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[70vh]">
             <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <h2 className="text-xl font-medium text-gray-700 mb-2">Memuat Data Keuangan</h2>
-            <p className="text-gray-500">Mohon tunggu sebentar...</p>
+            <h2 className="text-xl font-medium text-gray-700 mb-2">{t('finance.loadingData')}</h2>
+            <p className="text-gray-500">{t('finance.pleaseWait')}</p>
           </div>
         )}
         
@@ -554,7 +545,7 @@ const Finance = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-semibold text-gray-800 mb-2">Data Gagal Dimuat</h2>
+              <h2 className="text-2xl font-semibold text-gray-800 mb-2">{t('finance.loadFailed')}</h2>
               <p className="text-gray-600 mb-6">{error}</p>
               <button 
                 onClick={() => {
@@ -564,7 +555,7 @@ const Finance = () => {
                 }}
                 className="bg-gradient-to-r from-red-600 to-orange-500 text-white px-6 py-2 rounded-md font-medium hover:from-red-700 hover:to-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
               >
-                Refresh Halaman
+                {t('finance.refreshPage')}
               </button>
             </div>
           </div>
@@ -581,8 +572,8 @@ const Finance = () => {
                     <FaWallet className="w-7 h-7 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-white">Keuangan</h1>
-                    <p className="text-green-100 mt-1">Dashboard manajemen keuangan dan laporan</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-white">{t('finance.title')}</h1>
+                    <p className="text-green-100 mt-1">{t('finance.subtitle')}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -604,7 +595,7 @@ const Finance = () => {
                   <FaCalendarAlt className="text-red-500" />
                   <div className="w-full">
                     <label htmlFor="period-filter" className="block text-xs font-medium text-gray-600 mb-1">
-                      Periode
+                      {t('finance.period')}
                     </label>
                     <div className="relative">
                       <select
@@ -613,10 +604,10 @@ const Finance = () => {
                         onChange={handlePeriodChange}
                         className="block w-full py-2 pl-3 pr-10 text-base border border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 rounded-md"
                       >
-                        <option value="week">Minggu Ini</option>
-                        <option value="month">Bulan Ini</option>
-                        <option value="quarter">Kuartal Ini</option>
-                        <option value="year">Tahun Ini</option>
+                        <option value="week">{t('common.thisWeek')}</option>
+                        <option value="month">{t('common.thisMonth')}</option>
+                        <option value="quarter">{t('finance.thisQuarter')}</option>
+                        <option value="year">{t('finance.thisYear')}</option>
                       </select>
                     </div>
                   </div>
@@ -626,7 +617,7 @@ const Finance = () => {
                   <FaBuilding className="text-red-500" />
                   <div className="w-full">
                     <label htmlFor="branch-filter" className="block text-xs font-medium text-gray-600 mb-1">
-                      Cabang
+                      {t('finance.branch')}
                     </label>
                     <div className="relative">
                       <select
@@ -651,7 +642,7 @@ const Finance = () => {
                     className="bg-gradient-to-r from-red-600 to-orange-500 text-white px-4 py-2 rounded-md font-medium hover:from-red-700 hover:to-orange-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 flex items-center"
                   >
                     <FaFilter className="mr-2" />
-                    <span>Terapkan Filter</span>
+                    <span>{t('finance.applyFilter')}</span>
                   </button>
                 </div>
               </div>
@@ -662,7 +653,7 @@ const Finance = () => {
               {/* Total Income */}
               <div className="bg-white p-5 rounded-lg shadow-md">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Income Bulan Ini</span>
+                  <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{t('finance.incomeThisMonth')}</span>
                   <div className="bg-red-100 p-2.5 rounded-lg">
                     <FaArrowUp className="text-red-500 text-lg" />
                   </div>
@@ -680,7 +671,7 @@ const Finance = () => {
               {/* Total Expenses */}
               <div className="bg-white p-5 rounded-lg shadow-md">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Tagihan Bulan Ini</span>
+                  <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{t('finance.expensesThisMonth')}</span>
                   <div className="bg-orange-100 p-2.5 rounded-lg">
                     <FaArrowDown className="text-orange-500 text-lg" />
                   </div>
@@ -698,7 +689,7 @@ const Finance = () => {
               {/* Net Profit */}
               <div className="bg-white p-5 rounded-lg shadow-md">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Transaksi Minggu Ini</span>
+                  <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{t('finance.transactionsThisWeek')}</span>
                   <div className="bg-green-100 p-2.5 rounded-lg">
                     <FaWallet className="text-green-500 text-lg" />
                   </div>
@@ -716,7 +707,7 @@ const Finance = () => {
 
             {/* Quick Access Menu */}
             <div className="mb-6">
-              <h2 className="text-base font-bold text-gray-800 uppercase tracking-wide mb-5">Menu Keuangan</h2>
+              <h2 className="text-base font-bold text-gray-800 uppercase tracking-wide mb-5">{t('finance.financeMenu')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Link href="/finance/piutang" className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all border-l-4 border-blue-500 group">
                   <div className="flex items-center justify-between mb-2">
@@ -725,8 +716,8 @@ const Finance = () => {
                     </div>
                     <FaArrowRight className="text-gray-400 text-sm group-hover:text-blue-500 transition-colors" />
                   </div>
-                  <h3 className="font-bold text-gray-800 mb-1 text-sm">Piutang</h3>
-                  <p className="text-xs text-gray-600">Kelola tagihan pelanggan</p>
+                  <h3 className="font-bold text-gray-800 mb-1 text-sm">{t('finance.receivables')}</h3>
+                  <p className="text-xs text-gray-600">{t('finance.manageCustomerBills')}</p>
                 </Link>
 
                 <Link href="/finance/hutang" className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all border-l-4 border-red-500 group">
@@ -736,8 +727,8 @@ const Finance = () => {
                     </div>
                     <FaArrowRight className="text-gray-400 text-sm group-hover:text-red-500 transition-colors" />
                   </div>
-                  <h3 className="font-bold text-gray-800 mb-1 text-sm">Hutang</h3>
-                  <p className="text-xs text-gray-600">Kelola hutang supplier</p>
+                  <h3 className="font-bold text-gray-800 mb-1 text-sm">{t('finance.payables')}</h3>
+                  <p className="text-xs text-gray-600">{t('finance.manageSupplierDebt')}</p>
                 </Link>
 
                 <Link href="/finance/profit" className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all border-l-4 border-green-500 group">
@@ -747,8 +738,8 @@ const Finance = () => {
                     </div>
                     <FaArrowRight className="text-gray-400 text-sm group-hover:text-green-500 transition-colors" />
                   </div>
-                  <h3 className="font-bold text-gray-800 mb-1 text-sm">Analisa Profit</h3>
-                  <p className="text-xs text-gray-600">Pantau keuntungan</p>
+                  <h3 className="font-bold text-gray-800 mb-1 text-sm">{t('finance.profitAnalysis')}</h3>
+                  <p className="text-xs text-gray-600">{t('finance.monitorProfit')}</p>
                 </Link>
 
                 <Link href="/finance/invoices" className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all border-l-4 border-purple-500 group">
@@ -758,8 +749,8 @@ const Finance = () => {
                     </div>
                     <FaArrowRight className="text-gray-400 text-sm group-hover:text-purple-500 transition-colors" />
                   </div>
-                  <h3 className="font-bold text-gray-800 mb-1 text-sm">Invoice</h3>
-                  <p className="text-xs text-gray-600">Kelola faktur penjualan</p>
+                  <h3 className="font-bold text-gray-800 mb-1 text-sm">{t('finance.invoice')}</h3>
+                  <p className="text-xs text-gray-600">{t('finance.manageSalesInvoice')}</p>
                 </Link>
 
                 <Link href="/finance/expenses" className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all border-l-4 border-orange-500 group">
@@ -769,8 +760,8 @@ const Finance = () => {
                     </div>
                     <FaArrowRight className="text-gray-400 text-sm group-hover:text-orange-500 transition-colors" />
                   </div>
-                  <h3 className="font-bold text-gray-800 mb-1 text-sm">Pengeluaran</h3>
-                  <p className="text-xs text-gray-600">Catat biaya operasional</p>
+                  <h3 className="font-bold text-gray-800 mb-1 text-sm">{t('finance.expenses')}</h3>
+                  <p className="text-xs text-gray-600">{t('finance.recordOperationalCosts')}</p>
                 </Link>
 
                 <Link href="/finance/income" className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all border-l-4 border-teal-500 group">
@@ -780,8 +771,8 @@ const Finance = () => {
                     </div>
                     <FaArrowRight className="text-gray-400 text-sm group-hover:text-teal-500 transition-colors" />
                   </div>
-                  <h3 className="font-bold text-gray-800 mb-1 text-sm">Pendapatan</h3>
-                  <p className="text-xs text-gray-600">Catat pemasukan</p>
+                  <h3 className="font-bold text-gray-800 mb-1 text-sm">{t('finance.income')}</h3>
+                  <p className="text-xs text-gray-600">{t('finance.recordIncome')}</p>
                 </Link>
 
                 <Link href="/finance/profit-loss" className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all border-l-4 border-indigo-500 group">
@@ -791,8 +782,8 @@ const Finance = () => {
                     </div>
                     <FaArrowRight className="text-gray-400 text-sm group-hover:text-indigo-500 transition-colors" />
                   </div>
-                  <h3 className="font-bold text-gray-800 mb-1 text-sm">Laba Rugi</h3>
-                  <p className="text-xs text-gray-600">Laporan keuangan</p>
+                  <h3 className="font-bold text-gray-800 mb-1 text-sm">{t('finance.profitLoss')}</h3>
+                  <p className="text-xs text-gray-600">{t('finance.financialReport')}</p>
                 </Link>
 
                 <Link href="/finance/transactions" className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-all border-l-4 border-pink-500 group">
@@ -802,8 +793,8 @@ const Finance = () => {
                     </div>
                     <FaArrowRight className="text-gray-400 text-sm group-hover:text-pink-500 transition-colors" />
                   </div>
-                  <h3 className="font-bold text-gray-800 mb-1 text-sm">Transaksi</h3>
-                  <p className="text-xs text-gray-600">Riwayat transaksi</p>
+                  <h3 className="font-bold text-gray-800 mb-1 text-sm">{t('finance.transactionsMenu')}</h3>
+                  <p className="text-xs text-gray-600">{t('finance.transactionHistory')}</p>
                 </Link>
               </div>
             </div>

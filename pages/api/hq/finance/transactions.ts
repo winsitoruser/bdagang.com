@@ -29,7 +29,8 @@ export default withHQAuth(handler, { module: ['finance_pro', 'finance_lite'] });
 async function getTransactions(req: NextApiRequest, res: NextApiResponse) {
   const ctx = getTenantContext(req);
   const tf = buildTenantFilter(ctx.tenantId, 'ft');
-  const { search, type, status, startDate, endDate, page = '1', limit = '20' } = req.query;
+  const { search, type, status, startDate, endDate, page = '1', limit: rawLimit = '20' } = req.query;
+  const limit = String(Math.min(parseInt(rawLimit as string) || 20, 100));
   let where = 'WHERE 1=1' + tf.condition;
   const replacements: any = { ...tf.replacements };
 
@@ -70,23 +71,39 @@ async function createTransaction(req: NextApiRequest, res: NextApiResponse) {
   if (errors) return res.status(400).json(errors);
 
   const ctx = getTenantContext(req);
-  const { transactionType, accountId, category, subcategory, amount, description, referenceType, referenceId, paymentMethod, contactId, contactName, notes, tags } = req.body;
+  const { transactionType, accountId, category, subcategory, amount, description, referenceType, referenceId, paymentMethod, contactId, contactName, notes, tags, expense_type } = req.body;
 
-  const prefix = transactionType === 'income' ? 'INC' : transactionType === 'expense' ? 'EXP' : 'TRF';
-  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  const tf = buildTenantFilter(ctx.tenantId);
-  const [countRes] = await sequelize.query(`SELECT COUNT(*) as c FROM finance_transactions WHERE "transactionNumber" LIKE :prefix ${tf.condition}`, { replacements: { prefix: `${prefix}-${dateStr}%`, ...tf.replacements } });
-  const txnNumber = `${prefix}-${dateStr}-${String(parseInt(countRes[0]?.c || '0') + 1).padStart(4, '0')}`;
+  if (parseFloat(amount) <= 0) {
+    return res.status(400).json(errorResponse('VALIDATION', 'Amount must be greater than zero'));
+  }
 
-  const [rows] = await sequelize.query(`
-    INSERT INTO finance_transactions (tenant_id, "transactionNumber", "transactionDate", "transactionType", "accountId", category, subcategory, amount, description, "referenceType", "referenceId", "paymentMethod", "contactId", "contactName", notes, tags, status, "createdBy", "isActive", "createdAt", "updatedAt")
-    VALUES (:tenantId, :txnNumber, NOW(), :transactionType, :accountId, :category, :subcategory, :amount, :description, :referenceType, :referenceId, :paymentMethod, :contactId, :contactName, :notes, :tags, 'draft', :createdBy, true, NOW(), NOW())
-    RETURNING *
-  `, { replacements: { tenantId: ctx.tenantId, txnNumber, transactionType, accountId: accountId || null, category: category || null, subcategory: subcategory || null, amount, description, referenceType: referenceType || null, referenceId: referenceId || null, paymentMethod: paymentMethod || null, contactId: contactId || null, contactName: contactName || null, notes: notes || null, tags: tags ? JSON.stringify(tags) : null, createdBy: ctx.userId } });
+  const t = await sequelize.transaction();
+  try {
+    const prefix = transactionType === 'income' ? 'INC' : transactionType === 'expense' ? 'EXP' : 'TRF';
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const tf = buildTenantFilter(ctx.tenantId);
+    // Use FOR UPDATE to prevent race condition on concurrent inserts
+    const [countRes] = await sequelize.query(
+      `SELECT COUNT(*) as c FROM finance_transactions WHERE "transactionNumber" LIKE :prefix ${tf.condition} FOR UPDATE`,
+      { replacements: { prefix: `${prefix}-${dateStr}%`, ...tf.replacements }, transaction: t }
+    );
+    const txnNumber = `${prefix}-${dateStr}-${String(parseInt(countRes[0]?.c || '0') + 1).padStart(4, '0')}`;
 
-  await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'finance_transaction', entityId: rows[0]?.id, newValues: { txnNumber, transactionType, amount, description }, req });
+    const [rows] = await sequelize.query(`
+      INSERT INTO finance_transactions (tenant_id, "transactionNumber", "transactionDate", "transactionType", "accountId", category, subcategory, amount, description, "referenceType", "referenceId", "paymentMethod", "contactId", "contactName", notes, tags, expense_type, status, "createdBy", "isActive", "createdAt", "updatedAt")
+      VALUES (:tenantId, :txnNumber, NOW(), :transactionType, :accountId, :category, :subcategory, :amount, :description, :referenceType, :referenceId, :paymentMethod, :contactId, :contactName, :notes, :tags, :expenseType, 'draft', :createdBy, true, NOW(), NOW())
+      RETURNING *
+    `, { replacements: { tenantId: ctx.tenantId, txnNumber, transactionType, accountId: accountId || null, category: category || null, subcategory: subcategory || null, amount, description, referenceType: referenceType || null, referenceId: referenceId || null, paymentMethod: paymentMethod || null, contactId: contactId || null, contactName: contactName || null, notes: notes || null, tags: tags ? JSON.stringify(tags) : null, expenseType: (transactionType === 'expense' && expense_type) ? expense_type : null, createdBy: ctx.userId }, transaction: t });
 
-  return res.status(201).json(successResponse(rows[0], undefined, 'Transaction created'));
+    await t.commit();
+
+    await logAudit({ tenantId: ctx.tenantId as string, userId: ctx.userId, userName: ctx.userName, action: 'create', entityType: 'finance_transaction', entityId: rows[0]?.id, newValues: { txnNumber, transactionType, amount, description }, req });
+
+    return res.status(201).json(successResponse(rows[0], undefined, 'Transaction created'));
+  } catch (error: any) {
+    await t.rollback();
+    throw error;
+  }
 }
 
 async function updateTransaction(req: NextApiRequest, res: NextApiResponse) {

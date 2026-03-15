@@ -2,10 +2,12 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { FaPrint, FaCog } from 'react-icons/fa';
+import { useTranslation } from '@/lib/i18n';
 
 const POSSettingsPage = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (status === "unauthenticated") {

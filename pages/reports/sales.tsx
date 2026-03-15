@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +44,7 @@ interface SalesReportData {
 const SalesReportPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState<SalesReportData | null>(null);
   const [filters, setFilters] = useState({

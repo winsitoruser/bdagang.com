@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NextPage } from "next";
 import InventoryLayout from "@/components/layouts/inventory-layout";
+import { useTranslation } from '@/lib/i18n';
 import { Breadcrumbs } from "@/components/common/breadcrumbs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -248,6 +249,7 @@ const adjustmentReasons = [
 
 const AdjustmentPage: NextPage = () => {
   const { toast } = useToast();
+  const { t } = useTranslation();
   
   // Adjustment form state
   const [adjustmentNumber, setAdjustmentNumber] = useState("");
@@ -744,9 +746,9 @@ const AdjustmentPage: NextPage = () => {
       <div className="flex flex-col">
         <Breadcrumbs
           items={[
-            { title: "Dashboard", href: "/dashboard" },
-            { title: "Inventori", href: "/inventory" },
-            { title: "Penyesuaian Stok", href: "/inventory/adjustment" },
+            { title: t('sidebar.dashboard'), href: "/dashboard" },
+            { title: t('inventory.title'), href: "/inventory" },
+            { title: t('inventory.adjustment.title'), href: "/inventory/adjustment" },
           ]}
           className="mb-6"
         />
@@ -756,10 +758,10 @@ const AdjustmentPage: NextPage = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-                <FaBalanceScale className="mr-3 text-orange-500" /> Penyesuaian Stok
+                <FaBalanceScale className="mr-3 text-orange-500" /> {t('inventory.adjustment.title')}
               </h1>
               <p className="text-gray-600 mt-1">
-                Sesuaikan stok fisik dengan stok di sistem
+                {t('inventory.adjustment.subtitle')}
               </p>
             </div>
           </div>
@@ -772,7 +774,7 @@ const AdjustmentPage: NextPage = () => {
                 ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white" 
                 : "text-gray-600 hover:text-orange-500 hover:bg-orange-50"}`}
             >
-              <FaExchangeAlt className="inline-block mr-2" /> Penyesuaian Manual
+              <FaExchangeAlt className="inline-block mr-2" /> {t('inventory.adjustment.manualTab')}
             </button>
             <button
               onClick={() => setActiveTab("stockopname")}
@@ -780,7 +782,7 @@ const AdjustmentPage: NextPage = () => {
                 ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white" 
                 : "text-gray-600 hover:text-orange-500 hover:bg-orange-50"}`}
             >
-              <FaClipboardCheck className="inline-block mr-2" /> Dari Stock Opname
+              <FaClipboardCheck className="inline-block mr-2" /> {t('inventory.adjustment.stockOpnameTab')}
             </button>
             <button
               onClick={() => setActiveTab("history")}
@@ -788,7 +790,7 @@ const AdjustmentPage: NextPage = () => {
                 ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white" 
                 : "text-gray-600 hover:text-orange-500 hover:bg-orange-50"}`}
             >
-              <FaHistory className="inline-block mr-2" /> Riwayat Penyesuaian
+              <FaHistory className="inline-block mr-2" /> {t('inventory.adjustment.historyTab')}
             </button>
           </div>
           
@@ -801,16 +803,16 @@ const AdjustmentPage: NextPage = () => {
                   <div className="h-2 bg-gradient-to-r from-orange-500 to-amber-500"></div>
                   <CardHeader>
                     <CardTitle className="text-xl font-semibold flex items-center">
-                      <FaExchangeAlt className="mr-2 text-orange-500" /> Form Penyesuaian Manual
+                      <FaExchangeAlt className="mr-2 text-orange-500" /> {t('inventory.adjustment.manualForm')}
                     </CardTitle>
                     <CardDescription>
-                      Isi data untuk penyesuaian manual stok produk
+                      {t('inventory.adjustment.manualFormDesc')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                       <div>
-                        <Label htmlFor="adjustment-number">Nomor Penyesuaian</Label>
+                        <Label htmlFor="adjustment-number">{t('inventory.adjustment.adjustmentNumber')}</Label>
                         <Input
                           id="adjustment-number"
                           value={adjustmentNumber}
@@ -820,7 +822,7 @@ const AdjustmentPage: NextPage = () => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="adjustment-date">Tanggal</Label>
+                        <Label htmlFor="adjustment-date">{t('inventory.adjustment.date')}</Label>
                         <Input
                           id="adjustment-date"
                           type="date"
@@ -830,45 +832,45 @@ const AdjustmentPage: NextPage = () => {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="adjustment-by">Disesuaikan Oleh</Label>
+                        <Label htmlFor="adjustment-by">{t('inventory.adjustment.adjustedBy')}</Label>
                         <Input
                           id="adjustment-by"
                           value={adjustmentBy}
                           onChange={(e) => setAdjustmentBy(e.target.value)}
-                          placeholder="Nama petugas"
+                          placeholder={t('inventory.adjustment.officerName')}
                           className="mt-1"
                         />
                       </div>
                     </div>
                     
                     <div className="mb-6">
-                      <Label htmlFor="notes">Catatan</Label>
+                      <Label htmlFor="notes">{t('inventory.adjustment.notes')}</Label>
                       <Textarea
                         id="notes"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Tambahkan catatan penyesuaian di sini"
+                        placeholder={t('inventory.adjustment.notesPlaceholder')}
                         className="mt-1"
                         rows={3}
                       />
                     </div>
                     
                     <div className="bg-orange-50 p-4 rounded-lg mb-6">
-                      <h3 className="font-medium text-orange-800 mb-3">Cari Produk</h3>
+                      <h3 className="font-medium text-orange-800 mb-3">{t('inventory.adjustment.searchProduct')}</h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="col-span-2">
                           <div className="relative">
                             <Input
                               value={searchQuery}
                               onChange={(e) => setSearchQuery(e.target.value)}
-                              placeholder="Cari nama produk, SKU, atau scan barcode"
+                              placeholder={t('inventory.adjustment.searchPlaceholder')}
                               className="pr-10"
                             />
                             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                               <FaSearch className="text-gray-400" />
                             </div>
                           </div>
-                          {isSearching && <p className="text-sm text-gray-500 mt-1">Mencari...</p>}
+                          {isSearching && <p className="text-sm text-gray-500 mt-1">{t('inventory.adjustment.searching')}</p>}
                           {searchResults.length > 0 && (
                             <div className="mt-2 bg-white shadow-lg rounded-md border border-gray-200 absolute z-10 max-h-60 overflow-y-auto w-full md:w-1/2">
                               {searchResults.map((product) => (
@@ -892,7 +894,7 @@ const AdjustmentPage: NextPage = () => {
                             onClick={handleSearch}
                             className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
                           >
-                            <FaSearch className="mr-2" /> Cari Produk
+                            <FaSearch className="mr-2" /> {t('inventory.adjustment.searchProduct')}
                           </Button>
                         </div>
                       </div>
@@ -901,22 +903,22 @@ const AdjustmentPage: NextPage = () => {
                     {/* Product Adjustment Form */}
                     {selectedProduct && (
                       <div className="bg-white border border-orange-200 rounded-lg p-4 mb-6">
-                        <h3 className="font-medium text-orange-800 mb-3">Informasi Penyesuaian</h3>
+                        <h3 className="font-medium text-orange-800 mb-3">{t('inventory.adjustment.adjustmentInfo')}</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                           <div>
-                            <p className="text-sm text-gray-500">Produk</p>
+                            <p className="text-sm text-gray-500">{t('inventory.adjustment.product')}</p>
                             <p className="font-medium">{selectedProduct.name}</p>
                             {selectedProduct.sku && <p className="text-sm">SKU: {selectedProduct.sku}</p>}
                           </div>
                           <div>
-                            <p className="text-sm text-gray-500">Stok Saat Ini</p>
+                            <p className="text-sm text-gray-500">{t('inventory.adjustment.currentStock')}</p>
                             <p className="font-medium">{selectedStock}</p>
                           </div>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                           <div>
-                            <Label htmlFor="adjustment-type">Tipe Penyesuaian</Label>
+                            <Label htmlFor="adjustment-type">{t('inventory.adjustment.adjustmentType')}</Label>
                             <div className="flex space-x-2 mt-1">
                               <Button
                                 type="button"
@@ -925,7 +927,7 @@ const AdjustmentPage: NextPage = () => {
                                   ? "bg-gradient-to-r from-green-500 to-emerald-500" 
                                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
                               >
-                                <FaArrowUp className="mr-1" /> Tambah
+                                <FaArrowUp className="mr-1" /> {t('inventory.adjustment.increase')}
                               </Button>
                               <Button
                                 type="button"
@@ -934,12 +936,12 @@ const AdjustmentPage: NextPage = () => {
                                   ? "bg-gradient-to-r from-red-500 to-rose-500" 
                                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
                               >
-                                <FaArrowDown className="mr-1" /> Kurang
+                                <FaArrowDown className="mr-1" /> {t('inventory.adjustment.decrease')}
                               </Button>
                             </div>
                           </div>
                           <div>
-                            <Label htmlFor="new-stock">Stok Baru</Label>
+                            <Label htmlFor="new-stock">{t('inventory.adjustment.newStock')}</Label>
                             <Input
                               id="new-stock"
                               type="number"
@@ -950,7 +952,7 @@ const AdjustmentPage: NextPage = () => {
                             />
                           </div>
                           <div>
-                            <Label htmlFor="adjustment-quantity">Jumlah Penyesuaian</Label>
+                            <Label htmlFor="adjustment-quantity">{t('inventory.adjustment.adjustmentQty')}</Label>
                             <Input
                               id="adjustment-quantity"
                               type="number"
@@ -963,13 +965,13 @@ const AdjustmentPage: NextPage = () => {
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                           <div>
-                            <Label htmlFor="reason">Alasan Penyesuaian</Label>
+                            <Label htmlFor="reason">{t('inventory.adjustment.reason')}</Label>
                             <Select 
                               value={reason} 
                               onValueChange={setReason}
                             >
                               <SelectTrigger className="mt-1">
-                                <SelectValue placeholder="Pilih alasan penyesuaian" />
+                                <SelectValue placeholder={t('inventory.adjustment.selectReason')} />
                               </SelectTrigger>
                               <SelectContent>
                                 {adjustmentReasons.map((r) => (
@@ -982,12 +984,12 @@ const AdjustmentPage: NextPage = () => {
                           </div>
                           {reason === "other" && (
                             <div>
-                              <Label htmlFor="custom-reason">Alasan Lainnya</Label>
+                              <Label htmlFor="custom-reason">{t('inventory.adjustment.otherReason')}</Label>
                               <Input
                                 id="custom-reason"
                                 value={customReason}
                                 onChange={(e) => setCustomReason(e.target.value)}
-                                placeholder="Masukkan alasan penyesuaian"
+                                placeholder={t('inventory.adjustment.enterReason')}
                                 className="mt-1"
                               />
                             </div>
@@ -1000,14 +1002,14 @@ const AdjustmentPage: NextPage = () => {
                             onClick={() => setSelectedProduct(null)} 
                             className="mr-2 border-orange-200 text-orange-600 hover:bg-orange-50"
                           >
-                            <FaTimes className="mr-1" /> Batal
+                            <FaTimes className="mr-1" /> {t('common.cancel')}
                           </Button>
                           <Button 
                             onClick={handleAddProduct}
                             className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
                             disabled={!reason || (reason === "other" && !customReason)}
                           >
-                            <FaPlus className="mr-1" /> Tambah Produk
+                            <FaPlus className="mr-1" /> {t('inventory.adjustment.addProduct')}
                           </Button>
                         </div>
                       </div>
@@ -1016,18 +1018,18 @@ const AdjustmentPage: NextPage = () => {
                     {/* Items Table */}
                     {adjustmentItems.length > 0 && (
                       <div className="mt-6">
-                        <h3 className="font-medium text-gray-800 mb-3">Daftar Item Penyesuaian</h3>
+                        <h3 className="font-medium text-gray-800 mb-3">{t('inventory.adjustment.itemList')}</h3>
                         <div className="border rounded-lg overflow-hidden">
                           <Table>
                             <TableHeader>
                               <TableRow className="bg-orange-50">
                                 <TableHead className="w-[50px]">No</TableHead>
-                                <TableHead>Produk</TableHead>
-                                <TableHead>Stok Saat Ini</TableHead>
-                                <TableHead>Stok Baru</TableHead>
-                                <TableHead>Penyesuaian</TableHead>
-                                <TableHead>Alasan</TableHead>
-                                <TableHead className="w-[100px]">Aksi</TableHead>
+                                <TableHead>{t('inventory.adjustment.product')}</TableHead>
+                                <TableHead>{t('inventory.adjustment.currentStock')}</TableHead>
+                                <TableHead>{t('inventory.adjustment.newStock')}</TableHead>
+                                <TableHead>{t('inventory.adjustment.adjustmentCol')}</TableHead>
+                                <TableHead>{t('inventory.adjustment.reason')}</TableHead>
+                                <TableHead className="w-[100px]">{t('common.actions')}</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1067,7 +1069,7 @@ const AdjustmentPage: NextPage = () => {
                             onClick={handleSaveAdjustment}
                             className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
                           >
-                            <FaSave className="mr-2" /> Simpan Penyesuaian
+                            <FaSave className="mr-2" /> {t('inventory.adjustment.saveAdjustment')}
                           </Button>
                         </div>
                       </div>
@@ -1084,20 +1086,20 @@ const AdjustmentPage: NextPage = () => {
                   <div className="h-2 bg-gradient-to-r from-orange-500 to-amber-500"></div>
                   <CardHeader>
                     <CardTitle className="text-xl font-semibold flex items-center">
-                      <FaClipboardCheck className="mr-2 text-orange-500" /> Penyesuaian dari Stock Opname
+                      <FaClipboardCheck className="mr-2 text-orange-500" /> {t('inventory.adjustment.stockOpnameTab')}
                     </CardTitle>
                     <CardDescription>
-                      Penyesuaian stok berdasarkan hasil stock opname
+                      {t('inventory.adjustment.stockOpnameDesc')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {stocktakes.length === 0 ? (
                       <div className="p-6 text-center">
                         <FaList className="mx-auto text-5xl text-orange-300 mb-4" />
-                        <h3 className="text-xl font-medium text-gray-700 mb-2">Tidak ada hasil stock opname yang menunggu penyesuaian</h3>
-                        <p className="text-gray-500 mb-4">Saat ini tidak ada data stock opname yang perlu disesuaikan</p>
+                        <h3 className="text-xl font-medium text-gray-700 mb-2">{t('inventory.adjustment.noStocktake')}</h3>
+                        <p className="text-gray-500 mb-4">{t('inventory.adjustment.noStocktakeDesc')}</p>
                         <Button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600">
-                          <FaClipboardCheck className="mr-2" /> Mulai Stock Opname Baru
+                          <FaClipboardCheck className="mr-2" /> {t('inventory.adjustment.startNewStocktake')}
                         </Button>
                       </div>
                     ) : (
@@ -1105,13 +1107,13 @@ const AdjustmentPage: NextPage = () => {
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-orange-50">
-                              <TableHead>Nomor Stock Opname</TableHead>
-                              <TableHead>Tanggal</TableHead>
-                              <TableHead>Lokasi</TableHead>
-                              <TableHead>Dilakukan Oleh</TableHead>
-                              <TableHead>Diverifikasi Oleh</TableHead>
-                              <TableHead>Status</TableHead>
-                              <TableHead className="text-right">Aksi</TableHead>
+                              <TableHead>{t('inventory.adjustment.stocktakeNumber')}</TableHead>
+                              <TableHead>{t('inventory.adjustment.date')}</TableHead>
+                              <TableHead>{t('inventory.adjustment.location')}</TableHead>
+                              <TableHead>{t('inventory.adjustment.conductedBy')}</TableHead>
+                              <TableHead>{t('inventory.adjustment.verifiedBy')}</TableHead>
+                              <TableHead>{t('common.status')}</TableHead>
+                              <TableHead className="text-right">{t('common.actions')}</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -1131,10 +1133,10 @@ const AdjustmentPage: NextPage = () => {
                                         : "bg-yellow-100 text-yellow-800"
                                   }>
                                     {stocktake.status === "approved" 
-                                      ? "Disetujui" 
+                                      ? t('inventory.adjustment.approved') 
                                       : stocktake.status === "rejected"
-                                        ? "Ditolak"
-                                        : "Menunggu"}
+                                        ? t('inventory.adjustment.rejected')
+                                        : t('inventory.adjustment.pending')}
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
@@ -1165,10 +1167,10 @@ const AdjustmentPage: NextPage = () => {
                   <div className="h-2 bg-gradient-to-r from-orange-500 to-amber-500"></div>
                   <CardHeader>
                     <CardTitle className="text-xl font-semibold flex items-center">
-                      <FaHistory className="mr-2 text-orange-500" /> Riwayat Penyesuaian
+                      <FaHistory className="mr-2 text-orange-500" /> {t('inventory.adjustment.historyTab')}
                     </CardTitle>
                     <CardDescription>
-                      Daftar penyesuaian stok yang telah dilakukan
+                      {t('inventory.adjustment.historyDesc')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1176,13 +1178,13 @@ const AdjustmentPage: NextPage = () => {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-orange-50">
-                            <TableHead>Nomor Penyesuaian</TableHead>
-                            <TableHead>Tanggal</TableHead>
-                            <TableHead>Disesuaikan Oleh</TableHead>
-                            <TableHead>Disetujui Oleh</TableHead>
-                            <TableHead>Jumlah Item</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Aksi</TableHead>
+                            <TableHead>{t('inventory.adjustment.adjustmentNumber')}</TableHead>
+                            <TableHead>{t('inventory.adjustment.date')}</TableHead>
+                            <TableHead>{t('inventory.adjustment.adjustedBy')}</TableHead>
+                            <TableHead>{t('inventory.adjustment.approvedBy')}</TableHead>
+                            <TableHead>{t('inventory.adjustment.totalItems')}</TableHead>
+                            <TableHead>{t('common.status')}</TableHead>
+                            <TableHead className="text-right">{t('common.actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1202,10 +1204,10 @@ const AdjustmentPage: NextPage = () => {
                                       : "bg-yellow-100 text-yellow-800"
                                 }>
                                   {history.status === "approved" 
-                                    ? "Disetujui" 
+                                    ? t('inventory.adjustment.approved') 
                                     : history.status === "rejected"
-                                      ? "Ditolak"
-                                      : "Menunggu"}
+                                      ? t('inventory.adjustment.rejected')
+                                      : t('inventory.adjustment.pending')}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right">
@@ -1245,7 +1247,7 @@ const AdjustmentPage: NextPage = () => {
               <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                   <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-gray-800">Detail Stock Opname</h2>
+                    <h2 className="text-xl font-bold text-gray-800">{t('inventory.adjustment.stocktakeDetail')}</h2>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1259,15 +1261,15 @@ const AdjustmentPage: NextPage = () => {
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                       <div>
-                        <p><span className="font-medium">Nomor Stock Opname:</span> {selectedStocktake.stocktakeNumber}</p>
-                        <p><span className="font-medium">Tanggal:</span> {formatDate(selectedStocktake.date)}</p>
-                        <p><span className="font-medium">Lokasi:</span> {selectedStocktake.location}</p>
+                        <p><span className="font-medium">{t('inventory.adjustment.stocktakeNumber')}:</span> {selectedStocktake.stocktakeNumber}</p>
+                        <p><span className="font-medium">{t('inventory.adjustment.date')}:</span> {formatDate(selectedStocktake.date)}</p>
+                        <p><span className="font-medium">{t('inventory.adjustment.location')}:</span> {selectedStocktake.location}</p>
                       </div>
                       <div>
-                        <p><span className="font-medium">Dilakukan Oleh:</span> {selectedStocktake.conductedBy}</p>
-                        <p><span className="font-medium">Diverifikasi Oleh:</span> {selectedStocktake.verifiedBy || "-"}</p>
+                        <p><span className="font-medium">{t('inventory.adjustment.conductedBy')}:</span> {selectedStocktake.conductedBy}</p>
+                        <p><span className="font-medium">{t('inventory.adjustment.verifiedBy')}:</span> {selectedStocktake.verifiedBy || "-"}</p>
                         <p>
-                          <span className="font-medium">Status:</span> 
+                          <span className="font-medium">{t('common.status')}:</span> 
                           <Badge className={
                             selectedStocktake.status === "approved" 
                               ? "bg-green-100 text-green-800 ml-2" 
@@ -1276,10 +1278,10 @@ const AdjustmentPage: NextPage = () => {
                                 : "bg-yellow-100 text-yellow-800 ml-2"
                           }>
                             {selectedStocktake.status === "approved" 
-                              ? "Disetujui" 
+                              ? t('inventory.adjustment.approved') 
                               : selectedStocktake.status === "rejected"
-                                ? "Ditolak"
-                                : "Menunggu"}
+                                ? t('inventory.adjustment.rejected')
+                                : t('inventory.adjustment.pending')}
                           </Badge>
                         </p>
                       </div>
@@ -1287,23 +1289,23 @@ const AdjustmentPage: NextPage = () => {
                     
                     {selectedStocktake.notes && (
                       <div className="mb-6">
-                        <p className="font-medium">Catatan:</p>
+                        <p className="font-medium">{t('inventory.adjustment.notes')}:</p>
                         <p className="bg-gray-50 p-3 rounded-md">{selectedStocktake.notes}</p>
                       </div>
                     )}
                     
-                    <h3 className="font-semibold text-lg mb-3">Item Stock Opname</h3>
+                    <h3 className="font-semibold text-lg mb-3">{t('inventory.adjustment.stocktakeItems')}</h3>
                     <div className="border rounded-lg overflow-hidden mb-6">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-orange-50">
                             <TableHead className="w-[50px]">No</TableHead>
-                            <TableHead>Produk</TableHead>
+                            <TableHead>{t('inventory.adjustment.product')}</TableHead>
                             <TableHead>SKU</TableHead>
-                            <TableHead>Stok Sistem</TableHead>
-                            <TableHead>Stok Aktual</TableHead>
-                            <TableHead>Perbedaan</TableHead>
-                            <TableHead>Catatan</TableHead>
+                            <TableHead>{t('inventory.adjustment.systemStock')}</TableHead>
+                            <TableHead>{t('inventory.adjustment.actualStock')}</TableHead>
+                            <TableHead>{t('inventory.adjustment.difference')}</TableHead>
+                            <TableHead>{t('inventory.adjustment.notes')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1341,13 +1343,13 @@ const AdjustmentPage: NextPage = () => {
                       onClick={() => setShowStocktakeDetails(false)}
                       className="border-orange-200 text-orange-600 hover:bg-orange-50"
                     >
-                      <FaTimes className="mr-2" /> Tutup
+                      <FaTimes className="mr-2" /> {t('common.close')}
                     </Button>
                     <Button 
                       onClick={handleAddStocktakeToAdjustment}
                       className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
                     >
-                      <FaExchangeAlt className="mr-2" /> Buat Penyesuaian
+                      <FaExchangeAlt className="mr-2" /> {t('inventory.adjustment.createAdjustment')}
                     </Button>
                   </div>
                 </div>
@@ -1359,7 +1361,7 @@ const AdjustmentPage: NextPage = () => {
               <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                   <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-gray-800">Dokumen Penyesuaian Stok</h2>
+                    <h2 className="text-xl font-bold text-gray-800">{t('inventory.adjustment.adjustmentDocument')}</h2>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -1391,20 +1393,20 @@ const AdjustmentPage: NextPage = () => {
                       </div>
 
                       <div className="header text-center mb-4">
-                        <h1 className="text-xl font-bold text-orange-500 mb-1">Dokumen Penyesuaian Stok</h1>
-                        <p className="text-gray-500 text-sm">Nomor: {selectedHistory.adjustmentNumber}</p>
+                        <h1 className="text-xl font-bold text-orange-500 mb-1">{t('inventory.adjustment.adjustmentDocument')}</h1>
+                        <p className="text-gray-500 text-sm">{t('inventory.adjustment.numberLabel')}: {selectedHistory.adjustmentNumber}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-4 mb-6">
                         <div>
-                          <p><span className="font-medium">Tanggal:</span> {formatDate(selectedHistory.date)}</p>
-                          <p><span className="font-medium">Disesuaikan Oleh:</span> {selectedHistory.adjustmentBy}</p>
+                          <p><span className="font-medium">{t('inventory.adjustment.date')}:</span> {formatDate(selectedHistory.date)}</p>
+                          <p><span className="font-medium">{t('inventory.adjustment.adjustedBy')}:</span> {selectedHistory.adjustmentBy}</p>
                           {selectedHistory.approvedBy && (
-                            <p><span className="font-medium">Disetujui Oleh:</span> {selectedHistory.approvedBy}</p>
+                            <p><span className="font-medium">{t('inventory.adjustment.approvedBy')}:</span> {selectedHistory.approvedBy}</p>
                           )}
                         </div>
                         <div>
                           <p>
-                            <span className="font-medium">Status:</span> 
+                            <span className="font-medium">{t('common.status')}:</span> 
                             <span className={
                               selectedHistory.status === "approved" 
                                 ? "text-green-600" 
@@ -1413,15 +1415,15 @@ const AdjustmentPage: NextPage = () => {
                                   : "text-yellow-600"
                             }>
                               {selectedHistory.status === "approved" 
-                                ? "Disetujui" 
+                                ? t('inventory.adjustment.approved') 
                                 : selectedHistory.status === "rejected"
-                                  ? "Ditolak"
-                                  : "Menunggu"}
+                                  ? t('inventory.adjustment.rejected')
+                                  : t('inventory.adjustment.pending')}
                             </span>
                           </p>
-                          <p><span className="font-medium">Jumlah Item:</span> {selectedHistory.totalItems}</p>
+                          <p><span className="font-medium">{t('inventory.adjustment.totalItems')}:</span> {selectedHistory.totalItems}</p>
                           {selectedHistory.notes && (
-                            <p><span className="font-medium">Catatan:</span> {selectedHistory.notes}</p>
+                            <p><span className="font-medium">{t('inventory.adjustment.notes')}:</span> {selectedHistory.notes}</p>
                           )}
                         </div>
                       </div>
@@ -1430,12 +1432,12 @@ const AdjustmentPage: NextPage = () => {
                         <thead>
                           <tr className="bg-orange-50">
                             <th className="border border-gray-300 p-2 text-left">No</th>
-                            <th className="border border-gray-300 p-2 text-left">Produk</th>
+                            <th className="border border-gray-300 p-2 text-left">{t('inventory.adjustment.product')}</th>
                             <th className="border border-gray-300 p-2 text-left">SKU</th>
-                            <th className="border border-gray-300 p-2 text-left">Stok Awal</th>
-                            <th className="border border-gray-300 p-2 text-left">Stok Baru</th>
-                            <th className="border border-gray-300 p-2 text-left">Penyesuaian</th>
-                            <th className="border border-gray-300 p-2 text-left">Alasan</th>
+                            <th className="border border-gray-300 p-2 text-left">{t('inventory.adjustment.initialStock')}</th>
+                            <th className="border border-gray-300 p-2 text-left">{t('inventory.adjustment.newStock')}</th>
+                            <th className="border border-gray-300 p-2 text-left">{t('inventory.adjustment.adjustmentCol')}</th>
+                            <th className="border border-gray-300 p-2 text-left">{t('inventory.adjustment.reason')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1461,8 +1463,8 @@ const AdjustmentPage: NextPage = () => {
                         <div className="flex justify-between">
                           <div className="w-1/3"></div>
                           <div className="w-1/3 text-center">
-                            <p className="font-medium text-gray-800 mb-1">Diserahkan di: Jakarta</p>
-                            <p className="text-sm text-gray-600">Tanggal: {formatDate(selectedHistory.date)}</p>
+                            <p className="font-medium text-gray-800 mb-1">{t('inventory.adjustment.submittedAt')}: Jakarta</p>
+                            <p className="text-sm text-gray-600">{t('inventory.adjustment.date')}: {formatDate(selectedHistory.date)}</p>
                           </div>
                           <div className="w-1/3"></div>
                         </div>
@@ -1470,24 +1472,24 @@ const AdjustmentPage: NextPage = () => {
                       
                       <div className="signature-area flex justify-between px-8 mt-6">
                         <div className="w-1/3 text-center">
-                          <p className="font-medium text-gray-700 mb-16">Dibuat Oleh,</p>
+                          <p className="font-medium text-gray-700 mb-16">{t('inventory.adjustment.createdBy')},</p>
                           <div className="signature-line w-full mx-auto border-b border-gray-400 mb-2"></div>
                           <p className="font-medium">{selectedHistory.adjustmentBy}</p>
-                          <p className="text-xs text-gray-500 mt-1">(Petugas Gudang)</p>
+                          <p className="text-xs text-gray-500 mt-1">({t('inventory.adjustment.warehouseOfficer')})</p>
                         </div>
                         
                         <div className="w-1/3 text-center">
-                          <p className="font-medium text-gray-700 mb-16">Mengetahui,</p>
+                          <p className="font-medium text-gray-700 mb-16">{t('inventory.adjustment.acknowledgedBy')},</p>
                           <div className="signature-line w-full mx-auto border-b border-gray-400 mb-2"></div>
-                          <p className="font-medium">Kepala Apotek</p>
-                          <p className="text-xs text-gray-500 mt-1">(Pimpinan)</p>
+                          <p className="font-medium">{t('inventory.adjustment.pharmacyHead')}</p>
+                          <p className="text-xs text-gray-500 mt-1">({t('inventory.adjustment.leader')})</p>
                         </div>
                         
                         <div className="w-1/3 text-center">
-                          <p className="font-medium text-gray-700 mb-16">{selectedHistory.status === "approved" ? "Disetujui" : "Perlu Disetujui"} Oleh,</p>
+                          <p className="font-medium text-gray-700 mb-16">{selectedHistory.status === "approved" ? t('inventory.adjustment.approved') : t('inventory.adjustment.needsApproval')} {t('inventory.adjustment.byLabel')},</p>
                           <div className="signature-line w-full mx-auto border-b border-gray-400 mb-2"></div>
                           <p className="font-medium">{selectedHistory.approvedBy || "_____________"}</p>
-                          <p className="text-xs text-gray-500 mt-1">(Apoteker Penanggung Jawab)</p>
+                          <p className="text-xs text-gray-500 mt-1">({t('inventory.adjustment.responsiblePharmacist')})</p>
                         </div>
                       </div>
                     </div>
@@ -1499,14 +1501,14 @@ const AdjustmentPage: NextPage = () => {
                       onClick={() => setShowAdjustmentDoc(false)}
                       className="border-orange-200 text-orange-600 hover:bg-orange-50"
                     >
-                      <FaTimes className="mr-2" /> Tutup
+                      <FaTimes className="mr-2" /> {t('common.close')}
                     </Button>
                     <div className="dropdown inline-block relative">
                       <Button
                         variant="outline"
                         className="border-orange-200 text-orange-600 hover:bg-orange-50 inline-flex items-center"
                       >
-                        <FaDownload className="mr-2" /> Unduh
+                        <FaDownload className="mr-2" /> {t('inventory.adjustment.download')}
                         <svg className="fill-current h-4 w-4 ml-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                           <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                         </svg>
@@ -1517,14 +1519,14 @@ const AdjustmentPage: NextPage = () => {
                           onClick={handleExportToPDF}
                           className="rounded-t bg-white hover:bg-gray-100 py-2 px-4 w-full text-left flex items-center text-sm"
                         >
-                          <FaFilePdf className="mr-2 text-red-500" /> Ekspor ke PDF
+                          <FaFilePdf className="mr-2 text-red-500" /> {t('inventory.adjustment.exportPDF')}
                         </Button>
                         <Button
                           variant="ghost"
                           onClick={handleExportToExcel}
                           className="rounded-b bg-white hover:bg-gray-100 py-2 px-4 w-full text-left flex items-center text-sm"
                         >
-                          <FaFileExcel className="mr-2 text-green-600" /> Ekspor ke Excel
+                          <FaFileExcel className="mr-2 text-green-600" /> {t('inventory.adjustment.exportExcel')}
                         </Button>
                       </div>
                     </div>
@@ -1532,7 +1534,7 @@ const AdjustmentPage: NextPage = () => {
                       onClick={handlePrintDocument}
                       className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
                     >
-                      <FaPrint className="mr-2" /> Cetak Dokumen
+                      <FaPrint className="mr-2" /> {t('inventory.adjustment.printDocument')}
                     </Button>
                   </div>
                 </div>

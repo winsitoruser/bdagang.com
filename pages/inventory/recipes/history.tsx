@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ interface HistoryEntry {
 
 const RecipeHistoryPage: React.FC = () => {
   const router = useRouter();
+  const { t, formatDate } = useTranslation();
   const { toast } = useToast();
   const { recipe_id } = router.query;
   
@@ -96,10 +98,10 @@ const RecipeHistoryPage: React.FC = () => {
       restored: 'bg-green-100 text-green-700'
     };
     const labels = {
-      created: 'Dibuat',
-      updated: 'Diperbarui',
-      archived: 'Diarsipkan',
-      restored: 'Dikembalikan'
+      created: t('inventory.recipes.historyCreated'),
+      updated: t('inventory.recipes.historyUpdated'),
+      archived: t('inventory.recipes.historyArchived'),
+      restored: t('inventory.recipes.historyRestored')
     };
     return (
       <Badge className={colors[type as keyof typeof colors] || 'bg-gray-100'}>
@@ -108,7 +110,7 @@ const RecipeHistoryPage: React.FC = () => {
     );
   };
 
-  const formatDate = (dateString: string) => {
+  const formatRelativeDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -116,18 +118,12 @@ const RecipeHistoryPage: React.FC = () => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Baru saja';
-    if (diffMins < 60) return `${diffMins} menit yang lalu`;
-    if (diffHours < 24) return `${diffHours} jam yang lalu`;
-    if (diffDays < 7) return `${diffDays} hari yang lalu`;
+    if (diffMins < 1) return t('inventory.production.justNow');
+    if (diffMins < 60) return `${diffMins} ${t('inventory.production.minutesAgo')}`;
+    if (diffHours < 24) return `${diffHours} ${t('inventory.production.hoursAgo')}`;
+    if (diffDays < 7) return `${diffDays} ${t('inventory.production.daysAgo')}`;
 
-    return date.toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return formatDate(date, 'datetime');
   };
 
   const filteredHistory = history.filter(entry =>
@@ -289,7 +285,7 @@ const RecipeHistoryPage: React.FC = () => {
                         <div className="flex items-center space-x-4 text-xs text-gray-500">
                           <div className="flex items-center">
                             <FaCalendar className="mr-1" />
-                            {formatDate(entry.created_at)}
+                            {formatRelativeDate(entry.created_at)}
                           </div>
                           {entry.changedBy && (
                             <div className="flex items-center">

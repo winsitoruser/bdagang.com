@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,7 @@ interface Location {
 const CreateTransferPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t, formatCurrency } = useTranslation();
   
   // Form state
   const [fromLocationId, setFromLocationId] = useState<number | ''>('');
@@ -144,13 +146,6 @@ const CreateTransferPage: React.FC = () => {
     };
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const validateForm = (): boolean => {
     if (!fromLocationId) {

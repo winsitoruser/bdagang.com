@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +53,7 @@ const EditProductPage: React.FC = () => {
   const router = useRouter();
   const { id } = router.query;
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [loadingProduct, setLoadingProduct] = useState(true);
@@ -1519,7 +1521,7 @@ const EditProductPage: React.FC = () => {
                         className="bg-blue-600 hover:bg-blue-700 text-sm"
                         disabled={uploadingImage}
                       >
-                        {uploadingImage ? 'Uploading...' : '+ Upload Gambar'}
+                        {uploadingImage ? 'Mengunggah...' : '+ Upload Gambar'}
                       </Button>
                     </label>
                   </div>

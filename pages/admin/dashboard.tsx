@@ -206,7 +206,7 @@ export default function AdminDashboard() {
 
   const menuItems = [
     { icon: Activity, label: 'Dasbor', path: '/admin/dashboard', active: true },
-    { icon: FileCheck, label: 'KYB Review', path: '/admin/kyb-review', badge: kybPendingCount > 0 ? kybPendingCount : undefined },
+    { icon: FileCheck, label: 'Tinjauan KYB', path: '/admin/kyb-review', badge: kybPendingCount > 0 ? kybPendingCount : undefined },
     { icon: Users, label: 'Tenant', path: '/admin/tenants' },
     { icon: Package, label: 'Jenis Bisnis', path: '/admin/business-types' },
     { icon: Store, label: 'Cabang', path: '/admin/branches' },
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
     { icon: DollarSign, label: 'Transaksi', path: '/admin/transactions' },
     { icon: CreditCard, label: 'Langganan', path: '/admin/subscriptions', badge: stats.subscriptions?.expiring },
     { icon: BarChart3, label: 'Analitik', path: '/admin/analytics' },
-    { icon: Brain, label: 'AI Models', path: '/admin/ai-models' },
+    { icon: Brain, label: 'Model AI', path: '/admin/ai-models' },
     { icon: Settings, label: 'Pengaturan', path: '/admin/settings' },
   ];
 

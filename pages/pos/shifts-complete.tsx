@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import { 
   FaClock, FaPlay, FaStop, FaUser, FaMoneyBillWave,
   FaCalendar, FaDownload, FaEye, FaExchangeAlt, FaTimes,
@@ -33,6 +34,7 @@ interface Shift {
 const ShiftsCompletePage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   
   // State
   const [shifts, setShifts] = useState<Shift[]>([]);

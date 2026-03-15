@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Op } from 'sequelize';
 import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
 
 let Branch: any, PosTransaction: any, FinanceTransaction: any, FinanceInvoice: any, FinanceAccount: any;
 try {
@@ -62,6 +63,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     const { period = 'month', branchId } = req.query;
+    const ctx = getTenantContext(req);
+    const tenantWhere: any = ctx.tenantId ? { tenantId: ctx.tenantId } : {};
 
     // Calculate date range
     const now = new Date();
@@ -81,7 +84,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     try {
       if (Branch && (PosTransaction || FinanceTransaction)) {
         const dbBranches = await Branch.findAll({
-          where: { isActive: true },
+          where: { isActive: true, ...tenantWhere },
           attributes: ['id', 'code', 'name', 'type'],
           order: [['name', 'ASC']]
         });
@@ -101,10 +104,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             
             if (FinanceTransaction) {
               const incomeSum = await FinanceTransaction.sum('amount', { 
-                where: { ...whereClause, type: 'income' } 
+                where: { ...whereClause, ...tenantWhere, type: 'income' } 
               }) || 0;
               const expenseSum = await FinanceTransaction.sum('amount', { 
-                where: { ...whereClause, type: 'expense' } 
+                where: { ...whereClause, ...tenantWhere, type: 'expense' } 
               }) || 0;
               revenue = parseFloat(incomeSum.toString());
               expenses = parseFloat(expenseSum.toString());
@@ -122,6 +125,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             if (FinanceTransaction) {
               prevRevenue = await FinanceTransaction.sum('amount', {
                 where: {
+                  ...tenantWhere,
                   branchId: branch.id,
                   status: 'completed',
                   type: 'income',
@@ -171,6 +175,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           if (FinanceInvoice) {
             const invoiceStats = await FinanceInvoice.findAll({
               where: {
+                ...tenantWhere,
                 invoiceDate: { [Op.between]: [startDate, now] }
               },
               attributes: [
@@ -213,6 +218,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         if (FinanceTransaction) {
           const recentTxns = await FinanceTransaction.findAll({
             where: {
+              ...tenantWhere,
               transactionDate: { [Op.between]: [startDate, now] }
             },
             include: [

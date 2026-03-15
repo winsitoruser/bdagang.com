@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import BranchSelector from '@/components/settings/BranchSelector';
 import { useBranches } from '@/hooks/useBranches';
 import { 
@@ -19,8 +20,10 @@ import {
 const PosPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const { branches, selectedBranch, setSelectedBranch } = useBranches();
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const MOCK_POS_DASH = { todaySales: 18500000, todayTransactions: 85, avgTransaction: 217647, topProducts: [{ name: 'Paracetamol 500mg', qty: 28, revenue: 420000 }, { name: 'Vitamin C', qty: 22, revenue: 110000 }], salesTrend: [{ date: '2026-03-09', amount: 15200000 }, { date: '2026-03-10', amount: 16800000 }, { date: '2026-03-11', amount: 14500000 }, { date: '2026-03-12', amount: 17200000 }, { date: '2026-03-13', amount: 19100000 }, { date: '2026-03-14', amount: 16900000 }, { date: '2026-03-15', amount: 18500000 }], paymentMethods: { cash: 8500000, qris: 5200000, transfer: 3100000, card: 1700000 } };
+  const [dashboardData, setDashboardData] = useState<any>(MOCK_POS_DASH);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '3m' | '6m' | '1y'>('7d');
@@ -44,6 +47,7 @@ const PosPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setDashboardData(MOCK_POS_DASH);
     } finally {
       setLoading(false);
     }

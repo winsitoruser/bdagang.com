@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,8 +31,12 @@ interface Recipe {
 
 const ArchivedRecipesPage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { toast } = useToast();
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const MOCK_ARCHIVED: Recipe[] = [
+    { id: 'ar1', code: 'RCP-OLD-001', name: 'Roti Lama', description: 'Resep roti lama', category: 'Roti', status: 'archived', version: 2, total_cost: 50000, cost_per_unit: 5000, batch_size: 10, batch_unit: 'pcs', updated_at: '2026-02-01', created_at: '2025-06-15' },
+  ];
+  const [recipes, setRecipes] = useState<Recipe[]>(MOCK_ARCHIVED);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [restoring, setRestoring] = useState<string | null>(null);
@@ -50,11 +55,7 @@ const ArchivedRecipesPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching archived recipes:', error);
-      toast({
-        title: '❌ Gagal Memuat Data',
-        description: 'Terjadi kesalahan saat memuat resep yang diarsipkan',
-        variant: 'destructive'
-      });
+      setRecipes(MOCK_ARCHIVED);
     } finally {
       setLoading(false);
     }

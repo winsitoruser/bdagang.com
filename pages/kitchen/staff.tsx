@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,8 +30,15 @@ interface StaffMember {
 
 const KitchenStaffPage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: session, status } = useSession();
-  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const MOCK_K_STAFF: StaffMember[] = [
+    { id: 'ks1', name: 'Chef Andi', role: 'head_chef', shift: 'morning', status: 'active', performance: 95, ordersCompleted: 425, avgPrepTime: 15, joinDate: new Date('2024-01-15') },
+    { id: 'ks2', name: 'Budi Prasetyo', role: 'sous_chef', shift: 'morning', status: 'active', performance: 88, ordersCompleted: 380, avgPrepTime: 18, joinDate: new Date('2024-06-01') },
+    { id: 'ks3', name: 'Dewi Sartika', role: 'line_cook', shift: 'afternoon', status: 'active', performance: 82, ordersCompleted: 290, avgPrepTime: 20, joinDate: new Date('2025-01-10') },
+    { id: 'ks4', name: 'Eko Susanto', role: 'prep_cook', shift: 'morning', status: 'off', performance: 75, ordersCompleted: 180, avgPrepTime: 22, joinDate: new Date('2025-06-15') },
+  ];
+  const [staff, setStaff] = useState<StaffMember[]>(MOCK_K_STAFF);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -84,6 +92,7 @@ const KitchenStaffPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching staff:', error);
+      setStaff(MOCK_K_STAFF);
     }
   };
 

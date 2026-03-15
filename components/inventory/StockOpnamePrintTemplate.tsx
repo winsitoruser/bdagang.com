@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '@/lib/i18n';
 
 interface StockOpnamePrintTemplateProps {
   opname: any;
@@ -20,13 +21,7 @@ const StockOpnamePrintTemplate: React.FC<StockOpnamePrintTemplateProps> = ({
     phone: '021-12345678'
   }
 }) => {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
+  const { formatCurrency } = useTranslation();
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('id-ID', {

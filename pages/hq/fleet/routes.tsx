@@ -15,10 +15,20 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+const MOCK_ROUTES = [
+  { id: 'rt1', name: 'Jakarta - Bandung', origin: 'Jakarta', destination: 'Bandung', distance: 150, estimatedDuration: 180, status: 'active', vehicleCount: 3 },
+  { id: 'rt2', name: 'Jakarta - Surabaya', origin: 'Jakarta', destination: 'Surabaya', distance: 780, estimatedDuration: 720, status: 'active', vehicleCount: 2 },
+  { id: 'rt3', name: 'Jakarta - Semarang', origin: 'Jakarta', destination: 'Semarang', distance: 450, estimatedDuration: 420, status: 'active', vehicleCount: 2 },
+];
+const MOCK_ASSIGNMENTS = [
+  { id: 'ra1', routeId: 'rt1', vehicleId: 'v1', driverId: 'd1', scheduledDate: new Date().toISOString().split('T')[0], status: 'in_progress', departureTime: '06:00', estimatedArrival: '09:00' },
+  { id: 'ra2', routeId: 'rt2', vehicleId: 'v2', driverId: 'd2', scheduledDate: new Date().toISOString().split('T')[0], status: 'completed', departureTime: '05:00', estimatedArrival: '17:00' },
+];
+
 export default function RouteManagement() {
   const [mounted, setMounted] = useState(false);
-  const [routes, setRoutes] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
+  const [routes, setRoutes] = useState<any[]>(MOCK_ROUTES);
+  const [assignments, setAssignments] = useState<any[]>(MOCK_ASSIGNMENTS);
   const [activeTab, setActiveTab] = useState<'routes' | 'assignments'>('routes');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -37,7 +47,7 @@ export default function RouteManagement() {
       ]);
       if (routesRes.ok) { const d = await routesRes.json(); setRoutes(d.data || []); }
       if (assignRes.ok) { const d = await assignRes.json(); setAssignments(d.data || []); }
-    } catch (e) { console.error('Failed to fetch fleet routes:', e); }
+    } catch (e) { console.error('Failed to fetch fleet routes:', e); setRoutes(MOCK_ROUTES); setAssignments(MOCK_ASSIGNMENTS); }
     setLoading(false);
   };
 

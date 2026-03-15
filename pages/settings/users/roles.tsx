@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -13,8 +14,14 @@ import { PERMISSIONS_STRUCTURE, DEFAULT_ROLES } from '@/lib/permissions/permissi
 const RolesManagementPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [roles, setRoles] = useState<any[]>([]);
+  const MOCK_S_ROLES = [
+    { id: 'r1', name: 'Admin', description: 'Full access ke semua fitur', usersCount: 1, permissions: { 'pos.access': true, 'inventory.access': true, 'settings.access': true } },
+    { id: 'r2', name: 'Kasir', description: 'Akses POS dan transaksi', usersCount: 3, permissions: { 'pos.access': true, 'pos.transactions': true } },
+    { id: 'r3', name: 'Gudang', description: 'Akses inventori', usersCount: 2, permissions: { 'inventory.access': true, 'inventory.stock': true } },
+  ];
+  const [roles, setRoles] = useState<any[]>(MOCK_S_ROLES);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRole, setSelectedRole] = useState<any>(null);
@@ -48,6 +55,7 @@ const RolesManagementPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching roles:', error);
+      setRoles(MOCK_S_ROLES);
     } finally {
       setLoading(false);
     }

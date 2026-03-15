@@ -182,6 +182,13 @@ const MODULES = [
     tags: '["addon","enterprise","operations","logistics"]'
   },
   {
+    code: 'asset_management', name: 'Asset Management', description: 'Registrasi aset, lifecycle tracking, penyusutan, pemeliharaan, dan manajemen industri (Manufacturing, Property, IT/Office)',
+    icon: 'HardHat', route: '/hq/assets', category: 'operations', pricing_tier: 'professional', setup_complexity: 'complex',
+    color: '#6366F1', is_core: false, sort_order: 43,
+    features: '["Registrasi aset","Kategori & EAV dinamis","Penyusutan otomatis (4 metode)","Mutasi & transfer","Serah terima aset","Preventive maintenance","Work orders","OEE tracking","Lisensi software","Manajemen penyewaan","Integrasi keuangan","Integrasi HR","Alert otomatis","Barcode/QR/RFID"]',
+    tags: '["addon","pro","operations","asset","depreciation","maintenance"]'
+  },
+  {
     code: 'audit', name: 'Audit Log', description: 'Activity log, security audit, change tracking',
     icon: 'Shield', route: '/hq/audit-logs', category: 'system', pricing_tier: 'professional', setup_complexity: 'simple',
     color: '#78716C', is_core: false, sort_order: 41,
@@ -223,6 +230,9 @@ const DEPENDENCIES = [
   // Marketplace needs Inventory + Products
   ['marketplace_integration', 'inventory', 'required'],
   ['marketplace_integration', 'products', 'required'],
+  // Asset Management optionally integrates with Finance Pro and HRIS
+  ['asset_management', 'finance_pro', 'optional'],
+  ['asset_management', 'hris', 'recommended'],
 ];
 
 async function run() {

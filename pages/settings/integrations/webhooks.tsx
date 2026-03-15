@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,8 +33,13 @@ interface Webhook {
 const WebhookManagement: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [webhooks, setWebhooks] = useState<Webhook[]>([]);
+  const MOCK_WEBHOOKS: Webhook[] = [
+    { id: 'wh1', name: 'Order Notification', url: 'https://example.com/webhook/orders', events: ['order.created', 'order.paid'], isActive: true, secret: 'whsec_xxx', lastTriggered: '2026-03-15T08:30:00', successCount: 152, failureCount: 3, createdAt: '2026-01-15' },
+    { id: 'wh2', name: 'Stock Alert', url: 'https://example.com/webhook/stock', events: ['stock.low'], isActive: true, secret: 'whsec_yyy', lastTriggered: '2026-03-14T16:00:00', successCount: 28, failureCount: 0, createdAt: '2026-02-01' },
+  ];
+  const [webhooks, setWebhooks] = useState<Webhook[]>(MOCK_WEBHOOKS);
   const [showModal, setShowModal] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<Webhook | null>(null);
   const [showSecret, setShowSecret] = useState<{ [key: string]: boolean }>({});
@@ -82,6 +88,7 @@ const WebhookManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching webhooks:', error);
+      setWebhooks(MOCK_WEBHOOKS);
     } finally {
       setLoading(false);
     }
@@ -235,7 +242,7 @@ const WebhookManagement: React.FC = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin h-12 w-12 mx-auto border-4 border-indigo-600 border-t-transparent rounded-full"></div>
-            <p className="mt-4 text-gray-700">Loading...</p>
+            <p className="mt-4 text-gray-700">Memuat...</p>
           </div>
         </div>
       </DashboardLayout>

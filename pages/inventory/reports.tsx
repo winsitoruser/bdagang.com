@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { NextPage } from "next";
 import InventoryLayout from "@/components/layouts/inventory-layout";
+import { useTranslation } from '@/lib/i18n';
 import { Breadcrumbs } from "@/components/common/breadcrumbs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -140,6 +141,7 @@ const generateLowStockData = () => {
 const ReportsPage: NextPage = () => {
   const [tab, setTab] = useState("stock-value");
   const [period, setPeriod] = useState("all-time");
+  const { t, formatDate } = useTranslation();
   const [exportFormat, setExportFormat] = useState("pdf");
   const [valueView, setValueView] = useState<'category' | 'product' | 'group'>('category');
   const [selectedBranch, setSelectedBranch] = useState<string>('all');
@@ -595,7 +597,7 @@ const ReportsPage: NextPage = () => {
             <h2>Laporan Nilai Stok - ${branchInfo.name}</h2>
           </div>
           <div class="date">
-            <p>Tanggal: ${new Date().toLocaleDateString('id-ID')}</p>
+            <p>Tanggal: ${formatDate(new Date())}</p>
           </div>
           <table>
             <thead>
@@ -648,9 +650,9 @@ const ReportsPage: NextPage = () => {
       <div className="flex flex-col min-h-screen">
         <Breadcrumbs
           items={[
-            { title: "Dashboard", href: "/dashboard" },
-            { title: "Inventori", href: "/inventory" },
-            { title: "Laporan", href: "/inventory/reports" },
+            { title: t('sidebar.dashboard'), href: "/dashboard" },
+            { title: t('inventory.title'), href: "/inventory" },
+            { title: t('inventory.reports.title'), href: "/inventory/reports" },
           ]}
           className="p-6 pb-0"
         />
@@ -660,16 +662,16 @@ const ReportsPage: NextPage = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-800 flex items-center">
-                <FaChartBar className="mr-3 text-orange-500" /> Laporan Inventori
+                <FaChartBar className="mr-3 text-orange-500" /> {t('inventory.reportsTitle')}
               </h1>
               <p className="text-gray-600 mt-1">
-                Analisis dan laporan mengenai stok, nilai, dan pergerakan inventori
+                {t('inventory.reportsSubtitle')}
               </p>
             </div>
             <div className="flex items-center space-x-3">
               <Select value={exportFormat} onValueChange={setExportFormat}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Format Export" />
+                  <SelectValue placeholder={t('inventory.reports.exportFormat')} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pdf">PDF</SelectItem>
@@ -688,13 +690,13 @@ const ReportsPage: NextPage = () => {
                 ) : (
                   <FaFileExport className="mr-2 h-4 w-4" />
                 )}
-                Export
+                {t('inventory.reports.export')}
               </Button>
               
               {isFromMock && (
                 <Badge className="bg-yellow-100 text-yellow-800">
                   <FaInfoCircle className="mr-1 h-3 w-3" />
-                  Data Simulasi
+                  {t('inventory.reports.simulationData')}
                 </Badge>
               )}
             </div>
@@ -705,19 +707,19 @@ const ReportsPage: NextPage = () => {
             <TabsList className="grid w-full grid-cols-4 mb-4">
               <TabsTrigger value="stock-value" className="data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700">
                 <FaChartPie className="h-4 w-4 mr-2" />
-                <span>Nilai Stok</span>
+                <span>{t('inventory.reports.stockValue')}</span>
               </TabsTrigger>
               <TabsTrigger value="stock-movement" className="data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700">
                 <FaChartLine className="h-4 w-4 mr-2" />
-                <span>Pergerakan Stok</span>
+                <span>{t('inventory.reports.stockMovement')}</span>
               </TabsTrigger>
               <TabsTrigger value="low-stock" className="data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700">
                 <FaArrowDown className="h-4 w-4 mr-2" />
-                <span>Stok Minimum</span>
+                <span>{t('inventory.reports.lowStock')}</span>
               </TabsTrigger>
               <TabsTrigger value="product-analysis" className="data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700">
                 <FaBoxOpen className="h-4 w-4 mr-2" />
-                <span>Analisis Produk</span>
+                <span>{t('inventory.reports.productAnalysis')}</span>
               </TabsTrigger>
             </TabsList>
             
@@ -726,10 +728,10 @@ const ReportsPage: NextPage = () => {
               {/* Stock Value View Options */}
               <div className="flex flex-wrap gap-2 items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <span className="text-sm font-medium text-gray-700">Filter Cabang:</span>
+                  <span className="text-sm font-medium text-gray-700">{t('inventory.reports.branchFilter')}:</span>
                   <Select value={selectedBranch} onValueChange={setSelectedBranch}>
                     <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Pilih Cabang" />
+                      <SelectValue placeholder={t('inventory.reports.selectBranch')} />
                     </SelectTrigger>
                     <SelectContent>
                       {mockBranches.map((branch) => (
@@ -755,7 +757,7 @@ const ReportsPage: NextPage = () => {
                   onClick={() => setValueView('category')}
                   size="sm"
                 >
-                  <FaBoxOpen className="mr-2 h-3 w-3" /> Kategori
+                  <FaBoxOpen className="mr-2 h-3 w-3" /> {t('inventory.reports.category')}
                 </Button>
                 <Button 
                   variant={valueView === 'product' ? 'default' : 'outline'}
@@ -763,7 +765,7 @@ const ReportsPage: NextPage = () => {
                   onClick={() => setValueView('product')}
                   size="sm"
                 >
-                  <FaCubes className="mr-2 h-3 w-3" /> Produk
+                  <FaCubes className="mr-2 h-3 w-3" /> {t('inventory.reports.productLabel')}
                 </Button>
                 <Button 
                   variant={valueView === 'group' ? 'default' : 'outline'}
@@ -771,7 +773,7 @@ const ReportsPage: NextPage = () => {
                   onClick={() => setValueView('group')}
                   size="sm"
                 >
-                  <FaChartPie className="mr-2 h-3 w-3" /> Kelompok
+                  <FaChartPie className="mr-2 h-3 w-3" /> {t('inventory.reports.group')}
                 </Button>
                 </div>
               </div>
@@ -780,7 +782,7 @@ const ReportsPage: NextPage = () => {
               {isLoading && (
                 <div className="flex justify-center items-center p-10">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-                  <span className="ml-3 text-gray-600">Memuat data laporan...</span>
+                  <span className="ml-3 text-gray-600">{t('inventory.loadingReports')}</span>
                 </div>
               )}
               
@@ -799,9 +801,9 @@ const ReportsPage: NextPage = () => {
                     <CardHeader className="border-b bg-gradient-to-r from-orange-50 to-amber-50">
                       <div className="flex justify-between items-center">
                         <div>
-                          <CardTitle>Produk dengan Nilai Stok Tertinggi {selectedBranch !== 'all' && `- ${mockBranches.find(b => b.id === selectedBranch)?.name}`}</CardTitle>
+                          <CardTitle>{t('inventory.reports.highestStockValue')} {selectedBranch !== 'all' && `- ${mockBranches.find(b => b.id === selectedBranch)?.name}`}</CardTitle>
                           <CardDescription>
-                            Produk-produk yang memberi kontribusi terbesar terhadap total nilai stok
+                            {t('inventory.reports.highestStockValueDesc')}
                           </CardDescription>
                         </div>
                       </div>
@@ -811,11 +813,11 @@ const ReportsPage: NextPage = () => {
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-orange-50">
-                              <TableHead>Produk</TableHead>
-                              <TableHead>Kategori</TableHead>
-                              <TableHead className="text-center">Stok</TableHead>
-                              <TableHead className="text-right">Harga Beli</TableHead>
-                              <TableHead className="text-right">Nilai Total</TableHead>
+                              <TableHead>{t('inventory.reports.productLabel')}</TableHead>
+                              <TableHead>{t('inventory.reports.category')}</TableHead>
+                              <TableHead className="text-center">{t('inventory.reports.stock')}</TableHead>
+                              <TableHead className="text-right">{t('inventory.reports.buyPrice')}</TableHead>
+                              <TableHead className="text-right">{t('inventory.reports.totalValue')}</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -835,7 +837,7 @@ const ReportsPage: NextPage = () => {
                           <TableFooter className="bg-orange-50">
                             <TableRow>
                               <TableCell colSpan={4} className="text-right font-bold">
-                                Total Nilai ({productValues.length} produk)
+                                {t('inventory.reports.totalValue')} ({productValues.length} {t('inventory.reports.productsCount')})
                               </TableCell>
                               <TableCell className="text-right font-bold">
                                 {formatRupiah(totalStockValue)}
@@ -856,14 +858,14 @@ const ReportsPage: NextPage = () => {
                     <CardHeader className="border-b bg-gradient-to-r from-orange-50 to-amber-50">
                       <div className="flex justify-between items-center">
                         <div>
-                          <CardTitle>Nilai Stok per Produk {selectedBranch !== 'all' && `- ${mockBranches.find(b => b.id === selectedBranch)?.name}`}</CardTitle>
+                          <CardTitle>{t('inventory.reports.stockValuePerProduct')} {selectedBranch !== 'all' && `- ${mockBranches.find(b => b.id === selectedBranch)?.name}`}</CardTitle>
                           <CardDescription>
-                            Detail nilai stok untuk setiap produk dalam inventori
+                            {t('inventory.reports.stockValuePerProductDesc')}
                           </CardDescription>
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="relative">
-                            <Input placeholder="Cari produk..." className="pl-9 w-[250px]" />
+                            <Input placeholder={t('inventory.reports.searchProduct')} className="pl-9 w-[250px]" />
                             <FaSearch className="absolute left-3 top-3 text-gray-400" />
                           </div>
                           <Button 
@@ -883,14 +885,14 @@ const ReportsPage: NextPage = () => {
                               `produk-nilai-stok-${new Date().toISOString().split('T')[0]}.xlsx`
                             )}
                           >
-                            <FaFileExcel className="mr-2 h-4 w-4" /> Ekspor Excel
+                            <FaFileExcel className="mr-2 h-4 w-4" /> {t('inventory.reports.exportExcel')}
                           </Button>
                           <Button 
                             variant="outline" 
                             className="border-orange-200 text-orange-600 hover:bg-orange-50"
                             onClick={() => window.print()}
                           >
-                            <FaPrint className="mr-2 h-4 w-4" /> Cetak
+                            <FaPrint className="mr-2 h-4 w-4" /> {t('inventory.reports.print')}
                           </Button>
                         </div>
                       </div>
@@ -899,22 +901,22 @@ const ReportsPage: NextPage = () => {
                       <div className="border-t">
                         <div className="p-4 bg-orange-50 flex items-center justify-between">
                           <div className="flex items-center">
-                            <Badge className="bg-orange-100 text-orange-800 mr-2">Total: {productValues.length} produk</Badge>
+                            <Badge className="bg-orange-100 text-orange-800 mr-2">{t('inventory.reports.total')}: {productValues.length} {t('inventory.reports.productsCount')}</Badge>
                             <span className="text-sm text-gray-600">
-                              Nilai Total: <span className="font-bold">{formatRupiah(totalStockValue)}</span>
+                              {t('inventory.reports.totalValue')}: <span className="font-bold">{formatRupiah(totalStockValue)}</span>
                             </span>
                           </div>
                           <Select defaultValue="value-desc">
                             <SelectTrigger className="w-[200px]">
-                              <SelectValue placeholder="Urutkan berdasarkan" />
+                              <SelectValue placeholder={t('inventory.reports.sortBy')} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="value-desc">Nilai (Tertinggi)</SelectItem>
-                              <SelectItem value="value-asc">Nilai (Terendah)</SelectItem>
-                              <SelectItem value="name-asc">Nama (A-Z)</SelectItem>
-                              <SelectItem value="name-desc">Nama (Z-A)</SelectItem>
-                              <SelectItem value="stock-desc">Stok (Tertinggi)</SelectItem>
-                              <SelectItem value="stock-asc">Stok (Terendah)</SelectItem>
+                              <SelectItem value="value-desc">{t('inventory.reports.valueHighest')}</SelectItem>
+                              <SelectItem value="value-asc">{t('inventory.reports.valueLowest')}</SelectItem>
+                              <SelectItem value="name-asc">{t('inventory.reports.nameAZ')}</SelectItem>
+                              <SelectItem value="name-desc">{t('inventory.reports.nameZA')}</SelectItem>
+                              <SelectItem value="stock-desc">{t('inventory.reports.stockHighest')}</SelectItem>
+                              <SelectItem value="stock-asc">{t('inventory.reports.stockLowest')}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -924,12 +926,12 @@ const ReportsPage: NextPage = () => {
                         <Table>
                           <TableHeader className="sticky top-0 z-10">
                             <TableRow className="bg-white">
-                              <TableHead>Produk</TableHead>
-                              <TableHead>Kategori</TableHead>
-                              <TableHead className="text-center">Stok</TableHead>
-                              <TableHead className="text-right">Harga Beli</TableHead>
-                              <TableHead className="text-right">Nilai Total</TableHead>
-                              <TableHead className="text-center">Kadaluarsa</TableHead>
+                              <TableHead>{t('inventory.reports.productLabel')}</TableHead>
+                              <TableHead>{t('inventory.reports.category')}</TableHead>
+                              <TableHead className="text-center">{t('inventory.reports.stock')}</TableHead>
+                              <TableHead className="text-right">{t('inventory.reports.buyPrice')}</TableHead>
+                              <TableHead className="text-right">{t('inventory.reports.totalValue')}</TableHead>
+                              <TableHead className="text-center">{t('inventory.reports.expiry')}</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -954,7 +956,7 @@ const ReportsPage: NextPage = () => {
                       
                       <div className="p-4 text-center border-t">
                         <Button variant="outline" className="border-orange-200 text-orange-600 hover:bg-orange-50">
-                          Lihat Semua Produk
+                          {t('inventory.reports.viewAllProducts')}
                         </Button>
                       </div>
                     </CardContent>
@@ -967,16 +969,16 @@ const ReportsPage: NextPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <Card className="border-orange-200 md:col-span-2 shadow-md">
                     <CardHeader className="border-b bg-gradient-to-r from-orange-50 to-amber-50">
-                      <CardTitle>Nilai Stok Berdasarkan Kelompok Produk {selectedBranch !== 'all' && `- ${mockBranches.find(b => b.id === selectedBranch)?.name}`}</CardTitle>
+                      <CardTitle>{t('inventory.reports.stockValueByGroup')} {selectedBranch !== 'all' && `- ${mockBranches.find(b => b.id === selectedBranch)?.name}`}</CardTitle>
                       <CardDescription>
-                        Distribusi nilai inventori berdasarkan kategori farmasi
+                        {t('inventory.reports.stockValueByGroupDesc')}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-6">
                       <div className="space-y-6">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm text-gray-500">Total Nilai Stok</p>
+                            <p className="text-sm text-gray-500">{t('inventory.reports.totalStockValue')}</p>
                             <p className="text-3xl font-bold text-gray-900">
                               {formatRupiah(groupTotalValue)}
                             </p>
@@ -1026,7 +1028,7 @@ const ReportsPage: NextPage = () => {
                   
                   <Card className="border-orange-200 shadow-md">
                     <CardHeader className="border-b bg-gradient-to-r from-orange-50 to-amber-50">
-                      <CardTitle>Detail Kelompok</CardTitle>
+                      <CardTitle>{t('inventory.reports.groupDetail')}</CardTitle>
                     </CardHeader>
                     <CardContent className="p-6">
                       <div className="space-y-4">
@@ -1062,9 +1064,9 @@ const ReportsPage: NextPage = () => {
                   <CardHeader className="border-b">
                     <div className="flex justify-between items-center">
                       <div>
-                        <CardTitle>Pergerakan Stok</CardTitle>
+                        <CardTitle>{t('inventory.reports.stockMovement')}</CardTitle>
                         <CardDescription>
-                          Riwayat pergerakan stok masuk dan keluar
+                          {t('inventory.reports.stockMovementDesc')}
                         </CardDescription>
                       </div>
                     </div>
@@ -1072,7 +1074,7 @@ const ReportsPage: NextPage = () => {
                     {/* Filter controls */}
                     <div className="flex flex-wrap gap-4 mt-4 items-center border-t border-gray-100 pt-4">
                       <div className="flex flex-col space-y-1">
-                        <Label htmlFor="dateFrom" className="text-xs font-medium text-gray-700">Dari Tanggal</Label>
+                        <Label htmlFor="dateFrom" className="text-xs font-medium text-gray-700">{t('inventory.reports.dateFrom')}</Label>
                         <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-orange-500">
                           <span className="pl-3 text-gray-400">
                             <FaCalendarDay size={14} />
@@ -1091,7 +1093,7 @@ const ReportsPage: NextPage = () => {
                       </div>
                       
                       <div className="flex flex-col space-y-1">
-                        <Label htmlFor="dateTo" className="text-xs font-medium text-gray-700">Sampai Tanggal</Label>
+                        <Label htmlFor="dateTo" className="text-xs font-medium text-gray-700">{t('inventory.reports.dateTo')}</Label>
                         <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-orange-500">
                           <span className="pl-3 text-gray-400">
                             <FaCalendarDay size={14} />
@@ -1110,16 +1112,16 @@ const ReportsPage: NextPage = () => {
                       </div>
                       
                       <div className="flex flex-col space-y-1">
-                        <Label htmlFor="movementType" className="text-xs font-medium text-gray-700">Jenis Pergerakan</Label>
+                        <Label htmlFor="movementType" className="text-xs font-medium text-gray-700">{t('inventory.reports.movementType')}</Label>
                         <Select value={movementType} onValueChange={setMovementType}>
                           <SelectTrigger id="movementType" className="w-[180px]">
-                            <SelectValue placeholder="Jenis Pergerakan" />
+                            <SelectValue placeholder={t('inventory.reports.movementType')} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="all">Semua Pergerakan</SelectItem>
-                            <SelectItem value="in">Stok Masuk</SelectItem>
-                            <SelectItem value="out">Stok Keluar</SelectItem>
-                            <SelectItem value="adjustment">Penyesuaian</SelectItem>
+                            <SelectItem value="all">{t('inventory.reports.allMovements')}</SelectItem>
+                            <SelectItem value="in">{t('inventory.reports.stockIn')}</SelectItem>
+                            <SelectItem value="out">{t('inventory.reports.stockOut')}</SelectItem>
+                            <SelectItem value="adjustment">{t('inventory.reports.adjustmentType')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1128,7 +1130,7 @@ const ReportsPage: NextPage = () => {
                         <Label className="opacity-0 text-xs">Filter</Label>
                         <Button variant="default" size="sm" className="px-4 bg-orange-600 hover:bg-orange-700">
                           <FaFilter className="mr-2 h-3.5 w-3.5" />
-                          Terapkan Filter
+                          {t('inventory.reports.applyFilter')}
                         </Button>
                       </div>
                     </div>
@@ -1138,13 +1140,13 @@ const ReportsPage: NextPage = () => {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-gray-50">
-                            <TableHead>Tanggal</TableHead>
-                            <TableHead>Referensi</TableHead>
-                            <TableHead>Produk</TableHead>
-                            <TableHead>Tipe</TableHead>
-                            <TableHead className="text-center">Jumlah</TableHead>
-                            <TableHead>Sumber/Tujuan</TableHead>
-                            <TableHead>Catatan</TableHead>
+                            <TableHead>{t('inventory.reports.date')}</TableHead>
+                            <TableHead>{t('inventory.reports.reference')}</TableHead>
+                            <TableHead>{t('inventory.reports.productLabel')}</TableHead>
+                            <TableHead>{t('inventory.reports.type')}</TableHead>
+                            <TableHead className="text-center">{t('inventory.reports.quantity')}</TableHead>
+                            <TableHead>{t('inventory.reports.sourceDestination')}</TableHead>
+                            <TableHead>{t('inventory.reports.notes')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1153,7 +1155,7 @@ const ReportsPage: NextPage = () => {
                               <TableCell colSpan={7} className="text-center py-8">
                                 <div className="flex items-center justify-center">
                                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
-                                  <span className="ml-3 text-gray-600">Memuat data...</span>
+                                  <span className="ml-3 text-gray-600">{t('common.loading')}</span>
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -1183,17 +1185,17 @@ const ReportsPage: NextPage = () => {
                                     <TableCell>
                                       {movementTypeValue === "in" && (
                                         <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                                          <FaArrowUp className="mr-1 h-3 w-3" /> Masuk
+                                          <FaArrowUp className="mr-1 h-3 w-3" /> {t('inventory.reports.stockIn')}
                                         </Badge>
                                       )}
                                       {movementTypeValue === "out" && (
                                         <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                                          <FaArrowDown className="mr-1 h-3 w-3" /> Keluar
+                                          <FaArrowDown className="mr-1 h-3 w-3" /> {t('inventory.reports.stockOut')}
                                         </Badge>
                                       )}
                                       {movementTypeValue === "adjustment" && (
                                         <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
-                                          Penyesuaian
+                                          {t('inventory.reports.adjustmentType')}
                                         </Badge>
                                       )}
                                     </TableCell>
@@ -1214,7 +1216,7 @@ const ReportsPage: NextPage = () => {
                         className="text-indigo-600"
                         onClick={() => setShowMovementHistory(true)}
                       >
-                        Lihat Riwayat Lengkap
+                        {t('inventory.reports.viewFullHistory')}
                       </Button>
                     </div>
                   </CardContent>
@@ -1228,23 +1230,23 @@ const ReportsPage: NextPage = () => {
                 <CardHeader className="border-b">
                   <div className="flex justify-between items-center">
                     <div>
-                      <CardTitle>Produk dengan Stok Minimum</CardTitle>
+                      <CardTitle>{t('inventory.reports.lowStockProducts')}</CardTitle>
                       <CardDescription>
-                        Daftar produk yang memerlukan pengisian ulang
+                        {t('inventory.reports.lowStockProductsDesc')}
                       </CardDescription>
                     </div>
                     <Button 
                       className="bg-red-600 hover:bg-red-700"
                       onClick={handlePrintPurchaseOrder}
                     >
-                      <FaPrint className="mr-2 h-4 w-4" /> Cetak Pesanan Pembelian
+                      <FaPrint className="mr-2 h-4 w-4" /> {t('inventory.reports.printPurchaseOrder')}
                     </Button>
                   </div>
                   
                   {/* Filter controls - Low Stock */}
                   <div className="flex flex-wrap gap-4 mt-4 items-center border-t border-gray-100 pt-4">
                     <div className="flex flex-col space-y-1">
-                      <Label htmlFor="lowStockDateFrom" className="text-xs font-medium text-gray-700">Tanggal Stok</Label>
+                      <Label htmlFor="lowStockDateFrom" className="text-xs font-medium text-gray-700">{t('inventory.reports.stockDate')}</Label>
                       <div className="flex items-center border rounded-md overflow-hidden focus-within:ring-1 focus-within:ring-orange-500">
                         <span className="pl-3 text-gray-400">
                           <FaCalendarDay size={14} />
@@ -1263,10 +1265,10 @@ const ReportsPage: NextPage = () => {
                     </div>
                     
                     <div className="flex flex-col space-y-1">
-                      <Label htmlFor="lowStockBranch" className="text-xs font-medium text-gray-700">Cabang</Label>
+                      <Label htmlFor="lowStockBranch" className="text-xs font-medium text-gray-700">{t('inventory.reports.branch')}</Label>
                       <Select value={selectedBranch} onValueChange={setSelectedBranch}>
                         <SelectTrigger id="lowStockBranch" className="w-[200px]">
-                          <SelectValue placeholder="Pilih Cabang" />
+                          <SelectValue placeholder={t('inventory.reports.selectBranch')} />
                         </SelectTrigger>
                         <SelectContent>
                           {mockBranches.map((branch) => (
@@ -1290,7 +1292,7 @@ const ReportsPage: NextPage = () => {
                       <Label className="opacity-0 text-xs">Filter</Label>
                       <Button variant="default" size="sm" className="px-4 bg-orange-600 hover:bg-orange-700">
                         <FaFilter className="mr-2 h-3.5 w-3.5" />
-                        Terapkan Filter
+                        {t('inventory.reports.applyFilter')}
                       </Button>
                     </div>
                   </div>
@@ -1300,11 +1302,11 @@ const ReportsPage: NextPage = () => {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50">
-                          <TableHead>Produk</TableHead>
-                          <TableHead className="text-center">Stok Saat Ini</TableHead>
-                          <TableHead className="text-center">Stok Minimum</TableHead>
-                          <TableHead className="text-center">Defisit</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead>{t('inventory.reports.productLabel')}</TableHead>
+                          <TableHead className="text-center">{t('inventory.reports.currentStock')}</TableHead>
+                          <TableHead className="text-center">{t('inventory.reports.minimumStock')}</TableHead>
+                          <TableHead className="text-center">{t('inventory.reports.deficit')}</TableHead>
+                          <TableHead>{t('common.status')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1313,14 +1315,14 @@ const ReportsPage: NextPage = () => {
                             <TableCell colSpan={5} className="text-center py-8">
                               <div className="flex items-center justify-center">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
-                                <span className="ml-3 text-gray-600">Memuat data...</span>
+                                <span className="ml-3 text-gray-600">{t('common.loading')}</span>
                               </div>
                             </TableCell>
                           </TableRow>
                         ) : (apiData?.products || lowStockData).length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={5} className="text-center py-6 text-gray-500">
-                              Tidak ada produk yang berada di bawah stok minimum
+                              {t('inventory.reports.noLowStockProducts')}
                             </TableCell>
                           </TableRow>
                         ) : (
@@ -1347,7 +1349,7 @@ const ReportsPage: NextPage = () => {
                                       ></div>
                                     </div>
                                     <div className="text-xs text-gray-500 mt-1">
-                                      {Math.round((deficit / item.minStock) * 100)}% di bawah minimal
+                                      {Math.round((deficit / item.minStock) * 100)}% {t('inventory.reports.belowMinimum')}
                                     </div>
                                   </TableCell>
                                 </TableRow>
@@ -1367,7 +1369,7 @@ const ReportsPage: NextPage = () => {
               {isLoading && (
                 <div className="flex justify-center items-center p-10">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-                  <span className="ml-3 text-gray-600">Memuat data analisis produk...</span>
+                  <span className="ml-3 text-gray-600">{t('inventory.reports.loadingProductAnalysis')}</span>
                 </div>
               )}
               
@@ -1378,10 +1380,10 @@ const ReportsPage: NextPage = () => {
                     <CardHeader className="border-b bg-gradient-to-r from-green-50 to-emerald-50">
                       <CardTitle className="flex items-center">
                         <FaArrowUp className="mr-2 h-5 w-5 text-green-600" />
-                        Produk Terlaris
+                        {t('inventory.reports.topSellingProducts')}
                       </CardTitle>
                       <CardDescription>
-                        Produk dengan penjualan tertinggi dalam periode ini
+                        {t('inventory.reports.topSellingProductsDesc')}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-6">
@@ -1389,7 +1391,7 @@ const ReportsPage: NextPage = () => {
                         {(apiData?.topSellingProducts && apiData.topSellingProducts.length > 0 ? apiData.topSellingProducts : []).length === 0 ? (
                           <div className="text-center py-8 text-gray-500">
                             <FaInfoCircle className="mx-auto h-12 w-12 mb-3 text-gray-400" />
-                            <p>Tidak ada data penjualan dalam periode ini</p>
+                            <p>{t('inventory.reports.noSalesData')}</p>
                           </div>
                         ) : (
                           (apiData?.topSellingProducts || []).map((product: any, index: number) => (
@@ -1404,7 +1406,7 @@ const ReportsPage: NextPage = () => {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="font-bold text-green-600">{product.totalSold} terjual</p>
+                              <p className="font-bold text-green-600">{product.totalSold} {t('inventory.reports.sold')}</p>
                               <p className="text-sm text-gray-600">{formatRupiah(product.revenue)}</p>
                               <div className="flex items-center mt-1">
                                 {product.trend === 'up' && <FaArrowUp className="h-3 w-3 text-green-500 mr-1" />}
@@ -1424,10 +1426,10 @@ const ReportsPage: NextPage = () => {
                     <CardHeader className="border-b bg-gradient-to-r from-red-50 to-pink-50">
                       <CardTitle className="flex items-center">
                         <FaExclamationTriangle className="mr-2 h-5 w-5 text-red-600" />
-                        Produk Slow Moving
+                        {t('inventory.reports.slowMovingProducts')}
                       </CardTitle>
                       <CardDescription>
-                        Produk dengan pergerakan lambat yang perlu perhatian
+                        {t('inventory.reports.slowMovingProductsDesc')}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-6">
@@ -1435,8 +1437,8 @@ const ReportsPage: NextPage = () => {
                         {(apiData?.slowMovingProducts && apiData.slowMovingProducts.length > 0 ? apiData.slowMovingProducts : []).length === 0 ? (
                           <div className="text-center py-8 text-gray-500">
                             <FaInfoCircle className="mx-auto h-12 w-12 mb-3 text-gray-400" />
-                            <p>Tidak ada produk slow moving</p>
-                            <p className="text-sm mt-2">Semua produk bergerak dengan baik!</p>
+                            <p>{t('inventory.reports.noSlowMoving')}</p>
+                            <p className="text-sm mt-2">{t('inventory.reports.allProductsMoving')}</p>
                           </div>
                         ) : (
                           (apiData?.slowMovingProducts || []).map((product: any) => (
@@ -1447,16 +1449,16 @@ const ReportsPage: NextPage = () => {
                                 <p className="text-sm text-gray-500">{product.sku}</p>
                               </div>
                               <Badge className="bg-red-100 text-red-800">
-                                {product.daysSinceLastSale} hari
+                                {product.daysSinceLastSale} {t('inventory.reports.days')}
                               </Badge>
                             </div>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                               <div>
-                                <p className="text-gray-600">Stok Tersisa</p>
-                                <p className="font-medium">{product.currentStock} unit</p>
+                                <p className="text-gray-600">{t('inventory.reports.remainingStock')}</p>
+                                <p className="font-medium">{product.currentStock} {t('inventory.reports.unitLabel')}</p>
                               </div>
                               <div>
-                                <p className="text-gray-600">Nilai Stok</p>
+                                <p className="text-gray-600">{t('inventory.reports.stockValue')}</p>
                                 <p className="font-medium">{formatRupiah(product.value)}</p>
                               </div>
                             </div>
@@ -1478,10 +1480,10 @@ const ReportsPage: NextPage = () => {
                     <CardHeader className="border-b bg-gradient-to-r from-orange-50 to-amber-50">
                       <CardTitle className="flex items-center">
                         <FaChartBar className="mr-2 h-5 w-5 text-orange-600" />
-                        Ringkasan Performa Produk
+                        {t('inventory.reports.performanceSummary')}
                       </CardTitle>
                       <CardDescription>
-                        Analisis komprehensif performa produk berdasarkan kategori dan lokasi
+                        {t('inventory.reports.performanceSummaryDesc')}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-6">
@@ -1489,27 +1491,27 @@ const ReportsPage: NextPage = () => {
                         <div className="text-center p-4 bg-blue-50 rounded-lg">
                           <FaCubes className="h-8 w-8 mx-auto text-blue-600 mb-2" />
                           <p className="text-2xl font-bold text-blue-600">156</p>
-                          <p className="text-sm text-gray-600">Total Produk Aktif</p>
+                          <p className="text-sm text-gray-600">{t('inventory.reports.totalActiveProducts')}</p>
                         </div>
                         <div className="text-center p-4 bg-green-50 rounded-lg">
                           <FaArrowUp className="h-8 w-8 mx-auto text-green-600 mb-2" />
                           <p className="text-2xl font-bold text-green-600">89%</p>
-                          <p className="text-sm text-gray-600">Produk Bergerak Aktif</p>
+                          <p className="text-sm text-gray-600">{t('inventory.reports.activeMovingProducts')}</p>
                         </div>
                         <div className="text-center p-4 bg-red-50 rounded-lg">
                           <FaExclamationTriangle className="h-8 w-8 mx-auto text-red-600 mb-2" />
                           <p className="text-2xl font-bold text-red-600">17</p>
-                          <p className="text-sm text-gray-600">Produk Slow Moving</p>
+                          <p className="text-sm text-gray-600">{t('inventory.reports.slowMovingLabel')}</p>
                         </div>
                         <div className="text-center p-4 bg-orange-50 rounded-lg">
                           <FaChartLine className="h-8 w-8 mx-auto text-orange-600 mb-2" />
                           <p className="text-2xl font-bold text-orange-600">23%</p>
-                          <p className="text-sm text-gray-600">Rata-rata Margin</p>
+                          <p className="text-sm text-gray-600">{t('inventory.reports.averageMargin')}</p>
                         </div>
                       </div>
                       
                       <div className="mt-6">
-                        <h4 className="font-medium text-gray-900 mb-4">Analisis per Kategori</h4>
+                        <h4 className="font-medium text-gray-900 mb-4">{t('inventory.reports.categoryAnalysis')}</h4>
                         <div className="space-y-3">
                           {[
                             { name: 'Obat Keras', products: 45, revenue: 1250000000, margin: 28, trend: 'up' },
@@ -1522,7 +1524,7 @@ const ReportsPage: NextPage = () => {
                                 <div className="w-3 h-3 bg-orange-500 rounded-full mr-3"></div>
                                 <div>
                                   <p className="font-medium">{category.name}</p>
-                                  <p className="text-sm text-gray-500">{category.products} produk</p>
+                                  <p className="text-sm text-gray-500">{category.products} {t('inventory.reports.productsCount')}</p>
                                 </div>
                               </div>
                               <div className="text-right">

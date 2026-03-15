@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +53,7 @@ interface RACStats {
 const RACManagementPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t, formatDate } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPriority, setFilterPriority] = useState<string>('all');
@@ -119,7 +121,7 @@ const RACManagementPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error fetching requests:', error);
-      toast.error(error.response?.data?.message || 'Gagal memuat data request');
+      toast.error(error.response?.data?.message || t('inventory.rac.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -147,7 +149,7 @@ const RACManagementPage: React.FC = () => {
         setShowDetailModal(true);
       }
     } catch (error: any) {
-      toast.error('Gagal memuat detail request');
+      toast.error(t('inventory.rac.detailLoadFailed'));
     }
   };
 
@@ -166,7 +168,7 @@ const RACManagementPage: React.FC = () => {
       );
 
       if (response.data.success) {
-        toast.success('Request berhasil disetujui & disinkronkan ke HQ!');
+        toast.success(t('inventory.rac.approveSuccess'));
         setShowApproveModal(false);
         setShowDetailModal(false);
         setApprovalNotes('');
@@ -174,7 +176,7 @@ const RACManagementPage: React.FC = () => {
         fetchStats();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal menyetujui request');
+      toast.error(error.response?.data?.message || t('inventory.rac.approveFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -182,7 +184,7 @@ const RACManagementPage: React.FC = () => {
 
   const handleReject = async () => {
     if (!selectedRequest || !rejectionReason) {
-      toast.error('Alasan penolakan harus diisi');
+      toast.error(t('inventory.rac.rejectReasonRequired'));
       return;
     }
     
@@ -198,7 +200,7 @@ const RACManagementPage: React.FC = () => {
       );
 
       if (response.data.success) {
-        toast.success('Request ditolak & disinkronkan ke HQ');
+        toast.success(t('inventory.rac.rejectSuccess'));
         setShowRejectModal(false);
         setShowDetailModal(false);
         setRejectionReason('');
@@ -206,7 +208,7 @@ const RACManagementPage: React.FC = () => {
         fetchStats();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal menolak request');
+      toast.error(error.response?.data?.message || t('inventory.rac.rejectFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -215,13 +217,13 @@ const RACManagementPage: React.FC = () => {
   const getStatusBadge = (status: string) => {
     const config: Record<string, any> = {
       draft: { color: 'bg-gray-100 text-gray-700', label: 'Draft', icon: FaFileAlt },
-      submitted: { color: 'bg-yellow-100 text-yellow-700', label: 'Menunggu Persetujuan', icon: FaClock },
-      approved: { color: 'bg-blue-100 text-blue-700', label: 'Disetujui', icon: FaCheck },
-      rejected: { color: 'bg-red-100 text-red-700', label: 'Ditolak', icon: FaTimes },
-      processing: { color: 'bg-indigo-100 text-indigo-700', label: 'Sedang Diproses', icon: FaClipboardCheck },
-      shipped: { color: 'bg-purple-100 text-purple-700', label: 'Dalam Pengiriman', icon: FaShippingFast },
-      received: { color: 'bg-teal-100 text-teal-700', label: 'Sudah Diterima', icon: FaCheck },
-      completed: { color: 'bg-green-100 text-green-700', label: 'Selesai', icon: FaCheck }
+      submitted: { color: 'bg-yellow-100 text-yellow-700', label: t('inventory.rac.awaitingApproval'), icon: FaClock },
+      approved: { color: 'bg-blue-100 text-blue-700', label: t('inventory.rac.approved'), icon: FaCheck },
+      rejected: { color: 'bg-red-100 text-red-700', label: t('inventory.rac.rejected'), icon: FaTimes },
+      processing: { color: 'bg-indigo-100 text-indigo-700', label: t('inventory.rac.processing'), icon: FaClipboardCheck },
+      shipped: { color: 'bg-purple-100 text-purple-700', label: t('inventory.rac.shipped'), icon: FaShippingFast },
+      received: { color: 'bg-teal-100 text-teal-700', label: t('inventory.rac.received'), icon: FaCheck },
+      completed: { color: 'bg-green-100 text-green-700', label: t('inventory.rac.completed'), icon: FaCheck }
     };
     const statusConfig = config[status] || config.draft;
     const Icon = statusConfig.icon;
@@ -235,10 +237,10 @@ const RACManagementPage: React.FC = () => {
 
   const getPriorityBadge = (priority: string) => {
     const config: Record<string, any> = {
-      low: { color: 'bg-gray-100 text-gray-700', label: 'Rendah' },
-      medium: { color: 'bg-blue-100 text-blue-700', label: 'Sedang' },
-      high: { color: 'bg-orange-100 text-orange-700', label: 'Tinggi' },
-      critical: { color: 'bg-red-100 text-red-700', label: 'Kritis' }
+      low: { color: 'bg-gray-100 text-gray-700', label: t('inventory.rac.low') },
+      medium: { color: 'bg-blue-100 text-blue-700', label: t('inventory.rac.medium') },
+      high: { color: 'bg-orange-100 text-orange-700', label: t('inventory.rac.high') },
+      critical: { color: 'bg-red-100 text-red-700', label: t('inventory.rac.critical') }
     };
     const priorityConfig = config[priority] || config.medium;
     return <Badge className={priorityConfig.color}>{priorityConfig.label}</Badge>;
@@ -246,9 +248,9 @@ const RACManagementPage: React.FC = () => {
 
   const getTypeBadge = (type: string) => {
     const config: Record<string, any> = {
-      rac: { color: 'bg-purple-100 text-purple-700', label: 'RAC (Relokasi Antar Cabang)' },
-      restock: { color: 'bg-blue-100 text-blue-700', label: 'Restock Rutin' },
-      emergency: { color: 'bg-red-100 text-red-700', label: 'Emergency' }
+      rac: { color: 'bg-purple-100 text-purple-700', label: t('inventory.rac.racType') },
+      restock: { color: 'bg-blue-100 text-blue-700', label: t('inventory.rac.restockType') },
+      emergency: { color: 'bg-red-100 text-red-700', label: t('inventory.rac.emergencyType') }
     };
     const typeConfig = config[type] || config.rac;
     return <Badge className={typeConfig.color}>{typeConfig.label}</Badge>;
@@ -268,7 +270,7 @@ const RACManagementPage: React.FC = () => {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <FaSpinner className="animate-spin text-4xl text-purple-600 mx-auto mb-4" />
-            <p className="text-gray-600">Memuat data request...</p>
+            <p className="text-gray-600">{t('inventory.rac.loading')}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -279,7 +281,7 @@ const RACManagementPage: React.FC = () => {
     <DashboardLayout>
       <Toaster position="top-right" />
       <Head>
-        <title>Manajemen Request Stok & RAC | BEDAGANG Cloud POS</title>
+        <title>{t('inventory.rac.pageTitle')}</title>
       </Head>
 
       <div className="space-y-6">
@@ -295,8 +297,8 @@ const RACManagementPage: React.FC = () => {
                     <FaExchangeAlt className="w-7 h-7" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold">Manajemen Request Stok & RAC</h1>
-                    <p className="text-purple-100 text-sm">Sistem permintaan stok dan relokasi antar cabang</p>
+                    <h1 className="text-3xl font-bold">{t('inventory.rac.title')}</h1>
+                    <p className="text-purple-100 text-sm">{t('inventory.rac.subtitle')}</p>
                   </div>
                 </div>
               </div>
@@ -305,30 +307,30 @@ const RACManagementPage: React.FC = () => {
                 className="bg-white/20 hover:bg-white/30 backdrop-blur-sm"
               >
                 <FaPlus className="mr-2" />
-                Buat Request Baru
+                {t('inventory.rac.createNew')}
               </Button>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <p className="text-xs text-purple-100">Total Request</p>
+                <p className="text-xs text-purple-100">{t('inventory.rac.totalRequests')}</p>
                 <p className="text-2xl font-bold">{displayStats.total}</p>
               </div>
               <div className="bg-yellow-500/30 backdrop-blur-sm rounded-lg p-3 border border-yellow-400/30">
-                <p className="text-xs text-yellow-100">Menunggu</p>
+                <p className="text-xs text-yellow-100">{t('inventory.rac.pending')}</p>
                 <p className="text-2xl font-bold">{displayStats.pending}</p>
               </div>
               <div className="bg-blue-500/30 backdrop-blur-sm rounded-lg p-3 border border-blue-400/30">
-                <p className="text-xs text-blue-100">Disetujui</p>
+                <p className="text-xs text-blue-100">{t('inventory.rac.approved')}</p>
                 <p className="text-2xl font-bold">{displayStats.approved}</p>
               </div>
               <div className="bg-green-500/30 backdrop-blur-sm rounded-lg p-3 border border-green-400/30">
-                <p className="text-xs text-green-100">Selesai</p>
+                <p className="text-xs text-green-100">{t('inventory.rac.completed')}</p>
                 <p className="text-2xl font-bold">{displayStats.completed}</p>
               </div>
               <div className="bg-red-500/30 backdrop-blur-sm rounded-lg p-3 border border-red-400/30">
-                <p className="text-xs text-red-100">Kritis</p>
+                <p className="text-xs text-red-100">{t('inventory.rac.critical')}</p>
                 <p className="text-2xl font-bold">{displayStats.critical}</p>
               </div>
             </div>
@@ -345,7 +347,7 @@ const RACManagementPage: React.FC = () => {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Semua Request
+            {t('inventory.rac.allRequests')}
           </button>
           <button
             onClick={() => setActiveTab('pending')}
@@ -355,7 +357,7 @@ const RACManagementPage: React.FC = () => {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Menunggu Persetujuan ({displayStats.pending})
+            {t('inventory.rac.awaitingApproval')} ({displayStats.pending})
           </button>
           <button
             onClick={() => setActiveTab('approved')}
@@ -365,7 +367,7 @@ const RACManagementPage: React.FC = () => {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Disetujui ({displayStats.approved})
+            {t('inventory.rac.approved')} ({displayStats.approved})
           </button>
           <button
             onClick={() => setActiveTab('completed')}
@@ -375,7 +377,7 @@ const RACManagementPage: React.FC = () => {
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Selesai ({displayStats.completed})
+            {t('inventory.rac.completed')} ({displayStats.completed})
           </button>
         </div>
 
@@ -387,7 +389,7 @@ const RACManagementPage: React.FC = () => {
                 <div className="relative">
                   <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <Input
-                    placeholder="Cari nomor request, lokasi asal, atau tujuan..."
+                    placeholder={t('inventory.rac.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -400,25 +402,25 @@ const RACManagementPage: React.FC = () => {
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                  <option value="all">Semua Status</option>
+                  <option value="all">{t('inventory.rac.allStatus')}</option>
                   <option value="draft">Draft</option>
-                  <option value="submitted">Menunggu</option>
-                  <option value="approved">Disetujui</option>
-                  <option value="processing">Diproses</option>
-                  <option value="shipped">Dikirim</option>
-                  <option value="completed">Selesai</option>
-                  <option value="rejected">Ditolak</option>
+                  <option value="submitted">{t('inventory.rac.pending')}</option>
+                  <option value="approved">{t('inventory.rac.approved')}</option>
+                  <option value="processing">{t('inventory.rac.processing')}</option>
+                  <option value="shipped">{t('inventory.rac.shipped')}</option>
+                  <option value="completed">{t('inventory.rac.completed')}</option>
+                  <option value="rejected">{t('inventory.rac.rejected')}</option>
                 </select>
                 <select
                   value={filterPriority}
                   onChange={(e) => setFilterPriority(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                  <option value="all">Semua Prioritas</option>
-                  <option value="low">Rendah</option>
-                  <option value="medium">Sedang</option>
-                  <option value="high">Tinggi</option>
-                  <option value="critical">Kritis</option>
+                  <option value="all">{t('inventory.rac.allPriority')}</option>
+                  <option value="low">{t('inventory.rac.low')}</option>
+                  <option value="medium">{t('inventory.rac.medium')}</option>
+                  <option value="high">{t('inventory.rac.high')}</option>
+                  <option value="critical">{t('inventory.rac.critical')}</option>
                 </select>
               </div>
             </div>
@@ -428,19 +430,19 @@ const RACManagementPage: React.FC = () => {
         {/* Requests List */}
         <Card className="shadow-lg border-0">
           <CardHeader>
-            <CardTitle>Daftar Request Stok & RAC</CardTitle>
+            <CardTitle>{t('inventory.rac.requestList')}</CardTitle>
           </CardHeader>
           <CardContent>
             {requests.length === 0 ? (
               <div className="text-center py-12 bg-gray-50 rounded-lg">
                 <FaFileAlt className="mx-auto text-5xl text-gray-400 mb-4" />
-                <p className="text-gray-600 mb-4">Belum ada request</p>
+                <p className="text-gray-600 mb-4">{t('inventory.rac.noRequests')}</p>
                 <Button
                   onClick={() => router.push('/inventory/rac/create')}
                   className="bg-purple-600 hover:bg-purple-700"
                 >
                   <FaPlus className="mr-2" />
-                  Buat Request Pertama
+                  {t('inventory.rac.createFirst')}
                 </Button>
               </div>
             ) : (
@@ -459,12 +461,12 @@ const RACManagementPage: React.FC = () => {
                         <div className="flex items-center space-x-4 text-sm text-gray-500">
                           <div className="flex items-center space-x-1">
                             <FaStore className="text-gray-400" />
-                            <span>Dari: <span className="font-semibold text-gray-700">Location {request.from_location_id}</span></span>
+                            <span>{t('inventory.rac.from')}: <span className="font-semibold text-gray-700">Location {request.from_location_id}</span></span>
                           </div>
                           <FaExchangeAlt className="text-gray-400" />
                           <div className="flex items-center space-x-1">
                             <FaWarehouse className="text-gray-400" />
-                            <span>Ke: <span className="font-semibold text-gray-700">Location {request.to_location_id}</span></span>
+                            <span>{t('inventory.rac.to')}: <span className="font-semibold text-gray-700">Location {request.to_location_id}</span></span>
                           </div>
                         </div>
                       </div>
@@ -472,19 +474,19 @@ const RACManagementPage: React.FC = () => {
 
                     <div className="grid grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
                       <div>
-                        <p className="text-xs text-gray-500">Tanggal Request</p>
-                        <p className="font-semibold text-gray-900">{new Date(request.request_date).toLocaleDateString('id-ID')}</p>
+                        <p className="text-xs text-gray-500">{t('inventory.rac.requestDate')}</p>
+                        <p className="font-semibold text-gray-900">{formatDate(request.request_date)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500">Tanggal Dibutuhkan</p>
-                        <p className="font-semibold text-gray-900">{new Date(request.required_date).toLocaleDateString('id-ID')}</p>
+                        <p className="text-xs text-gray-500">{t('inventory.rac.requiredDate')}</p>
+                        <p className="font-semibold text-gray-900">{formatDate(request.required_date)}</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500">Total Items</p>
+                        <p className="text-xs text-gray-500">{t('inventory.rac.totalItems')}</p>
                         <p className="font-semibold text-gray-900">{request.items_count || 0} item</p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500">Diminta oleh</p>
+                        <p className="text-xs text-gray-500">{t('inventory.rac.requestedBy')}</p>
                         <p className="font-semibold text-gray-900">{request.requested_by}</p>
                       </div>
                     </div>
@@ -498,7 +500,7 @@ const RACManagementPage: React.FC = () => {
                         onClick={() => handleViewDetail(request)}
                       >
                         <FaEye className="mr-2" />
-                        Lihat Detail
+                        {t('inventory.rac.viewDetail')}
                       </Button>
                       {request.status === 'submitted' && (
                         <>
@@ -511,7 +513,7 @@ const RACManagementPage: React.FC = () => {
                             }}
                           >
                             <FaCheck className="mr-2" />
-                            Setujui
+                            {t('inventory.rac.approve')}
                           </Button>
                           <Button 
                             size="sm" 
@@ -522,7 +524,7 @@ const RACManagementPage: React.FC = () => {
                             }}
                           >
                             <FaTimes className="mr-2" />
-                            Tolak
+                            {t('inventory.rac.reject')}
                           </Button>
                         </>
                       )}
@@ -545,7 +547,7 @@ const RACManagementPage: React.FC = () => {
             <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Detail Request - {selectedRequest.request_number}</h2>
+                  <h2 className="text-2xl font-bold text-gray-900">{t('inventory.rac.detailTitle')} - {selectedRequest.request_number}</h2>
                   <div className="flex items-center space-x-2 mt-2">
                     {getTypeBadge(selectedRequest.request_type)}
                     {getPriorityBadge(selectedRequest.priority)}
@@ -566,51 +568,51 @@ const RACManagementPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-6 mb-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="font-semibold text-gray-700 mb-3">Informasi Request</h3>
+                    <h3 className="font-semibold text-gray-700 mb-3">{t('inventory.rac.requestInfo')}</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Dari Lokasi:</span>
+                        <span className="text-gray-600">{t('inventory.rac.fromLocation')}:</span>
                         <span className="font-semibold text-gray-900">Location {selectedRequest.from_location_id}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Ke Lokasi:</span>
+                        <span className="text-gray-600">{t('inventory.rac.toLocation')}:</span>
                         <span className="font-semibold text-gray-900">Location {selectedRequest.to_location_id}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Tanggal Request:</span>
-                        <span className="font-semibold text-gray-900">{new Date(selectedRequest.request_date).toLocaleDateString('id-ID')}</span>
+                        <span className="text-gray-600">{t('inventory.rac.requestDate')}:</span>
+                        <span className="font-semibold text-gray-900">{formatDate(selectedRequest.request_date)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Tanggal Dibutuhkan:</span>
-                        <span className="font-semibold text-red-600">{new Date(selectedRequest.required_date).toLocaleDateString('id-ID')}</span>
+                        <span className="text-gray-600">{t('inventory.rac.requiredDate')}:</span>
+                        <span className="font-semibold text-red-600">{formatDate(selectedRequest.required_date)}</span>
                       </div>
                     </div>
                   </div>
                   
                   <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
                     <p className="text-sm text-gray-700">
-                      <span className="font-semibold">Alasan:</span> {selectedRequest.reason}
+                      <span className="font-semibold">{t('inventory.rac.reason')}:</span> {selectedRequest.reason}
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <h3 className="font-semibold text-gray-700 mb-3">Status & Approval</h3>
+                    <h3 className="font-semibold text-gray-700 mb-3">{t('inventory.rac.statusApproval')}</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Diminta oleh:</span>
+                        <span className="text-gray-600">{t('inventory.rac.requestedBy')}:</span>
                         <span className="font-semibold text-gray-900">{selectedRequest.requested_by}</span>
                       </div>
                       {selectedRequest.approved_by && (
                         <>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Disetujui oleh:</span>
+                            <span className="text-gray-600">{t('inventory.rac.approvedBy')}:</span>
                             <span className="font-semibold text-gray-900">{selectedRequest.approved_by}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Tanggal Approval:</span>
-                            <span className="font-semibold text-gray-900">{selectedRequest.approval_date ? new Date(selectedRequest.approval_date).toLocaleDateString('id-ID') : '-'}</span>
+                            <span className="text-gray-600">{t('inventory.rac.approvalDate')}:</span>
+                            <span className="font-semibold text-gray-900">{selectedRequest.approval_date ? formatDate(selectedRequest.approval_date) : '-'}</span>
                           </div>
                         </>
                       )}
@@ -622,18 +624,18 @@ const RACManagementPage: React.FC = () => {
               {/* Items Table */}
               {selectedRequest.items && selectedRequest.items.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="font-semibold text-gray-700 mb-3">Detail Items Request</h3>
+                  <h3 className="font-semibold text-gray-700 mb-3">{t('inventory.rac.itemsDetail')}</h3>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="text-left p-3 text-sm font-semibold text-gray-700">Produk</th>
-                          <th className="text-center p-3 text-sm font-semibold text-gray-700">Stok Saat Ini</th>
-                          <th className="text-center p-3 text-sm font-semibold text-gray-700">Qty Request</th>
+                          <th className="text-left p-3 text-sm font-semibold text-gray-700">{t('inventory.rac.product')}</th>
+                          <th className="text-center p-3 text-sm font-semibold text-gray-700">{t('inventory.rac.currentStock')}</th>
+                          <th className="text-center p-3 text-sm font-semibold text-gray-700">{t('inventory.rac.qtyRequest')}</th>
                           {selectedRequest.status !== 'draft' && selectedRequest.status !== 'submitted' && (
-                            <th className="text-center p-3 text-sm font-semibold text-gray-700">Qty Disetujui</th>
+                            <th className="text-center p-3 text-sm font-semibold text-gray-700">{t('inventory.rac.qtyApproved')}</th>
                           )}
-                          <th className="text-left p-3 text-sm font-semibold text-gray-700">Catatan</th>
+                          <th className="text-left p-3 text-sm font-semibold text-gray-700">{t('inventory.rac.notes')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -670,7 +672,7 @@ const RACManagementPage: React.FC = () => {
               {selectedRequest.notes && (
                 <div className="p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded mb-6">
                   <p className="text-sm text-gray-700">
-                    <span className="font-semibold">Catatan Tambahan:</span> {selectedRequest.notes}
+                    <span className="font-semibold">{t('inventory.rac.additionalNotes')}:</span> {selectedRequest.notes}
                   </p>
                 </div>
               )}
@@ -678,11 +680,11 @@ const RACManagementPage: React.FC = () => {
               {/* Action Buttons */}
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setShowDetailModal(false)}>
-                  Tutup
+                  {t('common.close')}
                 </Button>
                 <Button className="bg-purple-600 hover:bg-purple-700">
                   <FaPrint className="mr-2" />
-                  Cetak
+                  {t('inventory.rac.print')}
                 </Button>
                 {selectedRequest.status === 'submitted' && (
                   <>
@@ -694,7 +696,7 @@ const RACManagementPage: React.FC = () => {
                       }}
                     >
                       <FaCheck className="mr-2" />
-                      Setujui Request
+                      {t('inventory.rac.approveRequest')}
                     </Button>
                     <Button 
                       className="bg-red-600 hover:bg-red-700"
@@ -704,7 +706,7 @@ const RACManagementPage: React.FC = () => {
                       }}
                     >
                       <FaTimes className="mr-2" />
-                      Tolak Request
+                      {t('inventory.rac.rejectRequest')}
                     </Button>
                   </>
                 )}
@@ -719,22 +721,22 @@ const RACManagementPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Setujui Request</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t('inventory.rac.approveRequest')}</h2>
             </div>
             <div className="p-6">
               <p className="text-gray-600 mb-4">
-                Anda akan menyetujui request <strong>{selectedRequest.request_number}</strong>
+                {t('inventory.rac.approveConfirm')} <strong>{selectedRequest.request_number}</strong>
               </p>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Catatan Persetujuan (Opsional)
+                  {t('inventory.rac.approvalNotes')}
                 </label>
                 <textarea
                   value={approvalNotes}
                   onChange={(e) => setApprovalNotes(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   rows={3}
-                  placeholder="Tambahkan catatan..."
+                  placeholder={t('inventory.rac.addNotesPlaceholder')}
                 />
               </div>
               <div className="flex gap-3">
@@ -747,7 +749,7 @@ const RACManagementPage: React.FC = () => {
                   className="flex-1"
                   disabled={actionLoading}
                 >
-                  Batal
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={handleApprove}
@@ -757,12 +759,12 @@ const RACManagementPage: React.FC = () => {
                   {actionLoading ? (
                     <>
                       <FaSpinner className="animate-spin mr-2" />
-                      Memproses...
+                      {t('inventory.rac.processingAction')}
                     </>
                   ) : (
                     <>
                       <FaCheck className="mr-2" />
-                      Setujui
+                      {t('inventory.rac.approve')}
                     </>
                   )}
                 </Button>
@@ -777,22 +779,22 @@ const RACManagementPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Tolak Request</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t('inventory.rac.rejectRequest')}</h2>
             </div>
             <div className="p-6">
               <p className="text-gray-600 mb-4">
-                Anda akan menolak request <strong>{selectedRequest.request_number}</strong>
+                {t('inventory.rac.rejectConfirm')} <strong>{selectedRequest.request_number}</strong>
               </p>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Alasan Penolakan <span className="text-red-500">*</span>
+                  {t('inventory.rac.rejectionReason')} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   rows={3}
-                  placeholder="Jelaskan alasan penolakan..."
+                  placeholder={t('inventory.rac.rejectReasonPlaceholder')}
                   required
                 />
               </div>
@@ -806,7 +808,7 @@ const RACManagementPage: React.FC = () => {
                   className="flex-1"
                   disabled={actionLoading}
                 >
-                  Batal
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={handleReject}
@@ -816,12 +818,12 @@ const RACManagementPage: React.FC = () => {
                   {actionLoading ? (
                     <>
                       <FaSpinner className="animate-spin mr-2" />
-                      Memproses...
+                      {t('inventory.rac.processingAction')}
                     </>
                   ) : (
                     <>
                       <FaTimes className="mr-2" />
-                      Tolak
+                      {t('inventory.rac.reject')}
                     </>
                   )}
                 </Button>

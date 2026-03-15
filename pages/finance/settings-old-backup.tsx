@@ -1,6 +1,7 @@
 import { NextPage } from "next";
 import { useState, useEffect } from "react";
 import FinanceLayout from "@/components/layouts/finance-layout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -212,6 +213,7 @@ const mockAccountJournalsData: AccountJournal[] = [
 ];
 
 const FinanceSettingsPage: NextPage = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("general");
   const { toast } = useToast();
   

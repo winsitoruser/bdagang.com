@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,8 +20,13 @@ import {
 const HardwareSettingsPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [printers, setPrinters] = useState<any[]>([]);
+  const MOCK_PRINTERS = [
+    { id: 'pr1', name: 'Printer Kasir 1', type: 'thermal', connectionType: 'usb', ipAddress: '', port: '', isDefault: true, isActive: true },
+    { id: 'pr2', name: 'Printer Dapur', type: 'thermal', connectionType: 'network', ipAddress: '192.168.1.100', port: '9100', isDefault: false, isActive: true },
+  ];
+  const [printers, setPrinters] = useState<any[]>(MOCK_PRINTERS);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedPrinter, setSelectedPrinter] = useState<any>(null);
@@ -83,6 +89,7 @@ const HardwareSettingsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching printers:', error);
+      setPrinters(MOCK_PRINTERS);
     } finally {
       setLoading(false);
     }

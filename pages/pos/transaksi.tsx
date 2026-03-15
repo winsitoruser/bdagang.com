@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
+import { useTranslation } from '@/lib/i18n';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import {
   FaCalendarAlt, FaDownload, FaFilter, FaPrint, FaSearch, 
@@ -64,6 +65,7 @@ const getDateRangeByPeriod = (period: PeriodOption): { startDate?: string, endDa
 };
 
 const TransaksiPage = () => {
+  const { t } = useTranslation();
   // State Management
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [period, setPeriod] = useState<PeriodOption>('all');

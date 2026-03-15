@@ -2,6 +2,7 @@ import { NextPage } from "next";
 import { useState } from "react";
 import Link from "next/link";
 import FinanceLayout from "@/components/layouts/finance-layout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ import {
 } from "react-icons/fa";
 
 const TaxDashboard: NextPage = () => {
+  const { t } = useTranslation();
   // Simple tax summary data - no complex state management
   const taxSummary = {
     ppn: {

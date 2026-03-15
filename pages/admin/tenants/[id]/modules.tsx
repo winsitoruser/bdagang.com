@@ -140,7 +140,7 @@ export default function TenantModulesManagement() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading modules...</p>
+            <p className="mt-4 text-gray-600">Memuat modul...</p>
           </div>
         </div>
       </AdminLayout>
@@ -180,7 +180,7 @@ export default function TenantModulesManagement() {
               }`}
             >
               <Save className="w-5 h-5 mr-2" />
-              {saving ? 'Saving...' : `Save Changes ${hasChanges ? `(${changes.size})` : ''}`}
+              {saving ? 'Menyimpan...' : `Simpan Perubahan ${hasChanges ? `(${changes.size})` : ''}`}
             </button>
           </div>
       </div>
@@ -248,7 +248,7 @@ export default function TenantModulesManagement() {
                     <span className={`text-sm font-medium ${
                       isEnabled ? 'text-green-600' : 'text-gray-500'
                     }`}>
-                      {isEnabled ? 'Enabled' : 'Disabled'}
+                      {isEnabled ? 'Aktif' : 'Nonaktif'}
                     </span>
                   </div>
 
@@ -260,14 +260,14 @@ export default function TenantModulesManagement() {
                         : 'bg-green-100 text-green-700 hover:bg-green-200'
                     }`}
                   >
-                    {isEnabled ? 'Disable' : 'Enable'}
+                    {isEnabled ? 'Nonaktifkan' : 'Aktifkan'}
                   </button>
                 </div>
 
                 {hasChange && (
                   <div className="mt-3 pt-3 border-t border-blue-200">
                     <p className="text-xs text-blue-600 font-medium">
-                      ⚠️ Pending change: Will be {isEnabled ? 'enabled' : 'disabled'}
+                      ⚠️ Perubahan tertunda: Akan di{isEnabled ? 'aktifkan' : 'nonaktifkan'}
                     </p>
                   </div>
                 )}
@@ -275,7 +275,7 @@ export default function TenantModulesManagement() {
                 {tenantModule.enabledAt && isEnabled && !hasChange && (
                   <div className="mt-3 pt-3 border-t border-gray-200">
                     <p className="text-xs text-gray-500">
-                      Enabled: {new Date(tenantModule.enabledAt).toLocaleDateString()}
+                      Diaktifkan: {new Date(tenantModule.enabledAt).toLocaleDateString()}
                     </p>
                   </div>
                 )}
@@ -287,9 +287,9 @@ export default function TenantModulesManagement() {
         {tenantModules.length === 0 && (
           <div className="text-center py-12 bg-white rounded-lg shadow">
             <Package className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No modules found</h3>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">Tidak ada modul ditemukan</h3>
             <p className="mt-1 text-sm text-gray-500">
-              This tenant has no modules configured.
+              Tenant ini belum memiliki modul yang dikonfigurasi.
             </p>
           </div>
         )}

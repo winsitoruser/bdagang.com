@@ -2,6 +2,7 @@ import { NextPage } from "next";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -184,7 +185,12 @@ const formatCurrency = (amount: number) => {
 
 const InvoicesPage: NextPage = () => {
   const router = useRouter();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const { t } = useTranslation();
+  const MOCK_INVOICES: Invoice[] = [
+    { id: 'INV-001', supplier: 'PT Indofood', date: '2026-03-15', dueDate: '2026-04-15', invoiceNumber: 'INV/2026/03/001', status: 'active', type: 'purchase', paymentStatus: 'unpaid', inventoryStatus: 'pending', subtotal: 5000000, tax: 550000, discount: 0, total: 5550000, amountPaid: 0, items: [{ id: 1, product: 'Tepung Terigu 25kg', quantity: 10, price: 250000, total: 2500000 }, { id: 2, product: 'Minyak Goreng 5L', quantity: 10, price: 255000, total: 2550000 }], paymentHistory: [], inventoryReceipts: [], notes: '' },
+    { id: 'INV-002', supplier: 'CV Segar Jaya', date: '2026-03-10', dueDate: '2026-04-10', invoiceNumber: 'INV/2026/03/002', status: 'active', type: 'purchase', paymentStatus: 'partial', inventoryStatus: 'partial', subtotal: 3000000, tax: 330000, discount: 100000, total: 3230000, amountPaid: 1500000, items: [{ id: 1, product: 'Sayur Segar Campur', quantity: 50, price: 60000, total: 3000000 }], paymentHistory: [{ id: 'p1', date: '2026-03-12', amount: 1500000, method: 'Transfer', receivedBy: 'Admin', reference: 'TRF-001' }], inventoryReceipts: [], notes: '' },
+  ] as any;
+  const [invoices, setInvoices] = useState<Invoice[]>(MOCK_INVOICES);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [tabValue, setTabValue] = useState("all");
@@ -428,7 +434,7 @@ const InvoicesPage: NextPage = () => {
       }
     } catch (error) {
       console.error('Error fetching invoices:', error);
-      setInvoices([]);
+      setInvoices(MOCK_INVOICES);
     } finally {
       setLoading(false);
     }

@@ -6,9 +6,11 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, User, Building2, Phone, Eye, EyeOff, ArrowRight, ArrowLeft, Check, AlertCircle, Store, Sparkles, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from '@/lib/i18n';
 
 const Register: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -26,22 +28,22 @@ const Register: React.FC = () => {
   });
 
   const businessTypes = [
-    { value: 'fnb', label: 'F&B / Restoran', icon: '�️', desc: 'Kafe, restoran, warung makan, catering' },
-    { value: 'retail', label: 'Retail / Toko', icon: '�', desc: 'Toko ritel, minimarket, kelontong' },
-    { value: 'fashion', label: 'Fashion & Apparel', icon: '👔', desc: 'Pakaian, sepatu, aksesoris, butik' },
-    { value: 'beauty', label: 'Beauty & Salon', icon: '💄', desc: 'Salon, spa, barbershop, klinik kecantikan' },
-    { value: 'grocery', label: 'Grocery / Supermarket', icon: '🛒', desc: 'Supermarket, toko bahan pokok' },
-    { value: 'pharmacy', label: 'Apotek / Farmasi', icon: '💊', desc: 'Apotek, toko obat, distributor farmasi' },
-    { value: 'electronics', label: 'Elektronik', icon: '📱', desc: 'Toko elektronik, gadget, servis' },
-    { value: 'automotive', label: 'Otomotif', icon: '🚗', desc: 'Bengkel, dealer, sparepart, car wash' },
-    { value: 'services', label: 'Jasa / Layanan', icon: '🔧', desc: 'Konsultan, laundry, jasa profesional' },
-    { value: 'other', label: 'Lainnya', icon: '📦', desc: 'Jenis bisnis lainnya' },
+    { value: 'fnb', label: t('auth.fnb'), icon: '🍽️', desc: t('auth.fnbDesc') },
+    { value: 'retail', label: t('auth.retail'), icon: '🏪', desc: t('auth.retailDesc') },
+    { value: 'fashion', label: t('auth.fashion'), icon: '👔', desc: t('auth.fashionDesc') },
+    { value: 'beauty', label: t('auth.beauty'), icon: '💄', desc: t('auth.beautyDesc') },
+    { value: 'grocery', label: t('auth.grocery'), icon: '🛒', desc: t('auth.groceryDesc') },
+    { value: 'pharmacy', label: t('auth.pharmacy'), icon: '💊', desc: t('auth.pharmacyDesc') },
+    { value: 'electronics', label: t('auth.electronics'), icon: '📱', desc: t('auth.electronicsDesc') },
+    { value: 'automotive', label: t('auth.automotive'), icon: '🚗', desc: t('auth.automotiveDesc') },
+    { value: 'services', label: t('auth.services'), icon: '🔧', desc: t('auth.servicesDesc') },
+    { value: 'other', label: t('auth.other'), icon: '📦', desc: t('auth.otherDesc') },
   ];
 
   const steps = [
-    { number: 1, title: 'Info Pribadi', description: 'Data diri Anda' },
-    { number: 2, title: 'Info Bisnis', description: 'Detail bisnis Anda' },
-    { number: 3, title: 'Keamanan', description: 'Buat password' },
+    { number: 1, title: t('auth.personalInfo'), description: t('auth.personalInfoDesc') },
+    { number: 2, title: t('auth.businessInfo'), description: t('auth.businessInfoDesc') },
+    { number: 3, title: t('auth.security'), description: t('auth.securityDesc') },
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,36 +62,36 @@ const Register: React.FC = () => {
 
     if (step === 1) {
       if (!formData.name.trim()) {
-        newErrors.name = 'Nama lengkap wajib diisi';
+        newErrors.name = t('auth.nameRequired');
       } else if (formData.name.length < 3) {
-        newErrors.name = 'Nama minimal 3 karakter';
+        newErrors.name = t('auth.nameMin3');
       }
       if (!formData.email.trim()) {
-        newErrors.email = 'Email wajib diisi';
+        newErrors.email = t('auth.emailRequiredField');
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        newErrors.email = 'Format email tidak valid';
+        newErrors.email = t('auth.emailInvalid');
       }
     }
 
     if (step === 2) {
       if (!formData.businessName.trim()) {
-        newErrors.businessName = 'Nama bisnis wajib diisi';
+        newErrors.businessName = t('auth.businessNameRequired');
       }
       if (!formData.businessType) {
-        newErrors.businessType = 'Pilih jenis bisnis Anda';
+        newErrors.businessType = t('auth.selectBusinessType');
       }
     }
 
     if (step === 3) {
       if (!formData.password) {
-        newErrors.password = 'Password wajib diisi';
+        newErrors.password = t('auth.passwordRequired');
       } else if (formData.password.length < 6) {
-        newErrors.password = 'Password minimal 6 karakter';
+        newErrors.password = t('auth.passwordMin6');
       }
       if (!formData.confirmPassword) {
-        newErrors.confirmPassword = 'Konfirmasi password wajib diisi';
+        newErrors.confirmPassword = t('auth.confirmPasswordRequired');
       } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Password tidak cocok';
+        newErrors.confirmPassword = t('auth.passwordMismatch');
       }
     }
 
@@ -136,7 +138,7 @@ const Register: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success('🎉 Registrasi berhasil! Mengalihkan ke onboarding...', {
+        toast.success(t('auth.registerSuccess'), {
           duration: 3000,
           style: {
             background: '#10B981',
@@ -155,13 +157,13 @@ const Register: React.FC = () => {
           router.push('/auth/login');
         }
       } else {
-        toast.error(data.message || 'Registrasi gagal. Silakan coba lagi.', {
+        toast.error(data.message || t('auth.registerFailed'), {
           duration: 4000,
         });
       }
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error('Terjadi kesalahan. Silakan coba lagi.');
+      toast.error(t('auth.loginError'));
     } finally {
       setIsLoading(false);
     }
@@ -178,9 +180,9 @@ const Register: React.FC = () => {
     if (/[0-9]/.test(password)) strength++;
     if (/[^A-Za-z0-9]/.test(password)) strength++;
 
-    if (strength <= 2) return { strength, label: 'Lemah', color: 'bg-red-500' };
-    if (strength <= 3) return { strength, label: 'Sedang', color: 'bg-yellow-500' };
-    return { strength, label: 'Kuat', color: 'bg-green-500' };
+    if (strength <= 2) return { strength, label: t('auth.weak'), color: 'bg-red-500' };
+    if (strength <= 3) return { strength, label: t('auth.medium'), color: 'bg-yellow-500' };
+    return { strength, label: t('auth.strong'), color: 'bg-green-500' };
   };
 
   const passwordStrength = getPasswordStrength();
@@ -188,8 +190,8 @@ const Register: React.FC = () => {
   return (
     <>
       <Head>
-        <title>Daftar Gratis - BEDAGANG Cloud POS</title>
-        <meta name="description" content="Daftar gratis dan mulai kelola bisnis Anda dengan BEDAGANG. Tanpa biaya setup, tanpa kontrak." />
+        <title>{t('auth.registerTitle')}</title>
+        <meta name="description" content={t('auth.registerDesc')} />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 flex items-center justify-center p-4 py-12">
@@ -229,21 +231,21 @@ const Register: React.FC = () => {
 
               {/* Welcome Text */}
               <div className="space-y-4">
-                <h2 className="text-4xl font-bold text-gray-900">
-                  Mulai Gratis<br />Hari Ini! 🚀
+                <h2 className="text-4xl font-bold text-gray-900" style={{ whiteSpace: 'pre-line' }}>
+                  {t('auth.startFreeToday')}
                 </h2>
                 <p className="text-lg text-gray-600">
-                  Bergabunglah dengan <span className="font-semibold text-sky-600">10,000+</span> bisnis yang telah berkembang bersama BEDAGANG
+                  <span dangerouslySetInnerHTML={{ __html: t('auth.joinBusinesses').replace('<span>', '<span class="font-semibold text-sky-600">') }} />
                 </p>
               </div>
 
               {/* Benefits */}
               <div className="space-y-3">
                 {[
-                  'Gratis selamanya untuk paket Starter',
-                  'Setup dalam 5 menit',
-                  'Tidak perlu kartu kredit',
-                  'Support 24/7 siap membantu',
+                  t('auth.freeForever'),
+                  t('auth.setupIn5Min'),
+                  t('auth.noCreditCard'),
+                  t('auth.support247'),
                 ].map((benefit, index) => (
                   <motion.div
                     key={index}
@@ -264,20 +266,20 @@ const Register: React.FC = () => {
               <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-sky-100">
                 <div className="flex items-center space-x-2 mb-2">
                   <Sparkles className="w-5 h-5 text-yellow-500" />
-                  <span className="font-semibold text-gray-900">Dipercaya oleh</span>
+                  <span className="font-semibold text-gray-900">{t('auth.trustedBy')}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
                     <div className="text-2xl font-bold text-sky-600">10K+</div>
-                    <div className="text-xs text-gray-600">Bisnis</div>
+                    <div className="text-xs text-gray-600">{t('auth.businesses')}</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-sky-600">1M+</div>
-                    <div className="text-xs text-gray-600">Transaksi</div>
+                    <div className="text-xs text-gray-600">{t('auth.transactionsCount')}</div>
                   </div>
                   <div>
                     <div className="text-2xl font-bold text-sky-600">4.9/5</div>
-                    <div className="text-xs text-gray-600">Rating</div>
+                    <div className="text-xs text-gray-600">{t('auth.rating')}</div>
                   </div>
                 </div>
               </div>
@@ -348,14 +350,14 @@ const Register: React.FC = () => {
                         className="space-y-5"
                       >
                         <div className="mb-6">
-                          <h3 className="text-2xl font-bold text-gray-900 mb-2">Informasi Pribadi</h3>
-                          <p className="text-gray-600">Mulai dengan data diri Anda</p>
+                          <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('auth.personalInfoTitle')}</h3>
+                          <p className="text-gray-600">{t('auth.personalInfoSubtitle')}</p>
                         </div>
 
                         {/* Name */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Nama Lengkap <span className="text-red-500">*</span>
+                            {t('auth.fullName')} <span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
                             <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -367,7 +369,7 @@ const Register: React.FC = () => {
                               className={`w-full pl-12 pr-4 py-3.5 border-2 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition ${
                                 errors.name ? 'border-red-500' : 'border-gray-200'
                               }`}
-                              placeholder="Contoh: John Doe"
+                              placeholder={t('auth.namePlaceholder')}
                             />
                           </div>
                           {errors.name && (
@@ -385,7 +387,7 @@ const Register: React.FC = () => {
                         {/* Email */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Email <span className="text-red-500">*</span>
+                            {t('auth.email')} <span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
                             <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -415,7 +417,7 @@ const Register: React.FC = () => {
                         {/* Phone */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            No. Telepon <span className="text-gray-400 text-xs">(Opsional)</span>
+                            {t('auth.phone')} <span className="text-gray-400 text-xs">({t('auth.optional')})</span>
                           </label>
                           <div className="relative">
                             <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -443,14 +445,14 @@ const Register: React.FC = () => {
                         className="space-y-5"
                       >
                         <div className="mb-6">
-                          <h3 className="text-2xl font-bold text-gray-900 mb-2">Informasi Bisnis</h3>
-                          <p className="text-gray-600">Ceritakan tentang bisnis Anda</p>
+                          <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('auth.businessInfoTitle')}</h3>
+                          <p className="text-gray-600">{t('auth.businessInfoSubtitle')}</p>
                         </div>
 
                         {/* Business Name */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Nama Bisnis <span className="text-red-500">*</span>
+                            {t('auth.businessName')} <span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
                             <Building2 className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -462,7 +464,7 @@ const Register: React.FC = () => {
                               className={`w-full pl-12 pr-4 py-3.5 border-2 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition ${
                                 errors.businessName ? 'border-red-500' : 'border-gray-200'
                               }`}
-                              placeholder="Contoh: Toko Berkah Jaya"
+                              placeholder={t('auth.businessNamePlaceholder')}
                             />
                           </div>
                           {errors.businessName && (
@@ -480,7 +482,7 @@ const Register: React.FC = () => {
                         {/* Business Type */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-3">
-                            Jenis Bisnis <span className="text-red-500">*</span>
+                            {t('auth.businessType')} <span className="text-red-500">*</span>
                           </label>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {businessTypes.map((type) => (
@@ -539,14 +541,14 @@ const Register: React.FC = () => {
                         className="space-y-5"
                       >
                         <div className="mb-6">
-                          <h3 className="text-2xl font-bold text-gray-900 mb-2">Keamanan Akun</h3>
-                          <p className="text-gray-600">Buat password yang kuat untuk akun Anda</p>
+                          <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('auth.securityTitle')}</h3>
+                          <p className="text-gray-600">{t('auth.securitySubtitle')}</p>
                         </div>
 
                         {/* Password */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Password <span className="text-red-500">*</span>
+                            {t('auth.password')} <span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
                             <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -558,7 +560,7 @@ const Register: React.FC = () => {
                               className={`w-full pl-12 pr-12 py-3.5 border-2 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition ${
                                 errors.password ? 'border-red-500' : 'border-gray-200'
                               }`}
-                              placeholder="Minimal 6 karakter"
+                              placeholder={t('auth.passwordPlaceholder')}
                             />
                             <button
                               type="button"
@@ -571,7 +573,7 @@ const Register: React.FC = () => {
                           {formData.password && (
                             <div className="mt-2">
                               <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs text-gray-600">Kekuatan password:</span>
+                                <span className="text-xs text-gray-600">{t('auth.passwordStrengthLabel')}</span>
                                 <span className={`text-xs font-medium ${
                                   passwordStrength.strength <= 2 ? 'text-red-600' :
                                   passwordStrength.strength <= 3 ? 'text-yellow-600' : 'text-green-600'
@@ -603,7 +605,7 @@ const Register: React.FC = () => {
                         {/* Confirm Password */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Konfirmasi Password <span className="text-red-500">*</span>
+                            {t('auth.confirmPassword')} <span className="text-red-500">*</span>
                           </label>
                           <div className="relative">
                             <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -615,7 +617,7 @@ const Register: React.FC = () => {
                               className={`w-full pl-12 pr-12 py-3.5 border-2 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition ${
                                 errors.confirmPassword ? 'border-red-500' : 'border-gray-200'
                               }`}
-                              placeholder="Ulangi password Anda"
+                              placeholder={t('auth.confirmPasswordPlaceholder')}
                             />
                             <button
                               type="button"
@@ -632,7 +634,7 @@ const Register: React.FC = () => {
                               className="mt-2 text-sm text-green-600 flex items-center space-x-1"
                             >
                               <Check className="w-4 h-4" />
-                              <span>Password cocok</span>
+                              <span>{t('auth.passwordMatch')}</span>
                             </motion.p>
                           )}
                           {errors.confirmPassword && (
@@ -650,15 +652,15 @@ const Register: React.FC = () => {
                         {/* Terms */}
                         <div className="bg-gray-50 rounded-xl p-4">
                           <p className="text-xs text-gray-600">
-                            Dengan mendaftar, Anda menyetujui{' '}
+                            {t('auth.termsText')}{' '}
                             <Link href="/terms" className="text-sky-600 hover:underline">
-                              Syarat & Ketentuan
+                              {t('auth.termsLink')}
                             </Link>{' '}
-                            dan{' '}
+                            {t('auth.andText')}{' '}
                             <Link href="/privacy" className="text-sky-600 hover:underline">
-                              Kebijakan Privasi
+                              {t('auth.privacyLink')}
                             </Link>{' '}
-                            kami.
+                            {t('auth.ourText')}
                           </p>
                         </div>
                       </motion.div>
@@ -676,7 +678,7 @@ const Register: React.FC = () => {
                         className="flex items-center space-x-2 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-all"
                       >
                         <ArrowLeft className="w-5 h-5" />
-                        <span>Kembali</span>
+                        <span>{t('auth.backBtn')}</span>
                       </motion.button>
                     )}
 
@@ -688,7 +690,7 @@ const Register: React.FC = () => {
                         whileTap={{ scale: 0.98 }}
                         className="flex-1 flex items-center justify-center space-x-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white py-3.5 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
                       >
-                        <span>Lanjutkan</span>
+                        <span>{t('auth.continueBtn')}</span>
                         <ArrowRight className="w-5 h-5" />
                       </motion.button>
                     ) : (
@@ -702,11 +704,11 @@ const Register: React.FC = () => {
                         {isLoading ? (
                           <>
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <span>Mendaftar...</span>
+                            <span>{t('auth.registeringBtn')}</span>
                           </>
                         ) : (
                           <>
-                            <span>Daftar Gratis</span>
+                            <span>{t('auth.registerFreeBtn')}</span>
                             <ArrowRight className="w-5 h-5" />
                           </>
                         )}
@@ -718,9 +720,9 @@ const Register: React.FC = () => {
                 {/* Login Link */}
                 <div className="mt-6 text-center">
                   <p className="text-gray-600 text-sm">
-                    Sudah punya akun?{' '}
+                    {t('auth.haveAccount')}{' '}
                     <Link href="/auth/login" className="text-sky-600 font-semibold hover:text-sky-700 hover:underline">
-                      Login di sini
+                      {t('auth.loginHere')}
                     </Link>
                   </p>
                 </div>

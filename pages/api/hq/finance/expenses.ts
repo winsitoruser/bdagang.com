@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
 
 let FinanceTransaction: any, Branch: any;
 try {
@@ -78,6 +79,8 @@ export default withHQAuth(handler, { module: 'finance_pro' });
 
 async function getExpenses(req: NextApiRequest, res: NextApiResponse) {
   const { period = 'month' } = req.query;
+  const ctx = getTenantContext(req);
+  const tenantWhere: any = ctx.tenantId ? { tenantId: ctx.tenantId } : {};
 
   const now = new Date();
     let startDate = new Date();
@@ -91,7 +94,7 @@ async function getExpenses(req: NextApiRequest, res: NextApiResponse) {
     if (FinanceTransaction) {
       try {
         const { Op } = require('sequelize');
-        const where: any = { type: 'expense', transactionDate: { [Op.between]: [startDate, now] } };
+        const where: any = { ...tenantWhere, type: 'expense', transactionDate: { [Op.between]: [startDate, now] } };
 
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB query timeout')), 5000));
         const queryPromise = FinanceTransaction.findAll({

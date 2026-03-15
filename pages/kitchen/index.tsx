@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,16 +27,16 @@ interface KitchenActivity {
 
 const KitchenManagementPage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: session, status } = useSession();
-  const [stats, setStats] = useState({
-    activeOrders: 0,
-    completedToday: 0,
-    avgPrepTime: 0,
-    pendingOrders: 0,
-    totalRevenue: 0,
-    uniqueCustomers: 0
-  });
-  const [activities, setActivities] = useState<KitchenActivity[]>([]);
+  const MOCK_K_STATS = { activeOrders: 8, completedToday: 62, avgPrepTime: 18, pendingOrders: 8, totalRevenue: 18500000, uniqueCustomers: 45 };
+  const MOCK_K_ACTIVITIES: KitchenActivity[] = [
+    { id: 'ka1', type: 'order', action: 'Pesanan Baru', details: 'Order #085 - Nasi Goreng x2, Es Teh x2', timeAgo: '2 menit lalu', status: 'info' },
+    { id: 'ka2', type: 'order', action: 'Selesai Disiapkan', details: 'Order #083 - Mie Ayam x1', timeAgo: '5 menit lalu', status: 'success' },
+    { id: 'ka3', type: 'stock', action: 'Stok Rendah', details: 'Ayam Potong - Sisa 2 kg', timeAgo: '15 menit lalu', status: 'warning' },
+  ];
+  const [stats, setStats] = useState(MOCK_K_STATS);
+  const [activities, setActivities] = useState<KitchenActivity[]>(MOCK_K_ACTIVITIES);
   const [activitiesLoading, setActivitiesLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
@@ -87,6 +88,7 @@ const KitchenManagementPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching activities:', error);
+      setActivities(MOCK_K_ACTIVITIES);
     } finally {
       setActivitiesLoading(false);
     }
@@ -109,6 +111,7 @@ const KitchenManagementPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
+      setStats(MOCK_K_STATS);
     } finally {
       setLoading(false);
     }

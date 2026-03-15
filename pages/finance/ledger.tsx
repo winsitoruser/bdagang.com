@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import dynamic from "next/dynamic";
 import FinanceLayout from "@/components/layouts/finance-layout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -227,6 +228,7 @@ const formatCurrency = (amount: number) => {
 
 const LedgerPage: NextPage = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { invoiceId } = router.query;
   
   // State for data

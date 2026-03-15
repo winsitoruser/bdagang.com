@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from '@/lib/i18n';
 import {
   FaDollarSign, FaChartLine, FaInfoCircle, FaHistory,
   FaTimes, FaCalendarAlt, FaUser, FaArrowUp, FaArrowDown,
@@ -88,6 +89,7 @@ interface PriceChangeHistoryProps {
 }
 
 const PriceChangeHistory: React.FC<PriceChangeHistoryProps> = ({ productId, showAll = true }) => {
+  const { formatCurrency } = useTranslation();
   const [selectedProduct, setSelectedProduct] = useState<PriceHistoryDetail | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
@@ -227,13 +229,6 @@ const PriceChangeHistory: React.FC<PriceChangeHistoryProps> = ({ productId, show
     }
   ];
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const getImpactBadge = (impact: string) => {
     const config = {

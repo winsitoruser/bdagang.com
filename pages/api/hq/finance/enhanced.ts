@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Op } from 'sequelize';
 import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
 
 let Branch: any, PosTransaction: any, FinanceTransaction: any, FinanceInvoice: any, FinanceAccount: any, User: any;
 try {
@@ -296,6 +297,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     const { action = 'dashboard', period = 'month', industry = 'general', branchId } = req.query as Record<string, string>;
+    const ctx = getTenantContext(req);
+    const tenantWhere: any = ctx.tenantId ? { tenantId: ctx.tenantId } : {};
 
     switch (action) {
       case 'dashboard': {
@@ -314,7 +317,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               case 'year': startDate.setFullYear(now.getFullYear() - 1); break;
             }
 
-            const where: any = { createdAt: { [Op.gte]: startDate } };
+            const where: any = { ...tenantWhere, createdAt: { [Op.gte]: startDate } };
             if (branchId && branchId !== 'all') where.branchId = branchId;
 
             const txCount = await PosTransaction.count({ where });
@@ -322,8 +325,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
               const txSum = await PosTransaction.sum('grandTotal', { where });
               if (txSum) {
                 data.summary.totalRevenue = txSum;
-                data.summary.grossProfit = Math.round(txSum * 0.4);
-                data.summary.netProfit = Math.round(txSum * 0.2);
+                // Try to get actual expenses from FinanceTransaction
+                let totalExpenses = 0;
+                if (FinanceTransaction) {
+                  try {
+                    const expWhere: any = { ...tenantWhere, type: 'expense', status: 'completed', transactionDate: { [Op.gte]: startDate } };
+                    if (branchId && branchId !== 'all') expWhere.branchId = branchId;
+                    totalExpenses = await FinanceTransaction.sum('amount', { where: expWhere }) || 0;
+                  } catch (e) {}
+                }
+                if (totalExpenses > 0) {
+                  data.summary.totalExpenses = totalExpenses;
+                  data.summary.grossProfit = Math.round(txSum - totalExpenses);
+                  data.summary.netProfit = Math.round((txSum - totalExpenses) * 0.78); // after 22% PPh Badan
+                } else {
+                  // Fallback to estimates when no expense data
+                  data.summary.grossProfit = Math.round(txSum * 0.4);
+                  data.summary.netProfit = Math.round(txSum * 0.2);
+                }
               }
             }
           }

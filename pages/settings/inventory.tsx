@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -13,14 +14,19 @@ import {
 const InventorySettingsPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('categories');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [categories, setCategories] = useState<any[]>([]);
-  const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [units, setUnits] = useState<any[]>([]);
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const MOCK_CATEGORIES = [{ id: 'c1', name: 'Makanan', code: 'MKN', description: 'Produk makanan', productCount: 45 }, { id: 'c2', name: 'Minuman', code: 'MNM', description: 'Produk minuman', productCount: 30 }, { id: 'c3', name: 'Bahan Baku', code: 'BB', description: 'Bahan baku dapur', productCount: 25 }];
+  const MOCK_SUPPLIERS = [{ id: 's1', name: 'PT Indofood', contact: 'Budi', phone: '021-1234567', email: 'budi@indofood.com', address: 'Jakarta' }, { id: 's2', name: 'CV Segar Jaya', contact: 'Siti', phone: '021-7654321', email: 'siti@segarjaya.com', address: 'Bandung' }];
+  const MOCK_UNITS = [{ id: 'u1', name: 'Kilogram', symbol: 'kg' }, { id: 'u2', name: 'Liter', symbol: 'L' }, { id: 'u3', name: 'Piece', symbol: 'pcs' }, { id: 'u4', name: 'Pack', symbol: 'pack' }];
+  const MOCK_WAREHOUSES = [{ id: 'w1', name: 'Gudang Utama', location: 'Jakarta', description: 'Gudang pusat' }, { id: 'w2', name: 'Gudang Cabang 1', location: 'Bandung', description: 'Gudang cabang Bandung' }];
+  const [categories, setCategories] = useState<any[]>(MOCK_CATEGORIES);
+  const [suppliers, setSuppliers] = useState<any[]>(MOCK_SUPPLIERS);
+  const [units, setUnits] = useState<any[]>(MOCK_UNITS);
+  const [warehouses, setWarehouses] = useState<any[]>(MOCK_WAREHOUSES);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -90,6 +96,12 @@ const InventorySettingsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
+      switch (activeTab) {
+        case 'categories': setCategories(MOCK_CATEGORIES); break;
+        case 'suppliers': setSuppliers(MOCK_SUPPLIERS); break;
+        case 'units': setUnits(MOCK_UNITS); break;
+        case 'warehouses': setWarehouses(MOCK_WAREHOUSES); break;
+      }
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import CustomersLayout from '@/components/customers/CustomersLayout';
+import { useTranslation } from '@/lib/i18n';
 import { FaChartBar, FaChartPie, FaChartLine, FaDownload, FaCalendarAlt, FaInfoCircle } from 'react-icons/fa';
 import {
   fetchCustomerOverviewReport,
@@ -22,6 +23,7 @@ interface DateRange {
 
 const CustomerReportsPage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(true);
   const [chartData, setChartData] = useState<any>({
     newCustomersChart: { months: [], data: [] },
@@ -409,7 +411,7 @@ const CustomerReportsPage: React.FC = () => {
               disabled={isLoading}
             >
               <FaDownload />
-              <span>{isLoading ? 'Loading...' : 'Export PDF'}</span>
+              <span>{isLoading ? 'Memuat...' : 'Ekspor PDF'}</span>
             </button>
             <button 
               onClick={() => handleExportReport('excel')}
@@ -417,7 +419,7 @@ const CustomerReportsPage: React.FC = () => {
               disabled={isLoading}
             >
               <FaDownload />
-              <span>{isLoading ? 'Loading...' : 'Export Excel'}</span>
+              <span>{isLoading ? 'Memuat...' : 'Ekspor Excel'}</span>
             </button>
           </div>
         </div>

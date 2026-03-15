@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,7 @@ interface Product {
 
 const CreateReturnPage: React.FC = () => {
   const router = useRouter();
+  const { t, formatCurrency, formatDate } = useTranslation();
   const { data: session } = useSession();
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -285,13 +287,6 @@ const CreateReturnPage: React.FC = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   return (
     <DashboardLayout>
@@ -944,7 +939,7 @@ const CreateReturnPage: React.FC = () => {
                               <td className="p-3">
                                 <p className="font-mono text-sm font-semibold">{item.opname_number}</p>
                                 <p className="text-xs text-gray-500">
-                                  {new Date(item.opname_date).toLocaleDateString('id-ID')}
+                                  {formatDate(item.opname_date)}
                                 </p>
                               </td>
                               <td className="p-3">

@@ -760,57 +760,80 @@ function getIndustrySettingsTemplates(industry: string) {
 // ─── Mock Data Helpers ───
 function getMockDashboard() {
   return {
-    total: 5, active: 4, inactive: 1,
-    byType: { main: 1, branch: 2, warehouse: 1, kiosk: 1 },
-    byCity: [['Jakarta', 2], ['Bandung', 1], ['Surabaya', 1], ['Bekasi', 1]],
-    byProvince: [['DKI Jakarta', 2], ['Jawa Barat', 2], ['Jawa Timur', 1]],
-    avgHealthScore: 78, criticalBranches: 1,
-    syncStatus: { synced: 3, pending: 1, failed: 0, never: 1 }
+    total: 12, active: 11, inactive: 1,
+    byType: { main: 1, branch: 8, warehouse: 2, kiosk: 2 },
+    byCity: [['Jakarta Selatan', 1], ['Jakarta Utara', 1], ['Jakarta Pusat', 1], ['Bandung', 1], ['Surabaya', 2], ['Medan', 1], ['Denpasar', 1], ['Makassar', 1], ['Semarang', 1], ['Bekasi', 1]],
+    byProvince: [['DKI Jakarta', 3], ['Jawa Barat', 2], ['Jawa Timur', 2], ['Jawa Tengah', 1], ['DI Yogyakarta', 1], ['Sumatera Utara', 1], ['Bali', 1], ['Sulawesi Selatan', 1]],
+    avgHealthScore: 74, criticalBranches: 2,
+    syncStatus: { synced: 9, pending: 1, failed: 1, never: 1 }
   };
 }
 
 function getMockHealthScores() {
   return [
-    { id: '1', code: 'HQ-001', name: 'Cabang Pusat Jakarta', type: 'main', score: 95, grade: 'A', factors: [] },
-    { id: '2', code: 'BR-002', name: 'Cabang Bandung', type: 'branch', score: 82, grade: 'B', factors: [] },
+    { id: '1', code: 'HQ-001', name: 'Kantor Pusat Jakarta', type: 'main', score: 95, grade: 'A', factors: [] },
+    { id: '10', code: 'KS-001', name: 'Kiosk Mall Kelapa Gading', type: 'kiosk', score: 90, grade: 'A', factors: [] },
+    { id: '5', code: 'BR-005', name: 'Cabang Bali', type: 'branch', score: 88, grade: 'B', factors: [] },
+    { id: '12', code: 'BR-008', name: 'Cabang Yogyakarta', type: 'branch', score: 85, grade: 'B', factors: [] },
+    { id: '2', code: 'BR-002', name: 'Cabang Bandung', type: 'branch', score: 84, grade: 'B', factors: [] },
+    { id: '7', code: 'BR-007', name: 'Cabang Semarang', type: 'branch', score: 82, grade: 'B', factors: [] },
+    { id: '4', code: 'BR-004', name: 'Cabang Medan', type: 'branch', score: 79, grade: 'B', factors: [] },
+    { id: '8', code: 'WH-001', name: 'Gudang Pusat Cikarang', type: 'warehouse', score: 76, grade: 'B', factors: [] },
+    { id: '9', code: 'WH-002', name: 'Gudang Regional Surabaya', type: 'warehouse', score: 72, grade: 'C', factors: [] },
     { id: '3', code: 'BR-003', name: 'Cabang Surabaya', type: 'branch', score: 68, grade: 'C', factors: [] },
-    { id: '4', code: 'WH-001', name: 'Gudang Pusat', type: 'warehouse', score: 45, grade: 'D', factors: [] },
+    { id: '6', code: 'BR-006', name: 'Cabang Makassar', type: 'branch', score: 42, grade: 'D', factors: [] },
+    { id: '11', code: 'KS-002', name: 'Kiosk Grand Indonesia', type: 'kiosk', score: 25, grade: 'F', factors: [] },
   ];
 }
 
 function getMockPerformance(industry: string) {
-  const kpis = (INDUSTRY_KPIS[industry] || INDUSTRY_KPIS.fnb || []).map((kpi: any) => ({
+  const mkKpis = () => (INDUSTRY_KPIS[industry] || INDUSTRY_KPIS.fnb || []).map((kpi: any) => ({
     ...kpi, value: kpi.unit === '%' ? 65 + Math.random() * 30 : 100 + Math.random() * 500, achievement: kpi.target ? 85 + Math.random() * 25 : null
   }));
   return [
-    { id: '1', code: 'HQ-001', name: 'Cabang Pusat Jakarta', type: 'main', city: 'Jakarta', manager: 'Ahmad Wijaya', healthScore: 95, healthGrade: 'A', metrics: { salesActual: 1250000000, salesTarget: 1200000000, transactions: 3890, avgTicket: 321337, grossMargin: 30, netMargin: 20, employeeProductivity: 2500000, customerSatisfaction: 4.8, stockTurnover: 12.5 }, growth: { sales: 8.5, transactions: 5.2, profit: 10.3 }, industryKpis: kpis, rank: 1, trend: 'up' },
-    { id: '2', code: 'BR-002', name: 'Cabang Bandung', type: 'branch', city: 'Bandung', manager: 'Siti Rahayu', healthScore: 82, healthGrade: 'B', metrics: { salesActual: 920000000, salesTarget: 900000000, transactions: 2450, avgTicket: 375510, grossMargin: 28, netMargin: 18, employeeProductivity: 2100000, customerSatisfaction: 4.5, stockTurnover: 10.8 }, growth: { sales: 5.2, transactions: 3.8, profit: 6.5 }, industryKpis: kpis, rank: 2, trend: 'up' },
-    { id: '3', code: 'BR-003', name: 'Cabang Surabaya', type: 'branch', city: 'Surabaya', manager: 'Budi Santoso', healthScore: 68, healthGrade: 'C', metrics: { salesActual: 780000000, salesTarget: 850000000, transactions: 2180, avgTicket: 357798, grossMargin: 25, netMargin: 15, employeeProductivity: 1800000, customerSatisfaction: 4.0, stockTurnover: 9.2 }, growth: { sales: -2.1, transactions: -1.5, profit: -3.2 }, industryKpis: kpis, rank: 3, trend: 'down' },
+    { id: '1', code: 'HQ-001', name: 'Kantor Pusat Jakarta', type: 'main', city: 'Jakarta Selatan', manager: 'Ahmad Wijaya', healthScore: 95, healthGrade: 'A', metrics: { salesActual: 1350000000, salesTarget: 1200000000, transactions: 4120, avgTicket: 327670, grossMargin: 32, netMargin: 22, employeeProductivity: 2700000, customerSatisfaction: 4.8, stockTurnover: 13.2 }, growth: { sales: 8.5, transactions: 5.2, profit: 10.3 }, industryKpis: mkKpis(), rank: 1, trend: 'up' },
+    { id: '5', code: 'BR-005', name: 'Cabang Bali', type: 'branch', city: 'Denpasar', manager: 'Made Wirawan', healthScore: 88, healthGrade: 'B', metrics: { salesActual: 1050000000, salesTarget: 950000000, transactions: 3100, avgTicket: 338710, grossMargin: 30, netMargin: 20, employeeProductivity: 2400000, customerSatisfaction: 4.7, stockTurnover: 11.5 }, growth: { sales: 12.3, transactions: 8.1, profit: 14.0 }, industryKpis: mkKpis(), rank: 2, trend: 'up' },
+    { id: '2', code: 'BR-002', name: 'Cabang Bandung', type: 'branch', city: 'Bandung', manager: 'Siti Rahayu', healthScore: 84, healthGrade: 'B', metrics: { salesActual: 980000000, salesTarget: 900000000, transactions: 2680, avgTicket: 365672, grossMargin: 28, netMargin: 18, employeeProductivity: 2100000, customerSatisfaction: 4.5, stockTurnover: 10.8 }, growth: { sales: 5.2, transactions: 3.8, profit: 6.5 }, industryKpis: mkKpis(), rank: 3, trend: 'up' },
+    { id: '3', code: 'BR-003', name: 'Cabang Surabaya', type: 'branch', city: 'Surabaya', manager: 'Budi Santoso', healthScore: 68, healthGrade: 'C', metrics: { salesActual: 820000000, salesTarget: 850000000, transactions: 2250, avgTicket: 364444, grossMargin: 25, netMargin: 15, employeeProductivity: 1800000, customerSatisfaction: 4.0, stockTurnover: 9.2 }, growth: { sales: -2.1, transactions: -1.5, profit: -3.2 }, industryKpis: mkKpis(), rank: 4, trend: 'down' },
+    { id: '7', code: 'BR-007', name: 'Cabang Semarang', type: 'branch', city: 'Semarang', manager: 'Rina Hartati', healthScore: 82, healthGrade: 'B', metrics: { salesActual: 760000000, salesTarget: 750000000, transactions: 2050, avgTicket: 370731, grossMargin: 27, netMargin: 17, employeeProductivity: 1950000, customerSatisfaction: 4.3, stockTurnover: 10.1 }, growth: { sales: 3.8, transactions: 2.5, profit: 4.1 }, industryKpis: mkKpis(), rank: 5, trend: 'up' },
+    { id: '4', code: 'BR-004', name: 'Cabang Medan', type: 'branch', city: 'Medan', manager: 'Dewi Lestari', healthScore: 79, healthGrade: 'B', metrics: { salesActual: 710000000, salesTarget: 700000000, transactions: 1980, avgTicket: 358586, grossMargin: 26, netMargin: 16, employeeProductivity: 1850000, customerSatisfaction: 4.2, stockTurnover: 9.8 }, growth: { sales: 1.4, transactions: 0.8, profit: 1.9 }, industryKpis: mkKpis(), rank: 6, trend: 'stable' },
+    { id: '12', code: 'BR-008', name: 'Cabang Yogyakarta', type: 'branch', city: 'Yogyakarta', manager: 'Wahyu Nugroho', healthScore: 85, healthGrade: 'B', metrics: { salesActual: 620000000, salesTarget: 600000000, transactions: 1720, avgTicket: 360465, grossMargin: 29, netMargin: 19, employeeProductivity: 2000000, customerSatisfaction: 4.6, stockTurnover: 10.5 }, growth: { sales: 6.7, transactions: 4.3, profit: 7.8 }, industryKpis: mkKpis(), rank: 7, trend: 'up' },
+    { id: '6', code: 'BR-006', name: 'Cabang Makassar', type: 'branch', city: 'Makassar', manager: 'Andi Pratama', healthScore: 42, healthGrade: 'D', metrics: { salesActual: 520000000, salesTarget: 650000000, transactions: 1350, avgTicket: 385185, grossMargin: 22, netMargin: 12, employeeProductivity: 1500000, customerSatisfaction: 3.5, stockTurnover: 7.5 }, growth: { sales: -8.5, transactions: -6.2, profit: -12.1 }, industryKpis: mkKpis(), rank: 8, trend: 'down' },
+    { id: '10', code: 'KS-001', name: 'Kiosk Mall Kelapa Gading', type: 'kiosk', city: 'Jakarta Utara', manager: 'Lisa Permata', healthScore: 90, healthGrade: 'A', metrics: { salesActual: 480000000, salesTarget: 450000000, transactions: 1580, avgTicket: 303797, grossMargin: 35, netMargin: 25, employeeProductivity: 3200000, customerSatisfaction: 4.9, stockTurnover: 15.0 }, growth: { sales: 15.2, transactions: 12.0, profit: 18.5 }, industryKpis: mkKpis(), rank: 9, trend: 'up' },
   ];
 }
 
 function getMockAnalytics() {
   return {
     salesByBranch: [
-      { name: 'Cabang Pusat', sales: 1250000000, transactions: 3890 },
-      { name: 'Cabang Bandung', sales: 920000000, transactions: 2450 },
-      { name: 'Cabang Surabaya', sales: 780000000, transactions: 2180 },
+      { name: 'Kantor Pusat Jakarta', sales: 1350000000, transactions: 4120 },
+      { name: 'Cabang Bali', sales: 1050000000, transactions: 3100 },
+      { name: 'Cabang Bandung', sales: 980000000, transactions: 2680 },
+      { name: 'Cabang Surabaya', sales: 820000000, transactions: 2250 },
+      { name: 'Cabang Semarang', sales: 760000000, transactions: 2050 },
+      { name: 'Cabang Medan', sales: 710000000, transactions: 1980 },
+      { name: 'Cabang Yogyakarta', sales: 620000000, transactions: 1720 },
+      { name: 'Cabang Makassar', sales: 520000000, transactions: 1350 },
+      { name: 'Kiosk Kelapa Gading', sales: 480000000, transactions: 1580 },
     ],
     monthlyTrend: [
-      { month: '2025-09', transactions: 6520, sales: 2200000000 },
-      { month: '2025-10', transactions: 6800, sales: 2400000000 },
-      { month: '2025-11', transactions: 7100, sales: 2600000000 },
-      { month: '2025-12', transactions: 7500, sales: 2900000000 },
-      { month: '2026-01', transactions: 7200, sales: 2700000000 },
-      { month: '2026-02', transactions: 7800, sales: 3100000000 },
+      { month: '2025-09', transactions: 14200, sales: 5800000000 },
+      { month: '2025-10', transactions: 15100, sales: 6200000000 },
+      { month: '2025-11', transactions: 15800, sales: 6500000000 },
+      { month: '2025-12', transactions: 16500, sales: 7100000000 },
+      { month: '2026-01', transactions: 15900, sales: 6800000000 },
+      { month: '2026-02', transactions: 17200, sales: 7500000000 },
     ],
     typeDistribution: [
-      { type: 'main', count: 1 }, { type: 'branch', count: 3 },
-      { type: 'warehouse', count: 1 }, { type: 'kiosk', count: 1 }
+      { type: 'main', count: 1 }, { type: 'branch', count: 8 },
+      { type: 'warehouse', count: 2 }, { type: 'kiosk', count: 2 }
     ],
     cityDistribution: [
-      { city: 'Jakarta', count: 2 }, { city: 'Bandung', count: 1 },
-      { city: 'Surabaya', count: 1 }, { city: 'Bekasi', count: 1 }
+      { city: 'Jakarta Selatan', count: 1 }, { city: 'Jakarta Utara', count: 1 },
+      { city: 'Jakarta Pusat', count: 1 }, { city: 'Bandung', count: 1 },
+      { city: 'Surabaya', count: 2 }, { city: 'Medan', count: 1 },
+      { city: 'Denpasar', count: 1 }, { city: 'Makassar', count: 1 },
+      { city: 'Semarang', count: 1 }, { city: 'Bekasi', count: 1 }
     ]
   };
 }

@@ -150,7 +150,7 @@ export default function TenantDetailPage() {
           <div className="text-center">
             <p className="text-red-600">Error: {error || 'Tenant not found'}</p>
             <Link href="/admin/tenants" className="mt-4 text-blue-600 hover:underline">
-              Back to Tenants
+              Kembali ke Tenant
             </Link>
           </div>
         </div>
@@ -326,7 +326,7 @@ export default function TenantDetailPage() {
                   </div>
                 ))}
                 {tenant.users.length === 0 && (
-                  <p className="text-sm text-gray-500 text-center py-4">No users found</p>
+                  <p className="text-sm text-gray-500 text-center py-4">Tidak ada pengguna ditemukan</p>
                 )}
               </div>
             </div>

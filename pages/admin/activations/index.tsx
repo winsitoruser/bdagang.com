@@ -121,10 +121,10 @@ export default function ActivationRequests() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to approve request');
+        throw new Error(errorData.error || 'Gagal menyetujui permintaan');
       }
 
-      alert('Activation request approved successfully!');
+      alert('Permintaan aktivasi berhasil disetujui!');
       setShowApprovalModal(false);
       setSelectedRequest(null);
       setReviewNotes('');
@@ -138,7 +138,7 @@ export default function ActivationRequests() {
 
   const handleReject = async () => {
     if (!selectedRequest || !rejectionReason) {
-      alert('Please provide a rejection reason');
+      alert('Harap berikan alasan penolakan');
       return;
     }
 
@@ -155,10 +155,10 @@ export default function ActivationRequests() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to reject request');
+        throw new Error(errorData.error || 'Gagal menolak permintaan');
       }
 
-      alert('Activation request rejected');
+      alert('Permintaan aktivasi ditolak');
       setShowRejectModal(false);
       setSelectedRequest(null);
       setReviewNotes('');
@@ -394,7 +394,7 @@ export default function ActivationRequests() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Approve Activation Request
+              Setujui Permintaan Aktivasi
             </h3>
             
             <div className="mb-4 p-4 bg-blue-50 rounded-lg">
@@ -402,37 +402,37 @@ export default function ActivationRequests() {
                 <strong>{selectedRequest.partner.business_name}</strong>
               </p>
               <p className="text-sm text-gray-600">
-                Package: {selectedRequest.package.name} - {formatCurrency(selectedRequest.package.price_monthly)}/month
+                Paket: {selectedRequest.package.name} - {formatCurrency(selectedRequest.package.price_monthly)}/bulan
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Subscription Duration
+                  Durasi Langganan
                 </label>
                 <select
                   value={subscriptionMonths}
                   onChange={(e) => setSubscriptionMonths(parseInt(e.target.value))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value={1}>1 Month</option>
-                  <option value={3}>3 Months</option>
-                  <option value={6}>6 Months</option>
-                  <option value={12}>12 Months (Yearly)</option>
+                  <option value={1}>1 Bulan</option>
+                  <option value={3}>3 Bulan</option>
+                  <option value={6}>6 Bulan</option>
+                  <option value={12}>12 Bulan (Tahunan)</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Review Notes (Optional)
+                  Catatan Tinjauan (Opsional)
                 </label>
                 <textarea
                   value={reviewNotes}
                   onChange={(e) => setReviewNotes(e.target.value)}
                   rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  placeholder="Add any notes for this approval..."
+                  placeholder="Tambahkan catatan untuk persetujuan ini..."
                 />
               </div>
             </div>
@@ -447,14 +447,14 @@ export default function ActivationRequests() {
                 disabled={processing}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
-                Cancel
+                Batal
               </button>
               <button
                 onClick={handleApprove}
                 disabled={processing}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
-                {processing ? 'Processing...' : 'Approve & Create Subscription'}
+                {processing ? 'Memproses...' : 'Setujui & Buat Langganan'}
               </button>
             </div>
           </div>
@@ -466,7 +466,7 @@ export default function ActivationRequests() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Reject Activation Request
+              Tolak Permintaan Aktivasi
             </h3>
             
             <div className="mb-4 p-4 bg-red-50 rounded-lg">
@@ -481,28 +481,28 @@ export default function ActivationRequests() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Rejection Reason <span className="text-red-500">*</span>
+                  Alasan Penolakan <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                  placeholder="Please provide a reason for rejection..."
+                  placeholder="Berikan alasan penolakan..."
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Additional Notes (Optional)
+                  Catatan Tambahan (Opsional)
                 </label>
                 <textarea
                   value={reviewNotes}
                   onChange={(e) => setReviewNotes(e.target.value)}
                   rows={2}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                  placeholder="Add any additional notes..."
+                  placeholder="Tambahkan catatan tambahan..."
                 />
               </div>
             </div>
@@ -518,14 +518,14 @@ export default function ActivationRequests() {
                 disabled={processing}
                 className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
-                Cancel
+                Batal
               </button>
               <button
                 onClick={handleReject}
                 disabled={processing || !rejectionReason}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
               >
-                {processing ? 'Processing...' : 'Reject Request'}
+                {processing ? 'Memproses...' : 'Tolak Permintaan'}
               </button>
             </div>
           </div>

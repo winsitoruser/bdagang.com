@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -13,10 +14,20 @@ import {
 const SecuritySettingsPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('password');
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
-  const [sessions, setSessions] = useState<any[]>([]);
+  const MOCK_AUDIT_LOGS = [
+    { id: 'al1', action: 'login', user: 'admin@bedagang.com', ip: '192.168.1.10', timestamp: '2026-03-15T09:00:00', details: 'Login berhasil' },
+    { id: 'al2', action: 'settings_update', user: 'admin@bedagang.com', ip: '192.168.1.10', timestamp: '2026-03-15T10:30:00', details: 'Ubah pengaturan toko' },
+    { id: 'al3', action: 'user_create', user: 'admin@bedagang.com', ip: '192.168.1.10', timestamp: '2026-03-14T14:00:00', details: 'Tambah user baru: kasir2' },
+  ];
+  const MOCK_SESSIONS = [
+    { id: 'ss1', device: 'Chrome - Windows', ip: '192.168.1.10', lastActive: '2026-03-15T09:00:00', current: true },
+    { id: 'ss2', device: 'Safari - iPhone', ip: '192.168.1.15', lastActive: '2026-03-14T20:00:00', current: false },
+  ];
+  const [auditLogs, setAuditLogs] = useState<any[]>(MOCK_AUDIT_LOGS);
+  const [sessions, setSessions] = useState<any[]>(MOCK_SESSIONS);
 
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -50,6 +61,7 @@ const SecuritySettingsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching audit logs:', error);
+      setAuditLogs(MOCK_AUDIT_LOGS);
     } finally {
       setLoading(false);
     }

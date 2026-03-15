@@ -17,16 +17,20 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useBusinessType } from "@/contexts/BusinessTypeContext";
+import { useTranslation } from '@/lib/i18n';
 
 const Dashboard: NextPage = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { businessType, hasModule, isLoading: isLoadingBusinessType } = useBusinessType();
+  const { t, language, formatCurrency: fmtCurrency } = useTranslation();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [salesPeriod, setSalesPeriod] = useState<'today' | 'week' | 'month'>('today');
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const MOCK_DASHBOARD = { mainStats: { sales: 12500000, transactions: 85, products: 320, customers: 45 }, changes: { sales: 8.5, transactions: 12.3, products: 0, customers: 5.2 }, topProducts: [{ name: 'Nasi Goreng Spesial', qty: 28, revenue: 2800000 }, { name: 'Es Teh Manis', qty: 45, revenue: 450000 }], recentTransactions: [{ id: 'txn-1', total: 185000, date: '2026-03-15', status: 'completed' }] };
+  const MOCK_KITCHEN_ORDERS = [{ id: 'ko1', orderNumber: '#ORD-085', items: [{ name: 'Nasi Goreng', qty: 2 }], status: 'new', createdAt: new Date().toISOString() }];
+  const [dashboardData, setDashboardData] = useState<any>(MOCK_DASHBOARD);
   const [loading, setLoading] = useState(true);
-  const [kitchenOrders, setKitchenOrders] = useState<any[]>([]);
+  const [kitchenOrders, setKitchenOrders] = useState<any[]>(MOCK_KITCHEN_ORDERS);
   
   // Check if F&B business type
   const isFnB = businessType === 'fnb' || hasModule('kitchen');
@@ -69,7 +73,7 @@ const Dashboard: NextPage = () => {
       }
     } catch (error) {
       console.error('Error fetching kitchen orders:', error);
-      setKitchenOrders([]);
+      setKitchenOrders(MOCK_KITCHEN_ORDERS);
     }
   };
 
@@ -83,6 +87,7 @@ const Dashboard: NextPage = () => {
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setDashboardData(MOCK_DASHBOARD);
     } finally {
       setLoading(false);
     }
@@ -112,7 +117,7 @@ const Dashboard: NextPage = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <FaSpinner className="animate-spin h-12 w-12 mx-auto text-sky-600" />
-            <p className="mt-4 text-gray-700">Memuat dashboard...</p>
+            <p className="mt-4 text-gray-700">{t('dashboard.loadingDashboard')}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -121,10 +126,10 @@ const Dashboard: NextPage = () => {
 
   const stats = [
     {
-      title: "Total Penjualan Hari Ini",
+      title: t('dashboard.totalSalesToday'),
       value: loading ? "..." : formatCurrency(dashboardData?.mainStats?.sales || 0),
       change: loading ? "..." : `${dashboardData?.changes?.sales >= 0 ? '+' : ''}${dashboardData?.changes?.sales?.toFixed(1) || 0}%`,
-      changeText: "vs kemarin",
+      changeText: t('common.vsYesterday'),
       isPositive: (dashboardData?.changes?.sales || 0) >= 0,
       icon: FaMoneyBillWave,
       gradient: "from-green-500 to-emerald-600",
@@ -132,10 +137,10 @@ const Dashboard: NextPage = () => {
       textColor: "text-green-600",
     },
     {
-      title: "Transaksi Hari Ini",
+      title: t('dashboard.transactionsToday'),
       value: loading ? "..." : String(dashboardData?.mainStats?.transactions || 0),
       change: loading ? "..." : `${dashboardData?.changes?.transactions >= 0 ? '+' : ''}${dashboardData?.changes?.transactions?.toFixed(1) || 0}%`,
-      changeText: "vs kemarin",
+      changeText: t('common.vsYesterday'),
       isPositive: (dashboardData?.changes?.transactions || 0) >= 0,
       icon: FaShoppingCart,
       gradient: "from-blue-500 to-blue-600",
@@ -143,10 +148,10 @@ const Dashboard: NextPage = () => {
       textColor: "text-blue-600",
     },
     {
-      title: "Produk Terjual",
+      title: t('dashboard.productsSold'),
       value: loading ? "..." : String(dashboardData?.mainStats?.items || 0),
       change: loading ? "..." : `${dashboardData?.changes?.items >= 0 ? '+' : ''}${dashboardData?.changes?.items?.toFixed(1) || 0}%`,
-      changeText: "vs kemarin",
+      changeText: t('common.vsYesterday'),
       isPositive: (dashboardData?.changes?.items || 0) >= 0,
       icon: FaBoxOpen,
       gradient: "from-purple-500 to-purple-600",
@@ -154,10 +159,10 @@ const Dashboard: NextPage = () => {
       textColor: "text-purple-600",
     },
     {
-      title: "Pelanggan Aktif",
+      title: t('dashboard.activeCustomers'),
       value: loading ? "..." : String(dashboardData?.mainStats?.customers || 0),
       change: "+0%",
-      changeText: "bulan ini",
+      changeText: t('common.thisMonth'),
       isPositive: true,
       icon: FaUsers,
       gradient: "from-orange-500 to-orange-600",
@@ -168,18 +173,18 @@ const Dashboard: NextPage = () => {
 
   const quickStats = [
     { 
-      label: "Rata-rata Transaksi", 
+      label: t('dashboard.avgTransaction'), 
       value: loading ? "..." : formatCurrency(dashboardData?.quickStats?.avgTransaction || 0), 
       icon: FaReceipt 
     },
     { 
-      label: "Stok Menipis", 
-      value: loading ? "..." : `${dashboardData?.quickStats?.lowStock || 0} Produk`, 
+      label: t('dashboard.lowStock'), 
+      value: loading ? "..." : t('dashboard.lowStockProducts', { count: dashboardData?.quickStats?.lowStock || 0 }), 
       icon: FaWarehouse, 
       alert: (dashboardData?.quickStats?.lowStock || 0) > 0 
     },
     { 
-      label: "Pending Orders", 
+      label: t('dashboard.pendingOrders'), 
       value: loading ? "..." : String(dashboardData?.quickStats?.pendingOrders || 0), 
       icon: FaClock 
     },
@@ -236,10 +241,10 @@ const Dashboard: NextPage = () => {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h1 className="text-3xl font-bold mb-2">
-                  Selamat Datang, {session?.user?.name || 'User'}! 👋
+                  {t('dashboard.welcome', { name: session?.user?.name || 'User' })}
                 </h1>
                 <p className="text-blue-100 text-lg">
-                  Berikut adalah ringkasan bisnis Anda hari ini
+                  {t('dashboard.businessSummary')}
                 </p>
               </div>
               <div className="text-right">
@@ -352,10 +357,10 @@ const Dashboard: NextPage = () => {
                 <div>
                   <CardTitle className="flex items-center space-x-2">
                     <FaChartBar className="w-5 h-5 text-blue-600" />
-                    <span>Penjualan Per Kasir</span>
+                    <span>{t('dashboard.salesPerCashier')}</span>
                   </CardTitle>
                   <CardDescription>
-                    Performa penjualan masing-masing kasir {salesPeriod === 'today' ? 'hari ini' : salesPeriod === 'week' ? 'minggu ini' : 'bulan ini'}
+                    {t('dashboard.cashierPerformance')} {salesPeriod === 'today' ? t('dashboard.cashierPerformanceToday') : salesPeriod === 'week' ? t('dashboard.cashierPerformanceWeek') : t('dashboard.cashierPerformanceMonth')}
                   </CardDescription>
                 </div>
                 <select 
@@ -363,9 +368,9 @@ const Dashboard: NextPage = () => {
                   value={salesPeriod}
                   onChange={(e) => setSalesPeriod(e.target.value as 'today' | 'week' | 'month')}
                 >
-                  <option value="today">Hari Ini</option>
-                  <option value="week">Minggu Ini</option>
-                  <option value="month">Bulan Ini</option>
+                  <option value="today">{t('common.today')}</option>
+                  <option value="week">{t('common.thisWeek')}</option>
+                  <option value="month">{t('common.thisMonth')}</option>
                 </select>
               </div>
             </CardHeader>
@@ -379,7 +384,7 @@ const Dashboard: NextPage = () => {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">{data.cashier}</p>
-                        <p className="text-xs text-gray-500">{data.transactions} transaksi</p>
+                        <p className="text-xs text-gray-500">{data.transactions} {t('common.transaction')}</p>
                       </div>
                     </div>
                     <div className="flex-1">
@@ -410,15 +415,15 @@ const Dashboard: NextPage = () => {
               <div className="mt-6 pt-4 border-t border-gray-200">
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Total Penjualan</p>
+                    <p className="text-sm text-gray-500">{t('dashboard.totalSales')}</p>
                     <p className="text-xl font-bold text-gray-900">{formatSalesAmount(totalSalesCashier)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Total Transaksi</p>
+                    <p className="text-sm text-gray-500">{t('dashboard.totalTransactions')}</p>
                     <p className="text-xl font-bold text-blue-600">{totalTransactionsCashier}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-500">Rata-rata/Kasir</p>
+                    <p className="text-sm text-gray-500">{t('dashboard.avgPerCashier')}</p>
                     <p className="text-xl font-bold text-green-600">
                       {salesData.length > 0 ? formatSalesAmount(totalSalesCashier / salesData.length) : '-'}
                     </p>
@@ -433,9 +438,9 @@ const Dashboard: NextPage = () => {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <FaChartPie className="w-5 h-5 text-purple-600" />
-                <span>Kategori Produk</span>
+                <span>{t('dashboard.productCategory')}</span>
               </CardTitle>
-              <CardDescription>Distribusi penjualan per kategori</CardDescription>
+              <CardDescription>{t('dashboard.salesByCategory')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -455,11 +460,11 @@ const Dashboard: NextPage = () => {
               <div className="mt-6 pt-4 border-t border-gray-200">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <p className="text-xs text-gray-600">Top Kategori</p>
-                    <p className="text-lg font-bold text-blue-600">Makanan</p>
+                    <p className="text-xs text-gray-600">{t('dashboard.topCategory')}</p>
+                    <p className="text-lg font-bold text-blue-600">{categoryData[0]?.name || '-'}</p>
                   </div>
                   <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <p className="text-xs text-gray-600">Pertumbuhan</p>
+                    <p className="text-xs text-gray-600">{t('dashboard.growth')}</p>
                     <p className="text-lg font-bold text-green-600">+12%</p>
                   </div>
                 </div>
@@ -477,13 +482,13 @@ const Dashboard: NextPage = () => {
                 <div>
                   <CardTitle className="flex items-center space-x-2">
                     <FaChartLine className="w-5 h-5 text-green-600" />
-                    <span>Produk Terlaris Hari Ini</span>
+                    <span>{t('dashboard.topProductsToday')}</span>
                   </CardTitle>
-                  <CardDescription>Top 4 produk dengan penjualan tertinggi</CardDescription>
+                  <CardDescription>{t('dashboard.topProductsDesc')}</CardDescription>
                 </div>
                 <Link href="/reports">
                   <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                    Lihat Semua →
+                    {t('common.viewAll')} →
                   </button>
                 </Link>
               </div>
@@ -498,7 +503,7 @@ const Dashboard: NextPage = () => {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{product.name}</p>
-                        <p className="text-sm text-gray-500">{product.sold} terjual</p>
+                        <p className="text-sm text-gray-500">{product.sold} {t('common.sold')}</p>
                       </div>
                     </div>
                     <div className="text-right">
@@ -514,8 +519,8 @@ const Dashboard: NextPage = () => {
           {/* Quick Actions - Enhanced */}
           <Card className="shadow-lg">
             <CardHeader>
-              <CardTitle>Aksi Cepat</CardTitle>
-              <CardDescription>{isFnB ? 'Shortcut untuk operasional F&B' : 'Shortcut untuk fitur utama'}</CardDescription>
+              <CardTitle>{t('dashboard.quickActions')}</CardTitle>
+              <CardDescription>{isFnB ? t('dashboard.quickActionsFnb') : t('dashboard.quickActionsStd')}</CardDescription>
             </CardHeader>
             <CardContent>
               {isFnB ? (
@@ -528,8 +533,7 @@ const Dashboard: NextPage = () => {
                         <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                           <UtensilsCrossed className="w-6 h-6 text-white" />
                         </div>
-                        <p className="text-white font-semibold text-sm">Kitchen</p>
-                        <p className="text-white font-semibold text-sm">Display</p>
+                        <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.kitchenDisplay')}</p>
                       </div>
                     </div>
                   </Link>
@@ -541,8 +545,7 @@ const Dashboard: NextPage = () => {
                         <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                           <ClipboardList className="w-6 h-6 text-white" />
                         </div>
-                        <p className="text-white font-semibold text-sm">Daftar</p>
-                        <p className="text-white font-semibold text-sm">Pesanan</p>
+                        <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.orderList')}</p>
                       </div>
                     </div>
                   </Link>
@@ -554,8 +557,7 @@ const Dashboard: NextPage = () => {
                         <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                           <FaUtensils className="w-6 h-6 text-white" />
                         </div>
-                        <p className="text-white font-semibold text-sm">Manajemen</p>
-                        <p className="text-white font-semibold text-sm">Meja</p>
+                        <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.tableManagement')}</p>
                       </div>
                     </div>
                   </Link>
@@ -567,8 +569,7 @@ const Dashboard: NextPage = () => {
                         <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                           <FaCalendar className="w-6 h-6 text-white" />
                         </div>
-                        <p className="text-white font-semibold text-sm">Reservasi</p>
-                        <p className="text-white font-semibold text-sm">Meja</p>
+                        <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.tableReservation')}</p>
                       </div>
                     </div>
                   </Link>
@@ -580,8 +581,7 @@ const Dashboard: NextPage = () => {
                         <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                           <ChefHat className="w-6 h-6 text-white" />
                         </div>
-                        <p className="text-white font-semibold text-sm">Resep</p>
-                        <p className="text-white font-semibold text-sm">Menu</p>
+                        <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.recipeMenu')}</p>
                       </div>
                     </div>
                   </Link>
@@ -593,8 +593,7 @@ const Dashboard: NextPage = () => {
                         <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                           <FaShoppingCart className="w-6 h-6 text-white" />
                         </div>
-                        <p className="text-white font-semibold text-sm">Buat</p>
-                        <p className="text-white font-semibold text-sm">Transaksi</p>
+                        <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.newTransaction')}</p>
                       </div>
                     </div>
                   </Link>
@@ -609,8 +608,7 @@ const Dashboard: NextPage = () => {
                       <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                         <FaShoppingCart className="w-6 h-6 text-white" />
                       </div>
-                      <p className="text-white font-semibold text-sm">Buat</p>
-                      <p className="text-white font-semibold text-sm">Transaksi</p>
+                      <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.newTransaction')}</p>
                     </div>
                   </div>
                 </Link>
@@ -622,8 +620,7 @@ const Dashboard: NextPage = () => {
                       <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                         <FaBoxOpen className="w-6 h-6 text-white" />
                       </div>
-                      <p className="text-white font-semibold text-sm">Kelola</p>
-                      <p className="text-white font-semibold text-sm">Stok</p>
+                      <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.manageStock')}</p>
                     </div>
                   </div>
                 </Link>
@@ -635,8 +632,7 @@ const Dashboard: NextPage = () => {
                       <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                         <FaChartLine className="w-6 h-6 text-white" />
                       </div>
-                      <p className="text-white font-semibold text-sm">Lihat</p>
-                      <p className="text-white font-semibold text-sm">Laporan</p>
+                      <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.viewReports')}</p>
                     </div>
                   </div>
                 </Link>
@@ -648,8 +644,7 @@ const Dashboard: NextPage = () => {
                       <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                         <FaUsers className="w-6 h-6 text-white" />
                       </div>
-                      <p className="text-white font-semibold text-sm">Data</p>
-                      <p className="text-white font-semibold text-sm">Pelanggan</p>
+                      <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.customerData')}</p>
                     </div>
                   </div>
                 </Link>
@@ -661,8 +656,7 @@ const Dashboard: NextPage = () => {
                       <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                         <FaTicketAlt className="w-6 h-6 text-white" />
                       </div>
-                      <p className="text-white font-semibold text-sm">Promo &</p>
-                      <p className="text-white font-semibold text-sm">Voucher</p>
+                      <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.promoVoucher')}</p>
                     </div>
                   </div>
                 </Link>
@@ -674,8 +668,7 @@ const Dashboard: NextPage = () => {
                       <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                         <FaStar className="w-6 h-6 text-white" />
                       </div>
-                      <p className="text-white font-semibold text-sm">Loyalty</p>
-                      <p className="text-white font-semibold text-sm">Program</p>
+                      <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.loyaltyProgram')}</p>
                     </div>
                   </div>
                 </Link>
@@ -687,8 +680,7 @@ const Dashboard: NextPage = () => {
                       <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                         <FaUtensils className="w-6 h-6 text-white" />
                       </div>
-                      <p className="text-white font-semibold text-sm">Manajemen</p>
-                      <p className="text-white font-semibold text-sm">Meja</p>
+                      <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.tableManagement')}</p>
                     </div>
                   </div>
                 </Link>
@@ -700,8 +692,7 @@ const Dashboard: NextPage = () => {
                       <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center mb-3">
                         <FaCalendar className="w-6 h-6 text-white" />
                       </div>
-                      <p className="text-white font-semibold text-sm">Reservasi</p>
-                      <p className="text-white font-semibold text-sm">Pelanggan</p>
+                      <p className="text-white font-semibold text-sm" style={{ whiteSpace: 'pre-line' }}>{t('dashboard.reservations')}</p>
                     </div>
                   </div>
                 </Link>
@@ -718,13 +709,13 @@ const Dashboard: NextPage = () => {
               <div>
                 <h2 className="text-xl font-bold text-gray-800 flex items-center">
                   <ChefHat className="w-6 h-6 mr-2 text-orange-600" />
-                  Pesanan Dapur Baru
+                  {t('dashboard.newKitchenOrders')}
                 </h2>
-                <p className="text-sm text-gray-600">Pesanan yang perlu diproses</p>
+                <p className="text-sm text-gray-600">{t('dashboard.ordersToProcess')}</p>
               </div>
               <Link href="/kitchen/display">
                 <button className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white rounded-lg font-medium transition-all">
-                  Buka KDS →
+                  {t('dashboard.openKDS')}
                 </button>
               </Link>
             </div>
@@ -741,12 +732,12 @@ const Dashboard: NextPage = () => {
                         <div>
                           <p className="font-bold text-gray-900">{order.order_number}</p>
                           <p className="text-xs text-gray-500">
-                            {order.table_number ? `Meja ${order.table_number}` : order.customer_name || 'Takeaway'}
+                            {order.table_number ? t('dashboard.table', { number: order.table_number }) : order.customer_name || t('dashboard.takeaway')}
                           </p>
                         </div>
                       </div>
                       {order.priority === 'urgent' && (
-                        <Badge className="bg-red-500 text-white">Urgent</Badge>
+                        <Badge className="bg-red-500 text-white">{t('dashboard.urgent')}</Badge>
                       )}
                     </div>
 
@@ -757,18 +748,18 @@ const Dashboard: NextPage = () => {
                         </div>
                       ))}
                       {order.items?.length > 2 && (
-                        <p className="text-xs text-gray-500">+{order.items.length - 2} item lainnya</p>
+                        <p className="text-xs text-gray-500">{t('common.otherItems', { count: order.items.length - 2 })}</p>
                       )}
                     </div>
 
                     <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                       <div className="flex items-center text-sm text-gray-600">
                         <FaClock className="w-3 h-3 mr-1" />
-                        <span>{order.estimated_time || 15} menit</span>
+                        <span>{order.estimated_time || 15} {t('common.minute')}</span>
                       </div>
                       <Link href={`/kitchen/display`}>
                         <button className="text-sm text-orange-600 hover:text-orange-700 font-medium">
-                          Lihat Detail →
+                          {t('common.viewDetails')} →
                         </button>
                       </Link>
                     </div>
@@ -786,13 +777,13 @@ const Dashboard: NextPage = () => {
               <div>
                 <CardTitle className="flex items-center space-x-2">
                   <FaReceipt className="w-5 h-5 text-blue-600" />
-                  <span>Transaksi Terbaru</span>
+                  <span>{t('dashboard.recentTransactions')}</span>
                 </CardTitle>
-                <CardDescription>4 transaksi terakhir hari ini</CardDescription>
+                <CardDescription>{t('dashboard.last4Transactions')}</CardDescription>
               </div>
               <Link href="/pos/transactions">
                 <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                  Lihat Semua →
+                  {t('common.viewAll')} →
                 </button>
               </Link>
             </div>
@@ -815,7 +806,7 @@ const Dashboard: NextPage = () => {
                     <div className="flex items-center space-x-2">
                       <p className="text-xs text-gray-500">{trx.time}</p>
                       <Badge variant="default" className="bg-green-100 text-green-700 hover:bg-green-100">
-                        Sukses
+                        {t('common.success')}
                       </Badge>
                     </div>
                   </div>

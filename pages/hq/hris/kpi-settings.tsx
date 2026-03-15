@@ -53,12 +53,23 @@ const categoryColors: Record<string, string> = {
   quality: 'bg-cyan-100 text-cyan-700'
 };
 
+const MOCK_KPI_TEMPLATES: KPITemplate[] = [
+  { code: 'KPI-SALES-001', name: 'Target Penjualan Bulanan', description: 'Pencapaian target penjualan per bulan', category: 'sales', unit: 'percentage', dataType: 'numeric', formulaType: 'actual_vs_target', formula: '(actual/target)*100', defaultWeight: 40, measurementFrequency: 'monthly', applicableTo: ['branch_manager', 'sales_staff'], parameters: [{ name: 'target', label: 'Target Penjualan', type: 'currency', required: true }] },
+  { code: 'KPI-OPS-001', name: 'Efisiensi Operasional', description: 'Tingkat efisiensi operasional cabang', category: 'operations', unit: 'percentage', dataType: 'numeric', formulaType: 'ratio', formula: '(output/input)*100', defaultWeight: 20, measurementFrequency: 'monthly', applicableTo: ['branch_manager'], parameters: [] },
+  { code: 'KPI-CUST-001', name: 'Kepuasan Pelanggan', description: 'Skor kepuasan pelanggan rata-rata', category: 'customer', unit: 'score', dataType: 'numeric', formulaType: 'average', formula: 'avg(scores)', defaultWeight: 20, measurementFrequency: 'quarterly', applicableTo: ['all'], parameters: [] },
+  { code: 'KPI-HR-001', name: 'Kehadiran Karyawan', description: 'Persentase kehadiran karyawan', category: 'hr', unit: 'percentage', dataType: 'numeric', formulaType: 'actual_vs_target', formula: '(hadir/total_hari)*100', defaultWeight: 20, measurementFrequency: 'monthly', applicableTo: ['all'], parameters: [] },
+];
+const MOCK_SCORING_SCHEMES = [
+  { id: 'ss1', name: 'Standard 5-Level', levels: [{ level: 5, label: 'Excellent', minPercent: 120, maxPercent: 999, color: '#22C55E', multiplier: 1.2 }, { level: 4, label: 'Good', minPercent: 100, maxPercent: 119, color: '#3B82F6', multiplier: 1.0 }, { level: 3, label: 'Meet', minPercent: 80, maxPercent: 99, color: '#F59E0B', multiplier: 0.8 }, { level: 2, label: 'Below', minPercent: 60, maxPercent: 79, color: '#F97316', multiplier: 0.6 }, { level: 1, label: 'Poor', minPercent: 0, maxPercent: 59, color: '#EF4444', multiplier: 0.4 }] },
+];
+const MOCK_KPI_CATEGORIES = { sales: { count: 5, label: 'Sales' }, operations: { count: 3, label: 'Operations' }, customer: { count: 2, label: 'Customer' }, financial: { count: 4, label: 'Financial' }, hr: { count: 3, label: 'HR' }, quality: { count: 2, label: 'Quality' } };
+
 export default function KPISettings() {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'templates' | 'scoring' | 'calculator'>('templates');
-  const [templates, setTemplates] = useState<KPITemplate[]>([]);
-  const [scoringSchemes, setScoringSchemes] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any>({});
+  const [templates, setTemplates] = useState<KPITemplate[]>(MOCK_KPI_TEMPLATES);
+  const [scoringSchemes, setScoringSchemes] = useState<any[]>(MOCK_SCORING_SCHEMES);
+  const [categories, setCategories] = useState<any>(MOCK_KPI_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showTemplateModal, setShowTemplateModal] = useState(false);
@@ -86,6 +97,9 @@ export default function KPISettings() {
       }
     } catch (error) {
       console.error('Error fetching KPI data:', error);
+      setTemplates(MOCK_KPI_TEMPLATES);
+      setScoringSchemes(MOCK_SCORING_SCHEMES);
+      setCategories(MOCK_KPI_CATEGORIES);
     } finally {
       setLoading(false);
     }
@@ -119,14 +133,14 @@ export default function KPISettings() {
   if (!mounted) return null;
 
   return (
-    <HQLayout title="KPI Settings" subtitle="Konfigurasi Template, Parameter, dan Scoring KPI">
+    <HQLayout title="Pengaturan KPI" subtitle="Konfigurasi Template, Parameter, dan Penilaian KPI">
       <div className="space-y-6">
         {/* Tab Navigation */}
         <div className="bg-white rounded-xl shadow-sm border">
           <div className="flex border-b">
             {[
               { id: 'templates', label: 'Template KPI', icon: Target },
-              { id: 'scoring', label: 'Scoring Standard', icon: Award },
+              { id: 'scoring', label: 'Standar Penilaian', icon: Award },
               { id: 'calculator', label: 'Kalkulator KPI', icon: Calculator }
             ].map(tab => (
               <button
@@ -339,15 +353,15 @@ export default function KPISettings() {
                       <TrendingUp className="w-5 h-5 text-green-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold">Bonus Structure</h4>
+                      <h4 className="font-semibold">Struktur Bonus</h4>
                       <p className="text-sm text-gray-500">Bonus berdasarkan skor KPI</p>
                     </div>
                   </div>
                   <div className="space-y-3">
                     {[
-                      { minScore: 4.5, bonus: 15, label: 'Top Performer' },
-                      { minScore: 4.0, bonus: 10, label: 'High Performer' },
-                      { minScore: 3.5, bonus: 5, label: 'Good Performer' }
+                      { minScore: 4.5, bonus: 15, label: 'Kinerja Terbaik' },
+                      { minScore: 4.0, bonus: 10, label: 'Kinerja Tinggi' },
+                      { minScore: 3.5, bonus: 5, label: 'Kinerja Baik' }
                     ].map((tier, i) => (
                       <div key={i} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                         <div>
@@ -366,14 +380,14 @@ export default function KPISettings() {
                       <AlertCircle className="w-5 h-5 text-red-600" />
                     </div>
                     <div>
-                      <h4 className="font-semibold">Penalty Structure</h4>
+                      <h4 className="font-semibold">Struktur Penalti</h4>
                       <p className="text-sm text-gray-500">Pengurangan berdasarkan skor KPI</p>
                     </div>
                   </div>
                   <div className="space-y-3">
                     {[
-                      { maxScore: 2.0, penalty: 10, label: 'Performance Warning' },
-                      { maxScore: 1.5, penalty: 15, label: 'Performance Improvement Plan' }
+                      { maxScore: 2.0, penalty: 10, label: 'Peringatan Kinerja' },
+                      { maxScore: 1.5, penalty: 15, label: 'Rencana Peningkatan Kinerja' }
                     ].map((tier, i) => (
                       <div key={i} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                         <div>

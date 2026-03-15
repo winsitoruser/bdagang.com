@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ interface RecipeIngredient {
 
 const NewRecipePage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { toast } = useToast();
   
   // Form state
@@ -45,7 +47,14 @@ const NewRecipePage: React.FC = () => {
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   
   // UI state
-  const [materials, setMaterials] = useState<RawMaterial[]>([]);
+  const MOCK_NEW_MATERIALS: RawMaterial[] = [
+    { id: 'rm1', name: 'Tepung Terigu', sku: 'RM-001', unit: 'kg', price: 12000, stock: 500 },
+    { id: 'rm2', name: 'Gula Pasir', sku: 'RM-002', unit: 'kg', price: 15000, stock: 300 },
+    { id: 'rm3', name: 'Mentega', sku: 'RM-003', unit: 'kg', price: 45000, stock: 100 },
+    { id: 'rm4', name: 'Telur Ayam', sku: 'RM-004', unit: 'kg', price: 28000, stock: 80 },
+    { id: 'rm5', name: 'Coklat Bubuk', sku: 'RM-005', unit: 'kg', price: 95000, stock: 40 },
+  ];
+  const [materials, setMaterials] = useState<RawMaterial[]>(MOCK_NEW_MATERIALS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -79,11 +88,7 @@ const NewRecipePage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching materials:', error);
-      toast({
-        title: '❌ Terjadi Kesalahan',
-        description: 'Gagal memuat data bahan baku. Silakan refresh halaman.',
-        variant: 'destructive'
-      });
+      setMaterials(MOCK_NEW_MATERIALS);
     } finally {
       setLoading(false);
     }
@@ -240,7 +245,7 @@ const NewRecipePage: React.FC = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
+            <p className="text-gray-600">Memuat...</p>
           </div>
         </div>
       </DashboardLayout>

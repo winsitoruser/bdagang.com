@@ -127,16 +127,16 @@ export default function OutletsManagement() {
   };
 
   const formatLastSync = (lastSyncAt: string | null) => {
-    if (!lastSyncAt) return 'Never synced';
+    if (!lastSyncAt) return 'Belum pernah sinkron';
     
     const lastSync = new Date(lastSyncAt);
     const now = new Date();
     const diffMinutes = Math.floor((now.getTime() - lastSync.getTime()) / (1000 * 60));
     
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
-    return `${Math.floor(diffMinutes / 1440)}d ago`;
+    if (diffMinutes < 1) return 'Baru saja';
+    if (diffMinutes < 60) return `${diffMinutes} menit lalu`;
+    if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)} jam lalu`;
+    return `${Math.floor(diffMinutes / 1440)} hari lalu`;
   };
 
   if (loading && outlets.length === 0) {
