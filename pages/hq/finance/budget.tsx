@@ -66,13 +66,34 @@ const formatCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
+const MOCK_BUDGET_SUMMARY: BudgetSummary = {
+  totalBudget: 2500000000, totalSpent: 1650000000, totalRemaining: 850000000,
+  utilizationRate: 66, onTrackCategories: 5, overBudgetCategories: 1, underBudgetCategories: 2,
+};
+
+const MOCK_BUDGET_CATEGORIES: BudgetCategory[] = [
+  { id: '1', name: 'COGS / Bahan Baku', budget: 800000000, spent: 580000000, remaining: 220000000, utilization: 73, status: 'on_track', variance: -5, lastMonth: 560000000 },
+  { id: '2', name: 'Gaji & Tunjangan', budget: 650000000, spent: 520000000, remaining: 130000000, utilization: 80, status: 'on_track', variance: 2, lastMonth: 510000000 },
+  { id: '3', name: 'Utilitas', budget: 180000000, spent: 145000000, remaining: 35000000, utilization: 81, status: 'warning', variance: 8, lastMonth: 135000000 },
+  { id: '4', name: 'Marketing', budget: 250000000, spent: 185000000, remaining: 65000000, utilization: 74, status: 'on_track', variance: -3, lastMonth: 190000000 },
+  { id: '5', name: 'Logistik', budget: 200000000, spent: 120000000, remaining: 80000000, utilization: 60, status: 'under_budget', variance: -12, lastMonth: 140000000 },
+  { id: '6', name: 'IT & Teknologi', budget: 150000000, spent: 160000000, remaining: -10000000, utilization: 107, status: 'over_budget', variance: 15, lastMonth: 140000000 },
+];
+
+const MOCK_BRANCH_BUDGETS: BranchBudget[] = [
+  { id: 'b1', name: 'Kantor Pusat Jakarta', code: 'HQ-001', totalBudget: 650000000, spent: 420000000, utilization: 65, status: 'on_track' },
+  { id: 'b2', name: 'Cabang Bandung', code: 'BR-002', totalBudget: 380000000, spent: 290000000, utilization: 76, status: 'on_track' },
+  { id: 'b3', name: 'Cabang Surabaya', code: 'BR-003', totalBudget: 350000000, spent: 310000000, utilization: 89, status: 'warning' },
+  { id: 'b5', name: 'Cabang Bali', code: 'BR-005', totalBudget: 300000000, spent: 195000000, utilization: 65, status: 'on_track' },
+];
+
 export default function BudgetManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
-  const [summary, setSummary] = useState<BudgetSummary>(defaultBudgetSummary);
-  const [categories, setCategories] = useState<BudgetCategory[]>([]);
-  const [branchBudgets, setBranchBudgets] = useState<BranchBudget[]>([]);
+  const [summary, setSummary] = useState<BudgetSummary>(MOCK_BUDGET_SUMMARY);
+  const [categories, setCategories] = useState<BudgetCategory[]>(MOCK_BUDGET_CATEGORIES);
+  const [branchBudgets, setBranchBudgets] = useState<BranchBudget[]>(MOCK_BRANCH_BUDGETS);
   const [viewMode, setViewMode] = useState<'category' | 'branch' | 'trend'>('category');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newBudget, setNewBudget] = useState({
@@ -115,6 +136,9 @@ export default function BudgetManagement() {
       }
     } catch (error) {
       console.error('Error fetching budget data:', error);
+      setSummary(MOCK_BUDGET_SUMMARY);
+      setCategories(MOCK_BUDGET_CATEGORIES);
+      setBranchBudgets(MOCK_BRANCH_BUDGETS);
     } finally {
       setLoading(false);
     }

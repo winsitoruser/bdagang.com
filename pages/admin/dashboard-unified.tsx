@@ -132,7 +132,7 @@ export default function UnifiedAdminDashboard() {
     link: string;
   }> = [
     {
-      title: 'Total Tenants',
+      title: 'Total Tenant',
       value: analytics.totalTenants,
       icon: Building2,
       color: 'blue',
@@ -143,7 +143,7 @@ export default function UnifiedAdminDashboard() {
       link: '/admin/tenants'
     },
     {
-      title: 'Total Users',
+      title: 'Total Pengguna',
       value: analytics.totalUsers,
       icon: Users,
       color: 'green',
@@ -154,7 +154,7 @@ export default function UnifiedAdminDashboard() {
       link: '/admin/tenants'
     },
     {
-      title: 'Active Modules',
+      title: 'Modul Aktif',
       value: analytics.totalModules,
       icon: Boxes,
       color: 'purple',
@@ -179,29 +179,29 @@ export default function UnifiedAdminDashboard() {
 
   const quickActions = [
     {
-      title: 'Create Tenant',
-      description: 'Add new tenant to system',
+      title: 'Buat Tenant',
+      description: 'Tambah tenant baru ke sistem',
       icon: Plus,
       color: 'blue',
       action: () => router.push('/admin/tenants?action=create')
     },
     {
-      title: 'Manage Modules',
-      description: 'Configure system modules',
+      title: 'Kelola Modul',
+      description: 'Konfigurasi modul sistem',
       icon: SettingsIcon,
       color: 'purple',
       action: () => router.push('/admin/modules')
     },
     {
-      title: 'View Analytics',
-      description: 'Detailed system analytics',
+      title: 'Lihat Analitik',
+      description: 'Analitik sistem terperinci',
       icon: BarChart3,
       color: 'green',
       action: () => router.push('/admin/analytics')
     },
     {
-      title: 'View Reports',
-      description: 'Generate system reports',
+      title: 'Lihat Laporan',
+      description: 'Buat laporan sistem',
       icon: FileText,
       color: 'orange',
       action: () => router.push('/admin/analytics')

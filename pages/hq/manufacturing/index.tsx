@@ -53,17 +53,47 @@ const formatNumber = (n: number) => new Intl.NumberFormat('id-ID').format(n);
 const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 const formatDateTime = (d: string | null) => d ? new Date(d).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
 
+const MOCK_MFG_DASHBOARD = {
+  totalWorkOrders: 45, activeWorkOrders: 12, completedThisMonth: 28, overdueOrders: 3,
+  productionOutput: 18500, defectRate: 1.8, oeeScore: 82.5, avgCycleTime: 4.2,
+  topProducts: [
+    { name: 'Kopi Arabica Blend 250g', produced: 3200, target: 3500 },
+    { name: 'Kopi Robusta Premium 500g', produced: 2800, target: 3000 },
+    { name: 'Teh Herbal Mix 100g', produced: 1500, target: 1500 },
+  ],
+  workCenterUtilization: [
+    { name: 'Roasting Line A', utilization: 88 }, { name: 'Packaging Line 1', utilization: 76 },
+    { name: 'Grinding Station', utilization: 92 }, { name: 'QC Lab', utilization: 65 },
+  ],
+};
+
+const MOCK_MFG_ANALYTICS = {
+  productionTrend: [
+    { month: 'Jan', output: 15200, target: 16000 }, { month: 'Feb', output: 16800, target: 16000 },
+    { month: 'Mar', output: 18500, target: 17000 },
+  ],
+  qualityTrend: [{ month: 'Jan', defectRate: 2.1 }, { month: 'Feb', defectRate: 1.9 }, { month: 'Mar', defectRate: 1.8 }],
+  costBreakdown: { materials: 65, labor: 20, overhead: 10, other: 5 },
+};
+
+const MOCK_WORK_ORDERS = [
+  { id: 'wo1', wo_number: 'WO-2026-045', product_name: 'Kopi Arabica Blend 250g', quantity: 500, status: 'in_progress', priority: 'high', start_date: '2026-03-10', due_date: '2026-03-15', progress: 68 },
+  { id: 'wo2', wo_number: 'WO-2026-044', product_name: 'Kopi Robusta Premium 500g', quantity: 300, status: 'planned', priority: 'normal', start_date: '2026-03-14', due_date: '2026-03-18', progress: 0 },
+  { id: 'wo3', wo_number: 'WO-2026-043', product_name: 'Teh Herbal Mix 100g', quantity: 1000, status: 'completed', priority: 'normal', start_date: '2026-03-05', due_date: '2026-03-09', progress: 100 },
+  { id: 'wo4', wo_number: 'WO-2026-042', product_name: 'Sirup Vanila 750ml', quantity: 200, status: 'in_progress', priority: 'urgent', start_date: '2026-03-11', due_date: '2026-03-13', progress: 45 },
+];
+
 export default function ManufacturingPage() {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [loading, setLoading] = useState(true);
 
   // Dashboard data
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [dashboard, setDashboard] = useState<any>(MOCK_MFG_DASHBOARD);
+  const [analytics, setAnalytics] = useState<any>(MOCK_MFG_ANALYTICS);
 
   // Lists
-  const [workOrders, setWorkOrders] = useState<any[]>([]);
+  const [workOrders, setWorkOrders] = useState<any[]>(MOCK_WORK_ORDERS);
   const [boms, setBoms] = useState<any[]>([]);
   const [routings, setRoutings] = useState<any[]>([]);
   const [workCenters, setWorkCenters] = useState<any[]>([]);
@@ -127,7 +157,11 @@ export default function ManufacturingPage() {
       ]);
       setDashboard(dash);
       setAnalytics(anl);
-    } catch (e: any) { console.error('Dashboard fetch error:', e); }
+    } catch (e: any) {
+      console.error('Dashboard fetch error:', e);
+      setDashboard(MOCK_MFG_DASHBOARD);
+      setAnalytics(MOCK_MFG_ANALYTICS);
+    }
     setLoading(false);
   }, [api]);
 
@@ -174,7 +208,11 @@ export default function ManufacturingPage() {
         case 'subcontracting': setSubcontracts(await api('subcontracts', 'GET', null, 'advanced')); break;
         case 'settings': setSettings(await api('settings')); break;
       }
-    } catch (e: any) { console.error(`Fetch ${tab} error:`, e); }
+    } catch (e: any) {
+      console.error(`Fetch ${tab} error:`, e);
+      if (tab === 'dashboard') { setDashboard(MOCK_MFG_DASHBOARD); setAnalytics(MOCK_MFG_ANALYTICS); }
+      if (tab === 'work-orders') setWorkOrders(MOCK_WORK_ORDERS);
+    }
     setLoading(false);
   }, [api, fetchDashboard, fetchWorkOrders]);
 

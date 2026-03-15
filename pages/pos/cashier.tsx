@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import AddCustomerWizard from '@/components/customers/AddCustomerWizard';
 import { 
   FaShoppingCart, FaPlus, FaMinus, FaTrash, FaBarcode, 
@@ -22,6 +23,7 @@ interface CartItem {
 const CashierPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -344,7 +346,7 @@ const CashierPage: React.FC = () => {
       cashReceived: paymentMethod === 'cash' ? parseFloat(cashReceived) : calculateTotal(),
       change: paymentMethod === 'cash' ? calculateChange() : 0,
       customerType: customerType,
-      customerName: customerType === 'member' ? selectedMember?.name : 'Walk-in Customer'
+      customerName: customerType === 'member' ? selectedMember?.name : 'Pelanggan Umum'
     };
     
     setReceiptData(receipt);
@@ -562,7 +564,7 @@ const CashierPage: React.FC = () => {
                 <h2 className="text-xl font-bold text-gray-900">Katalog Produk</h2>
               </div>
               <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-semibold">
-                {filteredProducts.length} items
+                {filteredProducts.length} produk
               </span>
             </div>
             {isLoadingProducts ? (
@@ -1426,11 +1428,11 @@ const CashierPage: React.FC = () => {
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-gray-600">• Cash:</span>
+                      <span className="text-gray-600">• Tunai:</span>
                       <span>Rp {(activeShift?.cashSales || 0).toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between text-xs">
-                      <span className="text-gray-600">• Card:</span>
+                      <span className="text-gray-600">• Kartu:</span>
                       <span>Rp {(activeShift?.cardSales || 0).toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between text-xs">
@@ -1444,7 +1446,7 @@ const CashierPage: React.FC = () => {
                   <p className="text-sm text-yellow-900 font-semibold mb-1">⚠️ Perhatian</p>
                   <p className="text-xs text-yellow-700">
                     Pastikan Anda sudah menghitung cash di laci sebelum menutup shift.
-                    Untuk rekap lengkap, gunakan halaman Shift Management.
+                    Untuk rekap lengkap, gunakan halaman Manajemen Shift.
                   </p>
                 </div>
 
@@ -1459,7 +1461,7 @@ const CashierPage: React.FC = () => {
                     onClick={() => {
                       setActiveShift(null);
                       setShowShiftModal(false);
-                      alert('Shift ditutup! Silakan lakukan rekap lengkap di halaman Shift Management.');
+                      alert('Shift ditutup! Silakan lakukan rekap lengkap di halaman Manajemen Shift.');
                       router.push('/pos/shifts-complete');
                     }}
                     className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-bold hover:from-red-600 hover:to-pink-600 transition-all shadow-lg"

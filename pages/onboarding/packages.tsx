@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
+import { useTranslation } from '@/lib/i18n';
 import { ArrowRight, ArrowLeft, Check, Loader, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import PackageSelector from '@/components/packages/PackageSelector';
@@ -9,6 +10,7 @@ import PackageActivationModal from '@/components/packages/PackageActivationModal
 export default function PackageSelection() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { t } = useTranslation();
   const [selectedPackage, setSelectedPackage] = useState<any>(null);
   const [activating, setActivating] = useState(false);
   const [showModal, setShowModal] = useState(false);

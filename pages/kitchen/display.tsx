@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -63,6 +64,7 @@ interface CookingStats {
 const KitchenDisplaySystem: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [cookingHistory, setCookingHistory] = useState<CookingHistory[]>([]);
   const [stats, setStats] = useState<CookingStats>({
@@ -343,13 +345,13 @@ const KitchenDisplaySystem: React.FC = () => {
   };
 
   if (status === "loading") {
-    return <div>Loading...</div>;
+    return <div>Memuat...</div>;
   }
 
   return (
     <DashboardLayout>
       <Head>
-        <title>Kitchen Display System - Bedagang</title>
+        <title>{t('kitchen.pageTitle')}</title>
         <meta name="description" content="Kitchen Display System" />
       </Head>
 
@@ -360,10 +362,10 @@ const KitchenDisplaySystem: React.FC = () => {
             <div>
               <h1 className="text-2xl font-bold flex items-center">
                 <ChefHat className="w-8 h-8 mr-2" />
-                Kitchen Display System
+                {t('kitchen.title')}
               </h1>
               <p className="text-sm text-sky-100">
-                {currentTime.toLocaleString('id-ID')} • {orders.length} Pesanan Aktif
+                {currentTime.toLocaleString('id-ID')} • {orders.length} {t('kitchen.activeOrders')}
               </p>
             </div>
             <div className="flex items-center space-x-2">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +51,7 @@ interface WasteRecord {
 
 const WasteHistoryPage: React.FC = () => {
   const router = useRouter();
+  const { t, formatCurrency, formatDate } = useTranslation();
   const { toast } = useToast();
   
   const [wasteRecords, setWasteRecords] = useState<WasteRecord[]>([]);
@@ -86,8 +88,8 @@ const WasteHistoryPage: React.FC = () => {
     } catch (error) {
       console.error('Error fetching waste records:', error);
       toast({
-        title: '❌ Gagal Memuat Riwayat',
-        description: 'Terjadi kesalahan saat memuat riwayat limbah',
+        title: t('inventory.production.wasteHistoryLoadFailed'),
+        description: t('inventory.production.wasteHistoryLoadError'),
         variant: 'destructive'
       });
     } finally {
@@ -95,23 +97,7 @@ const WasteHistoryPage: React.FC = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -131,11 +117,11 @@ const WasteHistoryPage: React.FC = () => {
       other: 'bg-gray-100 text-gray-700'
     };
     const labels = {
-      raw_material: 'Bahan Baku',
+      raw_material: t('inventory.production.rawMaterial'),
       work_in_progress: 'WIP',
-      finished_product: 'Produk Jadi',
-      packaging: 'Kemasan',
-      other: 'Lainnya'
+      finished_product: t('inventory.production.finishedProduct'),
+      packaging: t('inventory.production.packaging'),
+      other: t('inventory.production.otherType')
     };
     return (
       <Badge className={colors[type as keyof typeof colors] || 'bg-gray-100'}>
@@ -154,12 +140,12 @@ const WasteHistoryPage: React.FC = () => {
       contamination: 'bg-pink-100 text-pink-700'
     };
     const labels = {
-      defect: 'Cacat',
-      expired: 'Kadaluarsa',
-      damaged: 'Rusak',
-      overproduction: 'Overproduksi',
-      spillage: 'Tumpah',
-      contamination: 'Kontaminasi'
+      defect: t('inventory.production.defect'),
+      expired: t('inventory.production.expired'),
+      damaged: t('inventory.production.damaged'),
+      overproduction: t('inventory.production.overproduction'),
+      spillage: t('inventory.production.spillage'),
+      contamination: t('inventory.production.contamination')
     };
     return (
       <Badge className={colors[category as keyof typeof colors] || 'bg-gray-100'}>
@@ -180,11 +166,11 @@ const WasteHistoryPage: React.FC = () => {
 
   const getMethodLabel = (method: string) => {
     const labels = {
-      discard: 'Buang',
-      recycle: 'Daur Ulang',
-      rework: 'Rework',
-      clearance_sale: 'Clearance Sale',
-      donation: 'Donasi'
+      discard: t('inventory.production.discard'),
+      recycle: t('inventory.production.recycle'),
+      rework: t('inventory.production.rework'),
+      clearance_sale: t('inventory.production.clearanceSale'),
+      donation: t('inventory.production.donation')
     };
     return labels[method as keyof typeof labels] || method;
   };
@@ -206,7 +192,7 @@ const WasteHistoryPage: React.FC = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin h-12 w-12 border-4 border-red-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Memuat riwayat limbah...</p>
+            <p className="text-gray-600">{t('inventory.production.loadingWasteHistory')}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -227,15 +213,15 @@ const WasteHistoryPage: React.FC = () => {
                   className="flex items-center space-x-2"
                 >
                   <FaArrowLeft />
-                  <span>Kembali</span>
+                  <span>{t('common.back')}</span>
                 </Button>
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
                     <FaTrash className="text-red-600" />
-                    <span>Riwayat Limbah Produksi</span>
+                    <span>{t('inventory.production.wasteHistoryTitle')}</span>
                   </h1>
                   <p className="text-gray-600 mt-1">
-                    Catatan lengkap semua limbah dan produk cacat
+                    {t('inventory.production.wasteHistorySubtitle')}
                   </p>
                 </div>
               </div>
@@ -251,7 +237,7 @@ const WasteHistoryPage: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-red-600 mb-1">Total Limbah</p>
+                    <p className="text-sm text-red-600 mb-1">{t('inventory.production.totalWaste')}</p>
                     <p className="text-3xl font-bold text-red-700">{summary.total_records}</p>
                     <p className="text-xs text-gray-600 mt-1">Record</p>
                   </div>
@@ -264,7 +250,7 @@ const WasteHistoryPage: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-orange-600 mb-1">Total Kerugian</p>
+                    <p className="text-sm text-orange-600 mb-1">{t('inventory.production.totalLoss')}</p>
                     <p className="text-2xl font-bold text-orange-700">
                       {formatCurrency(summary.total_loss)}
                     </p>
@@ -278,7 +264,7 @@ const WasteHistoryPage: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-green-600 mb-1">Recovery</p>
+                    <p className="text-sm text-green-600 mb-1">{t('inventory.production.recovery')}</p>
                     <p className="text-2xl font-bold text-green-700">
                       {formatCurrency(summary.total_recovery)}
                     </p>
@@ -292,7 +278,7 @@ const WasteHistoryPage: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-red-600 mb-1">Kerugian Bersih</p>
+                    <p className="text-sm text-red-600 mb-1">{t('inventory.production.netLossLabel')}</p>
                     <p className="text-2xl font-bold text-red-700">
                       {formatCurrency(summary.net_loss)}
                     </p>
@@ -311,7 +297,7 @@ const WasteHistoryPage: React.FC = () => {
                   <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <Input
                     type="text"
-                    placeholder="Cari nomor, batch, atau alasan..."
+                    placeholder={t('inventory.production.searchWaste')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -323,12 +309,12 @@ const WasteHistoryPage: React.FC = () => {
                   onChange={(e) => setFilterType(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
                 >
-                  <option value="all">Semua Tipe</option>
-                  <option value="raw_material">Bahan Baku</option>
+                  <option value="all">{t('inventory.production.allTypes')}</option>
+                  <option value="raw_material">{t('inventory.production.rawMaterial')}</option>
                   <option value="work_in_progress">WIP</option>
-                  <option value="finished_product">Produk Jadi</option>
-                  <option value="packaging">Kemasan</option>
-                  <option value="other">Lainnya</option>
+                  <option value="finished_product">{t('inventory.production.finishedProduct')}</option>
+                  <option value="packaging">{t('inventory.production.packaging')}</option>
+                  <option value="other">{t('inventory.production.otherType')}</option>
                 </select>
 
                 <select
@@ -336,13 +322,13 @@ const WasteHistoryPage: React.FC = () => {
                   onChange={(e) => setFilterCategory(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
                 >
-                  <option value="all">Semua Kategori</option>
-                  <option value="defect">Cacat</option>
-                  <option value="expired">Kadaluarsa</option>
-                  <option value="damaged">Rusak</option>
-                  <option value="overproduction">Overproduksi</option>
-                  <option value="spillage">Tumpah</option>
-                  <option value="contamination">Kontaminasi</option>
+                  <option value="all">{t('inventory.production.allCategories')}</option>
+                  <option value="defect">{t('inventory.production.defect')}</option>
+                  <option value="expired">{t('inventory.production.expired')}</option>
+                  <option value="damaged">{t('inventory.production.damaged')}</option>
+                  <option value="overproduction">{t('inventory.production.overproduction')}</option>
+                  <option value="spillage">{t('inventory.production.spillage')}</option>
+                  <option value="contamination">{t('inventory.production.contamination')}</option>
                 </select>
 
                 <select
@@ -350,12 +336,12 @@ const WasteHistoryPage: React.FC = () => {
                   onChange={(e) => setFilterMethod(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
                 >
-                  <option value="all">Semua Metode</option>
-                  <option value="discard">Buang</option>
-                  <option value="recycle">Daur Ulang</option>
-                  <option value="rework">Rework</option>
-                  <option value="clearance_sale">Clearance Sale</option>
-                  <option value="donation">Donasi</option>
+                  <option value="all">{t('inventory.production.allMethods')}</option>
+                  <option value="discard">{t('inventory.production.discard')}</option>
+                  <option value="recycle">{t('inventory.production.recycle')}</option>
+                  <option value="rework">{t('inventory.production.rework')}</option>
+                  <option value="clearance_sale">{t('inventory.production.clearanceSale')}</option>
+                  <option value="donation">{t('inventory.production.donation')}</option>
                 </select>
               </div>
             </CardContent>
@@ -368,12 +354,12 @@ const WasteHistoryPage: React.FC = () => {
                 <div className="text-center">
                   <FaTrash className="text-6xl text-gray-300 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Tidak Ada Riwayat Limbah
+                    {t('inventory.production.noWasteHistory')}
                   </h3>
                   <p className="text-gray-600">
                     {searchQuery
-                      ? 'Tidak ada limbah yang cocok dengan pencarian Anda'
-                      : 'Belum ada limbah yang tercatat'}
+                      ? t('inventory.production.noWasteSearch')
+                      : t('inventory.production.noWasteYet')}
                   </p>
                 </div>
               </CardContent>
@@ -407,25 +393,25 @@ const WasteHistoryPage: React.FC = () => {
                         <p className="text-2xl font-bold text-red-600">
                           {formatCurrency(waste.net_loss)}
                         </p>
-                        <p className="text-xs text-gray-500">Kerugian Bersih</p>
+                        <p className="text-xs text-gray-500">{t('inventory.production.netLossLabel')}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Jumlah</p>
+                        <p className="text-xs text-gray-500 mb-1">{t('inventory.production.quantity')}</p>
                         <p className="text-lg font-bold text-gray-900">
                           {waste.quantity} {waste.unit}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Nilai Kerugian</p>
+                        <p className="text-xs text-gray-500 mb-1">{t('inventory.production.lossValue')}</p>
                         <p className="text-lg font-bold text-orange-600">
                           {formatCurrency(waste.cost_value)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">Recovery</p>
+                        <p className="text-xs text-gray-500 mb-1">{t('inventory.production.recovery')}</p>
                         <p className="text-lg font-bold text-green-600">
                           {formatCurrency(waste.clearance_price)}
                         </p>
@@ -434,14 +420,14 @@ const WasteHistoryPage: React.FC = () => {
 
                     {waste.reason && (
                       <div className="p-3 bg-yellow-50 border-l-4 border-yellow-500 rounded mb-3">
-                        <p className="text-sm font-semibold text-gray-700 mb-1">Alasan:</p>
+                        <p className="text-sm font-semibold text-gray-700 mb-1">{t('inventory.production.reason')}:</p>
                         <p className="text-sm text-gray-600">{waste.reason}</p>
                       </div>
                     )}
 
                     {waste.notes && (
                       <div className="p-3 bg-blue-50 border-l-4 border-blue-500 rounded mb-3">
-                        <p className="text-sm font-semibold text-gray-700 mb-1">Catatan:</p>
+                        <p className="text-sm font-semibold text-gray-700 mb-1">{t('inventory.production.notes')}:</p>
                         <p className="text-sm text-gray-600">{waste.notes}</p>
                       </div>
                     )}
@@ -468,8 +454,8 @@ const WasteHistoryPage: React.FC = () => {
                         waste.status === 'disposed' ? 'bg-gray-100 text-gray-700' :
                         'bg-blue-100 text-blue-700'
                       }>
-                        {waste.status === 'recovered' ? 'Recovered' :
-                         waste.status === 'disposed' ? 'Disposed' : 'Recorded'}
+                        {waste.status === 'recovered' ? t('inventory.production.statusRecovered') :
+                         waste.status === 'disposed' ? t('inventory.production.statusDisposed') : t('inventory.production.statusRecorded')}
                       </Badge>
                     </div>
                   </CardContent>

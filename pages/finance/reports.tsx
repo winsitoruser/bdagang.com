@@ -1,6 +1,7 @@
 import { NextPage } from "next";
 import { useState, useEffect, Suspense, lazy } from "react";
 import FinanceLayout from "../../components/layouts/finance-layout";
+import { useTranslation } from '@/lib/i18n';
 import { useAuth } from "../../hooks/useAuth";
 import { useRouter } from "next/router";
 
@@ -20,6 +21,7 @@ const summaryData = [
 const FinanceReportsPage: NextPage<ReportsPageProps> = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
   const [isAuthorized, setIsAuthorized] = useState(false);
   
   // Handle authentication and authorization

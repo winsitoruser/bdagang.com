@@ -1,6 +1,7 @@
 import { NextPage } from "next";
 import { useState, useEffect, useRef } from "react";
 import FinanceLayout from "@/components/layouts/finance-layout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -172,6 +173,7 @@ const pieChartOptions = {
 };
 
 const FinanceIncomePage: NextPage = () => {
+  const { t } = useTranslation();
   // State variables
   const [incomeTransactions, setIncomeTransactions] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);

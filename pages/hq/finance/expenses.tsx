@@ -111,15 +111,47 @@ const getCategoryIcon = (icon: string) => {
   }
 };
 
+const MOCK_EXP_SUMMARY: ExpenseSummary = {
+  totalExpenses: 1650000000, previousExpenses: 1520000000, growth: 8.6,
+  cogs: 580000000, payroll: 520000000, utilities: 145000000, marketing: 185000000,
+  logistics: 120000000, maintenance: 65000000, other: 35000000,
+  pendingApprovals: 4, budgetUsed: 1650000000, budgetTotal: 2500000000,
+};
+
+const MOCK_EXP_CATEGORIES: ExpenseCategory[] = [
+  { id: '1', name: 'COGS', icon: 'shopping-cart', amount: 580000000, budget: 800000000, percentage: 35, trend: 3.2, color: '#3B82F6' },
+  { id: '2', name: 'Payroll', icon: 'users', amount: 520000000, budget: 650000000, percentage: 32, trend: 2.0, color: '#10B981' },
+  { id: '3', name: 'Utilities', icon: 'zap', amount: 145000000, budget: 180000000, percentage: 9, trend: 8.5, color: '#F59E0B' },
+  { id: '4', name: 'Marketing', icon: 'megaphone', amount: 185000000, budget: 250000000, percentage: 11, trend: -2.6, color: '#EF4444' },
+  { id: '5', name: 'Logistics', icon: 'truck', amount: 120000000, budget: 200000000, percentage: 7, trend: -14.3, color: '#8B5CF6' },
+  { id: '6', name: 'Maintenance', icon: 'wrench', amount: 65000000, budget: 100000000, percentage: 4, trend: 5.0, color: '#EC4899' },
+];
+
+const MOCK_EXP_ITEMS: ExpenseItem[] = [
+  { id: 'e1', date: '2026-03-12', description: 'Pembelian Bahan Baku Kopi', category: 'COGS', branch: 'Gudang Pusat Bekasi', amount: 15200000, status: 'approved', approver: 'Ahmad Wijaya', vendor: 'PT Sumber Makmur' },
+  { id: 'e2', date: '2026-03-11', description: 'Gaji Karyawan Maret 2026', category: 'Payroll', branch: 'All', amount: 125000000, status: 'pending', approver: '-', vendor: '-' },
+  { id: 'e3', date: '2026-03-10', description: 'Biaya Listrik & Air Maret', category: 'Utilities', branch: 'All', amount: 18500000, status: 'approved', approver: 'Ahmad Wijaya', vendor: 'PLN & PDAM' },
+  { id: 'e4', date: '2026-03-10', description: 'Campaign Google Ads Maret', category: 'Marketing', branch: 'HQ Jakarta', amount: 8500000, status: 'approved', approver: 'Siti Rahayu', vendor: 'Google' },
+  { id: 'e5', date: '2026-03-09', description: 'Servis AC Cabang Bandung', category: 'Maintenance', branch: 'Cabang Bandung', amount: 3200000, status: 'approved', approver: 'Siti Rahayu', vendor: 'CV Teknik Sejuk' },
+  { id: 'e6', date: '2026-03-08', description: 'Pengiriman ke Cabang Bali', category: 'Logistics', branch: 'Cabang Bali', amount: 4800000, status: 'pending', approver: '-', vendor: 'JNE Cargo' },
+];
+
+const MOCK_BRANCH_EXP: BranchExpense[] = [
+  { id: 'b1', name: 'Kantor Pusat Jakarta', code: 'HQ-001', totalExpenses: 420000000, cogs: 150000000, payroll: 180000000, utilities: 45000000, other: 45000000, budgetUsed: 65 },
+  { id: 'b2', name: 'Cabang Bandung', code: 'BR-002', totalExpenses: 290000000, cogs: 105000000, payroll: 120000000, utilities: 32000000, other: 33000000, budgetUsed: 76 },
+  { id: 'b3', name: 'Cabang Surabaya', code: 'BR-003', totalExpenses: 310000000, cogs: 115000000, payroll: 110000000, utilities: 38000000, other: 47000000, budgetUsed: 89 },
+  { id: 'b5', name: 'Cabang Bali', code: 'BR-005', totalExpenses: 195000000, cogs: 80000000, payroll: 75000000, utilities: 22000000, other: 18000000, budgetUsed: 65 },
+];
+
 export default function ExpenseManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const { period } = useFinancePeriod();
   const [apiError, setApiError] = useState<{ show: boolean; message: string; details?: string }>({ show: false, message: '' });
-  const [summary, setSummary] = useState<ExpenseSummary>(defaultExpSummary);
-  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [branchExpenses, setBranchExpenses] = useState<BranchExpense[]>([]);
+  const [summary, setSummary] = useState<ExpenseSummary>(MOCK_EXP_SUMMARY);
+  const [categories, setCategories] = useState<ExpenseCategory[]>(MOCK_EXP_CATEGORIES);
+  const [expenses, setExpenses] = useState<ExpenseItem[]>(MOCK_EXP_ITEMS);
+  const [branchExpenses, setBranchExpenses] = useState<BranchExpense[]>(MOCK_BRANCH_EXP);
   const [viewMode, setViewMode] = useState<'list' | 'category' | 'branch'>('list');
   const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -230,6 +262,10 @@ export default function ExpenseManagement() {
       }
     } catch (error) {
       console.error('Error fetching expense data:', error);
+      setSummary(MOCK_EXP_SUMMARY);
+      setCategories(MOCK_EXP_CATEGORIES);
+      setExpenses(MOCK_EXP_ITEMS);
+      setBranchExpenses(MOCK_BRANCH_EXP);
     } finally {
       setLoading(false);
     }

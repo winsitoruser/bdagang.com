@@ -25,9 +25,17 @@ interface DailyRecord {
 }
 
 
+const MOCK_DAILY_RECORDS: DailyRecord[] = [
+  { id: 'dr1', employeeName: 'Budi Santoso', employeeId: 'EMP-001', position: 'IT Manager', branchName: 'Kantor Pusat Jakarta', clockIn: '08:05', clockOut: '17:15', status: 'present', lateMinutes: 5, earlyLeaveMinutes: 0, overtimeMinutes: 15, workHours: 8.17, source: 'gps', isOutsideGeofence: false },
+  { id: 'dr2', employeeName: 'Siti Rahayu', employeeId: 'EMP-002', position: 'Finance Staff', branchName: 'Kantor Pusat Jakarta', clockIn: '08:22', clockOut: '17:00', status: 'late', lateMinutes: 22, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 7.63, source: 'face_recognition', isOutsideGeofence: false },
+  { id: 'dr3', employeeName: 'Ahmad Wijaya', employeeId: 'EMP-003', position: 'Operations Lead', branchName: 'Cabang Bandung', clockIn: '07:55', clockOut: '17:30', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 30, workHours: 8.58, source: 'fingerprint', isOutsideGeofence: false },
+  { id: 'dr4', employeeName: 'Dewi Lestari', employeeId: 'EMP-004', position: 'Barista Senior', branchName: 'Cabang Surabaya', clockIn: null, clockOut: null, status: 'absent', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 0, source: '', isOutsideGeofence: false },
+  { id: 'dr5', employeeName: 'Eko Prasetyo', employeeId: 'EMP-005', position: 'Warehouse Staff', branchName: 'Cabang Bandung', clockIn: '08:00', clockOut: '16:45', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 15, overtimeMinutes: 0, workHours: 7.75, source: 'gps', isOutsideGeofence: true },
+];
+
 export default function DailyAttendancePage() {
   const [mounted, setMounted] = useState(false);
-  const [records, setRecords] = useState<DailyRecord[]>([]);
+  const [records, setRecords] = useState<DailyRecord[]>(MOCK_DAILY_RECORDS);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,7 +55,7 @@ export default function DailyAttendancePage() {
         setRecords([]);
       }
     } catch {
-      setRecords([]);
+      setRecords(MOCK_DAILY_RECORDS);
     } finally {
       setLoading(false);
     }

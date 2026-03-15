@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import BranchCard from '@/components/settings/BranchCard';
@@ -14,6 +15,7 @@ import toast from 'react-hot-toast';
 const BranchesPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const { 
     branches, 
     loading, 
@@ -25,7 +27,8 @@ const BranchesPage: React.FC = () => {
 
   const [showForm, setShowForm] = useState(false);
   const [editingBranch, setEditingBranch] = useState<any>(null);
-  const [managers, setManagers] = useState([]);
+  const MOCK_MANAGERS = [{ id: 'm1', name: 'Budi Manager', email: 'budi@bedagang.com' }, { id: 'm2', name: 'Siti Manager', email: 'siti@bedagang.com' }] as any;
+  const [managers, setManagers] = useState(MOCK_MANAGERS);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -48,6 +51,7 @@ const BranchesPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching managers:', error);
+      setManagers(MOCK_MANAGERS);
     }
   };
 

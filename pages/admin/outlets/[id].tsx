@@ -167,7 +167,7 @@ export default function OutletDetailPage() {
               onClick={() => router.push('/admin/outlets')}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Back to Outlets
+              Kembali ke Outlet
             </button>
           </div>
         </div>
@@ -189,7 +189,7 @@ export default function OutletDetailPage() {
             className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Outlets
+            Kembali ke Outlet
           </button>
           <div className="flex items-center justify-between">
             <div>
@@ -207,7 +207,7 @@ export default function OutletDetailPage() {
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Edit className="h-4 w-4" />
-                <span>Edit</span>
+                <span>Ubah</span>
               </button>
             </div>
           </div>

@@ -82,13 +82,34 @@ const formatCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
+const MOCK_CF_SUMMARY: CashFlowSummary = {
+  openingBalance: 3200000000, closingBalance: 3450000000, netChange: 250000000,
+  cashInflow: 4250000000, cashOutflow: 4000000000, operatingCashFlow: 350000000,
+  investingCashFlow: -80000000, financingCashFlow: -20000000, freeCashFlow: 270000000,
+};
+
+const MOCK_CF_ITEMS: CashFlowItem[] = [
+  { id: 'cf1', date: '2026-03-12', description: 'Penerimaan Penjualan Harian', category: 'Operating', type: 'inflow', source: 'Sales', destination: 'BCA 1234567890', amount: 113500000, status: 'completed', reference: 'TXN-2026-0312' },
+  { id: 'cf2', date: '2026-03-12', description: 'Pembayaran Supplier Bahan Baku', category: 'Operating', type: 'outflow', source: 'BCA 1234567890', destination: 'PT Sumber Makmur', amount: 95000000, status: 'completed', reference: 'PAY-2026-0312-001' },
+  { id: 'cf3', date: '2026-03-11', description: 'Transfer ke Cabang Bali', category: 'Operating', type: 'transfer', source: 'BCA 1234567890', destination: 'BCA 0987654321', amount: 50000000, status: 'completed', reference: 'TRF-2026-0311' },
+  { id: 'cf4', date: '2026-03-10', description: 'Pembelian Mesin Roasting', category: 'Investing', type: 'outflow', source: 'Mandiri 2468013579', destination: 'PT Mesin Indo', amount: 80000000, status: 'completed', reference: 'INV-2026-0310' },
+  { id: 'cf5', date: '2026-03-15', description: 'Pembayaran Gaji Maret', category: 'Operating', type: 'outflow', source: 'BCA 1234567890', destination: 'Multi-transfer', amount: 520000000, status: 'scheduled', reference: 'PAY-2026-0315' },
+];
+
+const MOCK_BANK_ACCOUNTS: BankAccount[] = [
+  { id: 'ba1', name: 'Rekening Utama Operasional', bank: 'BCA', accountNumber: '1234567890', type: 'checking', balance: 2100000000, currency: 'IDR' },
+  { id: 'ba2', name: 'Rekening Investasi', bank: 'Mandiri', accountNumber: '2468013579', type: 'savings', balance: 1200000000, currency: 'IDR' },
+  { id: 'ba3', name: 'Kas Kecil Pusat', bank: '-', accountNumber: '-', type: 'petty_cash', balance: 15000000, currency: 'IDR' },
+  { id: 'ba4', name: 'Rekening Cabang Bali', bank: 'BCA', accountNumber: '0987654321', type: 'checking', balance: 135000000, currency: 'IDR' },
+];
+
 export default function CashFlowManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const { period } = useFinancePeriod();
-  const [summary, setSummary] = useState<CashFlowSummary>(defaultCFSummary);
-  const [cashFlowItems, setCashFlowItems] = useState<CashFlowItem[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [summary, setSummary] = useState<CashFlowSummary>(MOCK_CF_SUMMARY);
+  const [cashFlowItems, setCashFlowItems] = useState<CashFlowItem[]>(MOCK_CF_ITEMS);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(MOCK_BANK_ACCOUNTS);
   const [forecast, setForecast] = useState<CashForecast[]>([]);
   const [viewMode, setViewMode] = useState<'overview' | 'transactions' | 'accounts' | 'forecast'>('overview');
   const [filterType, setFilterType] = useState<'all' | 'inflow' | 'outflow' | 'transfer'>('all');
@@ -107,6 +128,9 @@ export default function CashFlowManagement() {
       }
     } catch (error) {
       console.error('Error fetching cash flow data:', error);
+      setSummary(MOCK_CF_SUMMARY);
+      setCashFlowItems(MOCK_CF_ITEMS);
+      setBankAccounts(MOCK_BANK_ACCOUNTS);
     } finally {
       setLoading(false);
     }
@@ -146,8 +170,8 @@ export default function CashFlowManagement() {
   };
 
   const cashFlowChartSeries = [
-    { name: 'Cash In', data: weeklyData.map(w => Math.round(w.inflow)) },
-    { name: 'Cash Out', data: weeklyData.map(w => -Math.round(w.outflow)) }
+    { name: 'Kas Masuk', data: weeklyData.map(w => Math.round(w.inflow)) },
+    { name: 'Kas Keluar', data: weeklyData.map(w => -Math.round(w.outflow)) }
   ];
 
   // Derive balance trend from opening balance + weekly cumulative net
@@ -370,10 +394,10 @@ export default function CashFlowManagement() {
         {/* View Mode Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
           {[
-            { key: 'overview', label: 'Overview', icon: TrendingUp },
-            { key: 'transactions', label: 'Transactions', icon: ArrowRightLeft },
-            { key: 'accounts', label: 'Bank Accounts', icon: Landmark },
-            { key: 'forecast', label: 'Forecast', icon: Calendar }
+            { key: 'overview', label: 'Ringkasan', icon: TrendingUp },
+            { key: 'transactions', label: 'Transaksi', icon: ArrowRightLeft },
+            { key: 'accounts', label: 'Rekening Bank', icon: Landmark },
+            { key: 'forecast', label: 'Proyeksi', icon: Calendar }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -486,13 +510,13 @@ export default function CashFlowManagement() {
                     account.type === 'savings' ? 'bg-green-100 text-green-700' :
                     'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {account.type === 'checking' ? 'Checking' : account.type === 'savings' ? 'Savings' : 'Petty Cash'}
+                    {account.type === 'checking' ? 'Giro' : account.type === 'savings' ? 'Tabungan' : 'Kas Kecil'}
                   </span>
                 </div>
                 <h3 className="font-semibold text-gray-900">{account.name}</h3>
                 <p className="text-sm text-gray-500 mb-4">{account.bank} {account.accountNumber !== '-' && `• ${account.accountNumber}`}</p>
                 <div className="pt-4 border-t border-gray-200">
-                  <p className="text-xs text-gray-500">Current Balance</p>
+                  <p className="text-xs text-gray-500">Saldo Saat Ini</p>
                   <p className="text-2xl font-bold text-gray-900">{formatCurrency(account.balance)}</p>
                 </div>
               </div>

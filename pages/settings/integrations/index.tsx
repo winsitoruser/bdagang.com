@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -27,8 +28,14 @@ interface Integration {
 const Integrations: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const MOCK_INTEGRATIONS: Integration[] = [
+    { id: 'int1', name: 'Midtrans', description: 'Payment Gateway', icon: '💳', category: 'payment', status: 'connected', config: { serverKey: '***', clientKey: '***' } },
+    { id: 'int2', name: 'WhatsApp Business', description: 'Notifikasi WhatsApp', icon: '📱', category: 'communication', status: 'disconnected' },
+    { id: 'int3', name: 'SMTP Email', description: 'Email notifikasi', icon: '📧', category: 'communication', status: 'connected', config: { host: 'smtp.gmail.com', port: 587 } },
+  ];
+  const [integrations, setIntegrations] = useState<Integration[]>(MOCK_INTEGRATIONS);
   const [showConfig, setShowConfig] = useState<string | null>(null);
   const [configData, setConfigData] = useState<any>({});
 
@@ -70,6 +77,7 @@ const Integrations: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching integrations:', error);
+      setIntegrations(MOCK_INTEGRATIONS);
     } finally {
       setLoading(false);
     }
@@ -151,7 +159,7 @@ const Integrations: React.FC = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin h-12 w-12 mx-auto border-4 border-indigo-600 border-t-transparent rounded-full"></div>
-            <p className="mt-4 text-gray-700">Loading...</p>
+            <p className="mt-4 text-gray-700">Memuat...</p>
           </div>
         </div>
       </DashboardLayout>

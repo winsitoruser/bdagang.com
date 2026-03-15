@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Maximize2, Minimize2, X, GripVertical, ChevronDown } from 'lucide-react';
-import { WidgetSize, SIZE_LABELS, MODULE_LABELS, MODULE_COLORS, WidgetModule } from '../../../lib/widgets/types';
+import { WidgetSize, MODULE_COLORS, WidgetModule } from '../../../lib/widgets/types';
+import { useTranslation } from '@/lib/i18n';
 
 interface WidgetWrapperProps {
   title: string;
@@ -21,11 +22,23 @@ export default function WidgetWrapper({
   title, module, icon, children, size = 'sm',
   isEditMode, noPadding, onRemove, onResize, className = ''
 }: WidgetWrapperProps) {
+  const { t } = useTranslation();
   const [showSizeMenu, setShowSizeMenu] = useState(false);
 
+  const getModuleLabel = (mod: string) => {
+    const key = `dashboard.moduleLabels.${mod}`;
+    const val = t(key);
+    return val !== key ? val : mod;
+  };
+  const getSizeLabel = (s: string) => {
+    const key = `dashboard.sizeLabels.${s}`;
+    const val = t(key);
+    return val !== key ? val : s;
+  };
+
   return (
-    <div className={`bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden transition-all ${
-      isEditMode ? 'ring-2 ring-indigo-200 ring-offset-1' : 'hover:shadow-md'
+    <div className={`h-full bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden transition-all ${
+      isEditMode ? '' : 'hover:shadow-md'
     } ${className}`}>
       {/* Header */}
       <div className={`flex items-center justify-between px-4 py-3 border-b border-gray-100 ${
@@ -36,7 +49,7 @@ export default function WidgetWrapper({
           <span className="text-gray-500 flex-shrink-0">{icon}</span>
           <h3 className="text-sm font-semibold text-gray-900 truncate">{title}</h3>
           <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded-full flex-shrink-0 ${MODULE_COLORS[module]}`}>
-            {MODULE_LABELS[module]}
+            {getModuleLabel(module)}
           </span>
         </div>
         {isEditMode && (
@@ -60,7 +73,7 @@ export default function WidgetWrapper({
                         s === size ? 'text-indigo-600 font-medium bg-indigo-50' : 'text-gray-700'
                       }`}
                     >
-                      {SIZE_LABELS[s]}
+                      {getSizeLabel(s)}
                     </button>
                   ))}
                 </div>

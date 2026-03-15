@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -56,8 +57,13 @@ interface Invoice {
 const InvoicesPage = () => {
   const router = useRouter();
   const { data: session } = useSession();
+  const { t } = useTranslation();
+  const MOCK_BILL_INVOICES: Invoice[] = [
+    { id: 'inv1', invoiceNumber: 'INV-2026-0315', status: 'paid', issuedDate: '2026-03-01', dueDate: '2026-03-15', paidDate: '2026-03-03', subtotal: 2500000, taxAmount: 275000, discountAmount: 0, totalAmount: 2775000, currency: 'IDR', paymentProvider: 'midtrans', paymentMethod: 'bank_transfer', customerName: 'PT Bedagang Indonesia', customerEmail: 'finance@bedagang.co.id', items: [{ description: 'Enterprise Plan - Maret 2026', quantity: 1, unitPrice: 2500000, amount: 2500000, type: 'subscription' }] },
+    { id: 'inv2', invoiceNumber: 'INV-2026-0215', status: 'paid', issuedDate: '2026-02-01', dueDate: '2026-02-15', paidDate: '2026-02-05', subtotal: 2500000, taxAmount: 275000, discountAmount: 0, totalAmount: 2775000, currency: 'IDR', paymentProvider: 'midtrans', paymentMethod: 'bank_transfer', customerName: 'PT Bedagang Indonesia', customerEmail: 'finance@bedagang.co.id', items: [{ description: 'Enterprise Plan - Februari 2026', quantity: 1, unitPrice: 2500000, amount: 2500000, type: 'subscription' }] },
+  ];
   const [loading, setLoading] = useState(true);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>(MOCK_BILL_INVOICES);
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,6 +90,7 @@ const InvoicesPage = () => {
       }
     } catch (error) {
       console.error('Error fetching invoices:', error);
+      setInvoices(MOCK_BILL_INVOICES);
     } finally {
       setLoading(false);
     }

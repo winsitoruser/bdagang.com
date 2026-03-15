@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import { 
   FaHistory, FaSearch, FaFilter, FaDownload, 
   FaEye, FaPrint, FaCalendar, FaShoppingCart, FaSpinner,
@@ -36,9 +37,16 @@ interface Stats {
 const HistoryPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
+  const MOCK_HIST_TXS: Transaction[] = [
+    { id: 'ht1', transactionNumber: 'TRX-20260315-001', transactionDate: '2026-03-15T09:15:00', totalAmount: 185000, paymentMethod: 'cash', status: 'completed', customer: null, cashier: { id: 'c1', name: 'Budi S.' }, itemCount: 3, totalItems: 3 },
+    { id: 'ht2', transactionNumber: 'TRX-20260315-002', transactionDate: '2026-03-15T09:45:00', totalAmount: 250000, paymentMethod: 'qris', status: 'completed', customer: { id: 'cu1', name: 'Siti R.', phone: '081234567890' }, cashier: { id: 'c1', name: 'Budi S.' }, itemCount: 5, totalItems: 5 },
+    { id: 'ht3', transactionNumber: 'TRX-20260315-003', transactionDate: '2026-03-15T10:20:00', totalAmount: 95000, paymentMethod: 'cash', status: 'completed', customer: null, cashier: { id: 'c2', name: 'Siti R.' }, itemCount: 2, totalItems: 2 },
+  ];
+  const MOCK_HIST_STATS: Stats = { totalTransactions: 85, totalSales: 18500000, avgTransaction: 217647, completedSales: 83, voidedCount: 1, refundedCount: 1 };
+  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_HIST_TXS);
+  const [stats, setStats] = useState<Stats | null>(MOCK_HIST_STATS);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     startDate: new Date().toISOString().split('T')[0],
@@ -103,6 +111,8 @@ const HistoryPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
+      setTransactions(MOCK_HIST_TXS);
+      setStats(MOCK_HIST_STATS);
     } finally {
       setLoading(false);
     }

@@ -86,15 +86,38 @@ const formatFullCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
+const MOCK_REV_DATA: RevenueData = {
+  totalRevenue: 4250000000, previousRevenue: 3920000000, growth: 8.4,
+  avgDailyRevenue: 141700000, avgTicketSize: 230700, totalTransactions: 18420,
+  cashSales: 1700000000, cardSales: 1275000000, digitalSales: 850000000,
+  onlineSales: 425000000, offlineSales: 3825000000,
+};
+
+const MOCK_BRANCH_REV: BranchRevenue[] = [
+  { id: 'b1', name: 'Kantor Pusat Jakarta', code: 'HQ-001', revenue: 1200000000, transactions: 5200, avgTicket: 230769, growth: 8.5, contribution: 28.2 },
+  { id: 'b2', name: 'Cabang Bandung', code: 'BR-002', revenue: 850000000, transactions: 3800, avgTicket: 223684, growth: 12.2, contribution: 20.0 },
+  { id: 'b3', name: 'Cabang Surabaya', code: 'BR-003', revenue: 780000000, transactions: 3400, avgTicket: 229412, growth: 6.8, contribution: 18.4 },
+  { id: 'b5', name: 'Cabang Bali', code: 'BR-005', revenue: 680000000, transactions: 2900, avgTicket: 234483, growth: 15.3, contribution: 16.0 },
+  { id: 'b4', name: 'Cabang Medan', code: 'BR-004', revenue: 420000000, transactions: 1820, avgTicket: 230769, growth: 4.2, contribution: 9.9 },
+  { id: 'b6', name: 'Cabang Semarang', code: 'BR-006', revenue: 320000000, transactions: 1300, avgTicket: 246154, growth: -2.1, contribution: 7.5 },
+];
+
+const MOCK_PRODUCT_REV: ProductRevenue[] = [
+  { id: '1', name: 'Kopi Arabica Blend', category: 'Minuman', revenue: 850000000, quantity: 42500, avgPrice: 20000, growth: 12.5 },
+  { id: '2', name: 'Kopi Robusta Premium', category: 'Minuman', revenue: 620000000, quantity: 31000, avgPrice: 20000, growth: 8.3 },
+  { id: '3', name: 'Teh Herbal Mix', category: 'Minuman', revenue: 380000000, quantity: 25333, avgPrice: 15000, growth: 5.1 },
+  { id: '4', name: 'Cookies Coklat', category: 'Makanan', revenue: 270000000, quantity: 13500, avgPrice: 20000, growth: 18.2 },
+];
+
 export default function RevenueAnalysis() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const { period } = useFinancePeriod();
   const [apiError, setApiError] = useState<{ show: boolean; message: string; details?: string }>({ show: false, message: '' });
   const [dateRange, setDateRange] = useState({ start: '2026-02-01', end: '2026-02-22' });
-  const [revenueData, setRevenueData] = useState<RevenueData>(defaultRevData);
-  const [branchRevenue, setBranchRevenue] = useState<BranchRevenue[]>([]);
-  const [productRevenue, setProductRevenue] = useState<ProductRevenue[]>([]);
+  const [revenueData, setRevenueData] = useState<RevenueData>(MOCK_REV_DATA);
+  const [branchRevenue, setBranchRevenue] = useState<BranchRevenue[]>(MOCK_BRANCH_REV);
+  const [productRevenue, setProductRevenue] = useState<ProductRevenue[]>(MOCK_PRODUCT_REV);
   const [hourlyRevenue, setHourlyRevenue] = useState<HourlyRevenue[]>([]);
   const [viewMode, setViewMode] = useState<'branch' | 'product' | 'time'>('branch');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -201,6 +224,9 @@ export default function RevenueAnalysis() {
       }
     } catch (error) {
       console.error('Error fetching revenue data:', error);
+      setRevenueData(MOCK_REV_DATA);
+      setBranchRevenue(MOCK_BRANCH_REV);
+      setProductRevenue(MOCK_PRODUCT_REV);
     } finally {
       setLoading(false);
     }

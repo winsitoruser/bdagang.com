@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import HQLayout from '../../../components/hq/HQLayout';
 import ProductFormModal from '../../../components/hq/inventory/ProductFormModal';
@@ -68,13 +69,42 @@ interface RecentActivity {
 
 const defaultInvSummary: InventorySummary = { totalProducts: 0, totalStock: 0, totalValue: 0, lowStockItems: 0, outOfStockItems: 0, overStockItems: 0, pendingTransfers: 0, pendingOrders: 0 };
 
+const MOCK_INV_SUMMARY: InventorySummary = {
+  totalProducts: 342, totalStock: 28450, totalValue: 1850000000,
+  lowStockItems: 18, outOfStockItems: 5, overStockItems: 12, pendingTransfers: 8, pendingOrders: 14,
+};
+
+const MOCK_BRANCH_STOCK: BranchStock[] = [
+  { id: 'b1', name: 'Kantor Pusat Jakarta', code: 'HQ-001', totalProducts: 245, totalStock: 8200, stockValue: 620000000, lowStock: 5, outOfStock: 1, overStock: 3, lastSync: '2026-03-12T08:00:00', status: 'synced' },
+  { id: 'b2', name: 'Cabang Bandung', code: 'BR-002', totalProducts: 198, totalStock: 5600, stockValue: 380000000, lowStock: 4, outOfStock: 2, overStock: 2, lastSync: '2026-03-12T07:45:00', status: 'synced' },
+  { id: 'b3', name: 'Cabang Surabaya', code: 'BR-003', totalProducts: 185, totalStock: 4800, stockValue: 320000000, lowStock: 6, outOfStock: 1, overStock: 4, lastSync: '2026-03-12T07:30:00', status: 'synced' },
+  { id: 'b5', name: 'Cabang Bali', code: 'BR-005', totalProducts: 165, totalStock: 3500, stockValue: 250000000, lowStock: 2, outOfStock: 0, overStock: 1, lastSync: '2026-03-12T07:50:00', status: 'synced' },
+  { id: 'b8', name: 'Gudang Pusat Bekasi', code: 'WH-008', totalProducts: 320, totalStock: 6350, stockValue: 280000000, lowStock: 1, outOfStock: 1, overStock: 2, lastSync: '2026-03-12T06:00:00', status: 'synced' },
+];
+
+const MOCK_TOP_PRODUCTS: TopProduct[] = [
+  { id: 'p1', name: 'Kopi Arabica Gayo 1kg', sku: 'SKU-KAG-001', category: 'Bahan Baku', totalStock: 850, stockValue: 127500000, movement: 'fast', trend: 12 },
+  { id: 'p2', name: 'Gula Pasir Premium 1kg', sku: 'SKU-GP-001', category: 'Bahan Baku', totalStock: 1200, stockValue: 18000000, movement: 'fast', trend: 8 },
+  { id: 'p3', name: 'Cup Plastik 16oz (1000pcs)', sku: 'SKU-CP16-001', category: 'Packaging', totalStock: 45, stockValue: 6750000, movement: 'fast', trend: -5 },
+  { id: 'p4', name: 'Susu Full Cream 1L', sku: 'SKU-SFC-001', category: 'Bahan Baku', totalStock: 680, stockValue: 13600000, movement: 'medium', trend: 3 },
+  { id: 'p5', name: 'Sirup Vanila 750ml', sku: 'SKU-SV-001', category: 'Bahan Baku', totalStock: 320, stockValue: 32000000, movement: 'medium', trend: 0 },
+];
+
+const MOCK_INV_ACTIVITIES: RecentActivity[] = [
+  { id: 'a1', type: 'transfer', description: 'Transfer Kopi Arabica 50kg', branch: 'Gudang Bekasi → Cabang Bali', quantity: 50, timestamp: '2026-03-12T09:30:00', user: 'Eko Prasetyo' },
+  { id: 'a2', type: 'receipt', description: 'Penerimaan dari PT Sumber Makmur', branch: 'Gudang Pusat Bekasi', quantity: 200, timestamp: '2026-03-12T08:15:00', user: 'Hendra Gunawan' },
+  { id: 'a3', type: 'adjustment', description: 'Adjustment stok cup plastik', branch: 'Cabang Bandung', quantity: -15, timestamp: '2026-03-11T16:45:00', user: 'Yuni Kartika' },
+  { id: 'a4', type: 'stocktake', description: 'Stock Opname Mingguan', branch: 'Cabang Surabaya', quantity: 0, timestamp: '2026-03-11T14:00:00', user: 'Budi Santoso' },
+];
+
 export default function HQInventoryDashboard() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<InventorySummary>(defaultInvSummary);
-  const [branchStock, setBranchStock] = useState<BranchStock[]>([]);
-  const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
-  const [activities, setActivities] = useState<RecentActivity[]>([]);
+  const [summary, setSummary] = useState<InventorySummary>(MOCK_INV_SUMMARY);
+  const [branchStock, setBranchStock] = useState<BranchStock[]>(MOCK_BRANCH_STOCK);
+  const [topProducts, setTopProducts] = useState<TopProduct[]>(MOCK_TOP_PRODUCTS);
+  const [activities, setActivities] = useState<RecentActivity[]>(MOCK_INV_ACTIVITIES);
   const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [showAddModal, setShowAddModal] = useState(false);
   const [branches, setBranches] = useState([]);
@@ -154,6 +184,10 @@ export default function HQInventoryDashboard() {
       }
     } catch (error) {
       console.error('Error fetching inventory data:', error);
+      setSummary(MOCK_INV_SUMMARY);
+      setBranchStock(MOCK_BRANCH_STOCK);
+      setTopProducts(MOCK_TOP_PRODUCTS);
+      setActivities(MOCK_INV_ACTIVITIES);
     } finally {
       setLoading(false);
     }
@@ -189,8 +223,8 @@ export default function HQInventoryDashboard() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = `inventory-${selectedPeriod}.csv`; a.click();
       URL.revokeObjectURL(url);
-      toast.success('Export inventory berhasil');
-    } catch { toast.error('Export gagal'); }
+      toast.success(t('inventory.exportSuccess'));
+    } catch { toast.error(t('inventory.exportFailed')); }
     setExporting(false);
   };
   
@@ -273,22 +307,22 @@ export default function HQInventoryDashboard() {
 
   const getMovementBadge = (movement: string) => {
     switch (movement) {
-      case 'fast': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Fast Moving</span>;
-      case 'medium': return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">Medium</span>;
-      case 'slow': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">Slow Moving</span>;
+      case 'fast': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t('inventory.fastMoving')}</span>;
+      case 'medium': return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">{t('inventory.medium')}</span>;
+      case 'slow': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">{t('inventory.slowMoving')}</span>;
       default: return null;
     }
   };
 
   const quickLinks = [
-    { icon: Package, label: 'Stok Global', href: '/hq/inventory/stock', color: 'bg-blue-500' },
-    { icon: Box, label: 'Kategori', href: '/hq/inventory/categories', color: 'bg-teal-500' },
-    { icon: BarChart3, label: 'Harga & Pricing', href: '/hq/inventory/pricing', color: 'bg-emerald-500' },
-    { icon: ArrowRightLeft, label: 'Transfer Stok', href: '/hq/inventory/transfers', color: 'bg-purple-500' },
-    { icon: Bell, label: 'Alerts', href: '/hq/inventory/alerts', color: 'bg-orange-500' },
-    { icon: FileText, label: 'Stock Opname', href: '/hq/inventory/stocktake', color: 'bg-green-500' },
-    { icon: Truck, label: 'Penerimaan', href: '/hq/inventory/receipts', color: 'bg-indigo-500' },
-    { icon: ShoppingCart, label: 'Purchase Orders', href: '/hq/purchase-orders', color: 'bg-cyan-500' }
+    { icon: Package, label: t('inventory.qlGlobalStock'), href: '/hq/inventory/stock', color: 'bg-blue-500' },
+    { icon: Box, label: t('inventory.qlCategories'), href: '/hq/inventory/categories', color: 'bg-teal-500' },
+    { icon: BarChart3, label: t('inventory.qlPricing'), href: '/hq/inventory/pricing', color: 'bg-emerald-500' },
+    { icon: ArrowRightLeft, label: t('inventory.qlTransfers'), href: '/hq/inventory/transfers', color: 'bg-purple-500' },
+    { icon: Bell, label: t('inventory.qlAlerts'), href: '/hq/inventory/alerts', color: 'bg-orange-500' },
+    { icon: FileText, label: t('inventory.qlStocktake'), href: '/hq/inventory/stocktake', color: 'bg-green-500' },
+    { icon: Truck, label: t('inventory.qlReceipts'), href: '/hq/inventory/receipts', color: 'bg-indigo-500' },
+    { icon: ShoppingCart, label: t('inventory.qlPurchaseOrders'), href: '/hq/purchase-orders', color: 'bg-cyan-500' }
   ];
 
   return (
@@ -297,26 +331,26 @@ export default function HQInventoryDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Global Inventory Management</h1>
-            <p className="text-gray-500">Monitoring dan pengelolaan stok seluruh cabang</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('inventory.title')}</h1>
+            <p className="text-gray-500">{t('inventory.subtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
             <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <select value={selectedPeriod} onChange={(e) => setSelectedPeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-              <option value="day">Hari Ini</option>
-              <option value="week">Minggu Ini</option>
-              <option value="month">Bulan Ini</option>
+              <option value="day">{t('inventory.today')}</option>
+              <option value="week">{t('inventory.thisWeek')}</option>
+              <option value="month">{t('inventory.thisMonth')}</option>
             </select>
             <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Sync
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('inventory.sync')}
             </button>
             <Link href="/hq/inventory/smart-warehouse" className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 text-sm">
-              <Zap className="w-4 h-4" /> Smart Warehouse
+              <Zap className="w-4 h-4" /> {t('inventory.smartWarehouse')}
             </Link>
             <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50">
-              <Download className="w-4 h-4" /> {exporting ? 'Exporting...' : 'Export'}
+              <Download className="w-4 h-4" /> {exporting ? t('inventory.exporting') : t('inventory.export')}
             </button>
           </div>
         </div>
@@ -336,13 +370,13 @@ export default function HQInventoryDashboard() {
         {/* Sub-Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
           {([
-            { v: 'overview' as const, l: 'Overview', icon: BarChart3 },
-            { v: 'kpis' as const, l: 'Industry KPIs', icon: Target },
-            { v: 'forecast' as const, l: 'Forecast & Reorder', icon: Activity },
-            { v: 'abc' as const, l: 'ABC Analysis', icon: Layers },
-          ]).map(t => (
-            <button key={t.v} onClick={() => setSubTab(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${subTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
-              <t.icon className="w-4 h-4" />{t.l}
+            { v: 'overview' as const, l: t('inventory.tabOverview'), icon: BarChart3 },
+            { v: 'kpis' as const, l: t('inventory.tabKpis'), icon: Target },
+            { v: 'forecast' as const, l: t('inventory.tabForecast'), icon: Activity },
+            { v: 'abc' as const, l: t('inventory.tabAbc'), icon: Layers },
+          ]).map(tb => (
+            <button key={tb.v} onClick={() => setSubTab(tb.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${subTab === tb.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+              <tb.icon className="w-4 h-4" />{tb.l}
             </button>
           ))}
         </div>
@@ -358,7 +392,7 @@ export default function HQInventoryDashboard() {
               <span className="text-xs text-green-600 flex items-center gap-1"><ArrowUpRight className="w-3 h-3" />+5.2%</span>
             </div>
             <p className="text-2xl font-bold text-gray-900">{formatNumber(summary.totalProducts)}</p>
-            <p className="text-sm text-gray-500">Total Produk</p>
+            <p className="text-sm text-gray-500">{t('inventory.totalProducts')}</p>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -369,7 +403,7 @@ export default function HQInventoryDashboard() {
               <span className="text-xs text-green-600 flex items-center gap-1"><ArrowUpRight className="w-3 h-3" />+12.8%</span>
             </div>
             <p className="text-2xl font-bold text-gray-900">{formatNumber(summary.totalStock)}</p>
-            <p className="text-sm text-gray-500">Total Unit Stok</p>
+            <p className="text-sm text-gray-500">{t('inventory.totalStockUnits')}</p>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -379,7 +413,7 @@ export default function HQInventoryDashboard() {
               </div>
             </div>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.totalValue)}</p>
-            <p className="text-sm text-gray-500">Nilai Stok</p>
+            <p className="text-sm text-gray-500">{t('inventory.stockValue')}</p>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -387,10 +421,10 @@ export default function HQInventoryDashboard() {
               <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-orange-600" />
               </div>
-              <Link href="/hq/inventory/alerts" className="text-xs text-blue-600 hover:underline">Lihat semua</Link>
+              <Link href="/hq/inventory/alerts" className="text-xs text-blue-600 hover:underline">{t('inventory.viewAll')}</Link>
             </div>
             <p className="text-2xl font-bold text-gray-900">{summary.lowStockItems + summary.outOfStockItems}</p>
-            <p className="text-sm text-gray-500">Items Perlu Perhatian</p>
+            <p className="text-sm text-gray-500">{t('inventory.itemsNeedAttention')}</p>
           </div>
         </div>
 
@@ -402,12 +436,12 @@ export default function HQInventoryDashboard() {
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <p className="font-semibold text-red-800">Perhatian: Stok Kritis Terdeteksi</p>
-                <p className="text-sm text-red-600">{summary.outOfStockItems} produk habis stok, {summary.lowStockItems} produk stok rendah di beberapa cabang</p>
+                <p className="font-semibold text-red-800">{t('inventory.alertCriticalTitle')}</p>
+                <p className="text-sm text-red-600">{t('inventory.alertCriticalDesc', { outOfStock: summary.outOfStockItems, lowStock: summary.lowStockItems })}</p>
               </div>
             </div>
             <Link href="/hq/inventory/alerts" className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">
-              Review Sekarang
+              {t('inventory.reviewNow')}
             </Link>
           </div>
         )}
@@ -416,17 +450,17 @@ export default function HQInventoryDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Tren Pergerakan Stok</h3>
+              <h3 className="font-semibold text-gray-900">{t('inventory.stockMovementTrend')}</h3>
               <div className="flex items-center gap-2 text-xs">
-                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-500 rounded-full"></span>Stock In</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded-full"></span>Stock Out</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-blue-500 rounded-full"></span>{t('inventory.stockIn')}</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-500 rounded-full"></span>{t('inventory.stockOut')}</span>
               </div>
             </div>
             <Chart options={stockTrendOptions} series={stockTrendSeries} type="area" height={280} />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Distribusi Stok per Kategori</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('inventory.stockDistByCategory')}</h3>
             <Chart options={categoryStockOptions} series={categoryStockSeries} type="donut" height={280} />
           </div>
         </div>
@@ -434,23 +468,23 @@ export default function HQInventoryDashboard() {
         {/* Branch Stock Table */}
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900">Stok per Cabang</h3>
+            <h3 className="font-semibold text-gray-900">{t('inventory.stockPerBranch')}</h3>
             <Link href="/hq/inventory/stock" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
-              Lihat Detail <ChevronRight className="w-4 h-4" />
+              {t('inventory.viewDetail')} <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabang</th>
-                  <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Produk</th>
-                  <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Stok</th>
-                  <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Nilai Stok</th>
-                  <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Low Stock</th>
-                  <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Out of Stock</th>
-                  <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Sync Status</th>
-                  <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.branch')}</th>
+                  <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.products')}</th>
+                  <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.totalStock')}</th>
+                  <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.stockValue')}</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.lowStock')}</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.outOfStock')}</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.syncStatus')}</th>
+                  <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.action')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -507,8 +541,8 @@ export default function HQInventoryDashboard() {
           {/* Top Products */}
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Produk Teratas (Stok Terbanyak)</h3>
-              <Link href="/hq/inventory/stock" className="text-sm text-blue-600 hover:underline">Lihat Semua</Link>
+              <h3 className="font-semibold text-gray-900">{t('inventory.topProducts')}</h3>
+              <Link href="/hq/inventory/stock" className="text-sm text-blue-600 hover:underline">{t('inventory.viewAllLink')}</Link>
             </div>
             <div className="divide-y divide-gray-100">
               {topProducts.map((product) => (
@@ -523,7 +557,7 @@ export default function HQInventoryDashboard() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-gray-900">{formatNumber(product.totalStock)} unit</p>
+                    <p className="font-medium text-gray-900">{formatNumber(product.totalStock)} {t('inventory.unit')}</p>
                     <div className="flex items-center gap-2 justify-end mt-1">
                       {getMovementBadge(product.movement)}
                       <span className={`text-xs flex items-center gap-1 ${product.trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -540,8 +574,8 @@ export default function HQInventoryDashboard() {
           {/* Recent Activities */}
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Aktivitas Terbaru</h3>
-              <button className="text-sm text-blue-600 hover:underline">Lihat Semua</button>
+              <h3 className="font-semibold text-gray-900">{t('inventory.recentActivities')}</h3>
+              <button className="text-sm text-blue-600 hover:underline">{t('inventory.viewAllLink')}</button>
             </div>
             <div className="divide-y divide-gray-100">
               {activities.map((activity) => (
@@ -570,9 +604,9 @@ export default function HQInventoryDashboard() {
           <Link href="/hq/inventory/transfers" className="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl p-5 text-white hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100 text-sm">Transfer Pending</p>
+                <p className="text-purple-100 text-sm">{t('inventory.transferPending')}</p>
                 <p className="text-3xl font-bold mt-1">{summary.pendingTransfers}</p>
-                <p className="text-purple-200 text-sm mt-2">Menunggu approval atau pengiriman</p>
+                <p className="text-purple-200 text-sm mt-2">{t('inventory.transferPendingDesc')}</p>
               </div>
               <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
                 <ArrowRightLeft className="w-8 h-8" />
@@ -583,9 +617,9 @@ export default function HQInventoryDashboard() {
           <Link href="/hq/purchase-orders" className="bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl p-5 text-white hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-cyan-100 text-sm">Purchase Orders Pending</p>
+                <p className="text-cyan-100 text-sm">{t('inventory.poPending')}</p>
                 <p className="text-3xl font-bold mt-1">{summary.pendingOrders}</p>
-                <p className="text-cyan-200 text-sm mt-2">Menunggu konfirmasi supplier</p>
+                <p className="text-cyan-200 text-sm mt-2">{t('inventory.poPendingDesc')}</p>
               </div>
               <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center">
                 <ShoppingCart className="w-8 h-8" />
@@ -598,24 +632,24 @@ export default function HQInventoryDashboard() {
         {enhancedData?.summary && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center gap-2 mb-2"><RotateCcw className="w-4 h-4 text-blue-600" /><span className="text-xs text-gray-500">Inventory Turnover</span></div>
+              <div className="flex items-center gap-2 mb-2"><RotateCcw className="w-4 h-4 text-blue-600" /><span className="text-xs text-gray-500">{t('inventory.inventoryTurnover')}</span></div>
               <p className="text-xl font-bold text-gray-900">{enhancedData.summary.inventoryTurnover}x</p>
-              <p className="text-xs text-gray-400">per year</p>
+              <p className="text-xs text-gray-400">{t('inventory.perYear')}</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center gap-2 mb-2"><Clock className="w-4 h-4 text-green-600" /><span className="text-xs text-gray-500">Days on Hand</span></div>
-              <p className="text-xl font-bold text-gray-900">{enhancedData.summary.daysOnHand} hari</p>
-              <p className="text-xs text-gray-400">avg holding period</p>
+              <div className="flex items-center gap-2 mb-2"><Clock className="w-4 h-4 text-green-600" /><span className="text-xs text-gray-500">{t('inventory.daysOnHand')}</span></div>
+              <p className="text-xl font-bold text-gray-900">{enhancedData.summary.daysOnHand}</p>
+              <p className="text-xs text-gray-400">{t('inventory.avgHoldingPeriod')}</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center gap-2 mb-2"><Zap className="w-4 h-4 text-purple-600" /><span className="text-xs text-gray-500">Fill Rate</span></div>
+              <div className="flex items-center gap-2 mb-2"><Zap className="w-4 h-4 text-purple-600" /><span className="text-xs text-gray-500">{t('inventory.fillRate')}</span></div>
               <p className="text-xl font-bold text-gray-900">{enhancedData.summary.fillRate}%</p>
-              <p className="text-xs text-gray-400">order fulfillment</p>
+              <p className="text-xs text-gray-400">{t('inventory.orderFulfillment')}</p>
             </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-4 h-4 text-red-600" /><span className="text-xs text-gray-500">Dead Stock</span></div>
+              <div className="flex items-center gap-2 mb-2"><AlertTriangle className="w-4 h-4 text-red-600" /><span className="text-xs text-gray-500">{t('inventory.deadStock')}</span></div>
               <p className="text-xl font-bold text-gray-900">{formatCurrency(enhancedData.summary.deadStockValue)}</p>
-              <p className="text-xs text-gray-400">stok tidak bergerak</p>
+              <p className="text-xs text-gray-400">{t('inventory.deadStockDesc')}</p>
             </div>
           </div>
         )}
@@ -623,7 +657,7 @@ export default function HQInventoryDashboard() {
         {/* Warehouse Health */}
         {enhancedData?.warehouseHealth && (
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Thermometer className="w-5 h-5 text-blue-600" />Warehouse Health Monitor</h3>
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Thermometer className="w-5 h-5 text-blue-600" />{t('inventory.warehouseHealth')}</h3>
             <div className="grid grid-cols-3 gap-4">
               {enhancedData.warehouseHealth.map((wh: any) => (
                 <div key={wh.id} className="border border-gray-200 rounded-lg p-4">
@@ -637,11 +671,11 @@ export default function HQInventoryDashboard() {
                     </span>
                   </div>
                   <div className="space-y-2">
-                    <div className="flex justify-between text-xs"><span className="text-gray-500">Capacity</span><span className="font-medium">{wh.capacity}%</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-500">{t('inventory.capacity')}</span><span className="font-medium">{wh.capacity}%</span></div>
                     <div className="w-full bg-gray-200 rounded-full h-1.5"><div className={`h-1.5 rounded-full ${wh.capacity > 90 ? 'bg-red-500' : wh.capacity > 75 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${wh.capacity}%` }} /></div>
-                    <div className="flex justify-between text-xs"><span className="text-gray-500">Temp</span><span className="font-medium">{wh.temperature}°C</span></div>
-                    <div className="flex justify-between text-xs"><span className="text-gray-500">Humidity</span><span className="font-medium">{wh.humidity}%</span></div>
-                    {wh.issues > 0 && <p className="text-xs text-red-600 font-medium">{wh.issues} issue(s) detected</p>}
+                    <div className="flex justify-between text-xs"><span className="text-gray-500">{t('inventory.temp')}</span><span className="font-medium">{wh.temperature}°C</span></div>
+                    <div className="flex justify-between text-xs"><span className="text-gray-500">{t('inventory.humidity')}</span><span className="font-medium">{wh.humidity}%</span></div>
+                    {wh.issues > 0 && <p className="text-xs text-red-600 font-medium">{t('inventory.issuesDetected', { count: wh.issues })}</p>}
                   </div>
                 </div>
               ))}
@@ -653,20 +687,20 @@ export default function HQInventoryDashboard() {
         {enhancedData?.reorderSuggestions && enhancedData.reorderSuggestions.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-orange-600" />AI Reorder Suggestions</h3>
-              <span className="text-xs text-gray-500">{enhancedData.reorderSuggestions.length} items need reorder</span>
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-orange-600" />{t('inventory.aiReorderSuggestions')}</h3>
+              <span className="text-xs text-gray-500">{t('inventory.itemsNeedReorder', { count: enhancedData.reorderSuggestions.length })}</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Current</th>
-                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Reorder Point</th>
-                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Suggested Qty</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supplier</th>
-                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Lead Time</th>
-                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Urgency</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.product')}</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.current')}</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.reorderPoint')}</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.suggestedQty')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.supplier')}</th>
+                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.leadTime')}</th>
+                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.urgency')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -696,7 +730,7 @@ export default function HQInventoryDashboard() {
         {subTab === 'kpis' && (
           <div className="space-y-6">
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-              <p className="text-sm text-indigo-700"><strong>Industry KPIs ({INDUSTRY_OPTIONS.find(i => i.value === industry)?.label})</strong>: KPI inventori spesifik industri dengan target benchmark dan tren perubahan.</p>
+              <p className="text-sm text-indigo-700"><strong>Industry KPIs ({INDUSTRY_OPTIONS.find(i => i.value === industry)?.label})</strong>: {t('inventory.industryKpiDesc')}</p>
             </div>
             {industryKpis.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -717,7 +751,7 @@ export default function HQInventoryDashboard() {
                       <div className="mt-3 flex items-center justify-between text-xs">
                         <span className="text-gray-500">Target: {kpi.target}{kpi.unit === '%' || kpi.unit === 'x' ? kpi.unit : ` ${kpi.unit}`}</span>
                         <span className={`font-medium px-2 py-0.5 rounded-full ${isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {isGood ? 'On Target' : 'Below Target'}
+                          {isGood ? t('inventory.onTarget') : t('inventory.belowTarget')}
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
@@ -728,7 +762,7 @@ export default function HQInventoryDashboard() {
                 })}
               </div>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">Loading KPIs...</div>
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">{t('inventory.loadingKpis')}</div>
             )}
           </div>
         )}
@@ -737,12 +771,12 @@ export default function HQInventoryDashboard() {
         {subTab === 'forecast' && (
           <div className="space-y-6">
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <p className="text-sm text-amber-700"><strong>Stock Forecast & Reorder</strong>: Proyeksi stok 8 minggu ke depan dengan estimasi tanggal reorder otomatis berdasarkan rata-rata penjualan harian.</p>
+              <p className="text-sm text-amber-700"><strong>{t('inventory.tabForecast')}</strong>: {t('inventory.forecastDesc')}</p>
             </div>
             {forecast.length > 0 ? (
               <>
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
-                  <h3 className="font-semibold text-gray-900 mb-4">Stock Depletion Forecast</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('inventory.stockDepletionForecast')}</h3>
                   <Chart
                     options={{
                       chart: { type: 'line', toolbar: { show: false } },
@@ -762,18 +796,18 @@ export default function HQInventoryDashboard() {
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                   <div className="p-5 border-b border-gray-200">
-                    <h3 className="font-semibold text-gray-900">Reorder Schedule</h3>
+                    <h3 className="font-semibold text-gray-900">{t('inventory.reorderSchedule')}</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                          <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Current Stock</th>
-                          <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Daily Sales</th>
-                          <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Days Until Stockout</th>
-                          <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Reorder Date</th>
-                          <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                          <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.product')}</th>
+                          <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.currentStock')}</th>
+                          <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.avgDailySales')}</th>
+                          <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.daysUntilStockout')}</th>
+                          <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.reorderDate')}</th>
+                          <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.status')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -801,7 +835,7 @@ export default function HQInventoryDashboard() {
                 </div>
               </>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">Loading forecast data...</div>
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">{t('inventory.loadingForecast')}</div>
             )}
           </div>
         )}
@@ -810,7 +844,7 @@ export default function HQInventoryDashboard() {
         {subTab === 'abc' && (
           <div className="space-y-6">
             <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
-              <p className="text-sm text-teal-700"><strong>ABC Analysis</strong>: Klasifikasi produk berdasarkan nilai stok — A (high value, 70%), B (moderate, 20%), C (low value, 10%). Fokuskan kontrol ketat pada item kelas A.</p>
+              <p className="text-sm text-teal-700"><strong>{t('inventory.tabAbc')}</strong>: {t('inventory.abcDesc')}</p>
             </div>
             {abcAnalysis ? (
               <>
@@ -823,16 +857,16 @@ export default function HQInventoryDashboard() {
                         </span>
                         <span className="text-xs text-gray-500">{cat.valuePct}% of total value</span>
                       </div>
-                      <p className="text-2xl font-bold text-gray-900">{formatNumber(cat.items)} items</p>
+                      <p className="text-2xl font-bold text-gray-900">{formatNumber(cat.items)} {t('inventory.items')}</p>
                       <p className="text-sm text-gray-600 mt-1">{formatCurrency(cat.stockValue)}</p>
-                      <p className="text-xs text-gray-500 mt-2">Avg Turnover: {cat.avgTurnover}x</p>
+                      <p className="text-xs text-gray-500 mt-2">{t('inventory.avgTurnover')}: {cat.avgTurnover}x</p>
                       <p className="text-xs text-gray-400 mt-1">{cat.description}</p>
                     </div>
                   ))}
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="bg-white rounded-xl border border-gray-200 p-5">
-                    <h3 className="font-semibold text-gray-900 mb-4">Value Distribution</h3>
+                    <h3 className="font-semibold text-gray-900 mb-4">{t('inventory.valueDistribution')}</h3>
                     <Chart
                       options={{
                         chart: { type: 'donut' },
@@ -847,7 +881,7 @@ export default function HQInventoryDashboard() {
                     />
                   </div>
                   <div className="bg-white rounded-xl border border-gray-200 p-5">
-                    <h3 className="font-semibold text-gray-900 mb-4">Items Distribution</h3>
+                    <h3 className="font-semibold text-gray-900 mb-4">{t('inventory.itemsDistribution')}</h3>
                     <Chart
                       options={{
                         chart: { type: 'bar', toolbar: { show: false } },
@@ -866,7 +900,7 @@ export default function HQInventoryDashboard() {
                 </div>
               </>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">Loading ABC analysis...</div>
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">{t('inventory.loadingAbc')}</div>
             )}
           </div>
         )}

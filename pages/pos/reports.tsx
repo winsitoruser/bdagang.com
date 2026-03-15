@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import { 
   FaChartBar, FaCalendar, FaDownload, FaPrint,
   FaArrowUp, FaArrowDown, FaShoppingCart, FaMoneyBillWave, FaInfoCircle
@@ -18,6 +19,7 @@ import {
 const ReportsPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [dateRange, setDateRange] = useState('today');
   const [isLoading, setIsLoading] = useState(false);
   const [isFromMock, setIsFromMock] = useState(false);
@@ -180,7 +182,7 @@ const ReportsPage: React.FC = () => {
                 disabled={isLoading}
               >
                 <FaDownload />
-                <span>{isLoading ? 'Loading...' : 'Export'}</span>
+                <span>{isLoading ? 'Memuat...' : 'Ekspor'}</span>
               </button>
             </div>
           </div>

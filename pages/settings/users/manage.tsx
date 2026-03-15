@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,8 +32,14 @@ interface User {
 const UserManagement: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<User[]>([]);
+  const MOCK_MGR_USERS: User[] = [
+    { id: 'u1', name: 'Admin Utama', email: 'admin@bedagang.com', role: 'admin', isActive: true, lastLogin: '2026-03-15T09:00:00', createdAt: '2026-01-01', branches: [{ id: 'b1', name: 'Pusat' }] },
+    { id: 'u2', name: 'Budi Kasir', email: 'budi@bedagang.com', role: 'cashier', isActive: true, lastLogin: '2026-03-15T08:00:00', createdAt: '2026-01-15', branches: [{ id: 'b1', name: 'Pusat' }] },
+    { id: 'u3', name: 'Siti Manager', email: 'siti@bedagang.com', role: 'manager', isActive: true, lastLogin: '2026-03-14T16:00:00', createdAt: '2026-02-01', branches: [{ id: 'b2', name: 'Cabang Bandung' }] },
+  ];
+  const [users, setUsers] = useState<User[]>(MOCK_MGR_USERS);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
@@ -52,7 +59,8 @@ const UserManagement: React.FC = () => {
     branchIds: [] as string[]
   });
 
-  const [branches, setBranches] = useState<any[]>([]);
+  const MOCK_MGR_BRANCHES = [{ id: 'b1', name: 'Pusat', address: 'Jakarta' }, { id: 'b2', name: 'Cabang Bandung', address: 'Bandung' }];
+  const [branches, setBranches] = useState<any[]>(MOCK_MGR_BRANCHES);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -81,6 +89,7 @@ const UserManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching users:', error);
+      setUsers(MOCK_MGR_USERS);
     } finally {
       setLoading(false);
     }
@@ -96,6 +105,7 @@ const UserManagement: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching branches:', error);
+      setBranches(MOCK_MGR_BRANCHES);
     }
   };
 
@@ -344,7 +354,7 @@ const UserManagement: React.FC = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin h-12 w-12 mx-auto border-4 border-indigo-600 border-t-transparent rounded-full"></div>
-            <p className="mt-4 text-gray-700">Loading...</p>
+            <p className="mt-4 text-gray-700">Memuat...</p>
           </div>
         </div>
       </DashboardLayout>

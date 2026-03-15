@@ -142,11 +142,11 @@ export default function VehicleDetailPage() {
           <div className="border-b border-gray-200">
             <div className="flex">
               {[
-                { id: 'overview', label: 'Overview', icon: Truck },
-                { id: 'trips', label: 'Trip History', icon: MapPin },
-                { id: 'fuel', label: 'Fuel Records', icon: Fuel },
-                { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-                { id: 'costs', label: 'Cost Analysis', icon: DollarSign }
+                { id: 'overview', label: 'Ringkasan', icon: Truck },
+                { id: 'trips', label: 'Riwayat Perjalanan', icon: MapPin },
+                { id: 'fuel', label: 'Catatan BBM', icon: Fuel },
+                { id: 'maintenance', label: 'Pemeliharaan', icon: Wrench },
+                { id: 'costs', label: 'Analisis Biaya', icon: DollarSign }
               ].map(tab => (
                 <button
                   key={tab.id}

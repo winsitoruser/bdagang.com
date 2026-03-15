@@ -57,7 +57,7 @@ const ICON_MAP: Record<string, any> = {
 };
 
 const CATEGORY_CONFIG: Record<string, { label: string; icon: any; color: string }> = {
-  core: { label: 'Core System', icon: Shield, color: 'text-blue-600 bg-blue-50' },
+  core: { label: 'Sistem Inti', icon: Shield, color: 'text-blue-600 bg-blue-50' },
   operations: { label: 'Operasional', icon: Package, color: 'text-emerald-600 bg-emerald-50' },
   finance: { label: 'Keuangan', icon: Wallet, color: 'text-amber-600 bg-amber-50' },
   hr: { label: 'SDM & HR', icon: UserCheck, color: 'text-purple-600 bg-purple-50' },

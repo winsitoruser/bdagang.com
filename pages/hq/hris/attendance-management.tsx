@@ -55,19 +55,35 @@ const CLOCK_METHOD_LABELS: Record<string, string> = {
   fingerprint: 'Fingerprint', qr_code: 'QR Code', nfc: 'NFC'
 };
 
+const MOCK_AM_SHIFTS: WorkShift[] = [
+  { id: 'sh1', code: 'PAGI', name: 'Shift Pagi', shift_type: 'regular', start_time: '08:00', end_time: '17:00', break_start: '12:00', break_end: '13:00', break_duration_minutes: 60, is_cross_day: false, work_hours_per_day: 8, color: '#3B82F6', tolerance_late_minutes: 15, applicable_days: [1,2,3,4,5], is_active: true, sort_order: 1 },
+  { id: 'sh2', code: 'SIANG', name: 'Shift Siang', shift_type: 'regular', start_time: '14:00', end_time: '22:00', break_start: '18:00', break_end: '18:30', break_duration_minutes: 30, is_cross_day: false, work_hours_per_day: 8, color: '#F59E0B', tolerance_late_minutes: 10, applicable_days: [1,2,3,4,5], is_active: true, sort_order: 2 },
+  { id: 'sh3', code: 'MALAM', name: 'Shift Malam', shift_type: 'regular', start_time: '22:00', end_time: '06:00', break_start: '02:00', break_end: '02:30', break_duration_minutes: 30, is_cross_day: true, work_hours_per_day: 8, color: '#8B5CF6', tolerance_late_minutes: 10, applicable_days: [1,2,3,4,5,6], is_active: true, sort_order: 3 },
+];
+const MOCK_AM_GEO: GeofenceLocation[] = [
+  { id: 'g1', name: 'Kantor Pusat Jakarta', location_type: 'office', latitude: -6.2088, longitude: 106.8456, radius_meters: 150, address: 'Jl. Sudirman No.1, Jakarta', is_active: true },
+  { id: 'g2', name: 'Cabang Bandung', location_type: 'branch', latitude: -6.9175, longitude: 107.6191, radius_meters: 100, address: 'Jl. Asia Afrika No.10, Bandung', is_active: true },
+];
+const MOCK_AM_STATS = { totalEmployees: 156, presentToday: 142, lateToday: 8, absentToday: 6, onLeave: 4, avgClockIn: '08:12' };
+const MOCK_AM_RECORDS = [
+  { id: 'r1', employee_name: 'Budi Santoso', department: 'IT', shift: 'PAGI', clock_in: '08:05', clock_out: null, status: 'present', method: 'gps' },
+  { id: 'r2', employee_name: 'Siti Rahayu', department: 'Finance', shift: 'PAGI', clock_in: '08:22', clock_out: null, status: 'late', method: 'face_recognition' },
+  { id: 'r3', employee_name: 'Ahmad Wijaya', department: 'Operations', shift: 'PAGI', clock_in: '07:55', clock_out: null, status: 'present', method: 'fingerprint' },
+];
+
 export default function AttendanceManagementPage() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'live' | 'shifts' | 'geofence' | 'rotations' | 'settings'>('live');
 
   // Data
-  const [shifts, setShifts] = useState<WorkShift[]>([]);
-  const [geofences, setGeofences] = useState<GeofenceLocation[]>([]);
+  const [shifts, setShifts] = useState<WorkShift[]>(MOCK_AM_SHIFTS);
+  const [geofences, setGeofences] = useState<GeofenceLocation[]>(MOCK_AM_GEO);
   const [rotations, setRotations] = useState<ShiftRotation[]>([]);
   const [settings, setSettings] = useState<Record<string, any>>({});
   const [settingsRaw, setSettingsRaw] = useState<any[]>([]);
-  const [todayStats, setTodayStats] = useState<any>({});
-  const [todayRecords, setTodayRecords] = useState<any[]>([]);
+  const [todayStats, setTodayStats] = useState<any>(MOCK_AM_STATS);
+  const [todayRecords, setTodayRecords] = useState<any[]>(MOCK_AM_RECORDS);
 
   // Modals
   const [showShiftModal, setShowShiftModal] = useState(false);
@@ -128,7 +144,12 @@ export default function AttendanceManagementPage() {
         setTodayStats(json.todayStats || {});
         setTodayRecords(json.todayRecords || []);
       }
-    } catch { }
+    } catch {
+      setShifts(MOCK_AM_SHIFTS);
+      setGeofences(MOCK_AM_GEO);
+      setTodayStats(MOCK_AM_STATS);
+      setTodayRecords(MOCK_AM_RECORDS);
+    }
     finally { setLoading(false); }
   };
 

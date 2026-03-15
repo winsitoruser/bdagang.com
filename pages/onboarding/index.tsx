@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
+import { useTranslation } from '@/lib/i18n';
 import { useSession, signOut } from 'next-auth/react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -54,6 +55,7 @@ const kybSteps = [
 
 export default function OnboardingDashboard() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: session, status: sessionStatus } = useSession();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<OnboardingData | null>(null);

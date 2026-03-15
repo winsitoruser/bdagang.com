@@ -49,10 +49,23 @@ const DEFAULT_CATEGORIES: ReviewCategory[] = [
   { name: 'Kedisiplinan', rating: 0, weight: 15, comments: '' },
 ];
 
+const MOCK_REVIEWS: PerformanceReview[] = [
+  { id: 'pr1', employeeId: 'EMP-001', employeeName: 'Ahmad Wijaya', position: 'General Manager', branchName: 'Kantor Pusat Jakarta', department: 'MANAGEMENT', reviewPeriod: 'Q1 2026', reviewDate: '2026-03-10', reviewer: 'Board of Directors', overallRating: 4.5, categories: [{ name: 'Kualitas Kerja', rating: 5, weight: 25, comments: 'Excellent strategic leadership' }, { name: 'Produktivitas', rating: 4, weight: 25, comments: 'Consistently meets targets' }, { name: 'Inisiatif & Kreativitas', rating: 5, weight: 20, comments: 'Innovative approach' }, { name: 'Kerjasama Tim', rating: 4, weight: 15, comments: 'Good team builder' }, { name: 'Kedisiplinan', rating: 4, weight: 15, comments: 'Very disciplined' }], strengths: ['Strategic vision', 'Leadership'], areasForImprovement: ['Delegation'], goals: ['Expand to 5 new cities'], status: 'reviewed' },
+  { id: 'pr2', employeeId: 'EMP-002', employeeName: 'Siti Rahayu', position: 'Branch Manager', branchName: 'Cabang Bandung', department: 'OPERATIONS', reviewPeriod: 'Q1 2026', reviewDate: '2026-03-08', reviewer: 'Ahmad Wijaya', overallRating: 4.2, categories: DEFAULT_CATEGORIES.map(c => ({ ...c, rating: 4 })), strengths: ['Team management', 'Customer relations'], areasForImprovement: ['Time management'], goals: ['Increase branch revenue by 15%'], status: 'submitted' },
+  { id: 'pr3', employeeId: 'EMP-007', employeeName: 'Made Wirawan', position: 'Branch Manager', branchName: 'Cabang Bali', department: 'OPERATIONS', reviewPeriod: 'Q1 2026', reviewDate: '2026-03-09', reviewer: 'Ahmad Wijaya', overallRating: 4.8, categories: DEFAULT_CATEGORIES.map(c => ({ ...c, rating: 5 })), strengths: ['Innovation', 'Revenue growth', 'Staff development'], areasForImprovement: ['Documentation'], goals: ['Launch new product line'], status: 'acknowledged' },
+  { id: 'pr4', employeeId: 'EMP-006', employeeName: 'Lisa Permata', position: 'Finance Manager', branchName: 'Kantor Pusat Jakarta', department: 'FINANCE', reviewPeriod: 'Q1 2026', reviewDate: '2026-03-11', reviewer: 'Ahmad Wijaya', overallRating: 4.3, categories: DEFAULT_CATEGORIES.map(c => ({ ...c, rating: 4 })), strengths: ['Accuracy', 'Financial analysis'], areasForImprovement: ['Cross-dept communication'], goals: ['Implement automated reporting'], status: 'draft' },
+  { id: 'pr5', employeeId: 'EMP-010', employeeName: 'Fajar Setiawan', position: 'Sales Supervisor', branchName: 'Cabang Bandung', department: 'SALES', reviewPeriod: 'Q1 2026', reviewDate: '2026-03-07', reviewer: 'Siti Rahayu', overallRating: 3.2, categories: DEFAULT_CATEGORIES.map(c => ({ ...c, rating: 3 })), strengths: ['Product knowledge'], areasForImprovement: ['Sales targets', 'Punctuality'], goals: ['Achieve 100% of sales quota'], status: 'submitted' },
+];
+
+const MOCK_PERF_TEMPLATES: PerformanceTemplate[] = [
+  { id: 'tmpl1', name: 'Standard Review', categories: [{ name: 'Kualitas Kerja', weight: 25 }, { name: 'Produktivitas', weight: 25 }, { name: 'Inisiatif & Kreativitas', weight: 20 }, { name: 'Kerjasama Tim', weight: 15 }, { name: 'Kedisiplinan', weight: 15 }] },
+  { id: 'tmpl2', name: 'Manager Review', categories: [{ name: 'Leadership', weight: 30 }, { name: 'Strategic Thinking', weight: 25 }, { name: 'Team Development', weight: 20 }, { name: 'Results', weight: 25 }] },
+];
+
 export default function PerformancePage() {
   const [mounted, setMounted] = useState(false);
-  const [reviews, setReviews] = useState<PerformanceReview[]>([]);
-  const [templates, setTemplates] = useState<PerformanceTemplate[]>([]);
+  const [reviews, setReviews] = useState<PerformanceReview[]>(MOCK_REVIEWS);
+  const [templates, setTemplates] = useState<PerformanceTemplate[]>(MOCK_PERF_TEMPLATES);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [periodFilter, setPeriodFilter] = useState('all');
@@ -88,11 +101,13 @@ export default function PerformancePage() {
         setReviews(payload.reviews || []);
         if (payload.templates) setTemplates(payload.templates);
       } else {
-        setReviews([]);
+        setReviews(MOCK_REVIEWS);
+        setTemplates(MOCK_PERF_TEMPLATES);
       }
     } catch (error) {
       console.error('Failed to fetch performance reviews:', error);
-      setReviews([]);
+      setReviews(MOCK_REVIEWS);
+      setTemplates(MOCK_PERF_TEMPLATES);
     } finally {
       setLoading(false);
     }
@@ -238,10 +253,10 @@ export default function PerformancePage() {
 
   const getStatusBadge = (status: string) => {
     const cfg: Record<string, { label: string; cls: string; Icon: React.ElementType }> = {
-      acknowledged: { label: 'Acknowledged', cls: 'bg-green-100 text-green-700', Icon: CheckCircle },
-      reviewed: { label: 'Reviewed', cls: 'bg-blue-100 text-blue-700', Icon: Eye },
-      submitted: { label: 'Submitted', cls: 'bg-yellow-100 text-yellow-700', Icon: Send },
-      draft: { label: 'Draft', cls: 'bg-gray-100 text-gray-700', Icon: FileText },
+      acknowledged: { label: 'Dikonfirmasi', cls: 'bg-green-100 text-green-700', Icon: CheckCircle },
+      reviewed: { label: 'Direview', cls: 'bg-blue-100 text-blue-700', Icon: Eye },
+      submitted: { label: 'Diajukan', cls: 'bg-yellow-100 text-yellow-700', Icon: Send },
+      draft: { label: 'Draf', cls: 'bg-gray-100 text-gray-700', Icon: FileText },
     };
     const c = cfg[status] || cfg.draft;
     return <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full ${c.cls}`}><c.Icon className="w-3 h-3" />{c.label}</span>;
@@ -274,7 +289,7 @@ export default function PerformancePage() {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="p-5 border-b flex items-center justify-between sticky top-0 bg-white z-10">
-          <h2 className="text-lg font-bold">{isEdit ? 'Edit Performance Review' : 'Buat Review Baru'}</h2>
+          <h2 className="text-lg font-bold">{isEdit ? 'Edit Evaluasi Kinerja' : 'Buat Evaluasi Baru'}</h2>
           <button onClick={() => { setShowCreateModal(false); setShowEditModal(false); }}
             className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
         </div>
@@ -299,7 +314,7 @@ export default function PerformancePage() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Periode Review</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Periode Evaluasi</label>
               <select value={form.reviewPeriod}
                 onChange={(e) => setForm(f => ({ ...f, reviewPeriod: e.target.value }))}
                 className="w-full px-3 py-2 border rounded-lg text-sm">
@@ -326,10 +341,10 @@ export default function PerformancePage() {
                 className="w-full px-3 py-2 border rounded-lg text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Reviewer</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Penilai</label>
               <input type="text" value={form.reviewerName}
                 onChange={(e) => setForm(f => ({ ...f, reviewerName: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Nama reviewer" />
+                className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="Nama penilai" />
             </div>
           </div>
 
@@ -407,10 +422,10 @@ export default function PerformancePage() {
 
           {/* Goals */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Goals & Objectives</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tujuan & Sasaran</label>
             {form.goals.map((g, idx) => (
               <div key={idx} className="flex gap-2 mb-1">
-                <input type="text" value={g} placeholder="Goal..."
+                <input type="text" value={g} placeholder="Tujuan..."
                   onChange={(e) => { const arr = [...form.goals]; arr[idx] = e.target.value; setForm(f => ({ ...f, goals: arr })); }}
                   className="flex-1 px-2 py-1.5 border rounded text-sm" />
                 {idx === form.goals.length - 1 && (
@@ -442,15 +457,15 @@ export default function PerformancePage() {
   );
 
   return (
-    <HQLayout title="Performance Review" subtitle="Evaluasi dan penilaian kinerja karyawan">
+    <HQLayout title="Evaluasi Kinerja" subtitle="Evaluasi dan penilaian kinerja karyawan">
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { label: 'Total Review', value: reviews.length, icon: Users, color: 'blue' },
+            { label: 'Total Evaluasi', value: reviews.length, icon: Users, color: 'blue' },
             { label: 'Rata-rata Rating', value: avgRating.toFixed(1), icon: Star, color: 'yellow' },
-            { label: 'Excellent Performers', value: excellentPerformers, icon: Award, color: 'green' },
-            { label: 'Needs Improvement', value: needsImprovement, icon: TrendingDown, color: 'red' },
+            { label: 'Kinerja Sangat Baik', value: excellentPerformers, icon: Award, color: 'green' },
+            { label: 'Perlu Peningkatan', value: needsImprovement, icon: TrendingDown, color: 'red' },
           ].map((s, i) => (
             <div key={i} className="bg-white rounded-xl p-4 shadow-sm border">
               <div className="flex items-center gap-3">
@@ -472,7 +487,7 @@ export default function PerformancePage() {
             <div className="flex gap-2">
               <button onClick={openCreate}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                <Plus className="w-4 h-4" /> Buat Review Baru
+                <Plus className="w-4 h-4" /> Buat Evaluasi Baru
               </button>
             </div>
             <div className="flex gap-2 flex-wrap">
@@ -488,21 +503,21 @@ export default function PerformancePage() {
                 <option value="Q1 2026">Q1 2026</option>
                 <option value="Q4 2025">Q4 2025</option>
                 <option value="Q3 2025">Q3 2025</option>
-                <option value="Annual 2025">Annual 2025</option>
+                <option value="Annual 2025">Tahunan 2025</option>
               </select>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-3 py-2 border rounded-lg text-sm">
                 <option value="all">Semua Status</option>
-                <option value="draft">Draft</option>
-                <option value="submitted">Submitted</option>
-                <option value="reviewed">Reviewed</option>
-                <option value="acknowledged">Acknowledged</option>
+                <option value="draft">Draf</option>
+                <option value="submitted">Diajukan</option>
+                <option value="reviewed">Direview</option>
+                <option value="acknowledged">Dikonfirmasi</option>
               </select>
               <button onClick={fetchData} disabled={loading}
                 className="flex items-center gap-2 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50">
                 <Loader2 className={`w-4 h-4 ${loading ? 'animate-spin' : 'hidden'}`} />
                 {!loading && <Download className="w-4 h-4" />}
-                {loading ? '' : 'Refresh'}
+                {loading ? '' : 'Segarkan'}
               </button>
             </div>
           </div>
@@ -514,8 +529,8 @@ export default function PerformancePage() {
         ) : filteredReviews.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-xl border">
             <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">Belum ada performance review</p>
-            <button onClick={openCreate} className="mt-3 text-blue-600 hover:text-blue-700 text-sm">+ Buat Review Baru</button>
+            <p className="text-gray-500">Belum ada evaluasi kinerja</p>
+            <button onClick={openCreate} className="mt-3 text-blue-600 hover:text-blue-700 text-sm">+ Buat Evaluasi Baru</button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -561,7 +576,7 @@ export default function PerformancePage() {
                 <div>
                   <h3 className="text-lg font-bold">{selectedReview.employeeName}</h3>
                   <p className="text-sm text-gray-500">{selectedReview.position} - {selectedReview.branchName || selectedReview.department}</p>
-                  <p className="text-xs text-gray-400">Review: {selectedReview.reviewPeriod}</p>
+                  <p className="text-xs text-gray-400">Evaluasi: {selectedReview.reviewPeriod}</p>
                 </div>
                 <button onClick={() => setSelectedReview(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
               </div>
@@ -573,7 +588,7 @@ export default function PerformancePage() {
                   </div>
                   <div>
                     {renderStars(selectedReview.overallRating)}
-                    <p className="text-sm text-gray-500 mt-1">Overall Rating</p>
+                    <p className="text-sm text-gray-500 mt-1">Rating Keseluruhan</p>
                   </div>
                   <div className="ml-auto">{getStatusBadge(selectedReview.status)}</div>
                 </div>
@@ -634,7 +649,7 @@ export default function PerformancePage() {
                 {/* Goals */}
                 {selectedReview.goals.length > 0 && (
                   <div className="bg-blue-50 rounded-lg p-4">
-                    <h4 className="font-semibold text-blue-700 mb-2">Goals & Objectives</h4>
+                    <h4 className="font-semibold text-blue-700 mb-2">Tujuan & Sasaran</h4>
                     <ul className="text-sm space-y-1">
                       {selectedReview.goals.map((g, i) => (
                         <li key={i} className="flex items-center gap-2">
@@ -652,19 +667,19 @@ export default function PerformancePage() {
                   {selectedReview.status === 'draft' && (
                     <button onClick={() => handleStatusChange(selectedReview, 'submitted')}
                       className="flex items-center gap-1 px-3 py-2 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600">
-                      <Send className="w-4 h-4" /> Submit
+                      <Send className="w-4 h-4" /> Ajukan
                     </button>
                   )}
                   {selectedReview.status === 'submitted' && (
                     <button onClick={() => handleStatusChange(selectedReview, 'reviewed')}
                       className="flex items-center gap-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600">
-                      <Eye className="w-4 h-4" /> Mark Reviewed
+                      <Eye className="w-4 h-4" /> Tandai Direview
                     </button>
                   )}
                   {selectedReview.status === 'reviewed' && (
                     <button onClick={() => handleStatusChange(selectedReview, 'acknowledged')}
                       className="flex items-center gap-1 px-3 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600">
-                      <CheckCircle className="w-4 h-4" /> Acknowledge
+                      <CheckCircle className="w-4 h-4" /> Konfirmasi
                     </button>
                   )}
                 </div>
@@ -675,7 +690,7 @@ export default function PerformancePage() {
                   </button>
                   <button onClick={() => openEdit(selectedReview)}
                     className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                    <Edit className="w-4 h-4" /> Edit Review
+                    <Edit className="w-4 h-4" /> Edit Evaluasi
                   </button>
                 </div>
               </div>

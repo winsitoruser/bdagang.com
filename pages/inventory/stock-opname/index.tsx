@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ interface StockOpname {
 const StockOpnameListPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t, formatCurrency, formatDate } = useTranslation();
   const [stockOpnames, setStockOpnames] = useState<StockOpname[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
@@ -65,11 +67,11 @@ const StockOpnameListPage: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const badges: any = {
-      draft: { color: 'bg-gray-100 text-gray-700', icon: FaClock, label: 'Draft' },
-      in_progress: { color: 'bg-blue-100 text-blue-700', icon: FaClock, label: 'Sedang Berjalan' },
-      completed: { color: 'bg-green-100 text-green-700', icon: FaCheckCircle, label: 'Selesai' },
-      approved: { color: 'bg-purple-100 text-purple-700', icon: FaCheckCircle, label: 'Disetujui' },
-      posted: { color: 'bg-indigo-100 text-indigo-700', icon: FaCheckCircle, label: 'Posted' }
+      draft: { color: 'bg-gray-100 text-gray-700', icon: FaClock, label: t('inventory.stockOpname.draft') },
+      in_progress: { color: 'bg-blue-100 text-blue-700', icon: FaClock, label: t('inventory.stockOpname.inProgressStatus') },
+      completed: { color: 'bg-green-100 text-green-700', icon: FaCheckCircle, label: t('inventory.stockOpname.completedStatus') },
+      approved: { color: 'bg-purple-100 text-purple-700', icon: FaCheckCircle, label: t('inventory.stockOpname.approved') },
+      posted: { color: 'bg-indigo-100 text-indigo-700', icon: FaCheckCircle, label: t('inventory.stockOpname.posted') }
     };
     const badge = badges[status] || badges.draft;
     const Icon = badge.icon;
@@ -81,13 +83,6 @@ const StockOpnameListPage: React.FC = () => {
     );
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const filteredOpnames = stockOpnames.filter(opname => {
     if (filter === 'all') return true;
@@ -97,7 +92,7 @@ const StockOpnameListPage: React.FC = () => {
   return (
     <DashboardLayout>
       <Head>
-        <title>Stock Opname - Manajemen Inventory</title>
+        <title>{t('inventory.stockOpname.pageTitle')}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6">
@@ -108,23 +103,23 @@ const StockOpnameListPage: React.FC = () => {
               <Link href="/inventory">
                 <Button variant="outline" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30">
                   <FaWarehouse className="mr-2" />
-                  Inventory
+                  {t('inventory.pageTitle')}
                 </Button>
               </Link>
               <div>
                 <h1 className="text-3xl font-bold mb-2 flex items-center">
                   <FaClipboardList className="mr-3" />
-                  Stock Opname
+                  {t('inventory.stockOpname.title')}
                 </h1>
                 <p className="text-indigo-100">
-                  Manajemen penghitungan fisik stok barang
+                  {t('inventory.stockOpname.subtitle')}
                 </p>
               </div>
             </div>
             <Link href="/inventory/stock-opname/create">
               <Button className="bg-white text-indigo-600 hover:bg-indigo-50 font-semibold px-6 py-3">
                 <FaPlus className="mr-2" />
-                Buat Stock Opname Baru
+                {t('inventory.stockOpname.createNew')}
               </Button>
             </Link>
           </div>
@@ -134,11 +129,11 @@ const StockOpnameListPage: React.FC = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
           <div className="flex space-x-2">
             {[
-              { value: 'all', label: 'Semua' },
-              { value: 'draft', label: 'Draft' },
-              { value: 'in_progress', label: 'Sedang Berjalan' },
-              { value: 'completed', label: 'Selesai' },
-              { value: 'approved', label: 'Disetujui' }
+              { value: 'all', label: t('inventory.stockOpname.all') },
+              { value: 'draft', label: t('inventory.stockOpname.draft') },
+              { value: 'in_progress', label: t('inventory.stockOpname.inProgressStatus') },
+              { value: 'completed', label: t('inventory.stockOpname.completedStatus') },
+              { value: 'approved', label: t('inventory.stockOpname.approved') }
             ].map(tab => (
               <Button
                 key={tab.value}
@@ -156,22 +151,22 @@ const StockOpnameListPage: React.FC = () => {
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Memuat data...</p>
+            <p className="mt-4 text-gray-600">{t('common.loading')}</p>
           </div>
         ) : filteredOpnames.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
               <FaClipboardList className="mx-auto text-6xl text-gray-300 mb-4" />
               <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                Belum Ada Stock Opname
+                {t('inventory.stockOpname.noData')}
               </h3>
               <p className="text-gray-500 mb-6">
-                Mulai dengan membuat stock opname baru
+                {t('inventory.stockOpname.noDataDesc')}
               </p>
               <Link href="/inventory/stock-opname/create">
                 <Button className="bg-indigo-600 hover:bg-indigo-700">
                   <FaPlus className="mr-2" />
-                  Buat Stock Opname Baru
+                  {t('inventory.stockOpname.createNew')}
                 </Button>
               </Link>
             </CardContent>
@@ -198,25 +193,25 @@ const StockOpnameListPage: React.FC = () => {
                       
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div>
-                          <p className="text-xs text-gray-500">Gudang</p>
+                          <p className="text-xs text-gray-500">{t('inventory.stockOpname.warehouse')}</p>
                           <p className="font-semibold text-gray-900">
                             {opname.warehouse?.name || '-'}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Tanggal</p>
+                          <p className="text-xs text-gray-500">{t('inventory.stockOpname.date')}</p>
                           <p className="font-semibold text-gray-900">
-                            {new Date(opname.scheduled_date).toLocaleDateString('id-ID')}
+                            {formatDate(opname.scheduled_date)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Progress</p>
+                          <p className="text-xs text-gray-500">{t('inventory.stockOpname.progress')}</p>
                           <p className="font-semibold text-gray-900">
                             {opname.counted_items}/{opname.total_items} items
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Total Variance</p>
+                          <p className="text-xs text-gray-500">{t('inventory.stockOpname.totalVariance')}</p>
                           <p className={`font-semibold ${opname.total_variance_value < 0 ? 'text-red-600' : 'text-green-600'}`}>
                             {formatCurrency(opname.total_variance_value)}
                           </p>
@@ -224,8 +219,8 @@ const StockOpnameListPage: React.FC = () => {
                       </div>
 
                       <div className="flex items-center text-sm text-gray-600">
-                        <span className="mr-4">Dilakukan oleh: {opname.performed_by}</span>
-                        <span>Dibuat: {new Date(opname.created_at).toLocaleDateString('id-ID')}</span>
+                        <span className="mr-4">{t('inventory.stockOpname.performedBy')}: {opname.performed_by}</span>
+                        <span>{t('inventory.stockOpname.createdAt')}: {formatDate(opname.created_at)}</span>
                       </div>
                     </div>
 
@@ -233,7 +228,7 @@ const StockOpnameListPage: React.FC = () => {
                       <Link href={`/inventory/stock-opname/${opname.id}`}>
                         <Button variant="outline" size="sm">
                           <FaEye className="mr-2" />
-                          Detail
+                          {t('inventory.stockOpname.detail')}
                         </Button>
                       </Link>
                       <Button variant="outline" size="sm">

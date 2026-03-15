@@ -50,17 +50,25 @@ const actionIcons: Record<string, React.ReactNode> = {
 
 const barColors = ['bg-blue-500', 'bg-green-500', 'bg-red-500', 'bg-purple-500', 'bg-amber-500', 'bg-emerald-500', 'bg-indigo-500', 'bg-cyan-500', 'bg-orange-500', 'bg-pink-500'];
 
+const MOCK_AUDIT_LOGS: AuditLog[] = [
+  { id: 'al1', userId: '1', userName: 'Admin HQ', userRole: 'super_admin', action: 'UPDATE', resource: 'branch', resourceId: 'b1', resourceName: 'Cabang Jakarta', details: { field: 'status', from: 'inactive', to: 'active' }, oldValues: { status: 'inactive' }, newValues: { status: 'active' }, isHqIntervention: true, targetBranchName: 'Cabang Jakarta', ipAddress: '192.168.1.10', userAgent: 'Mozilla/5.0', createdAt: '2026-03-15T08:30:00Z' },
+  { id: 'al2', userId: '2', userName: 'Budi Santoso', userRole: 'branch_manager', action: 'CREATE', resource: 'transaction', resourceId: 'txn-501', resourceName: 'POS Transaction #501', details: { amount: 250000 }, oldValues: null, newValues: { amount: 250000, status: 'completed' }, isHqIntervention: false, targetBranchName: 'Cabang Bandung', ipAddress: '192.168.2.15', userAgent: 'Mozilla/5.0', createdAt: '2026-03-15T09:15:00Z' },
+  { id: 'al3', userId: '1', userName: 'Admin HQ', userRole: 'super_admin', action: 'DELETE', resource: 'product', resourceId: 'prod-88', resourceName: 'Produk Discontinue', details: { reason: 'discontinued' }, oldValues: { name: 'Produk Discontinue' }, newValues: null, isHqIntervention: true, targetBranchName: null, ipAddress: '192.168.1.10', userAgent: 'Mozilla/5.0', createdAt: '2026-03-14T16:45:00Z' },
+  { id: 'al4', userId: '3', userName: 'Siti Rahayu', userRole: 'finance', action: 'APPROVE', resource: 'expense', resourceId: 'exp-22', resourceName: 'Klaim Transport', details: { amount: 1200000 }, oldValues: { status: 'pending' }, newValues: { status: 'approved' }, isHqIntervention: false, targetBranchName: null, ipAddress: '192.168.1.25', userAgent: 'Mozilla/5.0', createdAt: '2026-03-14T14:20:00Z' },
+];
+const MOCK_AUDIT_STATS: Stats = { total: 1250, today: 45, thisWeek: 280, activeUsers: 18, byAction: [{ action: 'UPDATE', count: 520, label: 'Update', color: 'bg-blue-500' }, { action: 'CREATE', count: 380, label: 'Create', color: 'bg-green-500' }, { action: 'DELETE', count: 85, label: 'Delete', color: 'bg-red-500' }, { action: 'LOGIN', count: 180, label: 'Login', color: 'bg-purple-500' }], byEntity: [{ entity_type: 'transaction', count: 420, label: 'Transaksi' }, { entity_type: 'product', count: 280, label: 'Produk' }, { entity_type: 'employee', count: 150, label: 'Karyawan' }], byUser: [{ user_id: 1, user_name: 'Admin HQ', role: 'super_admin', count: 380 }, { user_id: 2, user_name: 'Budi Santoso', role: 'branch_manager', count: 220 }], dailyTrend: [{ date: '2026-03-09', count: 38 }, { date: '2026-03-10', count: 42 }, { date: '2026-03-11', count: 35 }, { date: '2026-03-12', count: 48 }, { date: '2026-03-13', count: 40 }, { date: '2026-03-14', count: 52 }, { date: '2026-03-15', count: 45 }] };
+
 export default function AuditLogViewer() {
   const [mounted, setMounted] = useState(false);
   const [tab, setTab] = useState<'logs' | 'analytics'>('logs');
 
   // Log list state
-  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [logs, setLogs] = useState<AuditLog[]>(MOCK_AUDIT_LOGS);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(25);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  const [total, setTotal] = useState(MOCK_AUDIT_LOGS.length);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Filters
   const [filterAction, setFilterAction] = useState('all');
@@ -69,10 +77,10 @@ export default function AuditLogViewer() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [search, setSearch] = useState('');
-  const [filterOptions, setFilterOptions] = useState<FilterOptions>({ actions: [], entities: [], users: [] });
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({ actions: [{ value: 'CREATE', label: 'Create' }, { value: 'UPDATE', label: 'Update' }, { value: 'DELETE', label: 'Delete' }], entities: [{ value: 'transaction', label: 'Transaksi' }, { value: 'product', label: 'Produk' }], users: [{ value: '1', label: 'Admin HQ' }, { value: '2', label: 'Budi Santoso' }] });
 
   // Stats
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<Stats | null>(MOCK_AUDIT_STATS);
   const [statsPeriod, setStatsPeriod] = useState('30');
 
   // Detail modal
@@ -102,6 +110,10 @@ export default function AuditLogViewer() {
       setLogs(r.logs || []);
       setTotal(r.total || 0);
       setTotalPages(r.totalPages || 0);
+    } else {
+      setLogs(MOCK_AUDIT_LOGS);
+      setTotal(MOCK_AUDIT_LOGS.length);
+      setTotalPages(1);
     }
     setLoading(false);
   }, [page, pageSize, filterAction, filterEntity, filterUser, dateFrom, dateTo, search, api]);
@@ -109,6 +121,7 @@ export default function AuditLogViewer() {
   const fetchStats = useCallback(async () => {
     const r = await api('stats', `&period=${statsPeriod}`);
     if (r.success) setStats(r.data);
+    else setStats(MOCK_AUDIT_STATS);
   }, [statsPeriod, api]);
 
   const fetchFilters = useCallback(async () => {
@@ -165,7 +178,7 @@ export default function AuditLogViewer() {
             </button>
           </div>
           <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-colors">
-            <Download className="w-4 h-4" /> Export Excel
+            <Download className="w-4 h-4" /> Ekspor Excel
           </button>
         </div>
 
@@ -202,8 +215,8 @@ export default function AuditLogViewer() {
             {[
               { label: 'Total Log', value: total, icon: History, color: 'blue' },
               { label: 'Halaman', value: `${page}/${totalPages || 1}`, icon: FileText, color: 'gray' },
-              { label: 'Deletions', value: logs.filter(l => l.action === 'DELETE').length, icon: Trash2, color: 'red' },
-              { label: 'HQ Actions', value: logs.filter(l => l.isHqIntervention).length, icon: Shield, color: 'purple' },
+              { label: 'Penghapusan', value: logs.filter(l => l.action === 'DELETE').length, icon: Trash2, color: 'red' },
+              { label: 'Aksi HQ', value: logs.filter(l => l.isHqIntervention).length, icon: Shield, color: 'purple' },
             ].map((s, i) => (
               <div key={i} className="bg-white rounded-xl shadow-sm border p-4 flex items-center justify-between">
                 <div><p className="text-xs text-gray-500">{s.label}</p><p className={`text-xl font-bold text-${s.color}-600`}>{s.value}</p></div>

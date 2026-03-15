@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from '@/lib/i18n';
 import {
   FaExclamationTriangle, FaExclamationCircle, FaInfoCircle,
   FaCalendarAlt, FaBoxes, FaDollarSign, FaLightbulb,
@@ -69,6 +70,7 @@ interface InventoryAlertsProps {
 }
 
 const InventoryAlerts: React.FC<InventoryAlertsProps> = ({ showInDashboard = false }) => {
+  const { t, formatCurrency } = useTranslation();
   const [expandedSection, setExpandedSection] = useState<string | null>('expiry');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -362,13 +364,6 @@ const InventoryAlerts: React.FC<InventoryAlertsProps> = ({ showInDashboard = fal
     }
   ];
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const getSeverityBadge = (severity: string) => {
     const config = {

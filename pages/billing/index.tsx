@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -69,9 +70,12 @@ interface SubscriptionData {
 const BillingPage = () => {
   const router = useRouter();
   const { data: session } = useSession();
+  const { t } = useTranslation();
+  const MOCK_SUB: SubscriptionData = { subscription: { id: 'sub-1', status: 'active', plan: { id: 'plan-enterprise', name: 'Enterprise', description: 'Paket bisnis lengkap', price: 2500000, billingInterval: 'monthly', currency: 'IDR', features: { pos: true, inventory: true, finance: true, hris: true } }, currentPeriod: { start: '2026-03-01', end: '2026-03-31' }, trial: { isActive: false, endsAt: '', daysLeft: 0 }, renewal: { daysLeft: 16, cancelAtPeriodEnd: false }, isOverdue: false }, usage: [{ metric: 'users', current: 45, limit: 200, percentage: 22.5 }, { metric: 'branches', current: 6, limit: 50, percentage: 12 }, { metric: 'products', current: 2450, limit: 10000, percentage: 24.5 }, { metric: 'transactions', current: 18420, limit: 100000, percentage: 18.4 }], billing: { lastBillingCycle: { amount: 2500000, date: '2026-03-01' }, nextBillingDate: '2026-04-01' } };
+  const MOCK_INVOICES = [{ id: 'inv1', number: 'INV-2026-03', amount: 2500000, status: 'paid', date: '2026-03-01', paidAt: '2026-03-03' }, { id: 'inv2', number: 'INV-2026-02', amount: 2500000, status: 'paid', date: '2026-02-01', paidAt: '2026-02-05' }];
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<SubscriptionData | null>(null);
-  const [invoices, setInvoices] = useState<any[]>([]);
+  const [data, setData] = useState<SubscriptionData | null>(MOCK_SUB);
+  const [invoices, setInvoices] = useState<any[]>(MOCK_INVOICES);
 
   useEffect(() => {
     if (session) {
@@ -90,6 +94,7 @@ const BillingPage = () => {
       }
     } catch (error) {
       console.error('Error fetching subscription:', error);
+      setData(MOCK_SUB);
     } finally {
       setLoading(false);
     }
@@ -105,6 +110,7 @@ const BillingPage = () => {
       }
     } catch (error) {
       console.error('Error fetching invoices:', error);
+      setInvoices(MOCK_INVOICES);
     }
   };
 

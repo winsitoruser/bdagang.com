@@ -358,14 +358,14 @@ export default function PartnerDetailPage() {
               ) : (
                 <div className="text-center py-8">
                   <Store className="h-12 w-12 text-gray-300 mx-auto" />
-                  <p className="text-sm text-gray-500 mt-2">No outlets found</p>
+                  <p className="text-sm text-gray-500 mt-2">Tidak ada outlet ditemukan</p>
                 </div>
               )}
             </div>
 
             {/* Subscriptions */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Subscriptions</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Langganan</h2>
 
               {partner?.subscriptions && partner.subscriptions.length > 0 ? (
                 <div className="space-y-3">
@@ -388,7 +388,7 @@ export default function PartnerDetailPage() {
               ) : (
                 <div className="text-center py-8">
                   <Package className="h-12 w-12 text-gray-300 mx-auto" />
-                  <p className="text-sm text-gray-500 mt-2">No subscriptions found</p>
+                  <p className="text-sm text-gray-500 mt-2">Tidak ada langganan ditemukan</p>
                 </div>
               )}
             </div>
@@ -398,7 +398,7 @@ export default function PartnerDetailPage() {
           <div className="space-y-6">
             {/* Quick Stats */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Quick Stats</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Statistik Cepat</h3>
               
               <div className="space-y-4">
                 <div>
@@ -407,7 +407,7 @@ export default function PartnerDetailPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-gray-500">Active Subscriptions</p>
+                  <p className="text-xs text-gray-500">Langganan Aktif</p>
                   <p className="text-2xl font-bold text-gray-900">
                     {partner?.subscriptions?.filter(s => s.status === 'active').length || 0}
                   </p>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { NextPage } from "next";
 import { Breadcrumbs } from "@/components/common/breadcrumbs";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -90,6 +91,7 @@ const ReceivePage: NextPage<ReceivePageProps> = () => {
   // Service - using the singleton instance with fallback
   const [receiptService, setReceiptService] = useState<any>(null);
   const { toast } = useToast();
+  const { t } = useTranslation();
   
   // Initialize service on component mount
   useEffect(() => {

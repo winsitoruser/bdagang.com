@@ -2,6 +2,7 @@ import { NextPage } from "next";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import FinanceLayout from "@/components/layouts/finance-layout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import {
 } from "react-icons/fa";
 
 const PPh21Page: NextPage = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("overview");
   const [pph21Data, setPph21Data] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);

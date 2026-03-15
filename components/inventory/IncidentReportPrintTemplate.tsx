@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '@/lib/i18n';
 
 interface IncidentReportPrintTemplateProps {
   incident: any;
@@ -18,13 +19,7 @@ const IncidentReportPrintTemplate: React.FC<IncidentReportPrintTemplateProps> = 
     phone: '021-12345678'
   }
 }) => {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
+  const { formatCurrency } = useTranslation();
 
   const formatDate = (date: string) => {
     if (!date) return '-';

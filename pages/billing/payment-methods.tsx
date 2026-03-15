@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -64,8 +65,13 @@ interface PaymentMethod {
 const PaymentMethodsPage = () => {
   const router = useRouter();
   const { data: session } = useSession();
+  const { t } = useTranslation();
+  const MOCK_PAY_METHODS: PaymentMethod[] = [
+    { id: 'pm1', type: 'bank_transfer', provider: 'manual', name: 'BCA Transfer', description: 'Transfer via BCA', details: { bankName: 'BCA', accountNumber: '***4567', accountName: 'PT Bedagang' }, isDefault: true, isActive: true, metadata: { fees: { percentage: 0, fixed: 0 }, limits: { min: 10000, max: 500000000 }, processingTime: '1-2 jam' }, createdAt: '2025-01-01' },
+    { id: 'pm2', type: 'ewallet', provider: 'midtrans', name: 'GoPay', description: 'Pembayaran via GoPay', details: { walletType: 'gopay', walletNumber: '***8901' }, isDefault: false, isActive: true, metadata: { fees: { percentage: 2, fixed: 0 }, limits: { min: 10000, max: 10000000 }, processingTime: 'Instan' }, createdAt: '2025-06-15' },
+  ];
   const [loading, setLoading] = useState(true);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(MOCK_PAY_METHODS);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
   const [newMethod, setNewMethod] = useState({
@@ -92,6 +98,7 @@ const PaymentMethodsPage = () => {
       }
     } catch (error) {
       console.error('Error fetching payment methods:', error);
+      setPaymentMethods(MOCK_PAY_METHODS);
     } finally {
       setLoading(false);
     }

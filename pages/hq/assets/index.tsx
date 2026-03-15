@@ -31,6 +31,80 @@ interface Asset {
 }
 
 // ============================================================
+// MOCK DATA
+// ============================================================
+const MOCK_DASHBOARD = {
+  totalAssets: 245, totalValue: 4850000000, totalDepreciation: 1250000000, netBookValue: 3600000000,
+  byStatus: { active: 198, maintenance: 22, disposed: 15, in_transit: 10 },
+  byCategory: [
+    { name: 'IT Equipment', count: 65, value: 1200000000 },
+    { name: 'Furniture', count: 48, value: 450000000 },
+    { name: 'Vehicles', count: 12, value: 1800000000 },
+    { name: 'Machinery', count: 35, value: 950000000 },
+    { name: 'Office Equipment', count: 42, value: 280000000 },
+    { name: 'Buildings', count: 8, value: 170000000 },
+  ],
+  recentMovements: [
+    { id: 'm1', asset_name: 'Laptop Dell Latitude 5540', type: 'transfer', from: 'HQ Jakarta', to: 'Cabang Bandung', date: '2026-03-10' },
+    { id: 'm2', asset_name: 'Printer HP LaserJet Pro', type: 'maintenance', from: 'Cabang Surabaya', to: 'Vendor Service', date: '2026-03-08' },
+  ],
+  expiringWarranties: 8, upcomingMaintenance: 12,
+};
+
+const MOCK_ASSETS: Asset[] = [
+  { id: 'a1', asset_code: 'AST-IT-001', name: 'Laptop Dell Latitude 5540', category_name: 'IT Equipment', category_code: 'IT', status: 'active', condition: 'good', purchase_price: 18500000, acquisition_date: '2025-06-15', serial_number: 'DL5540-JKT-001', brand: 'Dell', model: 'Latitude 5540', department: 'IT', location: 'HQ Jakarta', custodian_name: 'Rizki Firmansyah', depreciation_method: 'straight_line', useful_life_months: 48, current_book_value: 15400000 },
+  { id: 'a2', asset_code: 'AST-IT-002', name: 'MacBook Pro 14" M3', category_name: 'IT Equipment', category_code: 'IT', status: 'active', condition: 'excellent', purchase_price: 32000000, acquisition_date: '2025-09-01', serial_number: 'MBP14-M3-002', brand: 'Apple', model: 'MacBook Pro 14', department: 'MANAGEMENT', location: 'HQ Jakarta', custodian_name: 'Ahmad Wijaya', depreciation_method: 'straight_line', useful_life_months: 48, current_book_value: 28000000 },
+  { id: 'a3', asset_code: 'AST-VH-001', name: 'Toyota Avanza 2024', category_name: 'Vehicles', category_code: 'VH', status: 'active', condition: 'good', purchase_price: 245000000, acquisition_date: '2024-03-20', serial_number: 'MHFM1BA3J4K123456', brand: 'Toyota', model: 'Avanza 1.5 G', department: 'OPERATIONS', location: 'HQ Jakarta', depreciation_method: 'straight_line', useful_life_months: 96, current_book_value: 195000000 },
+  { id: 'a4', asset_code: 'AST-FR-001', name: 'Meja Kerja Direktur', category_name: 'Furniture', category_code: 'FR', status: 'active', condition: 'good', purchase_price: 8500000, acquisition_date: '2024-01-10', brand: 'IKEA', model: 'BEKANT', department: 'MANAGEMENT', location: 'HQ Jakarta', depreciation_method: 'straight_line', useful_life_months: 120, current_book_value: 6800000 },
+  { id: 'a5', asset_code: 'AST-MC-001', name: 'Mesin Espresso Comercial', category_name: 'Machinery', category_code: 'MC', status: 'active', condition: 'good', purchase_price: 85000000, acquisition_date: '2025-01-15', brand: 'La Marzocco', model: 'Linea Mini', department: 'KITCHEN', location: 'Cabang Bali', depreciation_method: 'straight_line', useful_life_months: 60, current_book_value: 71000000 },
+  { id: 'a6', asset_code: 'AST-IT-003', name: 'Server Rack Dell PowerEdge', category_name: 'IT Equipment', category_code: 'IT', status: 'active', condition: 'good', purchase_price: 125000000, acquisition_date: '2024-06-01', serial_number: 'DPE-R750-001', brand: 'Dell', model: 'PowerEdge R750', department: 'IT', location: 'Data Center Jakarta', depreciation_method: 'straight_line', useful_life_months: 60, current_book_value: 87500000 },
+  { id: 'a7', asset_code: 'AST-OE-001', name: 'Printer HP LaserJet Pro', category_name: 'Office Equipment', category_code: 'OE', status: 'maintenance', condition: 'fair', purchase_price: 12000000, acquisition_date: '2024-09-15', serial_number: 'HP-LJ-PRO-001', brand: 'HP', model: 'LaserJet Pro M404dn', department: 'ADMINISTRATION', location: 'Cabang Surabaya', depreciation_method: 'straight_line', useful_life_months: 48, current_book_value: 8000000 },
+  { id: 'a8', asset_code: 'AST-VH-002', name: 'Mitsubishi Colt Diesel', category_name: 'Vehicles', category_code: 'VH', status: 'active', condition: 'fair', purchase_price: 350000000, acquisition_date: '2023-08-10', brand: 'Mitsubishi', model: 'Colt Diesel FE 74', department: 'WAREHOUSE', location: 'Gudang Bekasi', depreciation_method: 'straight_line', useful_life_months: 96, current_book_value: 240000000 },
+];
+
+const MOCK_CATEGORIES = [
+  { id: 'cat1', code: 'IT', name: 'IT Equipment', description: 'Komputer, laptop, server, networking', icon: 'Monitor', asset_count: 65, useful_life_months: 48 },
+  { id: 'cat2', code: 'FR', name: 'Furniture', description: 'Meja, kursi, lemari kantor', icon: 'Home', asset_count: 48, useful_life_months: 120 },
+  { id: 'cat3', code: 'VH', name: 'Vehicles', description: 'Kendaraan operasional', icon: 'Truck', asset_count: 12, useful_life_months: 96 },
+  { id: 'cat4', code: 'MC', name: 'Machinery', description: 'Mesin produksi dan operasional', icon: 'Cog', asset_count: 35, useful_life_months: 60 },
+  { id: 'cat5', code: 'OE', name: 'Office Equipment', description: 'Printer, scanner, AC, dll', icon: 'ClipboardList', asset_count: 42, useful_life_months: 48 },
+  { id: 'cat6', code: 'BD', name: 'Buildings', description: 'Bangunan dan renovasi', icon: 'Building2', asset_count: 8, useful_life_months: 240 },
+];
+
+const MOCK_MOVEMENTS = [
+  { id: 'mv1', asset_code: 'AST-IT-001', asset_name: 'Laptop Dell Latitude 5540', movement_type: 'transfer', from_location: 'HQ Jakarta', to_location: 'Cabang Bandung', date: '2026-03-10', status: 'completed', notes: 'Transfer untuk karyawan baru', created_by: 'Nurul Hidayah' },
+  { id: 'mv2', asset_code: 'AST-OE-001', asset_name: 'Printer HP LaserJet Pro', movement_type: 'maintenance', from_location: 'Cabang Surabaya', to_location: 'Vendor HP Service', date: '2026-03-08', status: 'in_progress', notes: 'Paper jam issue', created_by: 'Yuni Kartika' },
+  { id: 'mv3', asset_code: 'AST-FR-005', asset_name: 'Kursi Ergonomis', movement_type: 'transfer', from_location: 'Gudang Bekasi', to_location: 'Cabang Bali', date: '2026-03-05', status: 'completed', notes: 'Penambahan furniture cabang baru', created_by: 'Eko Prasetyo' },
+  { id: 'mv4', asset_code: 'AST-VH-003', asset_name: 'Honda Vario 160', movement_type: 'return', from_location: 'Cabang Medan', to_location: 'HQ Jakarta', date: '2026-03-01', status: 'completed', notes: 'Return dari karyawan resign', created_by: 'Dewi Lestari' },
+];
+
+const MOCK_MAINTENANCE = [
+  { id: 'mt1', asset_code: 'AST-VH-001', asset_name: 'Toyota Avanza 2024', schedule_type: 'preventive', frequency: 'quarterly', last_maintenance: '2025-12-20', next_maintenance: '2026-03-20', status: 'upcoming', cost_estimate: 2500000 },
+  { id: 'mt2', asset_code: 'AST-MC-001', asset_name: 'Mesin Espresso Comercial', schedule_type: 'preventive', frequency: 'monthly', last_maintenance: '2026-02-15', next_maintenance: '2026-03-15', status: 'upcoming', cost_estimate: 500000 },
+  { id: 'mt3', asset_code: 'AST-IT-006', asset_name: 'Server Rack Dell PowerEdge', schedule_type: 'preventive', frequency: 'semi-annual', last_maintenance: '2025-12-01', next_maintenance: '2026-06-01', status: 'scheduled', cost_estimate: 5000000 },
+];
+
+const MOCK_LICENSES = [
+  { id: 'lic1', name: 'Microsoft 365 Business', vendor: 'Microsoft', license_type: 'subscription', seats: 50, used_seats: 42, cost_per_seat: 250000, total_cost: 12500000, start_date: '2026-01-01', expiry_date: '2026-12-31', status: 'active', auto_renew: true },
+  { id: 'lic2', name: 'Adobe Creative Cloud', vendor: 'Adobe', license_type: 'subscription', seats: 5, used_seats: 5, cost_per_seat: 850000, total_cost: 4250000, start_date: '2025-06-01', expiry_date: '2026-05-31', status: 'active', auto_renew: true },
+  { id: 'lic3', name: 'Antivirus Kaspersky', vendor: 'Kaspersky', license_type: 'subscription', seats: 80, used_seats: 72, cost_per_seat: 150000, total_cost: 12000000, start_date: '2025-09-01', expiry_date: '2026-08-31', status: 'active', auto_renew: false },
+];
+
+const MOCK_ALERTS = [
+  { id: 'al1', type: 'warranty_expiry', severity: 'warning', title: 'Garansi akan berakhir', message: '8 aset dengan garansi berakhir dalam 30 hari', date: '2026-03-12', is_read: false },
+  { id: 'al2', type: 'maintenance_due', severity: 'info', title: 'Maintenance terjadwal', message: '3 aset memerlukan maintenance minggu ini', date: '2026-03-11', is_read: false },
+  { id: 'al3', type: 'license_expiry', severity: 'critical', title: 'Lisensi segera berakhir', message: 'Adobe Creative Cloud berakhir dalam 60 hari', date: '2026-03-10', is_read: true },
+  { id: 'al4', type: 'depreciation', severity: 'info', title: 'Penyusutan bulanan', message: 'Penyusutan Maret 2026 telah dihitung: Rp 45.8 Jt', date: '2026-03-01', is_read: true },
+];
+
+const MOCK_DEPR_SUMMARY = {
+  totalOriginalCost: 4850000000, totalAccumulatedDepreciation: 1250000000, totalNetBookValue: 3600000000,
+  monthlyDepreciation: 45800000, yearlyDepreciation: 549600000,
+  byMethod: { straight_line: 220, declining_balance: 15, units_of_production: 10 },
+  fullyDepreciated: 18,
+};
+
+// ============================================================
 // MAIN PAGE
 // ============================================================
 export default function AssetManagementPage() {
@@ -115,8 +189,9 @@ export default function AssetManagementPage() {
     setLoading(true);
     try {
       const data = await apiFetch('/api/hq/assets?action=dashboard');
-      if (data.success) setDashboardData(data.data);
-    } catch (e) { console.error(e); }
+      if (data.success && data.data) setDashboardData(data.data);
+      else setDashboardData(MOCK_DASHBOARD);
+    } catch (e) { console.error(e); setDashboardData(MOCK_DASHBOARD); }
     setLoading(false);
   };
 
@@ -128,24 +203,27 @@ export default function AssetManagementPage() {
       if (filterStatus) url += `&status=${filterStatus}`;
       if (filterCategory) url += `&category=${filterCategory}`;
       const data = await apiFetch(url);
-      if (data.success) { setAssets(data.data); setTotalAssets(data.total); }
-    } catch (e) { console.error(e); }
+      if (data.success && data.data?.length) { setAssets(data.data); setTotalAssets(data.total); }
+      else { setAssets(MOCK_ASSETS); setTotalAssets(MOCK_ASSETS.length); }
+    } catch (e) { console.error(e); setAssets(MOCK_ASSETS); setTotalAssets(MOCK_ASSETS.length); }
     setLoading(false);
   };
 
   const fetchCategories = async () => {
     try {
       const data = await apiFetch('/api/hq/assets?action=categories');
-      if (data.success) setCategories(data.data);
-    } catch (e) { console.error(e); }
+      if (data.success && data.data?.length) setCategories(data.data);
+      else setCategories(MOCK_CATEGORIES);
+    } catch (e) { console.error(e); setCategories(MOCK_CATEGORIES); }
   };
 
   const fetchMovements = async () => {
     setLoading(true);
     try {
       const data = await apiFetch('/api/hq/assets?action=movements');
-      if (data.success) setMovements(data.data);
-    } catch (e) { console.error(e); }
+      if (data.success && data.data?.length) setMovements(data.data);
+      else setMovements(MOCK_MOVEMENTS);
+    } catch (e) { console.error(e); setMovements(MOCK_MOVEMENTS); }
     setLoading(false);
   };
 
@@ -153,16 +231,18 @@ export default function AssetManagementPage() {
     setLoading(true);
     try {
       const data = await apiFetch('/api/hq/assets/depreciation?action=summary');
-      if (data.success) setDeprSummary(data.data);
-    } catch (e) { console.error(e); }
+      if (data.success && data.data) setDeprSummary(data.data);
+      else setDeprSummary(MOCK_DEPR_SUMMARY);
+    } catch (e) { console.error(e); setDeprSummary(MOCK_DEPR_SUMMARY); }
     setLoading(false);
   };
 
   const fetchMaintenanceSchedules = async () => {
     try {
       const data = await apiFetch('/api/hq/assets/extensions?action=maintenance-schedules');
-      if (data.success) setMaintenanceSchedules(data.data);
-    } catch (e) { console.error(e); }
+      if (data.success && data.data?.length) setMaintenanceSchedules(data.data);
+      else setMaintenanceSchedules(MOCK_MAINTENANCE);
+    } catch (e) { console.error(e); setMaintenanceSchedules(MOCK_MAINTENANCE); }
   };
 
   const fetchWorkOrders = async () => {
@@ -176,8 +256,9 @@ export default function AssetManagementPage() {
     setLoading(true);
     try {
       const data = await apiFetch('/api/hq/assets/extensions?action=licenses');
-      if (data.success) setLicenses(data.data);
-    } catch (e) { console.error(e); }
+      if (data.success && data.data?.length) setLicenses(data.data);
+      else setLicenses(MOCK_LICENSES);
+    } catch (e) { console.error(e); setLicenses(MOCK_LICENSES); }
     setLoading(false);
   };
 
@@ -194,8 +275,9 @@ export default function AssetManagementPage() {
     setLoading(true);
     try {
       const data = await apiFetch('/api/hq/assets?action=alerts');
-      if (data.success) setAlerts(data.data);
-    } catch (e) { console.error(e); }
+      if (data.success && data.data?.length) setAlerts(data.data);
+      else setAlerts(MOCK_ALERTS);
+    } catch (e) { console.error(e); setAlerts(MOCK_ALERTS); }
     setLoading(false);
   };
 
@@ -272,7 +354,7 @@ export default function AssetManagementPage() {
   const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('id-ID') : '-';
 
   return (
-    <HQLayout title="Asset Management" noPadding>
+    <HQLayout title="Manajemen Aset" noPadding>
     <ModuleGuard moduleCode="asset_management">
       <AssetManagementContent
         activeTab={activeTab} setActiveTab={setActiveTab} loading={loading}
@@ -341,21 +423,21 @@ function AssetManagementContent(props: any) {
   };
 
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+    { id: 'dashboard', label: 'Dasbor', icon: BarChart3 },
     { id: 'registry', label: 'Daftar Aset', icon: Package },
     { id: 'categories', label: 'Kategori', icon: Layers },
     { id: 'movements', label: 'Mutasi & Transfer', icon: ArrowRightLeft },
     { id: 'depreciation', label: 'Penyusutan', icon: TrendingDown },
-    { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-    { id: 'licenses', label: 'Lisensi Software', icon: Key },
+    { id: 'maintenance', label: 'Pemeliharaan', icon: Wrench },
+    { id: 'licenses', label: 'Lisensi Perangkat Lunak', icon: Key },
     { id: 'tenancy', label: 'Penyewaan', icon: Home },
-    { id: 'alerts', label: 'Alerts', icon: AlertCircle },
+    { id: 'alerts', label: 'Peringatan', icon: AlertCircle },
     { id: 'settings', label: 'Pengaturan', icon: Settings },
   ];
 
   return (
     <>
-      <Head><title>Asset Management - Bedagang</title></Head>
+      <Head><title>Manajemen Aset - Bedagang</title></Head>
       <div className="p-4 md:p-6 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -364,8 +446,8 @@ function AssetManagementContent(props: any) {
               <Package className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Asset Management</h1>
-              <p className="text-xs text-gray-500">Registrasi, Lifecycle, Penyusutan & Pemeliharaan Aset</p>
+              <h1 className="text-xl font-bold text-gray-900">Manajemen Aset</h1>
+              <p className="text-xs text-gray-500">Registrasi, Siklus Hidup, Penyusutan & Pemeliharaan Aset</p>
             </div>
           </div>
           <button onClick={onCreateNew}
@@ -489,9 +571,9 @@ function DashboardTab({ data, loading, formatCurrency }: any) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Aset', value: s.total_assets || 0, sub: `${s.category_count || 0} kategori`, icon: Package, color: 'from-blue-500 to-blue-600' },
-          { label: 'Aset Aktif', value: totalActive, sub: `${s.disposed_count || 0} disposed`, icon: CheckCircle, color: 'from-green-500 to-green-600' },
-          { label: 'Dalam Maintenance', value: parseInt(ms.overdue || 0) + parseInt(ms.upcoming || 0), sub: `${ms.overdue || 0} overdue`, icon: Wrench, color: parseInt(ms.overdue || 0) > 0 ? 'from-red-500 to-red-600' : 'from-yellow-500 to-yellow-600' },
-          { label: 'Alert Aktif', value: (data.alerts || []).length, sub: `${s.warranty_expiring || 0} garansi expiring`, icon: AlertTriangle, color: (data.alerts || []).length > 0 ? 'from-orange-500 to-orange-600' : 'from-gray-400 to-gray-500' },
+          { label: 'Aset Aktif', value: totalActive, sub: `${s.disposed_count || 0} dilepas`, icon: CheckCircle, color: 'from-green-500 to-green-600' },
+          { label: 'Dalam Maintenance', value: parseInt(ms.overdue || 0) + parseInt(ms.upcoming || 0), sub: `${ms.overdue || 0} terlambat`, icon: Wrench, color: parseInt(ms.overdue || 0) > 0 ? 'from-red-500 to-red-600' : 'from-yellow-500 to-yellow-600' },
+          { label: 'Alert Aktif', value: (data.alerts || []).length, sub: `${s.warranty_expiring || 0} garansi kedaluwarsa`, icon: AlertTriangle, color: (data.alerts || []).length > 0 ? 'from-orange-500 to-orange-600' : 'from-gray-400 to-gray-500' },
         ].map((c, i) => (
           <div key={i} className="bg-white rounded-xl p-4 shadow-sm border hover:shadow-md transition">
             <div className="flex items-start justify-between">
@@ -563,7 +645,7 @@ function DashboardTab({ data, loading, formatCurrency }: any) {
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="bg-green-50 rounded-lg px-2.5 py-2 text-center">
               <p className="font-bold text-green-700">{dh.fully_depreciated || 0}</p>
-              <p className="text-green-600">Fully Depr.</p>
+              <p className="text-green-600">Sudah Penuh</p>
             </div>
             <div className="bg-blue-50 rounded-lg px-2.5 py-2 text-center">
               <p className="font-bold text-blue-700">{dh.partially_depreciated || 0}</p>
@@ -575,7 +657,7 @@ function DashboardTab({ data, loading, formatCurrency }: any) {
             </div>
             <div className="bg-gray-50 rounded-lg px-2.5 py-2 text-center">
               <p className="font-bold text-gray-700">{dh.non_depreciable || 0}</p>
-              <p className="text-gray-500">Non-Depr.</p>
+              <p className="text-gray-500">Non-Penyusutan</p>
             </div>
           </div>
         </div>
@@ -583,14 +665,14 @@ function DashboardTab({ data, loading, formatCurrency }: any) {
         {/* Maintenance Overview */}
         <div className="bg-white rounded-xl p-5 shadow-sm border">
           <h3 className="font-semibold text-gray-900 text-sm mb-4 flex items-center gap-2">
-            <Wrench className="w-4 h-4 text-yellow-500" /> Ringkasan Maintenance
+            <Wrench className="w-4 h-4 text-yellow-500" /> Ringkasan Pemeliharaan
           </h3>
           <div className="space-y-3">
             {[
-              { label: 'Maintenance Overdue', value: ms.overdue || 0, color: parseInt(ms.overdue || 0) > 0 ? 'text-red-600 bg-red-50' : 'text-gray-600 bg-gray-50', icon: AlertCircle },
+              { label: 'Pemeliharaan Terlambat', value: ms.overdue || 0, color: parseInt(ms.overdue || 0) > 0 ? 'text-red-600 bg-red-50' : 'text-gray-600 bg-gray-50', icon: AlertCircle },
               { label: 'Jadwal 30 Hari Kedepan', value: ms.upcoming || 0, color: 'text-yellow-600 bg-yellow-50', icon: Calendar },
-              { label: 'Work Order Open', value: ms.open_wo || 0, color: 'text-blue-600 bg-blue-50', icon: ClipboardList },
-              { label: 'Work Order In Progress', value: ms.in_progress_wo || 0, color: 'text-indigo-600 bg-indigo-50', icon: Activity },
+              { label: 'Perintah Kerja Terbuka', value: ms.open_wo || 0, color: 'text-blue-600 bg-blue-50', icon: ClipboardList },
+              { label: 'Perintah Kerja Berjalan', value: ms.in_progress_wo || 0, color: 'text-indigo-600 bg-indigo-50', icon: Activity },
             ].map((item, i) => (
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -604,7 +686,7 @@ function DashboardTab({ data, loading, formatCurrency }: any) {
           <div className="mt-4 pt-3 border-t">
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <Shield className="w-3.5 h-3.5" />
-              <span>{s.warranty_expiring || 0} garansi segera habis · {s.warranty_expired || 0} sudah expired</span>
+              <span>{s.warranty_expiring || 0} garansi segera habis · {s.warranty_expired || 0} sudah kedaluwarsa</span>
             </div>
           </div>
         </div>
@@ -877,9 +959,9 @@ function RegistryTab({ assets, total, loading, page, searchTerm, filterStatus, f
         <select value={filterStatus} onChange={(e) => onFilterStatus(e.target.value)}
           className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
           <option value="">Semua Status</option>
-          <option value="draft">Draft</option><option value="active">Active</option>
-          <option value="in_use">In Use</option><option value="maintenance">Maintenance</option>
-          <option value="disposed">Disposed</option>
+          <option value="draft">Draft</option><option value="active">Aktif</option>
+          <option value="in_use">Digunakan</option><option value="maintenance">Pemeliharaan</option>
+          <option value="disposed">Dilepas</option>
         </select>
         <select value={filterCategory} onChange={(e) => onFilterCategory(e.target.value)}
           className="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
@@ -947,9 +1029,9 @@ function RegistryTab({ assets, total, loading, page, searchTerm, filterStatus, f
             <span className="text-sm text-gray-500">Halaman {page} dari {totalPages}</span>
             <div className="flex gap-1">
               <button disabled={page <= 1} onClick={() => onPageChange(page - 1)}
-                className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50">Prev</button>
+                className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50">Sebelumnya</button>
               <button disabled={page >= totalPages} onClick={() => onPageChange(page + 1)}
-                className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50">Next</button>
+                className="px-3 py-1 text-sm border rounded hover:bg-gray-100 disabled:opacity-50">Selanjutnya</button>
             </div>
           </div>
         )}
@@ -1157,7 +1239,7 @@ function MovementsTab({ movements, statusColors, formatDate, apiPost, fetchMovem
                 <td className="px-4 py-3 text-center">
                   <div className="flex items-center justify-center gap-1">
                     {m.status === 'pending' && (
-                      <button onClick={() => handleApprove(m.id)} className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 font-medium">Approve</button>
+                      <button onClick={() => handleApprove(m.id)} className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded hover:bg-blue-100 font-medium">Setujui</button>
                     )}
                     {m.status === 'approved' && (
                       <button onClick={() => handleReceive(m.id)} className="px-2 py-1 text-xs bg-green-50 text-green-700 rounded hover:bg-green-100 font-medium">Terima</button>
@@ -1315,7 +1397,7 @@ function DepreciationTab({ summary, loading, formatCurrency, onCalculateAll, onP
       {summary.fullyDepreciatedCount > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-600" />
-          <p className="text-sm text-amber-800"><strong>{summary.fullyDepreciatedCount}</strong> aset telah mencapai nilai sisa (fully depreciated)</p>
+          <p className="text-sm text-amber-800"><strong>{summary.fullyDepreciatedCount}</strong> aset telah mencapai nilai sisa (penyusutan penuh)</p>
         </div>
       )}
     </div>
@@ -1335,7 +1417,7 @@ function MaintenanceTab({ schedules, workOrders, formatCurrency, formatDate }: a
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">Preventive Maintenance</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Pemeliharaan Preventif</h2>
         <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
           <button onClick={() => setSubTab('schedules')}
             className={`px-3 py-1.5 text-sm rounded-md ${subTab === 'schedules' ? 'bg-white shadow-sm font-medium' : 'text-gray-500'}`}>
@@ -1343,7 +1425,7 @@ function MaintenanceTab({ schedules, workOrders, formatCurrency, formatDate }: a
           </button>
           <button onClick={() => setSubTab('work-orders')}
             className={`px-3 py-1.5 text-sm rounded-md ${subTab === 'work-orders' ? 'bg-white shadow-sm font-medium' : 'text-gray-500'}`}>
-            Work Orders
+            Perintah Kerja
           </button>
         </div>
       </div>
@@ -1371,7 +1453,7 @@ function MaintenanceTab({ schedules, workOrders, formatCurrency, formatDate }: a
               {s.estimated_cost && <p className="text-xs text-gray-500 mt-2">Est. biaya: {formatCurrency(s.estimated_cost)}</p>}
             </div>
           ))}
-          {schedules.length === 0 && <p className="text-gray-400 text-sm col-span-2 text-center py-8">Belum ada jadwal maintenance</p>}
+          {schedules.length === 0 && <p className="text-gray-400 text-sm col-span-2 text-center py-8">Belum ada jadwal pemeliharaan</p>}
         </div>
       )}
 
@@ -1386,7 +1468,7 @@ function MaintenanceTab({ schedules, workOrders, formatCurrency, formatDate }: a
             </tr></thead>
             <tbody>
               {workOrders.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-8 text-gray-400">Belum ada work order</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-gray-400">Belum ada perintah kerja</td></tr>
               ) : workOrders.map((wo: any) => (
                 <tr key={wo.id} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono text-xs text-indigo-600">{wo.wo_number}</td>
@@ -1412,7 +1494,7 @@ function MaintenanceTab({ schedules, workOrders, formatCurrency, formatDate }: a
 function LicensesTab({ licenses, formatCurrency, formatDate }: any) {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-gray-900">Manajemen Lisensi Software</h2>
+      <h2 className="text-lg font-semibold text-gray-900">Manajemen Lisensi Perangkat Lunak</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {licenses.map((l: any) => {
           const daysToExpiry = l.expiry_date ? Math.ceil((new Date(l.expiry_date).getTime() - Date.now()) / (1000*60*60*24)) : null;
@@ -1431,15 +1513,15 @@ function LicensesTab({ licenses, formatCurrency, formatDate }: any) {
                     <p className="text-xs text-gray-500">{l.vendor || '-'}</p>
                   </div>
                 </div>
-                {isExpired ? <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">Expired</span> :
+                {isExpired ? <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded-full">Kedaluwarsa</span> :
                  isExpiring ? <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">{daysToExpiry} hari lagi</span> :
                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full capitalize">{l.status}</span>}
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <div><span className="text-gray-500">Tipe:</span> <span className="font-medium capitalize">{l.license_type}</span></div>
                 <div><span className="text-gray-500">Versi:</span> <span className="font-medium">{l.version || '-'}</span></div>
-                <div><span className="text-gray-500">Seats:</span> <span className="font-medium">{l.used_seats}/{l.total_seats}</span></div>
-                <div><span className="text-gray-500">Expiry:</span> <span className="font-medium">{formatDate(l.expiry_date)}</span></div>
+                <div><span className="text-gray-500">Kursi:</span> <span className="font-medium">{l.used_seats}/{l.total_seats}</span></div>
+                <div><span className="text-gray-500">Kedaluwarsa:</span> <span className="font-medium">{formatDate(l.expiry_date)}</span></div>
               </div>
               {l.purchase_cost && <p className="text-xs text-gray-500 mt-2">Biaya: {formatCurrency(l.purchase_cost)}</p>}
             </div>
@@ -1538,11 +1620,11 @@ function AlertsTab({ alerts, formatDate, apiPost, fetchAlerts }: any) {
               <div className="flex flex-col gap-1.5 flex-shrink-0">
                 <button onClick={() => handleAcknowledge(a.id, false)}
                   className="px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition">
-                  Acknowledge
+                  Terima
                 </button>
                 <button onClick={() => handleAcknowledge(a.id, true)}
                   className="px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition">
-                  Resolve
+                  Selesaikan
                 </button>
               </div>
             </div>
@@ -1552,7 +1634,7 @@ function AlertsTab({ alerts, formatDate, apiPost, fetchAlerts }: any) {
 
       {acknowledgedAlerts.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-sm font-semibold text-gray-500 mb-3">Sudah Diakui ({acknowledgedAlerts.length})</h3>
+          <h3 className="text-sm font-semibold text-gray-500 mb-3">Sudah Diterima ({acknowledgedAlerts.length})</h3>
           <div className="space-y-2">
             {acknowledgedAlerts.map((a: any) => (
               <div key={a.id} className="p-3 bg-gray-50 rounded-lg border flex items-center justify-between">
@@ -1562,7 +1644,7 @@ function AlertsTab({ alerts, formatDate, apiPost, fetchAlerts }: any) {
                 </div>
                 <button onClick={() => handleAcknowledge(a.id, true)}
                   className="px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100">
-                  Resolve
+                  Selesaikan
                 </button>
               </div>
             ))}

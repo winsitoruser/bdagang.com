@@ -6,15 +6,9 @@ import {
 } from 'lucide-react';
 import WidgetWrapper from './WidgetWrapper';
 import { WidgetComponentProps } from '../../../lib/widgets/types';
+import { useTranslation } from '@/lib/i18n';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
-
-const formatCurrency = (value: number) => {
-  if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)}M`;
-  if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(1)}Jt`;
-  if (value >= 1000) return `Rp ${(value / 1000).toFixed(0)}rb`;
-  return `Rp ${value.toLocaleString('id-ID')}`;
-};
 
 function useDashboardData() {
   const [data, setData] = useState<any>({ branches: [], alerts: [], salesTrend: [], regionPerformance: [] });
@@ -35,24 +29,25 @@ function useDashboardData() {
 // WIDGET: Sales Trend Chart
 // ═══════════════════════════════════════════════
 export function SalesTrendWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t, formatCurrency } = useTranslation();
   const { data, loading } = useDashboardData();
   const [view, setView] = useState<'daily' | 'weekly'>('daily');
 
   const trend = data.salesTrend.length > 0 ? data.salesTrend : [
-    { day: 'Sen', sales: 125000000 }, { day: 'Sel', sales: 142000000 }, { day: 'Rab', sales: 138000000 },
-    { day: 'Kam', sales: 155000000 }, { day: 'Jum', sales: 162000000 }, { day: 'Sab', sales: 185000000 }, { day: 'Min', sales: 154000000 }
+    { day: t('dashboard.wc.mon'), sales: 125000000 }, { day: t('dashboard.wc.tue'), sales: 142000000 }, { day: t('dashboard.wc.wed'), sales: 138000000 },
+    { day: t('dashboard.wc.thu'), sales: 155000000 }, { day: t('dashboard.wc.fri'), sales: 162000000 }, { day: t('dashboard.wc.sat'), sales: 185000000 }, { day: t('dashboard.wc.sun'), sales: 154000000 }
   ];
 
   const categories = trend.map((t: any) => t.day || t.date || '');
   const salesData = trend.map((t: any) => typeof t.sales === 'number' && t.sales > 10000 ? t.sales : t.sales * 1000000);
 
   return (
-    <WidgetWrapper title="Tren Penjualan" module="sales" icon={<TrendingUp className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.sales-trend')} module="sales" icon={<TrendingUp className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       <div className="flex items-center gap-2 mb-3">
         {['daily', 'weekly'].map(v => (
           <button key={v} onClick={() => setView(v as any)}
             className={`px-3 py-1 text-xs rounded-lg transition-all ${view === v ? 'bg-indigo-100 text-indigo-700 font-medium' : 'text-gray-500 hover:bg-gray-100'}`}>
-            {v === 'daily' ? 'Harian' : 'Mingguan'}
+            {v === 'daily' ? t('dashboard.wc.daily') : t('dashboard.wc.weekly')}
           </button>
         ))}
       </div>
@@ -64,11 +59,11 @@ export function SalesTrendWidget({ isEditMode, size }: WidgetComponentProps) {
             fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 } },
             colors: ['#6366F1'],
             xaxis: { categories, labels: { style: { fontSize: '11px', colors: '#6B7280' } }, axisBorder: { show: false }, axisTicks: { show: false } },
-            yaxis: { labels: { formatter: (v: number) => `${(v / 1000000).toFixed(0)}Jt`, style: { fontSize: '11px', colors: '#6B7280' } } },
+            yaxis: { labels: { formatter: (v: number) => formatCurrency(v), style: { fontSize: '11px', colors: '#6B7280' } } },
             grid: { borderColor: '#E5E7EB', strokeDashArray: 4 },
             tooltip: { y: { formatter: (v: number) => formatCurrency(v) } },
             dataLabels: { enabled: false },
-          }} series={[{ name: 'Penjualan', data: salesData }]} />
+          }} series={[{ name: t('dashboard.wc.sales'), data: salesData }]} />
         </div>
       )}
     </WidgetWrapper>
@@ -79,6 +74,7 @@ export function SalesTrendWidget({ isEditMode, size }: WidgetComponentProps) {
 // WIDGET: Sales by Branch (Bar Chart)
 // ═══════════════════════════════════════════════
 export function SalesByBranchWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t, formatCurrency } = useTranslation();
   const { data, loading } = useDashboardData();
   const branchData = data.branches
     .filter((b: any) => b.type !== 'warehouse')
@@ -87,7 +83,7 @@ export function SalesByBranchWidget({ isEditMode, size }: WidgetComponentProps) 
     .slice(0, 8);
 
   return (
-    <WidgetWrapper title="Penjualan per Cabang" module="branches" icon={<BarChart3 className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.branch-sales')} module="branches" icon={<BarChart3 className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       {loading ? <div className="animate-pulse h-48 bg-gray-100 rounded-lg" /> : (
         <div className="h-56">
           <Chart type="bar" height="100%" width="100%" options={{
@@ -95,11 +91,11 @@ export function SalesByBranchWidget({ isEditMode, size }: WidgetComponentProps) 
             colors: ['#6366F1'],
             plotOptions: { bar: { borderRadius: 6, columnWidth: '50%' } },
             xaxis: { categories: branchData.map((b: any) => b.name), labels: { style: { fontSize: '10px', colors: '#6B7280' } }, axisBorder: { show: false }, axisTicks: { show: false } },
-            yaxis: { labels: { formatter: (v: number) => `${(v / 1000000).toFixed(0)}Jt`, style: { fontSize: '11px', colors: '#6B7280' } } },
+            yaxis: { labels: { formatter: (v: number) => formatCurrency(v), style: { fontSize: '11px', colors: '#6B7280' } } },
             grid: { borderColor: '#E5E7EB', strokeDashArray: 4 },
             tooltip: { y: { formatter: (v: number) => formatCurrency(v) } },
             dataLabels: { enabled: false },
-          }} series={[{ name: 'Penjualan', data: branchData.map((b: any) => b.sales) }]} />
+          }} series={[{ name: t('dashboard.wc.sales'), data: branchData.map((b: any) => b.sales) }]} />
         </div>
       )}
     </WidgetWrapper>
@@ -110,6 +106,7 @@ export function SalesByBranchWidget({ isEditMode, size }: WidgetComponentProps) 
 // WIDGET: Region Performance (Horizontal Bar)
 // ═══════════════════════════════════════════════
 export function RegionPerformanceWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t, formatCurrency } = useTranslation();
   const { data, loading } = useDashboardData();
   const regions = data.regionPerformance.length > 0 ? data.regionPerformance : [
     { region: 'DKI Jakarta', sales: 53500000, branches: 2 }, { region: 'Jawa Barat', sales: 32000000, branches: 2 },
@@ -118,19 +115,19 @@ export function RegionPerformanceWidget({ isEditMode, size }: WidgetComponentPro
   ];
 
   return (
-    <WidgetWrapper title="Performa Wilayah" module="branches" icon={<PieChartIcon className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.branch-region')} module="branches" icon={<PieChartIcon className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       {loading ? <div className="animate-pulse h-48 bg-gray-100 rounded-lg" /> : (
         <div className="h-56">
           <Chart type="bar" height="100%" width="100%" options={{
             chart: { toolbar: { show: false } },
             colors: ['#8B5CF6'],
             plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '60%' } },
-            xaxis: { labels: { formatter: (v: number) => `${(Number(v) / 1000000).toFixed(0)}Jt`, style: { fontSize: '11px', colors: '#6B7280' } } },
+            xaxis: { labels: { formatter: (v: number) => formatCurrency(Number(v)), style: { fontSize: '11px', colors: '#6B7280' } } },
             yaxis: { labels: { style: { fontSize: '11px', colors: '#6B7280' } } },
             grid: { borderColor: '#E5E7EB', strokeDashArray: 4 },
             tooltip: { y: { formatter: (v: number) => formatCurrency(v) } },
             dataLabels: { enabled: false },
-          }} series={[{ name: 'Penjualan', data: regions.map((r: any) => ({ x: r.region, y: typeof r.sales === 'number' && r.sales > 10000 ? r.sales : r.sales * 1000000 })) }]} />
+          }} series={[{ name: t('dashboard.wc.sales'), data: regions.map((r: any) => ({ x: r.region, y: typeof r.sales === 'number' && r.sales > 10000 ? r.sales : r.sales * 1000000 })) }]} />
         </div>
       )}
     </WidgetWrapper>
@@ -141,6 +138,7 @@ export function RegionPerformanceWidget({ isEditMode, size }: WidgetComponentPro
 // WIDGET: Top Products
 // ═══════════════════════════════════════════════
 export function TopProductsWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t, formatCurrency } = useTranslation();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -165,7 +163,7 @@ export function TopProductsWidget({ isEditMode, size }: WidgetComponentProps) {
   }, []);
 
   return (
-    <WidgetWrapper title="Produk Terlaris" module="sales" icon={<ShoppingCart className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.sales-top-products')} module="sales" icon={<ShoppingCart className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       {loading ? <div className="animate-pulse space-y-3">{[1,2,3].map(i => <div key={i} className="h-10 bg-gray-100 rounded-lg" />)}</div> : (
         <div className="space-y-3">
           {products.slice(0, 5).map((p: any, i: number) => (
@@ -196,6 +194,7 @@ export function TopProductsWidget({ isEditMode, size }: WidgetComponentProps) {
 // WIDGET: Recent Transactions
 // ═══════════════════════════════════════════════
 export function RecentTransactionsWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t, formatCurrency } = useTranslation();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -213,11 +212,11 @@ export function RecentTransactionsWidget({ isEditMode, size }: WidgetComponentPr
   }, []);
 
   return (
-    <WidgetWrapper title="Transaksi Terbaru" module="finance" icon={<Receipt className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.finance-transactions')} module="finance" icon={<Receipt className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       {loading ? <div className="animate-pulse space-y-3">{[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 rounded-lg" />)}</div> : (
         <div className="space-y-2">
           {transactions.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-6">Belum ada transaksi</p>
+            <p className="text-sm text-gray-500 text-center py-6">{t('dashboard.wc.noTransactions')}</p>
           ) : transactions.map((t: any) => (
             <div key={t.id} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
               <div className="w-9 h-9 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -244,20 +243,21 @@ export function RecentTransactionsWidget({ isEditMode, size }: WidgetComponentPr
 // WIDGET: Branch Performance Table
 // ═══════════════════════════════════════════════
 export function BranchPerformanceWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t, formatCurrency } = useTranslation();
   const { data, loading } = useDashboardData();
 
   return (
-    <WidgetWrapper title="Performa Cabang" module="branches" icon={<Store className="w-4 h-4" />} size={size} isEditMode={isEditMode} noPadding>
+    <WidgetWrapper title={t('dashboard.widgets.branch-performance')} module="branches" icon={<Store className="w-4 h-4" />} size={size} isEditMode={isEditMode} noPadding>
       {loading ? <div className="animate-pulse h-48 bg-gray-100 m-4 rounded-lg" /> : (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">Cabang</th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">Penjualan</th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Performa</th>
-                <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">Aksi</th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase">{t('dashboard.wc.branch')}</th>
+                <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">{t('dashboard.wc.status')}</th>
+                <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase">{t('dashboard.wc.sales')}</th>
+                <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">{t('dashboard.wc.performance')}</th>
+                <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase">{t('dashboard.wc.action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -283,7 +283,7 @@ export function BranchPerformanceWidget({ isEditMode, size }: WidgetComponentPro
                       b.status === 'online' ? 'bg-emerald-50 text-emerald-700' : b.status === 'warning' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${b.status === 'online' ? 'bg-emerald-500' : b.status === 'warning' ? 'bg-amber-500' : 'bg-red-500'}`} />
-                      {b.status === 'online' ? 'Online' : b.status === 'warning' ? 'Warning' : 'Offline'}
+                      {b.status === 'online' ? t('dashboard.wc.online') : b.status === 'warning' ? t('dashboard.wc.warning') : t('dashboard.wc.offline')}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">

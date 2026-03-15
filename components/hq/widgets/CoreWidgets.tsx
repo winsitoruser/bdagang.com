@@ -8,14 +8,7 @@ import {
 } from 'lucide-react';
 import WidgetWrapper from './WidgetWrapper';
 import { WidgetComponentProps } from '../../../lib/widgets/types';
-
-// ─── Shared helpers ───
-const formatCurrency = (value: number) => {
-  if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)}M`;
-  if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(1)}Jt`;
-  if (value >= 1000) return `Rp ${(value / 1000).toFixed(0)}rb`;
-  return `Rp ${value.toLocaleString('id-ID')}`;
-};
+import { useTranslation, localeMap } from '@/lib/i18n';
 
 interface DashboardData {
   branches: any[];
@@ -54,11 +47,12 @@ function useDashboardData() {
 // WIDGET: Welcome Header
 // ═══════════════════════════════════════════════
 export function WelcomeWidget({ isEditMode }: WidgetComponentProps) {
+  const { t, language } = useTranslation();
   const [time, setTime] = useState(new Date());
   const [isLive, setIsLive] = useState(true);
-  useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => { const ti = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(ti); }, []);
 
-  const greeting = time.getHours() < 12 ? 'Pagi' : time.getHours() < 18 ? 'Siang' : 'Malam';
+  const greeting = time.getHours() < 12 ? t('dashboard.wc.morning') : time.getHours() < 18 ? t('dashboard.wc.afternoon') : t('dashboard.wc.evening');
 
   return (
     <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-xl p-6 text-white shadow-xl h-full">
@@ -69,20 +63,20 @@ export function WelcomeWidget({ isEditMode }: WidgetComponentProps) {
               <Sparkles className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Selamat {greeting}!</h1>
+              <h1 className="text-2xl font-bold">{t('dashboard.wc.greet')} {greeting}!</h1>
               <p className="text-white/80 text-sm">
-                {time.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                {time.toLocaleDateString(localeMap[language] || 'id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4 mt-4">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
-              <span className="text-sm">{isLive ? 'Live Mode' : 'Static Mode'}</span>
+              <span className="text-sm">{isLive ? t('dashboard.wc.liveMode') : t('dashboard.wc.staticMode')}</span>
             </div>
             <div className="text-sm text-white/80">
               <Clock className="w-4 h-4 inline mr-1" />
-              {time.toLocaleTimeString('id-ID')}
+              {time.toLocaleTimeString(localeMap[language] || 'id-ID')}
             </div>
           </div>
         </div>
@@ -94,11 +88,11 @@ export function WelcomeWidget({ isEditMode }: WidgetComponentProps) {
             }`}
           >
             {isLive ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-            {isLive ? 'Live' : 'Paused'}
+            {isLive ? t('dashboard.wc.live') : t('dashboard.wc.paused')}
           </button>
           <button className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 rounded-xl text-sm font-medium hover:bg-white/90 transition-all">
             <Download className="w-4 h-4" />
-            Export
+            {t('dashboard.wc.export')}
           </button>
         </div>
       </div>
@@ -110,6 +104,7 @@ export function WelcomeWidget({ isEditMode }: WidgetComponentProps) {
 // WIDGET: Revenue Today
 // ═══════════════════════════════════════════════
 export function RevenueTodayWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t, formatCurrency } = useTranslation();
   const { data, loading } = useDashboardData();
   const active = data.branches.filter((b: any) => b.isActive && b.type !== 'warehouse');
   const today = active.reduce((s: number, b: any) => s + b.todaySales, 0);
@@ -117,7 +112,7 @@ export function RevenueTodayWidget({ isEditMode, size }: WidgetComponentProps) {
   const growth = yesterday > 0 ? ((today - yesterday) / yesterday * 100) : 0;
 
   return (
-    <WidgetWrapper title="Revenue Hari Ini" module="sales" icon={<Wallet className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.sales-revenue-today')} module="sales" icon={<Wallet className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       {loading ? <div className="animate-pulse h-16 bg-gray-100 rounded-lg" /> : (
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -132,7 +127,7 @@ export function RevenueTodayWidget({ isEditMode, size }: WidgetComponentProps) {
             </span>
           </div>
           <p className="text-2xl font-bold text-gray-900">{formatCurrency(today)}</p>
-          <p className="text-xs text-gray-400 mt-1">vs {formatCurrency(yesterday)} kemarin</p>
+          <p className="text-xs text-gray-400 mt-1">vs {formatCurrency(yesterday)} {t('dashboard.wc.yesterday')}</p>
         </div>
       )}
     </WidgetWrapper>
@@ -143,13 +138,14 @@ export function RevenueTodayWidget({ isEditMode, size }: WidgetComponentProps) {
 // WIDGET: Transaction Count
 // ═══════════════════════════════════════════════
 export function TransactionCountWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t, formatCurrency } = useTranslation();
   const { data, loading } = useDashboardData();
   const active = data.branches.filter((b: any) => b.isActive && b.type !== 'warehouse');
   const totalTrx = active.reduce((s: number, b: any) => s + b.transactionCount, 0);
   const totalSales = active.reduce((s: number, b: any) => s + b.todaySales, 0);
 
   return (
-    <WidgetWrapper title="Transaksi" module="sales" icon={<CreditCard className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.sales-transactions')} module="sales" icon={<CreditCard className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       {loading ? <div className="animate-pulse h-16 bg-gray-100 rounded-lg" /> : (
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -157,11 +153,11 @@ export function TransactionCountWidget({ isEditMode, size }: WidgetComponentProp
               <CreditCard className="w-5 h-5 text-white" />
             </div>
             <span className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-blue-50 text-blue-600">
-              <Activity className="w-3 h-3" /> Live
+              <Activity className="w-3 h-3" /> {t('dashboard.wc.live')}
             </span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{totalTrx.toLocaleString('id-ID')}</p>
-          <p className="text-xs text-gray-400 mt-1">Avg {formatCurrency(totalSales / (totalTrx || 1))}/trx</p>
+          <p className="text-2xl font-bold text-gray-900">{totalTrx.toLocaleString()}</p>
+          <p className="text-xs text-gray-400 mt-1">{t('dashboard.wc.avg')} {formatCurrency(totalSales / (totalTrx || 1))}{t('dashboard.wc.perTrx')}</p>
         </div>
       )}
     </WidgetWrapper>
@@ -172,12 +168,13 @@ export function TransactionCountWidget({ isEditMode, size }: WidgetComponentProp
 // WIDGET: Stock Value
 // ═══════════════════════════════════════════════
 export function StockValueWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t, formatCurrency } = useTranslation();
   const { data, loading } = useDashboardData();
   const totalStock = data.branches.reduce((s: number, b: any) => s + b.stockValue, 0);
   const lowStock = data.branches.reduce((s: number, b: any) => s + b.lowStockItems, 0);
 
   return (
-    <WidgetWrapper title="Nilai Stok" module="inventory" icon={<Package className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.inventory-stock-value')} module="inventory" icon={<Package className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       {loading ? <div className="animate-pulse h-16 bg-gray-100 rounded-lg" /> : (
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -191,7 +188,7 @@ export function StockValueWidget({ isEditMode, size }: WidgetComponentProps) {
             )}
           </div>
           <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalStock)}</p>
-          <p className="text-xs text-gray-400 mt-1">Di {data.branches.length} lokasi</p>
+          <p className="text-xs text-gray-400 mt-1">{t('dashboard.wc.atLocations', { count: data.branches.length })}</p>
         </div>
       )}
     </WidgetWrapper>
@@ -202,6 +199,7 @@ export function StockValueWidget({ isEditMode, size }: WidgetComponentProps) {
 // WIDGET: Monthly Target
 // ═══════════════════════════════════════════════
 export function MonthlyTargetWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t, formatCurrency } = useTranslation();
   const { data, loading } = useDashboardData();
   const active = data.branches.filter((b: any) => b.isActive && b.type !== 'warehouse');
   const monthSales = active.reduce((s: number, b: any) => s + b.monthSales, 0);
@@ -209,19 +207,19 @@ export function MonthlyTargetWidget({ isEditMode, size }: WidgetComponentProps) 
   const pct = Math.round((monthSales / targetAmount) * 100);
 
   return (
-    <WidgetWrapper title="Target Bulan Ini" module="sales" icon={<Target className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.sales-monthly-target')} module="sales" icon={<Target className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       {loading ? <div className="animate-pulse h-16 bg-gray-100 rounded-lg" /> : (
         <div>
           <div className="flex items-center justify-between mb-2">
             <div className="p-2.5 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl">
               <Target className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xs font-medium px-2 py-1 rounded-full bg-amber-50 text-amber-600">Bulan Ini</span>
+            <span className="text-xs font-medium px-2 py-1 rounded-full bg-amber-50 text-amber-600">{t('dashboard.wc.thisMonth')}</span>
           </div>
           <p className="text-2xl font-bold text-gray-900">{formatCurrency(monthSales)}</p>
           <div className="mt-2">
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-gray-500">Target Rp 5M</span>
+              <span className="text-gray-500">{t('dashboard.wc.target')} {formatCurrency(targetAmount)}</span>
               <span className="font-medium text-amber-600">{pct}%</span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5">
@@ -238,6 +236,7 @@ export function MonthlyTargetWidget({ isEditMode, size }: WidgetComponentProps) 
 // WIDGET: Active Branches Status
 // ═══════════════════════════════════════════════
 export function BranchStatusWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t } = useTranslation();
   const { data, loading } = useDashboardData();
   const online = data.branches.filter((b: any) => b.status === 'online').length;
   const warning = data.branches.filter((b: any) => b.status === 'warning').length;
@@ -247,18 +246,18 @@ export function BranchStatusWidget({ isEditMode, size }: WidgetComponentProps) {
     : 0;
 
   return (
-    <WidgetWrapper title="Status Cabang" module="branches" icon={<Store className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.branch-status')} module="branches" icon={<Store className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       {loading ? <div className="animate-pulse h-16 bg-gray-100 rounded-lg" /> : (
         <div>
           <p className="text-2xl font-bold text-gray-900">{online}/{data.branches.length}</p>
           <div className="flex items-center gap-3 text-xs mt-2">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-500 rounded-full" />{online} Online</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-yellow-500 rounded-full" />{warning} Warning</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-500 rounded-full" />{offline} Offline</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-500 rounded-full" />{online} {t('dashboard.wc.online')}</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-yellow-500 rounded-full" />{warning} {t('dashboard.wc.warning')}</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-500 rounded-full" />{offline} {t('dashboard.wc.offline')}</span>
           </div>
           <div className="mt-3 pt-3 border-t border-gray-100">
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-gray-500">Avg Performa</span>
+              <span className="text-gray-500">{t('dashboard.wc.avgPerformance')}</span>
               <span className="font-medium">{avgPerf}%</span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5">
@@ -275,6 +274,7 @@ export function BranchStatusWidget({ isEditMode, size }: WidgetComponentProps) {
 // WIDGET: Alerts / Notifications
 // ═══════════════════════════════════════════════
 export function AlertsWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t } = useTranslation();
   const { data } = useDashboardData();
   const alerts = data.alerts || [];
   const getIcon = (type: string) => {
@@ -295,12 +295,12 @@ export function AlertsWidget({ isEditMode, size }: WidgetComponentProps) {
   };
 
   return (
-    <WidgetWrapper title="Notifikasi" module="core" icon={<Bell className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.core-alerts')} module="core" icon={<Bell className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       <div className="space-y-2 max-h-64 overflow-y-auto">
         {alerts.length === 0 ? (
           <div className="text-center py-6 text-gray-500">
             <CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-200" />
-            <p className="text-sm">Tidak ada alert</p>
+            <p className="text-sm">{t('dashboard.wc.noAlerts')}</p>
           </div>
         ) : alerts.slice(0, 5).map((a: any) => (
           <div key={a.id} className={`p-2.5 rounded-lg border text-xs ${getColor(a.severity)}`}>
@@ -322,17 +322,18 @@ export function AlertsWidget({ isEditMode, size }: WidgetComponentProps) {
 // WIDGET: Quick Actions
 // ═══════════════════════════════════════════════
 export function QuickActionsWidget({ isEditMode, size }: WidgetComponentProps) {
+  const { t } = useTranslation();
   const actions = [
-    { label: 'Tambah Cabang', icon: Building2, href: '/hq/branches/new', color: 'from-blue-500 to-blue-600' },
-    { label: 'Lihat Laporan', icon: BarChart3, href: '/hq/reports/sales', color: 'from-emerald-500 to-emerald-600' },
-    { label: 'Kelola Stok', icon: Package, href: '/hq/inventory', color: 'from-violet-500 to-violet-600' },
-    { label: 'Karyawan', icon: Users, href: '/hq/hris', color: 'from-amber-500 to-amber-600' },
-    { label: 'Keuangan', icon: DollarSign, href: '/hq/finance', color: 'from-pink-500 to-pink-600' },
-    { label: 'Pengaturan', icon: Settings, href: '/hq/settings', color: 'from-gray-500 to-gray-600' },
+    { label: t('dashboard.wc.addBranch'), icon: Building2, href: '/hq/branches/new', color: 'from-blue-500 to-blue-600' },
+    { label: t('dashboard.wc.viewReports'), icon: BarChart3, href: '/hq/reports/sales', color: 'from-emerald-500 to-emerald-600' },
+    { label: t('dashboard.wc.manageStock'), icon: Package, href: '/hq/inventory', color: 'from-violet-500 to-violet-600' },
+    { label: t('dashboard.wc.employees'), icon: Users, href: '/hq/hris', color: 'from-amber-500 to-amber-600' },
+    { label: t('dashboard.wc.finance'), icon: DollarSign, href: '/hq/finance', color: 'from-pink-500 to-pink-600' },
+    { label: t('dashboard.wc.settings'), icon: Settings, href: '/hq/settings', color: 'from-gray-500 to-gray-600' },
   ];
 
   return (
-    <WidgetWrapper title="Aksi Cepat" module="core" icon={<Sparkles className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
+    <WidgetWrapper title={t('dashboard.widgets.core-quick-actions')} module="core" icon={<Sparkles className="w-4 h-4" />} size={size} isEditMode={isEditMode}>
       <div className="grid grid-cols-2 gap-2">
         {actions.map(a => (
           <button

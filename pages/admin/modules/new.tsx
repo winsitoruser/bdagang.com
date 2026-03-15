@@ -18,7 +18,7 @@ const ICON_OPTIONS = [
 ];
 
 const CATEGORY_OPTIONS = [
-  { value: 'core', label: 'Core System' },
+  { value: 'core', label: 'Sistem Inti' },
   { value: 'operations', label: 'Operasional' },
   { value: 'finance', label: 'Keuangan' },
   { value: 'hr', label: 'SDM & HR' },

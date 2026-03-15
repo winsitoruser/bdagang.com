@@ -1,10 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
+import { useTranslation } from '@/lib/i18n';
 import Head from 'next/head';
 import { FaBuilding, FaPhone, FaMapMarkerAlt, FaCalendarAlt, FaPrint } from 'react-icons/fa';
 
 const PrintPurchaseOrder: React.FC = () => {
   const router = useRouter();
+  const { t, formatCurrency } = useTranslation();
   const { id } = router.query;
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -48,13 +50,6 @@ const PrintPurchaseOrder: React.FC = () => {
     approvedBy: 'Manager Operations'
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const handlePrint = () => {
     window.print();

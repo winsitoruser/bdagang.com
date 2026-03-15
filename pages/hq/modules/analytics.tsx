@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Package, TrendingUp, Users, Activity, Zap,
   CheckCircle, XCircle, Clock, BarChart3, PieChart,
@@ -31,6 +32,7 @@ interface SystemMetrics {
 
 export default function ModuleAnalytics() {
   const { data: session } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [moduleStats, setModuleStats] = useState<ModuleStats[]>([]);
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics | null>(null);
@@ -81,7 +83,7 @@ export default function ModuleAnalytics() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading analytics...</p>
+            <p className="text-gray-600">{t('mp.analytics.loading')}</p>
           </div>
         </div>
       </HQLayout>
@@ -94,8 +96,8 @@ export default function ModuleAnalytics() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Module Analytics</h1>
-            <p className="text-gray-600 mt-1">Monitor module performance and usage across all tenants</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('mp.analytics.title')}</h1>
+            <p className="text-gray-600 mt-1">{t('mp.analytics.subtitle')}</p>
           </div>
           
           {/* Time Range Selector */}
@@ -110,7 +112,7 @@ export default function ModuleAnalytics() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {range === '24h' ? 'Last 24h' : range === '7d' ? 'Last 7 days' : 'Last 30 days'}
+                {range === '24h' ? t('mp.analytics.last24h') : range === '7d' ? t('mp.analytics.last7d') : t('mp.analytics.last30d')}
               </button>
             ))}
           </div>
@@ -120,30 +122,30 @@ export default function ModuleAnalytics() {
         {systemMetrics && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <MetricCard
-              title="Total Modules"
+              title={t('mp.analytics.totalModules')}
               value={systemMetrics.totalModules}
-              subtitle={`${systemMetrics.activeModules} active`}
+              subtitle={`${systemMetrics.activeModules} ${t('mp.analytics.active')}`}
               icon={Package}
               color="blue"
             />
             <MetricCard
-              title="Active Tenants"
+              title={t('mp.analytics.activeTenants')}
               value={systemMetrics.totalTenants}
-              subtitle="Using modules"
+              subtitle={t('mp.analytics.usingModules')}
               icon={Users}
               color="green"
             />
             <MetricCard
-              title="Events Processed"
+              title={t('mp.analytics.eventsProcessed')}
               value={systemMetrics.totalEvents.toLocaleString()}
-              subtitle={`${systemMetrics.avgEventsPerDay.toLocaleString()}/day avg`}
+              subtitle={t('mp.analytics.perDayAvg', { count: systemMetrics.avgEventsPerDay.toLocaleString() })}
               icon={Activity}
               color="purple"
             />
             <MetricCard
-              title="System Uptime"
+              title={t('mp.analytics.systemUptime')}
               value={`${systemMetrics.systemUptime}%`}
-              subtitle="Last 30 days"
+              subtitle={t('mp.analytics.last30Days')}
               icon={CheckCircle}
               color="emerald"
             />
@@ -153,8 +155,8 @@ export default function ModuleAnalytics() {
         {/* Module Performance Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Module Performance</h2>
-            <p className="text-sm text-gray-600 mt-1">Detailed metrics for each module</p>
+            <h2 className="text-lg font-semibold text-gray-900">{t('mp.analytics.modulePerformance')}</h2>
+            <p className="text-sm text-gray-600 mt-1">{t('mp.analytics.detailedMetrics')}</p>
           </div>
           
           <div className="overflow-x-auto">
@@ -162,28 +164,28 @@ export default function ModuleAnalytics() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Module
+                    {t('mp.analytics.colModule')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
+                    {t('mp.analytics.colCategory')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tenants
+                    {t('mp.analytics.colTenants')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Active Flows
+                    {t('mp.analytics.colActiveFlows')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Events
+                    {t('mp.analytics.colEvents')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Avg Response
+                    {t('mp.analytics.colAvgResponse')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Error Rate
+                    {t('mp.analytics.colErrorRate')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Trend
+                    {t('mp.analytics.colTrend')}
                   </th>
                 </tr>
               </thead>
@@ -242,7 +244,7 @@ export default function ModuleAnalytics() {
           {/* Module Adoption Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Module Adoption</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t('mp.analytics.moduleAdoption')}</h3>
               <PieChart className="w-5 h-5 text-gray-400" />
             </div>
             <div className="space-y-3">
@@ -252,7 +254,7 @@ export default function ModuleAnalytics() {
                   <div key={module.code}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium text-gray-700">{module.name}</span>
-                      <span className="text-sm text-gray-600">{module.tenantCount} tenants</span>
+                      <span className="text-sm text-gray-600">{module.tenantCount} {t('mp.analytics.tenants')}</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
@@ -269,7 +271,7 @@ export default function ModuleAnalytics() {
           {/* Event Processing Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Event Processing</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{t('mp.analytics.eventProcessing')}</h3>
               <BarChart3 className="w-5 h-5 text-gray-400" />
             </div>
             <div className="space-y-3">

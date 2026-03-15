@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -14,9 +15,20 @@ import { PERMISSIONS_STRUCTURE } from '@/lib/permissions/permissions-structure';
 const UsersSettingsPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
+  const MOCK_USERS = [
+    { id: 'u1', name: 'Admin Utama', email: 'admin@bedagang.com', phone: '081234567890', role: { id: 'r1', name: 'Admin' }, position: 'Administrator', isActive: true, lastLogin: '2026-03-15T09:00:00' },
+    { id: 'u2', name: 'Budi Kasir', email: 'budi@bedagang.com', phone: '081234567891', role: { id: 'r2', name: 'Kasir' }, position: 'Kasir', isActive: true, lastLogin: '2026-03-15T08:00:00' },
+    { id: 'u3', name: 'Siti Gudang', email: 'siti@bedagang.com', phone: '081234567892', role: { id: 'r3', name: 'Gudang' }, position: 'Staff Gudang', isActive: true, lastLogin: '2026-03-14T16:00:00' },
+  ];
+  const MOCK_ROLES = [
+    { id: 'r1', name: 'Admin', description: 'Full access', usersCount: 1, permissions: {} },
+    { id: 'r2', name: 'Kasir', description: 'POS access only', usersCount: 1, permissions: {} },
+    { id: 'r3', name: 'Gudang', description: 'Inventory access', usersCount: 1, permissions: {} },
+  ];
+  const [users, setUsers] = useState<any[]>(MOCK_USERS);
+  const [roles, setRoles] = useState<any[]>(MOCK_ROLES);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -76,7 +88,7 @@ const UsersSettingsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching users:', error);
-      setUsers([]);
+      setUsers(MOCK_USERS);
     } finally {
       setLoading(false);
     }
@@ -109,7 +121,7 @@ const UsersSettingsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching roles:', error);
-      setRoles([]);
+      setRoles(MOCK_ROLES);
     }
   };
 

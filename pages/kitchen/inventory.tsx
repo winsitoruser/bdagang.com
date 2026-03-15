@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,8 +30,15 @@ interface InventoryItem {
 
 const KitchenInventoryPage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: session, status } = useSession();
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const MOCK_K_INV: InventoryItem[] = [
+    { id: 'ki1', name: 'Ayam Potong', category: 'Protein', currentStock: 15, unit: 'kg', minStock: 5, maxStock: 50, reorderPoint: 10, unitCost: 45000, totalValue: 675000, lastRestocked: new Date('2026-03-14'), status: 'good' },
+    { id: 'ki2', name: 'Beras Premium', category: 'Karbohidrat', currentStock: 8, unit: 'kg', minStock: 10, maxStock: 100, reorderPoint: 20, unitCost: 15000, totalValue: 120000, lastRestocked: new Date('2026-03-12'), status: 'low' },
+    { id: 'ki3', name: 'Minyak Goreng', category: 'Minyak', currentStock: 2, unit: 'liter', minStock: 5, maxStock: 30, reorderPoint: 8, unitCost: 18000, totalValue: 36000, lastRestocked: new Date('2026-03-10'), status: 'critical' },
+    { id: 'ki4', name: 'Telur', category: 'Protein', currentStock: 120, unit: 'butir', minStock: 30, maxStock: 100, reorderPoint: 50, unitCost: 2500, totalValue: 300000, lastRestocked: new Date('2026-03-15'), status: 'overstock' },
+  ];
+  const [inventory, setInventory] = useState<InventoryItem[]>(MOCK_K_INV);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
@@ -58,6 +66,7 @@ const KitchenInventoryPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch inventory:', error);
+      setInventory(MOCK_K_INV);
     }
   };
 

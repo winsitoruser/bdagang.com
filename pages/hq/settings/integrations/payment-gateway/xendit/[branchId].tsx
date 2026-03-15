@@ -68,7 +68,7 @@ export default function BranchXenditConfigPage() {
   const handleUpdateLimits = (key: keyof TransactionLimits, value: number) => { if (!config) return; setConfig({ ...config, limits: { ...config.limits, [key]: value }, limitsOverride: true }); };
   const handleActivate = async () => { setLoading(true); await new Promise(r => setTimeout(r, 2000)); if (config) setConfig({ ...config, status: 'active', environment: 'production' }); setLoading(false); alert('✅ Cabang berhasil diaktifkan!'); };
 
-  if (!mounted || !config) return <HQLayout title="Loading..." subtitle=""><div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div></HQLayout>;
+  if (!mounted || !config) return <HQLayout title="Memuat..." subtitle=""><div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div></HQLayout>;
 
   return (
     <HQLayout title={`Xendit - ${config.branchName}`} subtitle="Konfigurasi payment gateway per cabang">

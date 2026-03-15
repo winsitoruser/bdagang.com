@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from '@/lib/i18n';
 import {
   FaTimes, FaTrash, FaExclamationTriangle, FaCheckCircle,
   FaCamera, FaDollarSign, FaClipboardList, FaRecycle
@@ -39,6 +40,7 @@ const WasteManagementModal: React.FC<WasteManagementModalProps> = ({
   productionBatch,
   onSubmit
 }) => {
+  const { formatCurrency } = useTranslation();
   const [wasteType, setWasteType] = useState<string>('defective');
   const [quantity, setQuantity] = useState<number>(0);
   const [costValue, setCostValue] = useState<number>(0);
@@ -52,13 +54,6 @@ const WasteManagementModal: React.FC<WasteManagementModalProps> = ({
   const [disposalWitness, setDisposalWitness] = useState<string>('');
   const [disposalLocation, setDisposalLocation] = useState<string>('');
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const handleSubmit = () => {
     const wasteData = {

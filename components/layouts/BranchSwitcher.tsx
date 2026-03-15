@@ -70,11 +70,11 @@ export function BranchSwitcher({
       if (data.success) {
         setBranches(data.data);
       } else {
-        toast.error('Failed to fetch branches');
+        toast.error('Gagal memuat daftar cabang');
       }
     } catch (error) {
       console.error('Error fetching branches:', error);
-      toast.error('Error loading branches');
+      toast.error('Gagal memuat cabang');
     } finally {
       setLoading(false);
     }
@@ -96,21 +96,21 @@ export function BranchSwitcher({
 
       if (data.success) {
         setSelectedBranch(branchId);
-        toast.success(`Switched to ${getBranchName(branchId)}`);
+        toast.success(`Beralih ke ${getBranchName(branchId)}`);
         // Reload page to update session data
         window.location.reload();
       } else {
-        toast.error(data.error || 'Failed to switch branch');
+        toast.error(data.error || 'Gagal beralih cabang');
       }
     } catch (error) {
       console.error('Error switching branch:', error);
-      toast.error('Error switching branch');
+      toast.error('Gagal beralih cabang');
     }
   };
 
   const getBranchName = (branchId: string) => {
     const branch = branches.find(b => b.id === branchId);
-    return branch ? branch.name : 'Unknown Branch';
+    return branch ? branch.name : 'Cabang Tidak Dikenal';
   };
 
   const getBranchCode = (branchId: string) => {
@@ -135,7 +135,7 @@ export function BranchSwitcher({
     } else if (compareBranches.length < 3) {
       setCompareBranches(prev => [...prev, branchId]);
     } else {
-      toast.error('Maximum 3 branches can be compared');
+      toast.error('Maksimal 3 cabang yang bisa dibandingkan');
     }
   };
 
@@ -153,7 +153,7 @@ export function BranchSwitcher({
         <Building2 className="h-4 w-4 text-muted-foreground" />
         <Select value={selectedBranch} onValueChange={handleBranchChange}>
           <SelectTrigger className="w-[250px]">
-            <SelectValue placeholder="Select branch">
+            <SelectValue placeholder="Pilih cabang">
               {currentBranch ? (
                 <div className="flex items-center gap-2">
                   <span>{currentBranch.name}</span>
@@ -162,7 +162,7 @@ export function BranchSwitcher({
                   </Badge>
                 </div>
               ) : (
-                'Select Branch'
+                'Pilih Cabang'
               )}
             </SelectValue>
           </SelectTrigger>
@@ -178,7 +178,7 @@ export function BranchSwitcher({
                   </div>
                   {!branch.isActive && (
                     <Badge variant="destructive" className="text-xs">
-                      Inactive
+                      Nonaktif
                     </Badge>
                   )}
                 </div>
@@ -197,14 +197,14 @@ export function BranchSwitcher({
           className="flex items-center gap-2"
         >
           <RefreshCw className="h-4 w-4" />
-          Compare Mode
+          Mode Perbandingan
         </Button>
       )}
 
       {/* Compare Branches Selection */}
       {compareMode && (
         <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-          <span className="text-sm font-medium">Compare with:</span>
+          <span className="text-sm font-medium">Bandingkan dengan:</span>
           {branches
             .filter(b => b.id !== selectedBranch)
             .map((branch) => (
@@ -233,7 +233,7 @@ export function BranchSwitcher({
           {currentBranch._count && (
             <div className="flex items-center gap-1">
               <Users className="h-3 w-3" />
-              {currentBranch._count.users} users
+              {currentBranch._count.users} pengguna
             </div>
           )}
         </div>

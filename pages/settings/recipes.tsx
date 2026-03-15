@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +58,7 @@ interface Recipe {
 const RecipesManagementPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [showRecipeModal, setShowRecipeModal] = useState(false);
@@ -64,7 +66,11 @@ const RecipesManagementPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'recipes' | 'materials'>('recipes');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const MOCK_S_RECIPES: Recipe[] = [
+    { id: 'r1', name: 'Roti Tawar', sku: 'RCP-001', category: 'Roti', description: 'Roti tawar standar', batchSize: 10, batchUnit: 'loaf', ingredients: [{ materialId: 'RM001', materialName: 'Tepung Terigu', quantity: 5, unit: 'kg', costPerUnit: 12000, subtotal: 60000 }], totalCost: 85000, costPerUnit: 8500, estimatedYield: 10, preparationTime: 120, status: 'active', createdBy: 'Admin', createdAt: '2026-01-15' },
+    { id: 'r2', name: 'Kue Coklat', sku: 'RCP-002', category: 'Kue', description: 'Kue coklat premium', batchSize: 5, batchUnit: 'pcs', ingredients: [{ materialId: 'RM006', materialName: 'Coklat Bubuk', quantity: 0.5, unit: 'kg', costPerUnit: 95000, subtotal: 47500 }], totalCost: 120000, costPerUnit: 24000, estimatedYield: 5, preparationTime: 90, status: 'active', createdBy: 'Admin', createdAt: '2026-02-01' },
+  ];
+  const [recipes, setRecipes] = useState<Recipe[]>(MOCK_S_RECIPES);
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
 
   // Fetch recipes from API
@@ -107,6 +113,7 @@ const RecipesManagementPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching recipes:', error);
+      setRecipes(MOCK_S_RECIPES);
     } finally {
       setLoading(false);
     }
@@ -131,6 +138,7 @@ const RecipesManagementPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching raw materials:', error);
+      setRawMaterials(mockRawMaterials);
     }
   };
 

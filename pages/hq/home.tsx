@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useTranslation } from '@/lib/i18n';
 
 // ─── Module Registry ───
 interface ModuleInfo {
@@ -25,34 +26,45 @@ interface ModuleInfo {
 }
 
 const MODULE_REGISTRY: ModuleInfo[] = [
-  { code: 'dashboard', name: 'Dashboard', description: 'Pusat kontrol & monitoring bisnis', icon: LayoutDashboard, href: '/hq/dashboard', gradient: 'from-indigo-500 to-indigo-600', iconColor: 'text-indigo-600', category: 'core' },
-  { code: 'pos', name: 'Point of Sale', description: 'Sistem kasir & penjualan', icon: ShoppingCart, href: '/pos', gradient: 'from-blue-500 to-blue-600', iconColor: 'text-blue-600', category: 'core' },
+  { code: 'dashboard', name: 'Dasbor', description: 'Pusat kontrol & monitoring bisnis', icon: LayoutDashboard, href: '/hq/dashboard', gradient: 'from-indigo-500 to-indigo-600', iconColor: 'text-indigo-600', category: 'core' },
+  { code: 'pos', name: 'Kasir (POS)', description: 'Sistem kasir & penjualan', icon: ShoppingCart, href: '/pos', gradient: 'from-blue-500 to-blue-600', iconColor: 'text-blue-600', category: 'core' },
   { code: 'branches', name: 'Cabang', description: 'Kelola & monitor cabang', icon: Building2, href: '/hq/branches', gradient: 'from-violet-500 to-violet-600', iconColor: 'text-violet-600', category: 'core' },
-  { code: 'inventory', name: 'Inventory', description: 'Stok, produk & gudang', icon: Package, href: '/hq/inventory', gradient: 'from-emerald-500 to-emerald-600', iconColor: 'text-emerald-600', category: 'core' },
+  { code: 'inventory', name: 'Inventaris', description: 'Stok, produk & gudang', icon: Package, href: '/hq/inventory', gradient: 'from-emerald-500 to-emerald-600', iconColor: 'text-emerald-600', category: 'core' },
   { code: 'products', name: 'Produk', description: 'Master data produk', icon: Layers, href: '/hq/products', gradient: 'from-teal-500 to-teal-600', iconColor: 'text-teal-600', category: 'operations' },
   { code: 'finance', name: 'Keuangan', description: 'Akuntansi & laporan', icon: Wallet, href: '/hq/finance', gradient: 'from-amber-500 to-amber-600', iconColor: 'text-amber-600', category: 'finance' },
   { code: 'hris', name: 'HRIS', description: 'SDM, payroll & KPI', icon: UserCheck, href: '/hq/hris', gradient: 'from-cyan-500 to-cyan-600', iconColor: 'text-cyan-600', category: 'hr' },
-  { code: 'users', name: 'Pengguna', description: 'Akses & role management', icon: Users, href: '/hq/users', gradient: 'from-sky-500 to-sky-600', iconColor: 'text-sky-600', category: 'hr' },
-  { code: 'crm', name: 'CRM & SFA', description: 'Pipeline & customer 360', icon: Briefcase, href: '/hq/sfa', gradient: 'from-pink-500 to-pink-600', iconColor: 'text-pink-600', category: 'sales' },
-  { code: 'marketing', name: 'Marketing', description: 'Kampanye & promosi', icon: Megaphone, href: '/hq/marketing', gradient: 'from-rose-500 to-rose-600', iconColor: 'text-rose-600', category: 'sales' },
-  { code: 'fms', name: 'Fleet', description: 'Kendaraan, driver & GPS', icon: Truck, href: '/hq/fms', gradient: 'from-orange-500 to-orange-600', iconColor: 'text-orange-600', category: 'operations' },
-  { code: 'tms', name: 'Transport', description: 'Shipment & dispatch', icon: Send, href: '/hq/tms', gradient: 'from-lime-500 to-lime-600', iconColor: 'text-lime-600', category: 'operations' },
-  { code: 'reports', name: 'Laporan', description: 'Analitik & KPI cross-module', icon: BarChart3, href: '/hq/reports/consolidated', gradient: 'from-purple-500 to-purple-600', iconColor: 'text-purple-600', category: 'analytics' },
-  { code: 'audit', name: 'Audit Log', description: 'Riwayat & keamanan', icon: Shield, href: '/hq/audit-logs', gradient: 'from-slate-500 to-slate-600', iconColor: 'text-slate-600', category: 'system' },
-  { code: 'whatsapp', name: 'WhatsApp', description: 'Broadcast & automasi', icon: MessageCircle, href: '/hq/whatsapp', gradient: 'from-green-500 to-green-600', iconColor: 'text-green-600', category: 'integration' },
-  { code: 'marketplace', name: 'Marketplace', description: 'Tokopedia, Shopee, dll', icon: Globe, href: '/hq/marketplace', gradient: 'from-blue-500 to-cyan-600', iconColor: 'text-blue-600', category: 'integration' },
+  { code: 'users', name: 'Pengguna', description: 'Akses & manajemen peran', icon: Users, href: '/hq/users', gradient: 'from-sky-500 to-sky-600', iconColor: 'text-sky-600', category: 'hr' },
+  { code: 'crm', name: 'CRM & SFA', description: 'Pipeline & pelanggan 360', icon: Briefcase, href: '/hq/sfa', gradient: 'from-pink-500 to-pink-600', iconColor: 'text-pink-600', category: 'sales' },
+  { code: 'marketing', name: 'Pemasaran', description: 'Kampanye & promosi', icon: Megaphone, href: '/hq/marketing', gradient: 'from-rose-500 to-rose-600', iconColor: 'text-rose-600', category: 'sales' },
+  { code: 'fms', name: 'Armada', description: 'Kendaraan, pengemudi & GPS', icon: Truck, href: '/hq/fms', gradient: 'from-orange-500 to-orange-600', iconColor: 'text-orange-600', category: 'operations' },
+  { code: 'tms', name: 'Transportasi', description: 'Pengiriman & logistik', icon: Send, href: '/hq/tms', gradient: 'from-lime-500 to-lime-600', iconColor: 'text-lime-600', category: 'operations' },
+  { code: 'reports', name: 'Laporan', description: 'Analitik & KPI lintas modul', icon: BarChart3, href: '/hq/reports/consolidated', gradient: 'from-purple-500 to-purple-600', iconColor: 'text-purple-600', category: 'analytics' },
+  { code: 'audit', name: 'Log Audit', description: 'Riwayat & keamanan', icon: Shield, href: '/hq/audit-logs', gradient: 'from-slate-500 to-slate-600', iconColor: 'text-slate-600', category: 'system' },
+  { code: 'whatsapp', name: 'WhatsApp', description: 'Siaran & automasi', icon: MessageCircle, href: '/hq/whatsapp', gradient: 'from-green-500 to-green-600', iconColor: 'text-green-600', category: 'integration' },
+  { code: 'marketplace', name: 'Marketplace', description: 'Tokopedia, Shopee, dll.', icon: Globe, href: '/hq/marketplace', gradient: 'from-blue-500 to-cyan-600', iconColor: 'text-blue-600', category: 'integration' },
   { code: 'settings', name: 'Pengaturan', description: 'Konfigurasi sistem', icon: Settings, href: '/hq/settings', gradient: 'from-gray-500 to-gray-600', iconColor: 'text-gray-600', category: 'system' },
 ];
 
-const CATEGORY_META: Record<string, { label: string; icon: any }> = {
-  core: { label: 'Core System', icon: Cpu },
-  operations: { label: 'Operasional', icon: Package },
-  finance: { label: 'Keuangan', icon: Wallet },
-  hr: { label: 'SDM & HR', icon: Users },
-  sales: { label: 'Sales & Marketing', icon: Briefcase },
-  analytics: { label: 'Analitik', icon: BarChart3 },
-  integration: { label: 'Integrasi', icon: Globe },
-  system: { label: 'Sistem', icon: Settings },
+const CATEGORY_ICONS: Record<string, any> = {
+  core: Cpu,
+  operations: Package,
+  finance: Wallet,
+  hr: Users,
+  sales: Briefcase,
+  analytics: BarChart3,
+  integration: Globe,
+  system: Settings,
+};
+
+const CATEGORY_KEYS: Record<string, string> = {
+  core: 'home.coreSystem',
+  operations: 'home.operations',
+  finance: 'home.finance',
+  hr: 'home.hrm',
+  sales: 'home.salesMarketing',
+  analytics: 'home.analytics',
+  integration: 'home.integration',
+  system: 'home.system',
 };
 
 const CATEGORY_ORDER = ['core', 'operations', 'finance', 'hr', 'sales', 'analytics', 'integration', 'system'];
@@ -84,8 +96,10 @@ const MOCK_UPDATES: SystemUpdate[] = [
   { id: '6', type: 'announcement', title: 'Maintenance Window', description: 'Server maintenance: Minggu 09 Mar 2026, 02:00–04:00 WIB.', date: '2026-03-03' },
 ];
 
-export default function UnifiedDashboard() {
+function UnifiedDashboardContent() {
   const router = useRouter();
+  const { t, language: currentLang, formatCurrency } = useTranslation();
+  const dateLocale = currentLang === 'ja' ? 'ja-JP' : currentLang === 'en' ? 'en-US' : 'id-ID';
   const [mounted, setMounted] = useState(false);
   const [moduleStatuses, setModuleStatuses] = useState<ModuleStatus[]>([]);
   const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
@@ -138,7 +152,7 @@ export default function UnifiedDashboard() {
         });
       }
     } catch {
-      setSystemStats({ totalBranches: 8, onlineBranches: 6, totalUsers: 45, todaySales: 0 });
+      setSystemStats({ totalBranches: 12, onlineBranches: 10, totalUsers: 162, todaySales: 244500000 });
     }
     setLoading(false);
   }, []);
@@ -167,28 +181,23 @@ export default function UnifiedDashboard() {
     groupedModules[m.category].push(m);
   });
 
-  const formatCurrency = (v: number) => {
-    if (v >= 1e9) return `Rp ${(v / 1e9).toFixed(1)}M`;
-    if (v >= 1e6) return `Rp ${(v / 1e6).toFixed(1)}Jt`;
-    return `Rp ${v.toLocaleString('id-ID')}`;
-  };
 
   const getGreeting = () => {
     const h = currentTime.getHours();
-    if (h < 11) return 'Selamat Pagi';
-    if (h < 15) return 'Selamat Siang';
-    if (h < 18) return 'Selamat Sore';
-    return 'Selamat Malam';
+    if (h < 11) return t('home.goodMorning');
+    if (h < 15) return t('home.goodAfternoon');
+    if (h < 18) return t('home.goodEvening');
+    return t('home.goodNight');
   };
 
-  const updateMeta = (t: string) => {
+  const updateMeta = (type: string) => {
     const map: Record<string, { label: string; dot: string; icon: any }> = {
-      feature: { label: 'Fitur Baru', dot: 'bg-blue-400', icon: <Sparkles className="w-3.5 h-3.5 text-blue-500" /> },
-      improvement: { label: 'Peningkatan', dot: 'bg-emerald-400', icon: <TrendingUp className="w-3.5 h-3.5 text-emerald-500" /> },
-      bugfix: { label: 'Perbaikan', dot: 'bg-amber-400', icon: <Zap className="w-3.5 h-3.5 text-amber-500" /> },
-      announcement: { label: 'Pengumuman', dot: 'bg-violet-400', icon: <Bell className="w-3.5 h-3.5 text-violet-500" /> },
+      feature: { label: t('home.newFeature'), dot: 'bg-blue-400', icon: <Sparkles className="w-3.5 h-3.5 text-blue-500" /> },
+      improvement: { label: t('home.improvement'), dot: 'bg-emerald-400', icon: <TrendingUp className="w-3.5 h-3.5 text-emerald-500" /> },
+      bugfix: { label: t('home.bugfix'), dot: 'bg-amber-400', icon: <Zap className="w-3.5 h-3.5 text-amber-500" /> },
+      announcement: { label: t('home.announcement'), dot: 'bg-violet-400', icon: <Bell className="w-3.5 h-3.5 text-violet-500" /> },
     };
-    return map[t] || { label: t, dot: 'bg-gray-400', icon: null };
+    return map[type] || { label: type, dot: 'bg-gray-400', icon: null };
   };
 
   const activeCategories = CATEGORY_ORDER.filter(cat => groupedModules[cat]?.length > 0);
@@ -197,7 +206,7 @@ export default function UnifiedDashboard() {
   const handleReviewClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toast('Akun Anda masih dalam proses review oleh tim Naincode. Modul akan segera dapat diakses setelah review selesai.', {
+    toast(t('home.reviewToast'), {
       icon: '⏳',
       duration: 4000,
       style: { background: '#FEF3C7', color: '#92400E', border: '1px solid #FDE68A', fontWeight: 500 },
@@ -205,7 +214,6 @@ export default function UnifiedDashboard() {
   };
 
   return (
-    <HQLayout>
       <div className="w-full">
 
         {/* ════════════════════════════════════════════════
@@ -230,21 +238,21 @@ export default function UnifiedDashboard() {
                     : 'bg-white/[0.08] border-white/[0.08] text-white/60'
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isUnderReview ? 'bg-amber-400' : 'bg-emerald-400'}`} />
-                  {isUnderReview ? 'Akun Inactive · Menunggu Review' : 'Sistem Online · v3.8.0'}
+                  {isUnderReview ? t('home.accountInactive') : `${t('home.systemOnline')} · v3.8.0`}
                 </div>
                 <h1 className="text-3xl font-bold text-white tracking-tight mb-1">{getGreeting()}</h1>
                 <p className="text-white/40 text-sm">
-                  {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  {currentTime.toLocaleDateString(dateLocale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
               </div>
 
               {/* Hero Stats */}
               <div className="grid grid-cols-2 sm:flex gap-4 sm:gap-6 lg:gap-8">
                 {[
-                  { label: 'Modul Aktif', val: enabledCount, total: MODULE_REGISTRY.length },
-                  { label: 'Cabang Online', val: systemStats?.onlineBranches || 0, total: systemStats?.totalBranches || 0 },
-                  { label: 'Pengguna', val: systemStats?.totalUsers || 0, total: null },
-                  { label: 'Sales Hari Ini', val: formatCurrency(systemStats?.todaySales || 0), total: null },
+                  { label: t('home.activeModules'), val: enabledCount, total: MODULE_REGISTRY.length },
+                  { label: t('home.onlineBranches'), val: systemStats?.onlineBranches || 0, total: systemStats?.totalBranches || 0 },
+                  { label: t('home.users'), val: systemStats?.totalUsers || 0, total: null },
+                  { label: t('home.todaySales'), val: formatCurrency(systemStats?.todaySales || 0), total: null },
                 ].map((s, i) => (
                   <div key={i} className="text-left sm:text-right">
                     <p className="text-[11px] uppercase tracking-wider text-white/30 mb-1">{s.label}</p>
@@ -260,10 +268,10 @@ export default function UnifiedDashboard() {
             {/* Quick Access Bar */}
             <div className="flex items-center gap-2 mt-5 sm:mt-7 pt-4 sm:pt-6 border-t border-white/[0.06] overflow-x-auto pb-1 scrollbar-hide">
               {[
-                { label: 'Dashboard Operasional', href: '/hq/dashboard', icon: LayoutDashboard },
-                { label: 'Laporan', href: '/hq/reports/consolidated', icon: BarChart3 },
-                { label: 'Kelola Modul', href: '/hq/settings/modules', icon: Package },
-                { label: 'Pengaturan', href: '/hq/settings', icon: Settings },
+                { label: t('home.operationalDashboard'), href: '/hq/dashboard', icon: LayoutDashboard },
+                { label: t('home.reports'), href: '/hq/reports/consolidated', icon: BarChart3 },
+                { label: t('home.manageModules'), href: '/hq/settings/modules', icon: Package },
+                { label: t('home.settings'), href: '/hq/settings', icon: Settings },
               ].map(q => (
                 <button
                   key={q.href}
@@ -292,25 +300,22 @@ export default function UnifiedDashboard() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-base font-bold text-amber-900">Akun Dalam Proses Review</h3>
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-200/60 text-amber-800 rounded-full">Under Review</span>
+                  <h3 className="text-base font-bold text-amber-900">{t('home.accountUnderReview')}</h3>
+                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-200/60 text-amber-800 rounded-full">{t('home.underReview')}</span>
                 </div>
-                <p className="text-sm text-amber-700 leading-relaxed">
-                  Data bisnis Anda sedang direview oleh tim <strong>Naincode</strong>. Seluruh modul akan dapat diakses setelah proses verifikasi selesai.
-                  Estimasi waktu review: <strong>1–2 hari kerja</strong>.
-                </p>
+                <p className="text-sm text-amber-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: t('home.reviewDescription') }} />
                 <div className="flex items-center gap-4 mt-3">
                   <div className="flex items-center gap-1.5 text-xs text-amber-600">
                     <CheckCircle className="w-3.5 h-3.5" />
-                    <span>KYB Tersubmit</span>
+                    <span>{t('home.kybSubmitted')}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-amber-600">
                     <Clock className="w-3.5 h-3.5" />
-                    <span>Menunggu Verifikasi</span>
+                    <span>{t('home.waitingVerification')}</span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-amber-400">
                     <Zap className="w-3.5 h-3.5" />
-                    <span>Aktivasi Modul</span>
+                    <span>{t('home.moduleActivation')}</span>
                   </div>
                 </div>
               </div>
@@ -332,7 +337,7 @@ export default function UnifiedDashboard() {
                 <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Cari modul..."
+                  placeholder={t('home.searchModules')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200/80 rounded-xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 shadow-sm transition-all"
@@ -343,7 +348,7 @@ export default function UnifiedDashboard() {
                   onClick={() => setSelectedCategory('all')}
                   className={`px-4 py-3 text-xs font-medium transition-colors ${selectedCategory === 'all' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
                 >
-                  Semua
+                  {t('home.all')}
                 </button>
                 {CATEGORY_ORDER.filter(c => MODULE_REGISTRY.some(m => m.category === c)).slice(0, 4).map(c => (
                   <button
@@ -351,7 +356,7 @@ export default function UnifiedDashboard() {
                     onClick={() => setSelectedCategory(selectedCategory === c ? 'all' : c)}
                     className={`px-4 py-3 text-xs font-medium transition-colors border-l border-gray-100 ${selectedCategory === c ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
                   >
-                    {CATEGORY_META[c]?.label}
+                    {t(CATEGORY_KEYS[c])}
                   </button>
                 ))}
                 <select
@@ -359,9 +364,9 @@ export default function UnifiedDashboard() {
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="px-3 py-3 text-xs font-medium text-gray-500 bg-transparent border-l border-gray-100 focus:outline-none cursor-pointer hover:bg-gray-50"
                 >
-                  <option value="all">Lainnya</option>
+                  <option value="all">{t('home.others')}</option>
                   {CATEGORY_ORDER.filter(c => !['core','operations','finance','hr'].includes(c) && MODULE_REGISTRY.some(m => m.category === c)).map(c => (
-                    <option key={c} value={c}>{CATEGORY_META[c]?.label}</option>
+                    <option key={c} value={c}>{t(CATEGORY_KEYS[c])}</option>
                   ))}
                 </select>
               </div>
@@ -372,13 +377,12 @@ export default function UnifiedDashboard() {
 
             {/* Module Grid by Category */}
             {activeCategories.map(cat => {
-              const meta = CATEGORY_META[cat];
-              const CatIcon = meta?.icon;
+              const CatIcon = CATEGORY_ICONS[cat];
               return (
                 <div key={cat} className="space-y-3">
                   <div className="flex items-center gap-2.5">
                     {CatIcon && <CatIcon className="w-4 h-4 text-gray-400" />}
-                    <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{meta?.label}</h2>
+                    <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">{t(CATEGORY_KEYS[cat])}</h2>
                     <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent" />
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -394,7 +398,7 @@ export default function UnifiedDashboard() {
                               handleReviewClick(e);
                             } else if (!enabled) {
                               e.preventDefault();
-                              toast.error(`Modul ${mod.name} belum diaktifkan`);
+                              toast.error(t('home.moduleNotActivated', { name: t(`modules.${mod.code}.name`) }));
                             }
                           }}
                           className={`group relative rounded-xl sm:rounded-2xl p-4 sm:p-5 transition-all duration-200 ${
@@ -426,17 +430,17 @@ export default function UnifiedDashboard() {
                             )}
                           </div>
 
-                          <h3 className={`text-sm font-semibold mb-1 ${isUnderReview ? 'text-gray-600' : enabled ? 'text-gray-900' : 'text-gray-400'}`}>{mod.name}</h3>
-                          <p className={`text-xs leading-relaxed ${isUnderReview ? 'text-gray-400' : enabled ? 'text-gray-500' : 'text-gray-300'}`}>{mod.description}</p>
+                          <h3 className={`text-sm font-semibold mb-1 ${isUnderReview ? 'text-gray-600' : enabled ? 'text-gray-900' : 'text-gray-400'}`}>{t(`modules.${mod.code}.name`)}</h3>
+                          <p className={`text-xs leading-relaxed ${isUnderReview ? 'text-gray-400' : enabled ? 'text-gray-500' : 'text-gray-300'}`}>{t(`modules.${mod.code}.description`)}</p>
 
                           {isUnderReview ? (
                             <div className="flex items-center gap-1.5 mt-3">
                               <Hourglass className="w-3 h-3 text-amber-400" />
-                              <span className="text-[11px] font-medium text-amber-500">Menunggu review</span>
+                              <span className="text-[11px] font-medium text-amber-500">{t('home.waitingReview')}</span>
                             </div>
                           ) : enabled ? (
                             <div className="flex items-center gap-1.5 mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                              <span className="text-[11px] font-medium text-indigo-500">Lihat detail</span>
+                              <span className="text-[11px] font-medium text-indigo-500">{t('home.viewDetails')}</span>
                               <ArrowRight className="w-3 h-3 text-indigo-400" />
                             </div>
                           ) : null}
@@ -451,8 +455,8 @@ export default function UnifiedDashboard() {
             {filteredModules.length === 0 && (
               <div className="text-center py-24 rounded-2xl border-2 border-dashed border-gray-200">
                 <Search className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-                <p className="text-sm font-medium text-gray-400">Tidak ada modul ditemukan</p>
-                <p className="text-xs text-gray-300 mt-1">Coba kata kunci lain atau ubah filter</p>
+                <p className="text-sm font-medium text-gray-400">{t('home.noModulesFound')}</p>
+                <p className="text-xs text-gray-300 mt-1">{t('home.tryOtherKeywords')}</p>
               </div>
             )}
           </div>
@@ -469,19 +473,19 @@ export default function UnifiedDashboard() {
                       <Activity className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-900">Status Sistem</h3>
-                      <p className="text-[11px] text-gray-400">Real-time overview</p>
+                      <h3 className="text-sm font-semibold text-gray-900">{t('home.systemStatus')}</h3>
+                      <p className="text-[11px] text-gray-400">{t('home.realtimeOverview')}</p>
                     </div>
                   </div>
                   {isUnderReview ? (
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-100">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                      <span className="text-[10px] font-semibold text-amber-600">UNDER REVIEW</span>
+                      <span className="text-[10px] font-semibold text-amber-600">{t('home.underReview').toUpperCase()}</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="text-[10px] font-semibold text-emerald-600">HEALTHY</span>
+                      <span className="text-[10px] font-semibold text-emerald-600">{t('home.healthy')}</span>
                     </div>
                   )}
                 </div>
@@ -491,7 +495,7 @@ export default function UnifiedDashboard() {
                 {/* Module progress */}
                 <div>
                   <div className="flex items-center justify-between text-sm mb-2.5">
-                    <span className="text-gray-600 font-medium">Modul Aktif</span>
+                    <span className="text-gray-600 font-medium">{t('home.activeModulesLabel')}</span>
                     <span className="font-bold text-gray-900">{enabledCount}<span className="font-normal text-gray-400">/{MODULE_REGISTRY.length}</span></span>
                   </div>
                   <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -506,24 +510,24 @@ export default function UnifiedDashboard() {
                       <CheckCircle className="w-16 h-16 text-emerald-600" />
                     </div>
                     <p className="text-2xl font-bold text-emerald-600">{enabledCount}</p>
-                    <p className="text-xs text-emerald-600/70 font-medium mt-0.5">Modul Aktif</p>
+                    <p className="text-xs text-emerald-600/70 font-medium mt-0.5">{t('home.activeModulesLabel')}</p>
                   </div>
                   <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-gray-50 to-gray-50/50 p-4">
                     <div className="absolute -right-2 -bottom-2 opacity-10">
                       <XCircle className="w-16 h-16 text-gray-400" />
                     </div>
                     <p className="text-2xl font-bold text-gray-400">{disabledCount}</p>
-                    <p className="text-xs text-gray-400 font-medium mt-0.5">Nonaktif</p>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">{t('home.inactive')}</p>
                   </div>
                 </div>
 
                 {/* System info rows */}
                 <div className="space-y-0 divide-y divide-gray-100">
                   {[
-                    { label: 'Platform', value: 'Bedagang ERP v3.8', color: 'text-gray-900' },
-                    { label: 'Uptime', value: '99.9%', color: 'text-emerald-600' },
-                    { label: 'Cabang Online', value: `${systemStats?.onlineBranches || 0} / ${systemStats?.totalBranches || 0}`, color: 'text-gray-900' },
-                    { label: 'Total Pengguna', value: `${systemStats?.totalUsers || 0}`, color: 'text-gray-900' },
+                    { label: t('home.platform'), value: 'Bedagang ERP v3.8', color: 'text-gray-900' },
+                    { label: t('home.uptime'), value: '99.9%', color: 'text-emerald-600' },
+                    { label: t('home.onlineBranchesLabel'), value: `${systemStats?.onlineBranches || 0} / ${systemStats?.totalBranches || 0}`, color: 'text-gray-900' },
+                    { label: t('home.totalUsers'), value: `${systemStats?.totalUsers || 0}`, color: 'text-gray-900' },
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between py-2.5">
                       <span className="text-sm text-gray-500">{row.label}</span>
@@ -542,8 +546,8 @@ export default function UnifiedDashboard() {
                     <Sparkles className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900">Update ERP</h3>
-                    <p className="text-[11px] text-gray-400">Fitur terbaru & pengumuman</p>
+                    <h3 className="text-sm font-semibold text-gray-900">{t('home.erpUpdates')}</h3>
+                    <p className="text-[11px] text-gray-400">{t('home.latestFeatures')}</p>
                   </div>
                 </div>
                 <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">{MOCK_UPDATES.length}</span>
@@ -562,12 +566,12 @@ export default function UnifiedDashboard() {
                         </div>
                         <div className="flex-1 min-w-0 pb-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <p className="text-sm font-semibold text-gray-900 truncate">{u.title}</p>
+                            <p className="text-sm font-semibold text-gray-900 truncate">{t(`updates.u${u.id}.title`)}</p>
                           </div>
-                          <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{u.description}</p>
+                          <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{t(`updates.u${u.id}.description`)}</p>
                           <div className="flex items-center gap-3 mt-2">
                             <span className="text-[10px] text-gray-400">
-                              {new Date(u.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {new Date(u.date).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', year: 'numeric' })}
                             </span>
                             {u.version && (
                               <span className="text-[10px] font-mono font-semibold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md">v{u.version}</span>
@@ -584,12 +588,12 @@ export default function UnifiedDashboard() {
 
             {/* Quick Links */}
             <div className="bg-white rounded-2xl border border-gray-200/60 p-5 shadow-sm">
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Pintasan</h3>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">{t('home.shortcuts')}</h3>
               <div className="space-y-1">
                 {[
-                  { label: 'Dashboard Operasional', desc: 'Sales, KPI & analytics', href: '/hq/dashboard', icon: LayoutDashboard },
-                  { label: 'Laporan Konsolidasi', desc: 'Cross-module reporting', href: '/hq/reports/consolidated', icon: BarChart3 },
-                  { label: 'Kelola Modul', desc: 'Aktifkan / nonaktifkan modul', href: '/hq/settings/modules', icon: Package },
+                  { label: t('home.operationalDashboard'), desc: t('home.salesKpiAnalytics'), href: '/hq/dashboard', icon: LayoutDashboard },
+                  { label: t('home.consolidatedReports'), desc: t('home.crossModuleReporting'), href: '/hq/reports/consolidated', icon: BarChart3 },
+                  { label: t('home.manageModules'), desc: t('home.activateDeactivate'), href: '/hq/settings/modules', icon: Package },
                 ].map(lnk => (
                   <Link
                     key={lnk.href}
@@ -612,6 +616,13 @@ export default function UnifiedDashboard() {
           </div>
         </div>
       </div>
+  );
+}
+
+export default function UnifiedDashboard() {
+  return (
+    <HQLayout>
+      <UnifiedDashboardContent />
     </HQLayout>
   );
 }

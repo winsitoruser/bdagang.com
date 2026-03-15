@@ -99,12 +99,24 @@ const taskStatusLabels: Record<string, string> = {
   pending: 'Menunggu',
 };
 
+const MOCK_QUICK_STATS: QuickStats = { monthlyRevenue: 485000000, monthlyExpenses: 312000000, netIncome: 173000000, overdueInvoices: 3, overdueAmount: 15600000, pendingTransactions: 8 };
+const MOCK_SCAN_RESULT: ScanResult = {
+  score: 78, grade: 'B',
+  alerts: [
+    { id: 'ga1', category: 'cash_flow', severity: 'medium', title: 'Arus kas operasional menurun', message: 'Arus kas operasional turun 15% dibanding bulan lalu', suggestedAction: 'Review pengeluaran operasional', autoFixable: false, createdAt: '2026-03-15T08:00:00Z' },
+    { id: 'ga2', category: 'compliance', severity: 'high', title: '3 invoice jatuh tempo', message: 'Terdapat 3 invoice pelanggan yang sudah melewati jatuh tempo', suggestedAction: 'Kirim pengingat pembayaran', autoFixable: true, createdAt: '2026-03-15T08:00:00Z' },
+    { id: 'ga3', category: 'anomaly', severity: 'low', title: 'Transaksi void meningkat', message: 'Jumlah transaksi void meningkat 20% di Cabang Bandung', suggestedAction: 'Investigasi penyebab void', autoFixable: false, createdAt: '2026-03-14T16:00:00Z' },
+  ],
+  summary: { critical: 0, high: 1, medium: 1, low: 1, info: 0, total: 3 },
+  scannedAt: '2026-03-15T08:00:00Z', scanDurationMs: 1250,
+};
+
 export default function AIGuardianPage() {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'guardian' | 'autonomous'>('guardian');
   const [scanning, setScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
-  const [quickStats, setQuickStats] = useState<QuickStats | null>(null);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(MOCK_SCAN_RESULT);
+  const [quickStats, setQuickStats] = useState<QuickStats | null>(MOCK_QUICK_STATS);
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
@@ -130,7 +142,7 @@ export default function AIGuardianPage() {
         const data = json.data || json;
         if (data.quickStats) setQuickStats(data.quickStats);
       }
-    } catch (e) { console.error('Dashboard fetch error:', e); }
+    } catch (e) { console.error('Dashboard fetch error:', e); setQuickStats(MOCK_QUICK_STATS); }
   }, []);
 
   const runScan = useCallback(async () => {

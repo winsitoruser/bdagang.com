@@ -2,9 +2,11 @@ import React from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import PosLayout from "@/components/layouts/pos-layout";
+import { useTranslation } from '@/lib/i18n';
 
 const InventoryPage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   
   return (
     <PosLayout>

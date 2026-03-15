@@ -18,7 +18,8 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  BookOpen
+  BookOpen,
+  Globe
 } from 'lucide-react';
 import {
   hqSidebarConfig,
@@ -30,6 +31,14 @@ import {
   UserRole,
   ModuleCode
 } from '@/config/sidebar.config';
+import { TranslationProvider } from '@/components/providers/TranslationProvider';
+import { useTranslation, Language, Currency, languageNames, languageFlags, currencySymbols, currencyNames, currencyFlags } from '@/lib/i18n';
+import { hqTranslations } from '@/lib/translations/hq';
+import { modulePageTranslations, mergeTranslations } from '@/lib/translations/hq-module-pages';
+import { moduleDetailTranslations } from '@/lib/translations/hq-module-detail';
+import { moduleArticleTranslations } from '@/lib/translations/hq-module-articles';
+
+const mergedHqTranslations = mergeTranslations(mergeTranslations(mergeTranslations(hqTranslations, modulePageTranslations), moduleDetailTranslations), moduleArticleTranslations);
 
 interface HQLayoutProps {
   children: React.ReactNode;
@@ -122,15 +131,20 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
     } catch {}
   };
 
+  const { t, language, setLanguage, currency, setCurrency } = useTranslation();
+
+  const [showLangMenu, setShowLangMenu] = useState(false);
+  const [showCurrencyMenu, setShowCurrencyMenu] = useState(false);
+
   function formatTimeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Baru saja';
-    if (mins < 60) return `${mins} menit lalu`;
+    if (mins < 1) return t('layout.justNow');
+    if (mins < 60) return t('layout.minutesAgo', { count: mins });
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours} jam lalu`;
+    if (hours < 24) return t('layout.hoursAgo', { count: hours });
     const days = Math.floor(hours / 24);
-    return `${days} hari lalu`;
+    return t('layout.daysAgo', { count: days });
   }
 
   if (!mounted) {
@@ -178,6 +192,20 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
     router.push('/auth/login');
   };
 
+  const getTranslatedItem = (id: string, fallback: string) => {
+    const key = `sidebar.items.${id}`;
+    const translated = t(key);
+    if (translated !== key) return translated;
+    return fallback;
+  };
+
+  const getTranslatedGroup = (id: string, fallback: string) => {
+    const key = `sidebar.groups.${id}`;
+    const translated = t(key);
+    if (translated !== key) return translated;
+    return fallback;
+  };
+
   const renderNavItem = (item: MenuItem, depth = 0) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedMenus.includes(item.id);
@@ -196,7 +224,7 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
           >
             <div className="flex items-center gap-3 min-w-0">
               <Icon className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && <span className="text-[15px] font-semibold truncate">{item.name}</span>}
+              {!sidebarCollapsed && <span className="text-[15px] font-semibold truncate">{getTranslatedItem(item.id, item.name)}</span>}
             </div>
             {!sidebarCollapsed && (
               <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -231,7 +259,7 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
           <Icon className={`flex-shrink-0 ${isChild ? 'w-4 h-4' : 'w-5 h-5'}`} />
           {!sidebarCollapsed && (
             <span className={`truncate ${isChild ? 'text-sm font-normal' : 'text-[15px] font-semibold'}`}>
-              {item.name}
+              {getTranslatedItem(item.id, item.name)}
             </span>
           )}
         </div>
@@ -243,7 +271,7 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
         {/* Collapsed tooltip */}
         {sidebarCollapsed && (
           <div className="hidden lg:block absolute left-full ml-2 px-2.5 py-1.5 bg-gray-900 text-white text-xs rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-            {item.name}
+            {getTranslatedItem(item.id, item.name)}
             <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
           </div>
         )}
@@ -256,7 +284,7 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
       {!sidebarCollapsed && (
         <div className="px-3 mb-1.5 flex items-center gap-2">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wide whitespace-nowrap">
-            {group.title}
+            {getTranslatedGroup(group.id, group.title)}
           </h3>
           <div className="flex-1 h-px bg-gray-100" />
         </div>
@@ -359,7 +387,7 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Cari cabang, produk, pengguna..."
+                  placeholder={t('layout.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
@@ -369,6 +397,67 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
 
             {/* Right Actions */}
             <div className="flex items-center gap-4">
+              {/* Language Switcher */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowLangMenu(!showLangMenu)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors text-sm"
+                  title="Language"
+                >
+                  <Globe className="w-4 h-4 text-gray-500" />
+                  <span className="hidden sm:inline text-xs font-medium text-gray-600">{languageFlags[language]} {language.toUpperCase()}</span>
+                </button>
+                {showLangMenu && (
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50">
+                    {(Object.keys(languageNames) as Language[]).map((lang) => (
+                      <button
+                        key={lang}
+                        onClick={() => { setLanguage(lang); setShowLangMenu(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                          language === lang ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="text-base">{languageFlags[lang]}</span>
+                        <span>{languageNames[lang]}</span>
+                        {language === lang && <CheckCircle className="w-4 h-4 ml-auto text-blue-500" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Currency Switcher */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowCurrencyMenu(!showCurrencyMenu)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors text-sm"
+                  title="Currency"
+                >
+                  <span className="text-xs font-bold text-gray-500">{currencySymbols[currency]}</span>
+                  <span className="hidden sm:inline text-xs font-medium text-gray-600">{currency}</span>
+                </button>
+                {showCurrencyMenu && (
+                  <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50">
+                    {(Object.keys(currencyNames) as Currency[]).map((cur) => (
+                      <button
+                        key={cur}
+                        onClick={() => { setCurrency(cur); setShowCurrencyMenu(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                          currency === cur ? 'bg-emerald-50 text-emerald-700 font-medium' : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className="text-base">{currencyFlags[cur]}</span>
+                        <div className="flex-1 text-left">
+                          <span className="font-medium">{cur}</span>
+                          <span className="text-xs text-gray-400 ml-1.5">{currencyNames[cur]}</span>
+                        </div>
+                        {currency === cur && <CheckCircle className="w-4 h-4 ml-auto text-emerald-500" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {/* Notifications */}
               <div className="relative">
                 <button
@@ -386,16 +475,16 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
                 {showNotifications && (
                   <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                     <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Notifikasi</h3>
+                      <h3 className="font-semibold text-gray-900">{t('layout.notifications')}</h3>
                       {unreadCount > 0 && (
                         <button onClick={() => handleMarkRead()} className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-                          Tandai semua dibaca
+                          {t('layout.markAllRead')}
                         </button>
                       )}
                     </div>
                     <div className="max-h-96 overflow-y-auto">
                       {notifications.length === 0 && (
-                        <div className="p-8 text-center text-gray-400 text-sm">Tidak ada notifikasi</div>
+                        <div className="p-8 text-center text-gray-400 text-sm">{t('layout.noNotifications')}</div>
                       )}
                       {notifications.map((notif) => (
                         <div
@@ -424,7 +513,7 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
                     </div>
                     <div className="p-3 bg-gray-50 text-center">
                       <Link href="/hq/notifications" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                        Lihat Semua Notifikasi
+                        {t('layout.viewAllNotifications')}
                       </Link>
                     </div>
                   </div>
@@ -468,7 +557,7 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
                         onClick={() => setShowUserMenu(false)}
                       >
                         <CreditCard className="w-4 h-4 text-gray-400" />
-                        Billing Information
+                        {t('layout.billingInfo')}
                       </Link>
                       <Link
                         href="/hq/settings"
@@ -476,7 +565,7 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
                         onClick={() => setShowUserMenu(false)}
                       >
                         <Settings className="w-4 h-4 text-gray-400" />
-                        Pengaturan Akun
+                        {t('layout.accountSettings')}
                       </Link>
                       <Link
                         href="/hq/knowledge-base"
@@ -484,7 +573,7 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
                         onClick={() => setShowUserMenu(false)}
                       >
                         <BookOpen className="w-4 h-4 text-gray-400" />
-                        Knowledge Base
+                        {t('layout.knowledgeBase')}
                       </Link>
                     </div>
                     <div className="border-t border-gray-100 py-1">
@@ -493,7 +582,7 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
                         className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <LogOut className="w-4 h-4" />
-                        Keluar
+                        {t('layout.logout')}
                       </button>
                     </div>
                   </div>
@@ -505,7 +594,7 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
         </header>
 
         {/* Page Content */}
-        <main className={noPadding ? 'w-full overflow-x-hidden' : 'p-6'}>
+        <main className={noPadding ? 'w-full h-[calc(100vh-4rem)] overflow-hidden' : 'p-6'}>
           {(title || subtitle) && (
             <div className="mb-6">
               {title && <h1 className="text-2xl font-bold text-gray-900">{title}</h1>}
@@ -517,10 +606,10 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
       </div>
 
       {/* Click outside to close dropdowns */}
-      {(showNotifications || showUserMenu) && (
+      {(showNotifications || showUserMenu || showLangMenu || showCurrencyMenu) && (
         <div 
           className="fixed inset-0 z-30" 
-          onClick={() => { setShowNotifications(false); setShowUserMenu(false); }}
+          onClick={() => { setShowNotifications(false); setShowUserMenu(false); setShowLangMenu(false); setShowCurrencyMenu(false); }}
         />
       )}
     </div>
@@ -528,5 +617,9 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
 }
 
 export default function HQLayout(props: HQLayoutProps) {
-  return <HQLayoutContent {...props} />;
+  return (
+    <TranslationProvider translations={mergedHqTranslations}>
+      <HQLayoutContent {...props} />
+    </TranslationProvider>
+  );
 }

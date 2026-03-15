@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -56,11 +57,18 @@ interface Plan {
 const PlansPage = () => {
   const router = useRouter();
   const { data: session } = useSession();
+  const { t } = useTranslation();
+  const MOCK_PLANS: Plan[] = [
+    { id: 'starter', name: 'Starter', description: 'Untuk bisnis kecil', price: 500000, billingInterval: 'monthly', currency: 'IDR', trialDays: 14, features: { pos: true, inventory: true, finance: false, hris: false }, limits: [{ metric: 'users', max: 5, unit: 'users' }, { metric: 'branches', max: 1, unit: 'branches' }], metadata: { targetAudience: 'UMKM' }, formattedPrice: 'Rp 500.000', intervalDisplay: '/bulan' },
+    { id: 'business', name: 'Business', description: 'Untuk bisnis berkembang', price: 1500000, billingInterval: 'monthly', currency: 'IDR', trialDays: 14, features: { pos: true, inventory: true, finance: true, hris: false }, limits: [{ metric: 'users', max: 25, unit: 'users' }, { metric: 'branches', max: 10, unit: 'branches' }], metadata: { isPopular: true, badge: 'Popular', targetAudience: 'SME' }, formattedPrice: 'Rp 1.500.000', intervalDisplay: '/bulan' },
+    { id: 'enterprise', name: 'Enterprise', description: 'Solusi lengkap enterprise', price: 2500000, billingInterval: 'monthly', currency: 'IDR', trialDays: 30, features: { pos: true, inventory: true, finance: true, hris: true }, limits: [{ metric: 'users', max: 200, unit: 'users' }, { metric: 'branches', max: 50, unit: 'branches' }], metadata: { badge: 'Best Value', targetAudience: 'Enterprise' }, formattedPrice: 'Rp 2.500.000', intervalDisplay: '/bulan' },
+  ];
+  const MOCK_CUR_SUB = { id: 'sub-1', status: 'active', plan: { id: 'enterprise', name: 'Enterprise' } };
   const [loading, setLoading] = useState(true);
-  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plans, setPlans] = useState<Plan[]>(MOCK_PLANS);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [upgrading, setUpgrading] = useState(false);
-  const [currentSubscription, setCurrentSubscription] = useState<any>(null);
+  const [currentSubscription, setCurrentSubscription] = useState<any>(MOCK_CUR_SUB);
 
   useEffect(() => {
     fetchPlans();
@@ -77,6 +85,7 @@ const PlansPage = () => {
       }
     } catch (error) {
       console.error('Error fetching plans:', error);
+      setPlans(MOCK_PLANS);
     } finally {
       setLoading(false);
     }
@@ -92,6 +101,7 @@ const PlansPage = () => {
       }
     } catch (error) {
       console.error('Error fetching subscription:', error);
+      setCurrentSubscription(MOCK_CUR_SUB);
     }
   };
 

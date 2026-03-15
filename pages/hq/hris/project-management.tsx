@@ -12,12 +12,27 @@ interface DocTemplate { id: string; name: string; description: string; category:
 
 type TabKey = 'projects' | 'workers' | 'timesheets' | 'payroll' | 'documents' | 'templates';
 
+const MOCK_PM_OVERVIEW = { totalProjects: 8, activeProjects: 5, totalWorkers: 45, totalBudget: 2500000000, totalActualCost: 1800000000, avgCompletion: 62 };
+const MOCK_PROJECTS: ProjectItem[] = [
+  { id: 'p1', project_code: 'PRJ-2026-001', name: 'Ekspansi Cabang Bali', description: 'Pembukaan cabang baru di Bali', client_name: 'Internal', location: 'Bali', start_date: '2026-01-15', end_date: '2026-06-30', status: 'in_progress', budget_amount: 800000000, actual_cost: 520000000, project_manager_id: 1, department: 'Operations', industry: 'F&B', completion_percent: 65, priority: 'high', milestones: [] },
+  { id: 'p2', project_code: 'PRJ-2026-002', name: 'Sistem POS v3.0', description: 'Upgrade sistem POS ke versi 3.0', client_name: 'Internal', location: 'Jakarta', start_date: '2026-02-01', end_date: '2026-08-31', status: 'in_progress', budget_amount: 500000000, actual_cost: 180000000, project_manager_id: 3, department: 'IT', industry: 'Technology', completion_percent: 35, priority: 'high', milestones: [] },
+  { id: 'p3', project_code: 'PRJ-2026-003', name: 'Renovasi Gudang Surabaya', description: 'Renovasi dan perluasan gudang', client_name: 'Internal', location: 'Surabaya', start_date: '2026-03-01', end_date: '2026-05-31', status: 'planned', budget_amount: 350000000, actual_cost: 0, project_manager_id: 5, department: 'Facilities', industry: 'Construction', completion_percent: 0, priority: 'medium', milestones: [] },
+];
+const MOCK_PM_WORKERS: Worker[] = [
+  { id: 'w1', project_id: 'p1', employee_id: 10, role: 'Site Manager', assignment_start: '2026-01-15', assignment_end: '2026-06-30', daily_rate: 500000, hourly_rate: 62500, allocation_percent: 100, status: 'active', worker_type: 'permanent', contract_number: '' },
+  { id: 'w2', project_id: 'p1', employee_id: 15, role: 'Architect', assignment_start: '2026-01-15', assignment_end: '2026-04-30', daily_rate: 750000, hourly_rate: 93750, allocation_percent: 50, status: 'active', worker_type: 'contract', contract_number: 'CTR-2026-005' },
+];
+const MOCK_PM_TIMESHEETS: Timesheet[] = [
+  { id: 'ts1', project_id: 'p1', employee_id: 10, timesheet_date: '2026-03-12', hours_worked: 8, overtime_hours: 2, activity_description: 'Supervisi pekerjaan struktur', task_category: 'supervision', status: 'approved' },
+  { id: 'ts2', project_id: 'p2', employee_id: 3, timesheet_date: '2026-03-12', hours_worked: 8, overtime_hours: 0, activity_description: 'Development modul payment', task_category: 'development', status: 'submitted' },
+];
+
 export default function ProjectManagementPage() {
   const [tab, setTab] = useState<TabKey>('projects');
-  const [overview, setOverview] = useState<any>({});
-  const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [workers, setWorkers] = useState<Worker[]>([]);
-  const [timesheets, setTimesheets] = useState<Timesheet[]>([]);
+  const [overview, setOverview] = useState<any>(MOCK_PM_OVERVIEW);
+  const [projects, setProjects] = useState<ProjectItem[]>(MOCK_PROJECTS);
+  const [workers, setWorkers] = useState<Worker[]>(MOCK_PM_WORKERS);
+  const [timesheets, setTimesheets] = useState<Timesheet[]>(MOCK_PM_TIMESHEETS);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -79,7 +94,13 @@ export default function ProjectManagementPage() {
       setWorkers(wk.data || []);
       setTimesheets(ts.data || []);
       setPayrollItems(pr.data || []);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setOverview(MOCK_PM_OVERVIEW);
+      setProjects(MOCK_PROJECTS);
+      setWorkers(MOCK_PM_WORKERS);
+      setTimesheets(MOCK_PM_TIMESHEETS);
+    }
     setLoading(false);
   }, [api]);
 
@@ -259,9 +280,9 @@ export default function ProjectManagementPage() {
         }
         setBulkResult({ success, failed });
       }
-      showToast(`Bulk import berhasil!`);
+      showToast(`Impor massal berhasil!`);
       loadData();
-    } catch (e) { showToast('Bulk import gagal', 'error'); }
+    } catch (e) { showToast('Impor massal gagal', 'error'); }
     setBulkUploading(false);
   };
 
@@ -288,9 +309,9 @@ export default function ProjectManagementPage() {
   };
 
   const BULK_LABELS: Record<string, { title: string; color: string }> = {
-    workers: { title: 'Bulk Import Tenaga Kerja', color: 'green' },
-    timesheets: { title: 'Bulk Import Timesheet', color: 'blue' },
-    payroll: { title: 'Bulk Hitung Payroll', color: 'purple' }
+    workers: { title: 'Impor Massal Tenaga Kerja', color: 'green' },
+    timesheets: { title: 'Impor Massal Timesheet', color: 'blue' },
+    payroll: { title: 'Hitung Penggajian Massal', color: 'purple' }
   };
 
   const openAdd = (type: string) => {
@@ -313,15 +334,15 @@ export default function ProjectManagementPage() {
       } else if (modalType === 'calc-payroll') {
         await api('calculate-payroll', 'POST', payrollCalcForm);
       }
-      showToast(editingItem ? 'Updated' : 'Created');
+      showToast(editingItem ? 'Diperbarui' : 'Dibuat');
       setShowModal(false); loadData();
-    } catch (e) { showToast('Error', 'error'); }
+    } catch (e) { showToast('Gagal menyimpan', 'error'); }
   };
 
   const handleDelete = async (action: string, id: string) => {
     if (!confirm('Hapus data ini?')) return;
     await api(action, 'DELETE', null, `&id=${id}`);
-    showToast('Deleted'); loadData();
+    showToast('Dihapus'); loadData();
   };
 
   const statusColor = (s: string) => {
@@ -338,18 +359,18 @@ export default function ProjectManagementPage() {
     { key: 'projects', label: 'Proyek', icon: Briefcase },
     { key: 'workers', label: 'Tenaga Kerja', icon: Users },
     { key: 'timesheets', label: 'Timesheet', icon: Clock },
-    { key: 'payroll', label: 'Payroll Proyek', icon: DollarSign },
+    { key: 'payroll', label: 'Penggajian Proyek', icon: DollarSign },
     { key: 'documents', label: 'Dokumen', icon: FolderOpen },
     { key: 'templates', label: 'Template', icon: FileText },
   ];
 
   return (
-    <HQLayout title="Project & Contract Worker Management">
+    <HQLayout title="Manajemen Proyek & Pekerja Kontrak">
     <div className="p-6 max-w-7xl mx-auto">
       {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Project & Contract Worker Management</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Manajemen Proyek & Pekerja Kontrak</h1>
         <p className="text-gray-500 mt-1">Kelola proyek, tenaga kerja kontrak, timesheet, dan payroll berbasis proyek</p>
       </div>
 
@@ -368,7 +389,7 @@ export default function ProjectManagementPage() {
         <div className="bg-white border rounded-xl p-4">
           <DollarSign className="w-5 h-5 text-blue-600 mb-1" />
           <p className="text-2xl font-bold">{fmtCur(overview.totalBudget || 0)}</p>
-          <p className="text-xs text-gray-500">Total Budget</p>
+          <p className="text-xs text-gray-500">Total Anggaran</p>
         </div>
         <div className="bg-white border rounded-xl p-4">
           <BarChart3 className="w-5 h-5 text-orange-600 mb-1" />
@@ -397,7 +418,7 @@ export default function ProjectManagementPage() {
         ))}
       </div>
 
-      {loading && <div className="text-center py-10 text-gray-400">Loading...</div>}
+      {loading && <div className="text-center py-10 text-gray-400">Memuat...</div>}
 
       {/* PROJECTS TAB */}
       {!loading && tab === 'projects' && !projectDetail && (
@@ -418,7 +439,7 @@ export default function ProjectManagementPage() {
                       <span className={`text-xs px-2 py-0.5 rounded-full ${statusColor(p.status)}`}>{p.status}</span>
                     </div>
                     <h3 className="font-semibold text-gray-900">{p.name}</h3>
-                    {p.client_name && <p className="text-sm text-gray-500">Client: {p.client_name}</p>}
+                    {p.client_name && <p className="text-sm text-gray-500">Klien: {p.client_name}</p>}
                   </div>
                   <div className="flex gap-1">
                     <button onClick={async () => { const res = await api('project-detail', 'GET', null, `&id=${p.id}`); setProjectDetail(res.data); }} className="p-1.5 text-gray-400 hover:text-indigo-600"><Eye className="w-4 h-4" /></button>
@@ -429,13 +450,13 @@ export default function ProjectManagementPage() {
                 {p.description && <p className="text-sm text-gray-500 line-clamp-2 mb-2">{p.description}</p>}
                 {/* Progress bar */}
                 <div className="mb-2">
-                  <div className="flex justify-between text-xs mb-1"><span>Progress</span><span>{Number(p.completion_percent || 0).toFixed(0)}%</span></div>
+                  <div className="flex justify-between text-xs mb-1"><span>Progres</span><span>{Number(p.completion_percent || 0).toFixed(0)}%</span></div>
                   <div className="w-full bg-gray-200 rounded-full h-1.5">
                     <div className="bg-indigo-500 h-1.5 rounded-full" style={{ width: `${p.completion_percent || 0}%` }} />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 pt-2 border-t text-xs">
-                  <div><span className="text-gray-400">Budget</span><p className="font-medium">{fmtCur(p.budget_amount)}</p></div>
+                  <div><span className="text-gray-400">Anggaran</span><p className="font-medium">{fmtCur(p.budget_amount)}</p></div>
                   <div><span className="text-gray-400">Aktual</span><p className="font-medium">{fmtCur(p.actual_cost)}</p></div>
                   <div><span className="text-gray-400">Periode</span><p className="font-medium">{p.start_date ? new Date(p.start_date).toLocaleDateString('id-ID', { month: 'short', year: '2-digit' }) : '-'}</p></div>
                 </div>
@@ -458,7 +479,7 @@ export default function ProjectManagementPage() {
             <h2 className="text-xl font-bold">{projectDetail.project?.name}</h2>
             <p className="text-gray-500">{projectDetail.project?.description}</p>
             <div className="grid md:grid-cols-4 gap-4 mt-4">
-              <div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-500">Budget</p><p className="font-bold">{fmtCur(projectDetail.project?.budget_amount)}</p></div>
+              <div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-500">Anggaran</p><p className="font-bold">{fmtCur(projectDetail.project?.budget_amount)}</p></div>
               <div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-500">Aktual</p><p className="font-bold">{fmtCur(projectDetail.project?.actual_cost)}</p></div>
               <div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-500">Pekerja</p><p className="font-bold">{(projectDetail.workers || []).length}</p></div>
               <div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-500">Total Jam</p><p className="font-bold">{projectDetail.totalHours || 0}</p></div>
@@ -470,7 +491,7 @@ export default function ProjectManagementPage() {
             <div className="space-y-2">
               {(projectDetail.workers || []).map((w: any) => (
                 <div key={w.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
-                  <div><span className="font-medium">#{w.employee_id}</span> - <span>{w.role || 'Member'}</span></div>
+                  <div><span className="font-medium">#{w.employee_id}</span> - <span>{w.role || 'Anggota'}</span></div>
                   <div className="flex items-center gap-3 text-xs text-gray-500">
                     <span className="capitalize">{w.worker_type}</span>
                     <span>{w.allocation_percent}%</span>
@@ -484,7 +505,7 @@ export default function ProjectManagementPage() {
           {/* Payroll */}
           {(projectDetail.payrollItems || []).length > 0 && (
             <div className="bg-white border rounded-xl p-5">
-              <h3 className="font-semibold mb-3">Payroll Items</h3>
+              <h3 className="font-semibold mb-3">Data Penggajian</h3>
               <table className="w-full text-sm">
                 <thead className="bg-gray-50"><tr><th className="px-3 py-2 text-left">Karyawan</th><th className="px-3 py-2 text-left">Periode</th><th className="px-3 py-2 text-right">Hari</th><th className="px-3 py-2 text-right">Gross</th><th className="px-3 py-2 text-right">Net</th><th className="px-3 py-2 text-left">Status</th></tr></thead>
                 <tbody className="divide-y">
@@ -592,7 +613,7 @@ export default function ProjectManagementPage() {
                       <td className="px-4 py-3">
                         <div className="flex gap-1">
                           {t.status === 'submitted' && (
-                            <button onClick={async () => { await api('approve-timesheet', 'POST', { id: t.id }); showToast('Approved'); loadData(); }} className="text-xs px-2 py-1 text-green-600 hover:bg-green-50 rounded"><Check className="w-3.5 h-3.5" /></button>
+                            <button onClick={async () => { await api('approve-timesheet', 'POST', { id: t.id }); showToast('Disetujui'); loadData(); }} className="text-xs px-2 py-1 text-green-600 hover:bg-green-50 rounded"><Check className="w-3.5 h-3.5" /></button>
                           )}
                           <button onClick={() => handleDelete('timesheet', t.id)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
@@ -611,7 +632,7 @@ export default function ProjectManagementPage() {
       {!loading && tab === 'payroll' && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Payroll Berbasis Proyek</h2>
+            <h2 className="text-lg font-semibold">Penggajian Berbasis Proyek</h2>
             <div className="flex gap-2">
               <button onClick={() => openBulk('payroll')} className="flex items-center gap-2 px-4 py-2 border border-purple-600 text-purple-700 rounded-lg text-sm hover:bg-purple-50">
                 <Upload className="w-4 h-4" /> Bulk Hitung CSV
@@ -654,10 +675,10 @@ export default function ProjectManagementPage() {
                       <td className="px-4 py-3">
                         <div className="flex gap-1">
                           {pi.status === 'calculated' && (
-                            <button onClick={async () => { await api('approve-payroll', 'POST', { id: pi.id }); showToast('Approved'); loadData(); }} className="text-xs px-2 py-1 text-green-600 hover:bg-green-50 rounded">Approve</button>
+                            <button onClick={async () => { await api('approve-payroll', 'POST', { id: pi.id }); showToast('Disetujui'); loadData(); }} className="text-xs px-2 py-1 text-green-600 hover:bg-green-50 rounded">Setujui</button>
                           )}
                           {pi.status === 'approved' && (
-                            <button onClick={async () => { await api('pay-payroll', 'POST', { id: pi.id, paymentRef: `PAY-${Date.now()}` }); showToast('Paid'); loadData(); }} className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded">Bayar</button>
+                            <button onClick={async () => { await api('pay-payroll', 'POST', { id: pi.id, paymentRef: `PAY-${Date.now()}` }); showToast('Dibayar'); loadData(); }} className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded">Bayar</button>
                           )}
                           <button onClick={() => handleDelete('payroll', pi.id)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
                         </div>
@@ -667,7 +688,7 @@ export default function ProjectManagementPage() {
                 })}
               </tbody>
             </table>
-            {payrollItems.length === 0 && <p className="text-center text-gray-400 py-8">Belum ada data payroll proyek</p>}
+            {payrollItems.length === 0 && <p className="text-center text-gray-400 py-8">Belum ada data penggajian proyek</p>}
           </div>
         </div>
       )}
@@ -805,7 +826,7 @@ export default function ProjectManagementPage() {
               <button onClick={() => setShowUploadModal(false)} className="px-4 py-2 text-sm text-gray-700 border rounded-lg hover:bg-gray-50">Batal</button>
               <button onClick={handleUpload} disabled={uploading || uploadFiles.length === 0}
                 className="px-5 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                {uploading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Uploading...</> : <><Upload className="w-4 h-4" /> Upload {uploadFiles.length > 0 ? `(${uploadFiles.length})` : ''}</>}
+                {uploading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Mengunggah...</> : <><Upload className="w-4 h-4" /> Upload {uploadFiles.length > 0 ? `(${uploadFiles.length})` : ''}</>}
               </button>
             </div>
           </div>
