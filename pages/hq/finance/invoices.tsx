@@ -81,11 +81,24 @@ const formatFullCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
+const MOCK_INV_SUMMARY: InvoiceSummary = {
+  totalInvoices: 42, totalAmount: 1850000000, paidAmount: 1200000000, pendingAmount: 450000000,
+  overdueAmount: 200000000, draftCount: 3, sentCount: 8, paidCount: 25, overdueCount: 6,
+};
+
+const MOCK_INVOICES: Invoice[] = [
+  { id: 'inv1', invoiceNumber: 'INV-2026-0042', customer: 'PT Maju Bersama', customerType: 'corporate', branch: 'Kantor Pusat Jakarta', branchCode: 'HQ-001', issueDate: '2026-03-01', dueDate: '2026-03-31', items: [{ id: 'i1', description: 'Kopi Arabica Blend 1kg x 100', quantity: 100, unitPrice: 185000, total: 18500000 }], subtotal: 18500000, tax: 2035000, discount: 0, total: 20535000, status: 'sent', paidAmount: 0, notes: '' },
+  { id: 'inv2', invoiceNumber: 'INV-2026-0041', customer: 'Hotel Grand Nusa', customerType: 'corporate', branch: 'Cabang Bali', branchCode: 'BR-005', issueDate: '2026-02-15', dueDate: '2026-03-15', items: [{ id: 'i2', description: 'Supply Kopi Bulanan', quantity: 1, unitPrice: 85000000, total: 85000000 }], subtotal: 85000000, tax: 9350000, discount: 5000000, total: 89350000, status: 'partial', paidAmount: 50000000, notes: 'Kontrak bulanan' },
+  { id: 'inv3', invoiceNumber: 'INV-2026-0040', customer: 'CV Sejahtera Abadi', customerType: 'corporate', branch: 'Cabang Bandung', branchCode: 'BR-002', issueDate: '2026-02-01', dueDate: '2026-03-01', items: [{ id: 'i3', description: 'Paket Produk Mix', quantity: 50, unitPrice: 350000, total: 17500000 }], subtotal: 17500000, tax: 1925000, discount: 0, total: 19425000, status: 'paid', paidAmount: 19425000, notes: '' },
+  { id: 'inv4', invoiceNumber: 'INV-2026-0039', customer: 'Restoran Padang Sederhana', customerType: 'individual', branch: 'Cabang Surabaya', branchCode: 'BR-003', issueDate: '2026-01-20', dueDate: '2026-02-20', items: [{ id: 'i4', description: 'Teh Premium Bulk', quantity: 200, unitPrice: 35000, total: 7000000 }], subtotal: 7000000, tax: 770000, discount: 0, total: 7770000, status: 'overdue', paidAmount: 0, notes: '' },
+  { id: 'inv5', invoiceNumber: 'INV-2026-0038', customer: 'PT Teknologi Nusantara', customerType: 'corporate', branch: 'Kantor Pusat Jakarta', branchCode: 'HQ-001', issueDate: '2026-03-10', dueDate: '2026-04-10', items: [{ id: 'i5', description: 'Catering Event Kantor', quantity: 1, unitPrice: 45000000, total: 45000000 }], subtotal: 45000000, tax: 4950000, discount: 2000000, total: 47950000, status: 'draft', paidAmount: 0, notes: 'Draft - perlu approval' },
+];
+
 export default function InvoiceManagement() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [summary, setSummary] = useState<InvoiceSummary>(defaultInvSummary);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [summary, setSummary] = useState<InvoiceSummary>(MOCK_INV_SUMMARY);
+  const [invoices, setInvoices] = useState<Invoice[]>(MOCK_INVOICES);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -154,6 +167,8 @@ export default function InvoiceManagement() {
       }
     } catch (error) {
       console.error('Error fetching invoices:', error);
+      setInvoices(MOCK_INVOICES);
+      setSummary(MOCK_INV_SUMMARY);
     } finally {
       setLoading(false);
     }

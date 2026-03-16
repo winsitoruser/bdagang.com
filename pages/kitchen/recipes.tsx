@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,15 +36,21 @@ interface Product {
 
 const RecipeManagementPage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: session, status } = useSession();
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const MOCK_RECIPES: Recipe[] = [
+    { id: 'r1', name: 'Nasi Goreng Spesial', category: 'Makanan Utama', description: 'Nasi goreng dengan telur dan ayam', prepTime: 5, cookTime: 15, servings: 1, difficulty: 'easy', cost: 12000, price: 35000, ingredients: [{ id: 'i1', name: 'Nasi', quantity: 200, unit: 'gram', cost: 3000 }, { id: 'i2', name: 'Ayam', quantity: 100, unit: 'gram', cost: 5000 }, { id: 'i3', name: 'Telur', quantity: 1, unit: 'butir', cost: 2500 }], instructions: ['Panaskan minyak', 'Tumis bumbu halus', 'Masukkan nasi dan aduk rata'] },
+    { id: 'r2', name: 'Mie Ayam', category: 'Makanan Utama', description: 'Mie dengan topping ayam', prepTime: 5, cookTime: 10, servings: 1, difficulty: 'easy', cost: 8000, price: 25000, ingredients: [{ id: 'i4', name: 'Mie', quantity: 150, unit: 'gram', cost: 3000 }, { id: 'i5', name: 'Ayam', quantity: 80, unit: 'gram', cost: 4000 }], instructions: ['Rebus mie', 'Siapkan topping ayam'] },
+  ] as any;
+  const [recipes, setRecipes] = useState<Recipe[]>(MOCK_RECIPES);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [showVersionDialog, setShowVersionDialog] = useState(false);
   const [recipeVersions, setRecipeVersions] = useState<any[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const MOCK_R_PRODUCTS: Product[] = [{ id: 1, name: 'Nasi', sku: 'NSI-001', unit: 'kg', price: 15000, cost: 12000 }, { id: 2, name: 'Ayam Potong', sku: 'AYM-001', unit: 'kg', price: 45000, cost: 35000 }];
+  const [products, setProducts] = useState<Product[]>(MOCK_R_PRODUCTS);
   const [productSearch, setProductSearch] = useState('');
   const [showProductDropdown, setShowProductDropdown] = useState<number | null>(null);
   const [formData, setFormData] = useState({
@@ -89,6 +96,7 @@ const RecipeManagementPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+      setProducts(MOCK_R_PRODUCTS);
     }
   };
 
@@ -130,6 +138,7 @@ const RecipeManagementPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching recipes:', error);
+      setRecipes(MOCK_RECIPES);
     }
   };
 

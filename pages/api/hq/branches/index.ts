@@ -303,11 +303,139 @@ async function createBranch(req: NextApiRequest, res: NextApiResponse) {
 }
 
 function getMockBranches() {
+  const now = new Date().toISOString();
   return [
-    { id: '1', code: 'HQ-001', name: 'Cabang Pusat Jakarta', type: 'main', city: 'Jakarta Selatan', province: 'DKI Jakarta', isActive: true, manager: { id: '1', name: 'Ahmad Wijaya' }, stats: { employeeCount: 25, todaySales: 45000000, monthSales: 1250000000, lowStockItems: 5 } },
-    { id: '2', code: 'BR-002', name: 'Cabang Bandung', type: 'branch', city: 'Bandung', province: 'Jawa Barat', isActive: true, manager: { id: '2', name: 'Siti Rahayu' }, stats: { employeeCount: 18, todaySales: 32000000, monthSales: 920000000, lowStockItems: 12 } },
-    { id: '3', code: 'BR-003', name: 'Cabang Surabaya', type: 'branch', city: 'Surabaya', province: 'Jawa Timur', isActive: true, manager: { id: '3', name: 'Budi Santoso' }, stats: { employeeCount: 15, todaySales: 28000000, monthSales: 780000000, lowStockItems: 8 } },
-    { id: '4', code: 'BR-004', name: 'Cabang Medan', type: 'branch', city: 'Medan', province: 'Sumatera Utara', isActive: true, manager: { id: '4', name: 'Dewi Lestari' }, stats: { employeeCount: 12, todaySales: 22000000, monthSales: 650000000, lowStockItems: 15 } },
-    { id: '5', code: 'WH-001', name: 'Gudang Pusat', type: 'warehouse', city: 'Bekasi', province: 'Jawa Barat', isActive: true, manager: { id: '5', name: 'Eko Prasetyo' }, stats: { employeeCount: 30, todaySales: 0, monthSales: 0, lowStockItems: 22 } }
+    {
+      id: '1', code: 'HQ-001', name: 'Kantor Pusat Jakarta', type: 'main',
+      address: 'Jl. Sudirman No. 123, Senayan', city: 'Jakarta Selatan', province: 'DKI Jakarta', region: 'DKI Jakarta',
+      phone: '021-5551234', email: 'pusat@bedagang.com',
+      isActive: true, status: 'online', syncStatus: 'synced', lastSync: now,
+      priceTierId: 'tier-1', priceTierName: 'Harga Standar',
+      manager: { id: '1', name: 'Ahmad Wijaya', email: 'ahmad@bedagang.com' },
+      stats: { employeeCount: 25, todaySales: 48500000, monthSales: 1350000000, lowStockItems: 3 },
+      setupStatus: 'completed', setupProgress: 100, healthScore: 95, healthGrade: 'A',
+      createdAt: '2024-01-15'
+    },
+    {
+      id: '2', code: 'BR-002', name: 'Cabang Bandung', type: 'branch',
+      address: 'Jl. Braga No. 45', city: 'Bandung', province: 'Jawa Barat', region: 'Jawa Barat',
+      phone: '022-4201234', email: 'bandung@bedagang.com',
+      isActive: true, status: 'online', syncStatus: 'synced', lastSync: now,
+      priceTierId: 'tier-2', priceTierName: 'Harga Regional Jabar',
+      manager: { id: '2', name: 'Siti Rahayu', email: 'siti@bedagang.com' },
+      stats: { employeeCount: 18, todaySales: 35200000, monthSales: 980000000, lowStockItems: 7 },
+      setupStatus: 'completed', setupProgress: 100, healthScore: 84, healthGrade: 'B',
+      createdAt: '2024-03-10'
+    },
+    {
+      id: '3', code: 'BR-003', name: 'Cabang Surabaya', type: 'branch',
+      address: 'Jl. Tunjungan No. 78', city: 'Surabaya', province: 'Jawa Timur', region: 'Jawa Timur',
+      phone: '031-5459876', email: 'surabaya@bedagang.com',
+      isActive: true, status: 'warning', syncStatus: 'pending', lastSync: new Date(Date.now() - 7200000).toISOString(),
+      priceTierId: 'tier-3', priceTierName: 'Harga Regional Jatim',
+      manager: { id: '3', name: 'Budi Santoso', email: 'budi@bedagang.com' },
+      stats: { employeeCount: 15, todaySales: 29800000, monthSales: 820000000, lowStockItems: 14 },
+      setupStatus: 'completed', setupProgress: 100, healthScore: 68, healthGrade: 'C',
+      createdAt: '2024-04-22'
+    },
+    {
+      id: '4', code: 'BR-004', name: 'Cabang Medan', type: 'branch',
+      address: 'Jl. Gatot Subroto No. 56', city: 'Medan', province: 'Sumatera Utara', region: 'Sumatera Utara',
+      phone: '061-4567890', email: 'medan@bedagang.com',
+      isActive: true, status: 'online', syncStatus: 'synced', lastSync: now,
+      priceTierId: 'tier-4', priceTierName: 'Harga Regional Sumut',
+      manager: { id: '4', name: 'Dewi Lestari', email: 'dewi@bedagang.com' },
+      stats: { employeeCount: 12, todaySales: 24500000, monthSales: 710000000, lowStockItems: 9 },
+      setupStatus: 'completed', setupProgress: 100, healthScore: 79, healthGrade: 'B',
+      createdAt: '2024-06-01'
+    },
+    {
+      id: '5', code: 'BR-005', name: 'Cabang Bali', type: 'branch',
+      address: 'Jl. Sunset Road No. 88, Kuta', city: 'Denpasar', province: 'Bali', region: 'Bali & Nusa Tenggara',
+      phone: '0361-765432', email: 'bali@bedagang.com',
+      isActive: true, status: 'online', syncStatus: 'synced', lastSync: now,
+      priceTierId: 'tier-5', priceTierName: 'Harga Regional Bali',
+      manager: { id: '6', name: 'Made Wirawan', email: 'made@bedagang.com' },
+      stats: { employeeCount: 14, todaySales: 38700000, monthSales: 1050000000, lowStockItems: 4 },
+      setupStatus: 'completed', setupProgress: 100, healthScore: 88, healthGrade: 'B',
+      createdAt: '2024-07-15'
+    },
+    {
+      id: '6', code: 'BR-006', name: 'Cabang Makassar', type: 'branch',
+      address: 'Jl. Penghibur No. 12', city: 'Makassar', province: 'Sulawesi Selatan', region: 'Sulawesi',
+      phone: '0411-332211', email: 'makassar@bedagang.com',
+      isActive: true, status: 'offline', syncStatus: 'failed', lastSync: new Date(Date.now() - 86400000).toISOString(),
+      priceTierId: null, priceTierName: null,
+      manager: { id: '7', name: 'Andi Pratama', email: 'andi@bedagang.com' },
+      stats: { employeeCount: 10, todaySales: 0, monthSales: 520000000, lowStockItems: 18 },
+      setupStatus: 'completed', setupProgress: 100, healthScore: 42, healthGrade: 'D',
+      createdAt: '2024-08-20'
+    },
+    {
+      id: '7', code: 'BR-007', name: 'Cabang Semarang', type: 'branch',
+      address: 'Jl. Pandanaran No. 33', city: 'Semarang', province: 'Jawa Tengah', region: 'Jawa Tengah',
+      phone: '024-8453210', email: 'semarang@bedagang.com',
+      isActive: true, status: 'online', syncStatus: 'synced', lastSync: now,
+      priceTierId: 'tier-2', priceTierName: 'Harga Regional Jateng',
+      manager: { id: '8', name: 'Rina Hartati', email: 'rina@bedagang.com' },
+      stats: { employeeCount: 13, todaySales: 27300000, monthSales: 760000000, lowStockItems: 6 },
+      setupStatus: 'completed', setupProgress: 100, healthScore: 82, healthGrade: 'B',
+      createdAt: '2024-09-05'
+    },
+    {
+      id: '8', code: 'WH-001', name: 'Gudang Pusat Cikarang', type: 'warehouse',
+      address: 'Kawasan Industri Jababeka Blok D-12', city: 'Bekasi', province: 'Jawa Barat', region: 'Jawa Barat',
+      phone: '021-89835678', email: 'gudang@bedagang.com',
+      isActive: true, status: 'online', syncStatus: 'synced', lastSync: now,
+      priceTierId: null, priceTierName: null,
+      manager: { id: '5', name: 'Eko Prasetyo', email: 'eko@bedagang.com' },
+      stats: { employeeCount: 30, todaySales: 0, monthSales: 0, lowStockItems: 22 },
+      setupStatus: 'completed', setupProgress: 100, healthScore: 76, healthGrade: 'B',
+      createdAt: '2024-02-01'
+    },
+    {
+      id: '9', code: 'WH-002', name: 'Gudang Regional Surabaya', type: 'warehouse',
+      address: 'Jl. Rungkut Industri No. 5', city: 'Surabaya', province: 'Jawa Timur', region: 'Jawa Timur',
+      phone: '031-8710234', email: 'gudang-sby@bedagang.com',
+      isActive: true, status: 'online', syncStatus: 'synced', lastSync: now,
+      priceTierId: null, priceTierName: null,
+      manager: { id: '9', name: 'Hendra Gunawan', email: 'hendra@bedagang.com' },
+      stats: { employeeCount: 20, todaySales: 0, monthSales: 0, lowStockItems: 15 },
+      setupStatus: 'completed', setupProgress: 100, healthScore: 72, healthGrade: 'C',
+      createdAt: '2024-05-10'
+    },
+    {
+      id: '10', code: 'KS-001', name: 'Kiosk Mall Kelapa Gading', type: 'kiosk',
+      address: 'Mall Kelapa Gading Lt. 2 Unit 215', city: 'Jakarta Utara', province: 'DKI Jakarta', region: 'DKI Jakarta',
+      phone: '021-4587123', email: 'kiosk-kg@bedagang.com',
+      isActive: true, status: 'online', syncStatus: 'synced', lastSync: now,
+      priceTierId: 'tier-1', priceTierName: 'Harga Standar',
+      manager: { id: '10', name: 'Lisa Permata', email: 'lisa@bedagang.com' },
+      stats: { employeeCount: 5, todaySales: 18900000, monthSales: 480000000, lowStockItems: 2 },
+      setupStatus: 'completed', setupProgress: 100, healthScore: 90, healthGrade: 'A',
+      createdAt: '2024-10-01'
+    },
+    {
+      id: '11', code: 'KS-002', name: 'Kiosk Grand Indonesia', type: 'kiosk',
+      address: 'Grand Indonesia East Mall Lt. 3', city: 'Jakarta Pusat', province: 'DKI Jakarta', region: 'DKI Jakarta',
+      phone: '021-2358890', email: 'kiosk-gi@bedagang.com',
+      isActive: false, status: 'offline', syncStatus: 'never', lastSync: new Date(Date.now() - 604800000).toISOString(),
+      priceTierId: 'tier-1', priceTierName: 'Harga Standar',
+      manager: null,
+      stats: { employeeCount: 0, todaySales: 0, monthSales: 0, lowStockItems: 0 },
+      setupStatus: 'pending', setupProgress: 20, healthScore: 25, healthGrade: 'F',
+      createdAt: '2025-01-15'
+    },
+    {
+      id: '12', code: 'BR-008', name: 'Cabang Yogyakarta', type: 'branch',
+      address: 'Jl. Malioboro No. 52', city: 'Yogyakarta', province: 'DI Yogyakarta', region: 'Jawa Tengah',
+      phone: '0274-567890', email: 'yogya@bedagang.com',
+      isActive: true, status: 'online', syncStatus: 'synced', lastSync: now,
+      priceTierId: 'tier-2', priceTierName: 'Harga Regional Jateng',
+      manager: { id: '11', name: 'Wahyu Nugroho', email: 'wahyu@bedagang.com' },
+      stats: { employeeCount: 11, todaySales: 21600000, monthSales: 620000000, lowStockItems: 5 },
+      setupStatus: 'completed', setupProgress: 100, healthScore: 85, healthGrade: 'B',
+      createdAt: '2024-11-10'
+    }
   ];
 }

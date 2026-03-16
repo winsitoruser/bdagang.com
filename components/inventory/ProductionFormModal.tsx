@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from '@/lib/i18n';
 import {
   FaTimes, FaFlask, FaBoxOpen, FaCheckCircle, FaExclamationTriangle,
   FaCalendarAlt, FaUser, FaStickyNote, FaCalculator
@@ -37,6 +38,7 @@ const ProductionFormModal: React.FC<ProductionFormModalProps> = ({
   recipes,
   onSubmit
 }) => {
+  const { formatCurrency } = useTranslation();
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [batchMultiplier, setBatchMultiplier] = useState(1);
   const [plannedQuantity, setPlannedQuantity] = useState(0);
@@ -50,13 +52,6 @@ const ProductionFormModal: React.FC<ProductionFormModalProps> = ({
     }
   }, [selectedRecipe, batchMultiplier]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const checkMaterialAvailability = (recipe: Recipe, multiplier: number) => {
     return recipe.ingredients.every(ing => ing.available >= ing.quantity * multiplier);

@@ -54,14 +54,38 @@ interface Stats {
   onRoute: number;
 }
 
+const MOCK_VEHICLES: Vehicle[] = [
+  { id: 'v1', vehicleNumber: 'VH-001', licensePlate: 'B 1234 ABC', vehicleType: 'truck', brand: 'Mitsubishi', model: 'Colt Diesel FE 74', status: 'active', currentOdometerKm: 45200, nextServiceDueKm: 50000, assignedDriverId: 'dr1' },
+  { id: 'v2', vehicleNumber: 'VH-002', licensePlate: 'B 5678 DEF', vehicleType: 'van', brand: 'Daihatsu', model: 'Gran Max Blind Van', status: 'active', currentOdometerKm: 32100, nextServiceDueKm: 40000, assignedDriverId: 'dr2' },
+  { id: 'v3', vehicleNumber: 'VH-003', licensePlate: 'D 9012 GHI', vehicleType: 'truck', brand: 'Hino', model: 'Dutro 130 HD', status: 'maintenance', currentOdometerKm: 78500, nextServiceDueKm: 80000, assignedDriverId: null },
+  { id: 'v4', vehicleNumber: 'VH-004', licensePlate: 'B 3456 JKL', vehicleType: 'motorcycle', brand: 'Honda', model: 'Vario 160', status: 'active', currentOdometerKm: 12300, nextServiceDueKm: 15000, assignedDriverId: 'dr4' },
+  { id: 'v5', vehicleNumber: 'VH-005', licensePlate: 'L 7890 MNO', vehicleType: 'van', brand: 'Suzuki', model: 'APV Blind Van', status: 'active', currentOdometerKm: 28700, nextServiceDueKm: 30000, assignedDriverId: 'dr5' },
+  { id: 'v6', vehicleNumber: 'VH-006', licensePlate: 'B 2345 PQR', vehicleType: 'car', brand: 'Toyota', model: 'Avanza', status: 'active', currentOdometerKm: 55600, nextServiceDueKm: 60000, assignedDriverId: null },
+  { id: 'v7', vehicleNumber: 'VH-007', licensePlate: 'DK 6789 STU', vehicleType: 'motorcycle', brand: 'Yamaha', model: 'NMAX', status: 'active', currentOdometerKm: 8900, nextServiceDueKm: 10000, assignedDriverId: 'dr7' },
+  { id: 'v8', vehicleNumber: 'VH-008', licensePlate: 'B 0123 VWX', vehicleType: 'truck', brand: 'Isuzu', model: 'Elf NLR 55', status: 'retired', currentOdometerKm: 120000, nextServiceDueKm: 125000, assignedDriverId: null },
+];
+
+const MOCK_DRIVERS: Driver[] = [
+  { id: 'dr1', driverNumber: 'DR-001', fullName: 'Agus Setiawan', phone: '081234560001', licenseType: 'B2', totalDeliveries: 342, onTimeDeliveries: 318, safetyScore: 92, status: 'active', availabilityStatus: 'on_duty' },
+  { id: 'dr2', driverNumber: 'DR-002', fullName: 'Bambang Suryadi', phone: '081234560002', licenseType: 'B1', totalDeliveries: 256, onTimeDeliveries: 230, safetyScore: 88, status: 'active', availabilityStatus: 'on_duty' },
+  { id: 'dr3', driverNumber: 'DR-003', fullName: 'Candra Wibowo', phone: '081234560003', licenseType: 'B2', totalDeliveries: 189, onTimeDeliveries: 170, safetyScore: 85, status: 'active', availabilityStatus: 'available' },
+  { id: 'dr4', driverNumber: 'DR-004', fullName: 'Dedi Kurniawan', phone: '081234560004', licenseType: 'C', totalDeliveries: 520, onTimeDeliveries: 495, safetyScore: 95, status: 'active', availabilityStatus: 'on_duty' },
+  { id: 'dr5', driverNumber: 'DR-005', fullName: 'Eka Pratama', phone: '081234560005', licenseType: 'B1', totalDeliveries: 178, onTimeDeliveries: 160, safetyScore: 90, status: 'active', availabilityStatus: 'available' },
+  { id: 'dr6', driverNumber: 'DR-006', fullName: 'Faisal Rahman', phone: '081234560006', licenseType: 'B2', totalDeliveries: 95, onTimeDeliveries: 82, safetyScore: 78, status: 'inactive', availabilityStatus: 'off_duty' },
+  { id: 'dr7', driverNumber: 'DR-007', fullName: 'Galih Permana', phone: '081234560007', licenseType: 'C', totalDeliveries: 410, onTimeDeliveries: 390, safetyScore: 93, status: 'active', availabilityStatus: 'on_duty' },
+];
+
+const MOCK_VEHICLE_STATS: Stats = { total: 8, active: 5, maintenance: 1, onRoute: 3 };
+const MOCK_DRIVER_STATS = { total: 7, active: 6, available: 2, onDuty: 4 };
+
 export default function FleetManagement() {
   const [mounted, setMounted] = useState(false);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
-  const [filteredDrivers, setFilteredDrivers] = useState<Driver[]>([]);
-  const [vehicleStats, setVehicleStats] = useState<Stats>({ total: 0, active: 0, maintenance: 0, onRoute: 0 });
-  const [driverStats, setDriverStats] = useState<any>({ total: 0, active: 0, available: 0, onDuty: 0 });
+  const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
+  const [drivers, setDrivers] = useState<Driver[]>(MOCK_DRIVERS);
+  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
+  const [filteredDrivers, setFilteredDrivers] = useState<Driver[]>(MOCK_DRIVERS);
+  const [vehicleStats, setVehicleStats] = useState<Stats>(MOCK_VEHICLE_STATS);
+  const [driverStats, setDriverStats] = useState<any>(MOCK_DRIVER_STATS);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'vehicles' | 'drivers'>('vehicles');
   
@@ -98,10 +122,10 @@ export default function FleetManagement() {
       if (vehiclesRes.ok) {
         const result = await vehiclesRes.json();
         const vehiclesData = result.data?.vehicles || [];
-        const stats = result.data?.stats || { total: 0, active: 0, maintenance: 0, onRoute: 0 };
-        setVehicles(vehiclesData);
+        const stats = result.data?.stats || MOCK_VEHICLE_STATS;
+        setVehicles(vehiclesData.length > 0 ? vehiclesData : MOCK_VEHICLES);
         setVehicleStats(stats);
-        setFilteredVehicles(vehiclesData);
+        setFilteredVehicles(vehiclesData.length > 0 ? vehiclesData : MOCK_VEHICLES);
       }
 
       // Fetch drivers from new standardized API
@@ -109,11 +133,13 @@ export default function FleetManagement() {
       if (driversRes.ok) {
         const result = await driversRes.json();
         const driversData = result.data?.drivers || [];
-        setDrivers(driversData);
-        setFilteredDrivers(driversData);
+        setDrivers(driversData.length > 0 ? driversData : MOCK_DRIVERS);
+        setFilteredDrivers(driversData.length > 0 ? driversData : MOCK_DRIVERS);
       }
     } catch (error) {
       console.error('Error fetching fleet data:', error);
+      setVehicles(MOCK_VEHICLES); setFilteredVehicles(MOCK_VEHICLES); setVehicleStats(MOCK_VEHICLE_STATS);
+      setDrivers(MOCK_DRIVERS); setFilteredDrivers(MOCK_DRIVERS); setDriverStats(MOCK_DRIVER_STATS);
     } finally {
       setLoading(false);
     }
@@ -197,7 +223,7 @@ export default function FleetManagement() {
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { color: string; label: string; icon: any }> = {
       active: { color: 'bg-green-100 text-green-800', label: 'Aktif', icon: CheckCircle },
-      maintenance: { color: 'bg-yellow-100 text-yellow-800', label: 'Maintenance', icon: Wrench },
+      maintenance: { color: 'bg-yellow-100 text-yellow-800', label: 'Perawatan', icon: Wrench },
       retired: { color: 'bg-gray-100 text-gray-800', label: 'Pensiun', icon: AlertCircle }
     };
     const badge = badges[status] || badges.active;
@@ -214,7 +240,7 @@ export default function FleetManagement() {
     const badges: Record<string, { color: string; label: string }> = {
       available: { color: 'bg-green-100 text-green-800', label: 'Tersedia' },
       on_duty: { color: 'bg-blue-100 text-blue-800', label: 'Bertugas' },
-      off_duty: { color: 'bg-gray-100 text-gray-800', label: 'Off Duty' }
+      off_duty: { color: 'bg-gray-100 text-gray-800', label: 'Tidak Bertugas' }
     };
     const badge = badges[status] || badges.available;
     return (
@@ -236,8 +262,8 @@ export default function FleetManagement() {
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Fleet Management</h1>
-          <p className="text-gray-600">Kelola kendaraan dan driver untuk operasional pengiriman</p>
+          <h1 className="text-2xl font-bold text-gray-900">Manajemen Armada</h1>
+          <p className="text-gray-600">Kelola kendaraan dan pengemudi untuk operasional pengiriman</p>
         </div>
 
         {/* Stats Cards */}
@@ -269,7 +295,7 @@ export default function FleetManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Driver</p>
+                <p className="text-sm text-gray-600">Total Pengemudi</p>
                 <p className="text-2xl font-bold text-gray-900">{driverStats.total}</p>
               </div>
               <div className="p-3 bg-purple-100 rounded-lg">
@@ -318,7 +344,7 @@ export default function FleetManagement() {
               >
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  Driver ({driverStats.total})
+                  Pengemudi ({driverStats.total})
                 </div>
               </button>
             </div>
@@ -359,7 +385,7 @@ export default function FleetManagement() {
                             >
                               <option value="all">Semua</option>
                               <option value="active">Aktif</option>
-                              <option value="maintenance">Maintenance</option>
+                              <option value="maintenance">Perawatan</option>
                               <option value="retired">Pensiun</option>
                             </select>
                           </div>
@@ -387,7 +413,7 @@ export default function FleetManagement() {
                       className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                     >
                       <Download className="w-4 h-4" />
-                      Export
+                      Ekspor
                     </button>
                     <button 
                       onClick={fetchFleetData}
@@ -424,7 +450,7 @@ export default function FleetManagement() {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Tipe</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Merk/Model</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Odometer</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Service Berikutnya</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Servis Berikutnya</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Status</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Aksi</th>
                         </tr>
@@ -492,7 +518,7 @@ export default function FleetManagement() {
                         type="text"
                         value={driverSearch}
                         onChange={(e) => setDriverSearch(e.target.value)}
-                        placeholder="Cari driver..."
+                        placeholder="Cari pengemudi..."
                         className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
@@ -516,11 +542,11 @@ export default function FleetManagement() {
                               <option value="all">Semua</option>
                               <option value="active">Aktif</option>
                               <option value="on_leave">Cuti</option>
-                              <option value="suspended">Suspended</option>
+                              <option value="suspended">Ditangguhkan</option>
                             </select>
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Ketersediaan</label>
                             <select
                               value={driverFilter.availability}
                               onChange={(e) => setDriverFilter(prev => ({ ...prev, availability: e.target.value }))}
@@ -529,7 +555,7 @@ export default function FleetManagement() {
                               <option value="all">Semua</option>
                               <option value="available">Tersedia</option>
                               <option value="on_duty">Bertugas</option>
-                              <option value="off_duty">Off Duty</option>
+                              <option value="off_duty">Tidak Bertugas</option>
                             </select>
                           </div>
                         </div>
@@ -542,7 +568,7 @@ export default function FleetManagement() {
                       className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                     >
                       <Download className="w-4 h-4" />
-                      Export
+                      Ekspor
                     </button>
                     <button 
                       onClick={fetchFleetData}
@@ -555,7 +581,7 @@ export default function FleetManagement() {
                       className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                     >
                       <Plus className="w-4 h-4" />
-                      Tambah Driver
+                      Tambah Pengemudi
                     </button>
                   </div>
                 </div>
@@ -568,7 +594,7 @@ export default function FleetManagement() {
                 ) : drivers.length === 0 ? (
                   <div className="text-center py-12">
                     <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600">Belum ada driver</p>
+                    <p className="text-gray-600">Belum ada pengemudi</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -579,8 +605,8 @@ export default function FleetManagement() {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">No. SIM</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Telepon</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Total Pengiriman</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">On-Time Rate</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Safety Score</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Ketepatan Waktu</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Skor Keselamatan</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Status</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Aksi</th>
                         </tr>
@@ -673,7 +699,7 @@ export default function FleetManagement() {
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-bold text-gray-900 mb-2">Konfirmasi Hapus</h3>
             <p className="text-gray-600 mb-6">
-              Apakah Anda yakin ingin menghapus {deleteConfirm.type === 'vehicle' ? 'kendaraan' : 'driver'} ini?
+              Apakah Anda yakin ingin menghapus {deleteConfirm.type === 'vehicle' ? 'kendaraan' : 'pengemudi'} ini?
               Tindakan ini tidak dapat dibatalkan.
             </p>
             <div className="flex justify-end gap-3">

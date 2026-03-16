@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import AuditHistory from '@/components/settings/AuditHistory';
@@ -15,24 +16,14 @@ import {
 const StoreSettingsPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
   const [branches, setBranches] = useState([]);
 
-  const [storeData, setStoreData] = useState({
-    name: '',
-    address: '',
-    city: '',
-    province: '',
-    postalCode: '',
-    phone: '',
-    email: '',
-    website: '',
-    taxId: '',
-    logoUrl: '',
-    description: ''
-  });
+  const MOCK_STORE = { name: 'Bedagang Store', address: 'Jl. Raya No. 123', city: 'Jakarta', province: 'DKI Jakarta', postalCode: '12345', phone: '021-1234567', email: 'store@bedagang.com', website: 'www.bedagang.com', taxId: '12.345.678.9-012.000', logoUrl: '', description: 'Toko retail dan F&B' };
+  const [storeData, setStoreData] = useState(MOCK_STORE);
 
   const [receiptSettings, setReceiptSettings] = useState({
     showLogo: true,
@@ -100,6 +91,7 @@ const StoreSettingsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching store settings:', error);
+      setStoreData(MOCK_STORE);
     } finally {
       setLoading(false);
     }

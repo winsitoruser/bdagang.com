@@ -1,15 +1,19 @@
-import React, { ReactNode, useMemo } from 'react';
+import React, { ReactNode, useMemo, useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useBusinessType } from '@/contexts/BusinessTypeContext';
+import { useTranslation } from '@/lib/i18n';
+import { languageNames, languageFlags, Language, currencySymbols, currencyNames, Currency } from '@/lib/i18n';
 import { 
   LogOut,
   Store,
   Menu,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Globe,
+  ChevronDown
 } from 'lucide-react';
 import {
   branchSidebarConfig,
@@ -26,12 +30,59 @@ interface DashboardLayoutProps {
   children: ReactNode;
 }
 
+// Map sidebar item IDs to translation keys
+const sidebarTranslationMap: Record<string, string> = {
+  // Groups (match branchSidebarConfig group IDs)
+  'outlet': 'sidebar.mainMenu',
+  'operations': 'sidebar.fnbOps',
+  'backoffice': 'sidebar.financeMenu',
+  // Items (match branchSidebarConfig item IDs)
+  'dashboard': 'sidebar.dashboard',
+  'pos': 'sidebar.cashier',
+  'inventory': 'sidebar.stockManagement',
+  'customers': 'sidebar.customerList',
+  'employees': 'sidebar.employeeSchedules',
+  'loyalty': 'sidebar.loyaltyPoints',
+  'tables': 'sidebar.tableManagement',
+  'reservations': 'sidebar.reservationMgmt',
+  'kitchen': 'sidebar.kitchenDisplay',
+  'promo': 'sidebar.promoVoucher',
+  'finance': 'sidebar.financeOverview',
+  'reports': 'sidebar.salesReports',
+  'settings': 'sidebar.settingsMenu',
+};
+
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { data: session } = useSession();
   const router = useRouter();
   const { hasModule, isLoading: configLoading, modules } = useBusinessType();
+  const { t, language, setLanguage, currency, setCurrency } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const [currOpen, setCurrOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+  const currRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
+      if (currRef.current && !currRef.current.contains(e.target as Node)) setCurrOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Helper to get translated name for sidebar items
+  const getTranslatedName = (id: string, fallback: string) => {
+    const key = sidebarTranslationMap[id];
+    if (key) {
+      const translated = t(key);
+      if (translated !== key) return translated;
+    }
+    return fallback;
+  };
 
   // Get user role from session
   const userRole = (session?.user as any)?.role as UserRole | undefined;
@@ -103,12 +154,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         }`} />
         <span className={`text-sm transition-all ${
           sidebarCollapsed ? 'lg:hidden' : ''
-        }`}>{item.name}</span>
+        }`}>{getTranslatedName(item.id, item.name)}</span>
         
         {/* Tooltip for collapsed state */}
         {sidebarCollapsed && (
           <div className="hidden lg:block absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-            {item.name}
+            {getTranslatedName(item.id, item.name)}
             <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
           </div>
         )}
@@ -122,7 +173,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       {!sidebarCollapsed && (
         <div className="px-4 mb-2">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-            {group.title}
+            {getTranslatedName(group.id, group.title)}
           </h3>
         </div>
       )}
@@ -185,7 +236,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         className={`hidden lg:flex fixed top-20 z-50 items-center justify-center w-8 h-8 bg-white border border-gray-200 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 ${
           sidebarCollapsed ? 'left-16' : 'left-60'
         }`}
-        title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+        title={sidebarCollapsed ? t('common.expandSidebar') : t('common.collapseSidebar')}
       >
         {sidebarCollapsed ? (
           <ChevronRight className="w-4 h-4 text-gray-600" />
@@ -209,8 +260,69 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </button>
             <div className="flex-1 lg:flex-none">
               <h1 className="text-xl font-semibold text-gray-900">
-                {findActiveMenuItem(filteredConfig.groups, router.pathname)?.name || 'Dashboard'}
+                {(() => {
+                  const active = findActiveMenuItem(filteredConfig.groups, router.pathname);
+                  return active ? getTranslatedName(active.id, active.name) : t('sidebar.dashboard');
+                })()}
               </h1>
+            </div>
+
+            {/* Language & Currency Switchers */}
+            <div className="flex items-center space-x-2">
+              {/* Language Switcher */}
+              <div className="relative" ref={langRef}>
+                <button
+                  onClick={() => { setLangOpen(!langOpen); setCurrOpen(false); }}
+                  className="flex items-center space-x-1.5 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition-colors border border-gray-200"
+                >
+                  <Globe className="w-4 h-4 text-gray-500" />
+                  <span>{languageFlags[language]}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${langOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {langOpen && (
+                  <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50">
+                    {(Object.keys(languageNames) as Language[]).map((lang) => (
+                      <button
+                        key={lang}
+                        onClick={() => { setLanguage(lang); setLangOpen(false); }}
+                        className={`w-full flex items-center space-x-2 px-4 py-2.5 text-sm hover:bg-sky-50 transition-colors ${
+                          language === lang ? 'bg-sky-50 text-sky-700 font-medium' : 'text-gray-700'
+                        }`}
+                      >
+                        <span className="text-lg">{languageFlags[lang]}</span>
+                        <span>{languageNames[lang]}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Currency Switcher */}
+              <div className="relative" ref={currRef}>
+                <button
+                  onClick={() => { setCurrOpen(!currOpen); setLangOpen(false); }}
+                  className="flex items-center space-x-1.5 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm transition-colors border border-gray-200"
+                >
+                  <span className="font-medium text-gray-700">{currency}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${currOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {currOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-1 z-50">
+                    {(Object.keys(currencySymbols) as Currency[]).map((cur) => (
+                      <button
+                        key={cur}
+                        onClick={() => { setCurrency(cur); setCurrOpen(false); }}
+                        className={`w-full flex items-center space-x-2 px-4 py-2.5 text-sm hover:bg-sky-50 transition-colors ${
+                          currency === cur ? 'bg-sky-50 text-sky-700 font-medium' : 'text-gray-700'
+                        }`}
+                      >
+                        <span className="font-medium">{currencySymbols[cur]}</span>
+                        <span>{cur} - {currencyNames[cur]}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>

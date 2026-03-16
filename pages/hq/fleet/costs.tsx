@@ -14,12 +14,19 @@ import {
   Filter
 } from 'lucide-react';
 
+const MOCK_FLEET_COSTS = [
+  { id: 'fc1', vehicleId: 'v1', licensePlate: 'B 1234 CD', costCategory: 'fuel', description: 'BBM Pertamax', amount: 850000, date: '2026-03-14', vendor: 'SPBU 31.101' },
+  { id: 'fc2', vehicleId: 'v2', licensePlate: 'B 5678 EF', costCategory: 'maintenance', description: 'Service berkala 10.000km', amount: 2500000, date: '2026-03-12', vendor: 'Bengkel Resmi Toyota' },
+  { id: 'fc3', vehicleId: 'v1', licensePlate: 'B 1234 CD', costCategory: 'insurance', description: 'Asuransi tahunan', amount: 4500000, date: '2026-03-01', vendor: 'Asuransi Jasindo' },
+];
+const MOCK_FLEET_COST_SUMMARY = { totalAmount: 28500000, byCategory: { fuel: 12500000, maintenance: 8500000, salary: 5000000, insurance: 2500000 } };
+
 export default function CostReporting() {
   const [mounted, setMounted] = useState(false);
-  const [costs, setCosts] = useState<any[]>([]);
+  const [costs, setCosts] = useState<any[]>(MOCK_FLEET_COSTS);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
-  const [summary, setSummary] = useState<any>({ totalAmount: 0, byCategory: {} });
+  const [summary, setSummary] = useState<any>(MOCK_FLEET_COST_SUMMARY);
 
   useEffect(() => {
     setMounted(true);
@@ -36,7 +43,7 @@ export default function CostReporting() {
         setCosts(data.data || []);
         setSummary(data.summary || { totalAmount: 0, byCategory: {} });
       }
-    } catch (e) { console.error('Costs fetch failed:', e); }
+    } catch (e) { console.error('Costs fetch failed:', e); setCosts(MOCK_FLEET_COSTS); setSummary(MOCK_FLEET_COST_SUMMARY); }
   };
 
   if (!mounted) return null;

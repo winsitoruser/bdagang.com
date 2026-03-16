@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import HQLayout from '../../../components/hq/HQLayout';
@@ -51,19 +52,20 @@ interface BranchStockDetail {
   lastUpdated: string;
 }
 
-const categories = ['Semua Kategori', 'Bahan Pokok', 'Minuman', 'Snack', 'Frozen', 'Non-Food'];
+const categories = ['all', 'Bahan Pokok', 'Minuman', 'Snack', 'Frozen', 'Non-Food'];
 
 export default function GlobalStockManagement() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { branch } = router.query;
   
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<ProductStock[]>([]);
-  const [branches, setBranches] = useState<{id: string, name: string, code: string}[]>([{id: 'all', name: 'Semua Cabang', code: 'ALL'}]);
+  const [branches, setBranches] = useState<{id: string, name: string, code: string}[]>([{id: 'all', name: '', code: 'ALL'}]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBranch, setSelectedBranch] = useState<string>(branch as string || 'all');
-  const [selectedCategory, setSelectedCategory] = useState('Semua Kategori');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out' | 'over'>('all');
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -74,7 +76,7 @@ export default function GlobalStockManagement() {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
-      if (selectedCategory !== 'Semua Kategori') params.append('category', selectedCategory);
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
       if (stockFilter !== 'all') params.append('stockFilter', stockFilter);
       
       const response = await fetch(`/api/hq/inventory/stock?${params.toString()}`);
@@ -110,19 +112,19 @@ export default function GlobalStockManagement() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'normal': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Normal</span>;
-      case 'low': return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">Low Stock</span>;
-      case 'out': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">Out of Stock</span>;
-      case 'over': return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">Over Stock</span>;
+      case 'normal': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t('inventory.normal')}</span>;
+      case 'low': return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">{t('inventory.lowStock')}</span>;
+      case 'out': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">{t('inventory.outOfStock')}</span>;
+      case 'over': return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{t('inventory.overStock')}</span>;
       default: return null;
     }
   };
 
   const getMovementBadge = (movement: string) => {
     switch (movement) {
-      case 'fast': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Fast Moving</span>;
-      case 'medium': return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">Medium</span>;
-      case 'slow': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">Slow Moving</span>;
+      case 'fast': return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t('inventory.fastMoving')}</span>;
+      case 'medium': return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">{t('inventory.medium')}</span>;
+      case 'slow': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">{t('inventory.slowMoving')}</span>;
       default: return null;
     }
   };
@@ -131,7 +133,7 @@ export default function GlobalStockManagement() {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.barcode.includes(searchTerm);
-    const matchesCategory = selectedCategory === 'Semua Kategori' || product.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
     
     let matchesStock = true;
     if (stockFilter !== 'all') {
@@ -160,22 +162,22 @@ export default function GlobalStockManagement() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Global Stock Management</h1>
-              <p className="text-gray-500">Monitoring stok produk di seluruh cabang</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('inventory.stockTitle')}</h1>
+              <p className="text-gray-500">{t('inventory.stockSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => { fetchStock(); toast.success('Sync stok berhasil'); }} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Sync
+            <button onClick={() => { fetchStock(); toast.success(t('inventory.syncStockSuccess')); }} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('inventory.sync')}
             </button>
             <button onClick={() => {
               const rows = filteredProducts.map(p => `${p.name},${p.sku},${p.barcode},${p.category},${p.unit},${p.totalStock},${p.minStock},${p.maxStock},${p.avgCost},${p.stockValue},${p.movement}`);
               const csv = `Name,SKU,Barcode,Category,Unit,Stock,Min,Max,AvgCost,Value,Movement\n${rows.join('\n')}`;
               const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
               const a = document.createElement('a'); a.href = url; a.download = 'stock-report.csv'; a.click(); URL.revokeObjectURL(url);
-              toast.success('Export stok berhasil');
+              toast.success(t('inventory.exportStockSuccess'));
             }} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-              <Download className="w-4 h-4" /> Export
+              <Download className="w-4 h-4" /> {t('inventory.export')}
             </button>
           </div>
         </div>
@@ -183,24 +185,24 @@ export default function GlobalStockManagement() {
         {/* Stats Summary */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Total Produk</p>
+            <p className="text-sm text-gray-500">{t('inventory.totalProducts')}</p>
             <p className="text-xl font-bold text-gray-900">{formatNumber(totalStats.totalProducts)}</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Total Unit</p>
+            <p className="text-sm text-gray-500">{t('inventory.totalUnit')}</p>
             <p className="text-xl font-bold text-gray-900">{formatNumber(totalStats.totalStock)}</p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-sm text-gray-500">Nilai Stok</p>
+            <p className="text-sm text-gray-500">{t('inventory.stockValue')}</p>
             <p className="text-xl font-bold text-gray-900">{formatCurrency(totalStats.totalValue)}</p>
           </div>
           <div className="bg-white rounded-xl border border-yellow-200 p-4 bg-yellow-50">
-            <p className="text-sm text-yellow-600">Low Stock</p>
-            <p className="text-xl font-bold text-yellow-700">{totalStats.lowStockCount} produk</p>
+            <p className="text-sm text-yellow-600">{t('inventory.lowStock')}</p>
+            <p className="text-xl font-bold text-yellow-700">{totalStats.lowStockCount} {t('inventory.productCount')}</p>
           </div>
           <div className="bg-white rounded-xl border border-red-200 p-4 bg-red-50">
-            <p className="text-sm text-red-600">Out of Stock</p>
-            <p className="text-xl font-bold text-red-700">{totalStats.outOfStockCount} produk</p>
+            <p className="text-sm text-red-600">{t('inventory.outOfStock')}</p>
+            <p className="text-xl font-bold text-red-700">{totalStats.outOfStockCount} {t('inventory.productCount')}</p>
           </div>
         </div>
 
@@ -212,7 +214,7 @@ export default function GlobalStockManagement() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Cari produk, SKU, atau barcode..."
+                  placeholder={t('inventory.searchProductPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -225,7 +227,7 @@ export default function GlobalStockManagement() {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
             >
               {branches.map(b => (
-                <option key={b.id} value={b.code}>{b.name}</option>
+                <option key={b.id} value={b.code}>{b.id === 'all' ? t('inventory.allBranches') : b.name}</option>
               ))}
             </select>
             <select
@@ -234,7 +236,7 @@ export default function GlobalStockManagement() {
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
             >
               {categories.map(c => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>{c === 'all' ? t('inventory.allCategories') : c}</option>
               ))}
             </select>
             <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden">
@@ -242,19 +244,19 @@ export default function GlobalStockManagement() {
                 onClick={() => setStockFilter('all')}
                 className={`px-3 py-2 text-sm ${stockFilter === 'all' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
               >
-                Semua
+                {t('inventory.all')}
               </button>
               <button
                 onClick={() => setStockFilter('low')}
                 className={`px-3 py-2 text-sm ${stockFilter === 'low' ? 'bg-yellow-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
               >
-                Low Stock
+                {t('inventory.lowStock')}
               </button>
               <button
                 onClick={() => setStockFilter('out')}
                 className={`px-3 py-2 text-sm ${stockFilter === 'out' ? 'bg-red-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
               >
-                Out of Stock
+                {t('inventory.outOfStock')}
               </button>
             </div>
           </div>
@@ -265,14 +267,14 @@ export default function GlobalStockManagement() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produk</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
-                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Stok</th>
-                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Min/Max</th>
-                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Nilai Stok</th>
-                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Movement</th>
-                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.product')}</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.category')}</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.totalStock')}</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.minMax')}</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.stockValue')}</th>
+                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.movement')}</th>
+                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.status')}</th>
+                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.action')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -305,12 +307,12 @@ export default function GlobalStockManagement() {
                       <td className="px-5 py-4 text-center">
                         {product.branches.some(b => b.status === 'out') ? (
                           <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs flex items-center gap-1 justify-center">
-                            <AlertTriangle className="w-3 h-3" /> Kritis
+                            <AlertTriangle className="w-3 h-3" /> {t('inventory.critical')}
                           </span>
                         ) : product.branches.some(b => b.status === 'low') ? (
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">Low Stock</span>
+                          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">{t('inventory.lowStock')}</span>
                         ) : (
-                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Normal</span>
+                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">{t('inventory.normal')}</span>
                         )}
                       </td>
                       <td className="px-5 py-4">
@@ -318,7 +320,7 @@ export default function GlobalStockManagement() {
                           <button
                             onClick={() => { setSelectedProductForTransfer(product); setShowTransferModal(true); }}
                             className="p-2 hover:bg-blue-100 rounded-lg text-blue-600"
-                            title="Transfer Stok"
+                            title={t('inventory.transferStock')}
                           >
                             <ArrowRightLeft className="w-4 h-4" />
                           </button>
@@ -372,7 +374,7 @@ export default function GlobalStockManagement() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl w-full max-w-lg">
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Transfer Stok</h2>
+                <h2 className="text-xl font-bold text-gray-900">{t('inventory.transferStock')}</h2>
                 <button onClick={() => setShowTransferModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
@@ -384,7 +386,7 @@ export default function GlobalStockManagement() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Dari Cabang</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.fromBranch')}</label>
                     <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
                       {branches.filter(b => b.id !== 'all').map(b => (
                         <option key={b.id} value={b.code}>{b.name}</option>
@@ -392,7 +394,7 @@ export default function GlobalStockManagement() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ke Cabang</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.toBranch')}</label>
                     <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
                       {branches.filter(b => b.id !== 'all').map(b => (
                         <option key={b.id} value={b.code}>{b.name}</option>
@@ -401,7 +403,7 @@ export default function GlobalStockManagement() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah Transfer</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.transferQty')}</label>
                   <input
                     type="number"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
@@ -410,11 +412,11 @@ export default function GlobalStockManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.notes')}</label>
                   <textarea
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     rows={2}
-                    placeholder="Alasan transfer..."
+                    placeholder={t('inventory.transferReasonPlaceholder')}
                   />
                 </div>
               </div>
@@ -423,10 +425,10 @@ export default function GlobalStockManagement() {
                   onClick={() => setShowTransferModal(false)}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Batal
+                  {t('inventory.cancel')}
                 </button>
                 <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  Buat Transfer
+                  {t('inventory.createTransfer')}
                 </button>
               </div>
             </div>

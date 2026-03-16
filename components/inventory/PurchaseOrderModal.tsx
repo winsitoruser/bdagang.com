@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useTranslation } from '@/lib/i18n';
 import {
   FaTimes, FaShoppingCart, FaExclamationTriangle, FaCheckCircle,
   FaCalculator, FaTruck, FaCalendarAlt, FaBoxOpen, FaPlus, FaMinus,
@@ -41,6 +42,7 @@ interface OrderItem {
 
 const PurchaseOrderModal: React.FC<PurchaseOrderModalProps> = ({ isOpen, onClose, products }) => {
   const router = useRouter();
+  const { formatCurrency } = useTranslation();
   const [selectedItems, setSelectedItems] = useState<OrderItem[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'critical' | 'low' | 'normal'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -140,13 +142,6 @@ const PurchaseOrderModal: React.FC<PurchaseOrderModalProps> = ({ isOpen, onClose
     return selectedItems.reduce((sum, item) => sum + (item.product.cost * item.quantity), 0);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const filteredProducts = getFilteredProducts();
   const criticalCount = products.filter(p => getUrgency(p) === 'critical').length;

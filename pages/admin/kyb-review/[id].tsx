@@ -352,7 +352,7 @@ export default function KybReviewDetail() {
                 </h3>
                 <div className={`p-3 rounded-lg ${kyb.businessStructure === 'multi_branch' ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50 border border-gray-200'}`}>
                   <p className="font-medium text-sm">
-                    {kyb.businessStructure === 'multi_branch' ? 'Multi-Branch (HQ Model)' : 'Single Outlet'}
+                    {kyb.businessStructure === 'multi_branch' ? 'Multi-Cabang (Model HQ)' : 'Outlet Tunggal'}
                   </p>
                   {kyb.businessStructure === 'multi_branch' && (
                     <p className="text-xs text-gray-500 mt-1">Rencana: {kyb.plannedBranchCount || 1} cabang</p>

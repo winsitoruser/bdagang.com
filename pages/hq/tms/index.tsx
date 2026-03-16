@@ -17,23 +17,23 @@ type TabType = 'dashboard' | 'shipments' | 'trips' | 'carriers' | 'routes' | 'bi
 
 const TAB_GROUPS: { label: string; icon: any; tabs: { id: TabType; label: string; icon: any }[] }[] = [
   { label: 'Utama', icon: LayoutDashboard, tabs: [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'shipments', label: 'Shipment', icon: Package },
-    { id: 'trips', label: 'Trip', icon: Navigation },
+    { id: 'dashboard', label: 'Dasbor', icon: LayoutDashboard },
+    { id: 'shipments', label: 'Pengiriman', icon: Package },
+    { id: 'trips', label: 'Perjalanan', icon: Navigation },
   ]},
   { label: 'Operasional', icon: Send, tabs: [
-    { id: 'dispatch', label: 'Dispatch', icon: Send },
-    { id: 'tracking', label: 'Tracking', icon: Activity },
-    { id: 'carriers', label: 'Carrier', icon: Building2 },
+    { id: 'dispatch', label: 'Pengiriman Barang', icon: Send },
+    { id: 'tracking', label: 'Pelacakan', icon: Activity },
+    { id: 'carriers', label: 'Pengangkut', icon: Building2 },
     { id: 'routes', label: 'Rute', icon: Map },
   ]},
   { label: 'Analitik', icon: BarChart3, tabs: [
-    { id: 'logistics-analytics', label: 'Logistics KPI', icon: BarChart3 },
-    { id: 'carrier-scores', label: 'Carrier Score', icon: Star },
-    { id: 'delivery-sla', label: 'Delivery SLA', icon: Timer },
+    { id: 'logistics-analytics', label: 'KPI Logistik', icon: BarChart3 },
+    { id: 'carrier-scores', label: 'Skor Pengangkut', icon: Star },
+    { id: 'delivery-sla', label: 'SLA Pengiriman', icon: Timer },
   ]},
   { label: 'Admin', icon: Receipt, tabs: [
-    { id: 'billing', label: 'Billing', icon: Receipt },
+    { id: 'billing', label: 'Penagihan', icon: Receipt },
     { id: 'zones', label: 'Zona', icon: Globe },
     { id: 'rate-cards', label: 'Tarif', icon: CreditCard },
     { id: 'warehouses', label: 'Gudang', icon: Warehouse },
@@ -296,7 +296,7 @@ export default function TMSPage() {
           {/* Title Bar */}
           <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2 truncate"><Package className="w-6 h-6 text-indigo-600 flex-shrink-0" />Transport Management</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2 truncate"><Package className="w-6 h-6 text-indigo-600 flex-shrink-0" />Manajemen Transportasi</h1>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <div className="relative hidden sm:block"><Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" /><input className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-52 lg:w-64 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="Cari..." value={search} onChange={e => setSearch(e.target.value)} /></div>
@@ -351,18 +351,18 @@ export default function TMSPage() {
             <div className="space-y-6">
               {/* ── KPI Summary ── */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <StatCard icon={Package} label="Total Shipment" value={fmt(dashboard.shipments?.total)} color="indigo" />
-                <StatCard icon={Send} label="In Transit" value={fmt(dashboard.shipments?.in_transit)} color="yellow" />
-                <StatCard icon={CheckCircle} label="Delivered" value={fmt(dashboard.shipments?.delivered)} color="green" />
-                <StatCard icon={Navigation} label="Trip Aktif" value={fmt(dashboard.trips?.in_progress)} color="blue" sub={`${fmt(dashboard.trips?.planned)} planned`} />
-                <StatCard icon={Building2} label="Carrier Aktif" value={fmt(dashboard.carriers?.active)} color="purple" />
-                <StatCard icon={DollarSign} label="Revenue" value={fmtRp(dashboard.shipments?.total_revenue)} color="emerald" />
+                <StatCard icon={Package} label="Total Pengiriman" value={fmt(dashboard.shipments?.total)} color="indigo" />
+                <StatCard icon={Send} label="Dalam Perjalanan" value={fmt(dashboard.shipments?.in_transit)} color="yellow" />
+                <StatCard icon={CheckCircle} label="Terkirim" value={fmt(dashboard.shipments?.delivered)} color="green" />
+                <StatCard icon={Navigation} label="Trip Aktif" value={fmt(dashboard.trips?.in_progress)} color="blue" sub={`${fmt(dashboard.trips?.planned)} direncanakan`} />
+                <StatCard icon={Building2} label="Pengangkut Aktif" value={fmt(dashboard.carriers?.active)} color="purple" />
+                <StatCard icon={DollarSign} label="Pendapatan" value={fmtRp(dashboard.shipments?.total_revenue)} color="emerald" />
               </div>
 
               {/* ── Row 1: Shipment Trend (Area) + Status Doughnut ── */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 bg-white rounded-xl border p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-indigo-500" />Trend Shipment & Revenue</h3>
+                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-indigo-500" />Tren Pengiriman & Pendapatan</h3>
                   <p className="text-xs text-gray-400 mb-4">12 bulan terakhir</p>
                   {chartData?.shipmentTrend?.length > 0 ? (
                     <ResponsiveContainer width="100%" height={260}>
@@ -385,7 +385,7 @@ export default function TMSPage() {
                   ) : <div className="flex items-center justify-center h-[260px] text-gray-400 text-sm">Belum ada data trend</div>}
                 </div>
                 <div className="bg-white rounded-xl border p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-4">Status Shipment</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">Status Pengiriman</h3>
                   {chartData?.shipmentsByStatus?.length > 0 ? (<>
                     <ResponsiveContainer width="100%" height={180}>
                       <PieChart>
@@ -408,8 +408,8 @@ export default function TMSPage() {
               {/* ── Row 2: Carrier Performance (Bar) + Delivery Performance (Doughnut) ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl border p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><Building2 className="w-5 h-5 text-purple-500" />Carrier Performance</h3>
-                  <p className="text-xs text-gray-400 mb-4">Top carrier by shipment count</p>
+                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><Building2 className="w-5 h-5 text-purple-500" />Performa Pengangkut</h3>
+                  <p className="text-xs text-gray-400 mb-4">Pengangkut teratas berdasarkan jumlah pengiriman</p>
                   {chartData?.carrierPerformance?.length > 0 ? (
                     <ResponsiveContainer width="100%" height={220}>
                       <BarChart data={chartData.carrierPerformance.map((c:any)=>({name:c.carrier_name?.length>12?c.carrier_name.slice(0,12)+'..':c.carrier_name,shipments:Number(c.shipments),revenue:Number(c.revenue)}))}>
@@ -426,8 +426,8 @@ export default function TMSPage() {
                   ) : <div className="flex items-center justify-center h-[220px] text-gray-400 text-sm">Belum ada data</div>}
                 </div>
                 <div className="bg-white rounded-xl border p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><Target className="w-5 h-5 text-green-500" />Delivery Performance</h3>
-                  <p className="text-xs text-gray-400 mb-4">On-time vs late delivery ratio</p>
+                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><Target className="w-5 h-5 text-green-500" />Performa Pengiriman</h3>
+                  <p className="text-xs text-gray-400 mb-4">Rasio pengiriman tepat waktu vs terlambat</p>
                   {chartData?.deliveryPerformance?.length > 0 ? (
                     <div className="flex items-center gap-4">
                       <ResponsiveContainer width="50%" height={200}>
@@ -457,7 +457,7 @@ export default function TMSPage() {
               {/* ── Row 3: Status & Billing Info Cards ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl border p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Package className="w-4 h-4 text-indigo-500" />Status Shipment</h3>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Package className="w-4 h-4 text-indigo-500" />Status Pengiriman</h3>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="text-center p-3 bg-gray-50 rounded-lg"><p className="text-2xl font-bold text-gray-700">{fmt(dashboard.shipments?.draft)}</p><p className="text-xs text-gray-500">Draft</p></div>
                     <div className="text-center p-3 bg-blue-50 rounded-lg"><p className="text-2xl font-bold text-blue-700">{fmt(dashboard.shipments?.confirmed)}</p><p className="text-xs text-gray-500">Confirmed</p></div>
@@ -465,10 +465,10 @@ export default function TMSPage() {
                   </div>
                 </div>
                 <div className="bg-white rounded-xl border p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><DollarSign className="w-4 h-4 text-green-500" />Billing</h3>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><DollarSign className="w-4 h-4 text-green-500" />Penagihan</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="text-center p-3 bg-green-50 rounded-lg"><p className="text-2xl font-bold text-green-700">{fmtRp(dashboard.billing?.paid)}</p><p className="text-xs text-gray-500">Terbayar</p></div>
-                    <div className="text-center p-3 bg-red-50 rounded-lg"><p className="text-2xl font-bold text-red-700">{fmtRp(dashboard.billing?.outstanding)}</p><p className="text-xs text-gray-500">Outstanding</p></div>
+                    <div className="text-center p-3 bg-red-50 rounded-lg"><p className="text-2xl font-bold text-red-700">{fmtRp(dashboard.billing?.outstanding)}</p><p className="text-xs text-gray-500">Belum Terbayar</p></div>
                   </div>
                 </div>
               </div>
@@ -496,7 +496,7 @@ export default function TMSPage() {
               {/* ── Recent Shipments ── */}
               {dashboard.recentShipments?.length > 0 && (
                 <div className="bg-white rounded-xl border p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-3">Shipment Terbaru</h3>
+                  <h3 className="font-semibold text-gray-900 mb-3">Pengiriman Terbaru</h3>
                   <div className="space-y-2">{dashboard.recentShipments.map((s: any) => (
                     <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
@@ -518,7 +518,7 @@ export default function TMSPage() {
           {/* SHIPMENTS */}
           {!loading && tab === 'shipments' && (
             <div>
-              <SectionHeader title="Daftar Shipment" onExport={() => handleExport('shipments')} onAdd={() => { setForm({ shipment_type: 'standard', priority: 'normal', status: 'draft' }); setModal('add-shipment'); }} addLabel="Buat Shipment" />
+              <SectionHeader title="Daftar Pengiriman" onExport={() => handleExport('shipments')} onAdd={() => { setForm({ shipment_type: 'standard', priority: 'normal', status: 'draft' }); setModal('add-shipment'); }} addLabel="Buat Pengiriman" />
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 {['','draft','confirmed','assigned','in_transit','delivered','cancelled'].map(s => (
                   <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${statusFilter === s ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
@@ -528,8 +528,8 @@ export default function TMSPage() {
               </div>
               <div className="bg-white rounded-xl border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-gray-50">{['No. Shipment','Tipe','Pengirim','Penerima','Tujuan','Berat','Carrier','Kendaraan','Total','Prioritas','Status'].map(h => <th key={h} className="text-left px-3 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
-                  <tbody>{filteredShipments.length === 0 ? <tr><td colSpan={11} className="text-center py-8 text-gray-400">Belum ada shipment</td></tr> : filteredShipments.map(s => (
+                  <thead><tr className="border-b bg-gray-50">{['No. Pengiriman','Tipe','Pengirim','Penerima','Tujuan','Berat','Pengangkut','Kendaraan','Total','Prioritas','Status'].map(h => <th key={h} className="text-left px-3 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
+                  <tbody>{filteredShipments.length === 0 ? <tr><td colSpan={11} className="text-center py-8 text-gray-400">Belum ada pengiriman</td></tr> : filteredShipments.map(s => (
                     <tr key={s.id} className="border-b hover:bg-gray-50">
                       <td className="px-3 py-3 font-medium">{s.shipment_number}</td>
                       <td className="px-3 py-3 capitalize">{s.shipment_type}</td>
@@ -552,10 +552,10 @@ export default function TMSPage() {
           {/* TRIPS */}
           {!loading && tab === 'trips' && (
             <div>
-              <SectionHeader title="Daftar Trip" onExport={() => handleExport('trips')} onAdd={() => { setForm({ trip_type: 'delivery', status: 'planned', shipment_ids: [] }); setModal('add-trip'); }} addLabel="Buat Trip" />
+              <SectionHeader title="Daftar Perjalanan" onExport={() => handleExport('trips')} onAdd={() => { setForm({ trip_type: 'delivery', status: 'planned', shipment_ids: [] }); setModal('add-trip'); }} addLabel="Buat Perjalanan" />
               <div className="bg-white rounded-xl border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-gray-50">{['No. Trip','Tipe','Kendaraan','Driver','Rute','Planned Start','Shipments','Delivered','Jarak','Biaya','Status'].map(h => <th key={h} className="text-left px-3 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
+                  <thead><tr className="border-b bg-gray-50">{['No. Trip','Tipe','Kendaraan','Pengemudi','Rute','Rencana Mulai','Pengiriman','Terkirim','Jarak','Biaya','Status'].map(h => <th key={h} className="text-left px-3 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
                   <tbody>{trips.length === 0 ? <tr><td colSpan={11} className="text-center py-8 text-gray-400">Belum ada trip</td></tr> : trips.map(t => (
                     <tr key={t.id} className="border-b hover:bg-gray-50">
                       <td className="px-3 py-3 font-medium">{t.trip_number}</td>
@@ -579,11 +579,11 @@ export default function TMSPage() {
           {/* CARRIERS */}
           {!loading && tab === 'carriers' && (
             <div>
-              <SectionHeader title="Daftar Carrier" onExport={() => handleExport('carriers')} onAdd={() => { setForm({ carrier_type: 'external', payment_terms: 'net30' }); setModal('add-carrier'); }} addLabel="Tambah Carrier" />
+              <SectionHeader title="Daftar Pengangkut" onExport={() => handleExport('carriers')} onAdd={() => { setForm({ carrier_type: 'external', payment_terms: 'net30' }); setModal('add-carrier'); }} addLabel="Tambah Pengangkut" />
               <div className="bg-white rounded-xl border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-gray-50">{['Kode','Nama','Tipe','Kontak','Telepon','Shipment','Rating','On-Time','Terms','Status'].map(h => <th key={h} className="text-left px-3 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
-                  <tbody>{carriers.length === 0 ? <tr><td colSpan={10} className="text-center py-8 text-gray-400">Belum ada carrier</td></tr> : carriers.map(c => (
+                  <thead><tr className="border-b bg-gray-50">{['Kode','Nama','Tipe','Kontak','Telepon','Pengiriman','Peringkat','Ketepatan','Syarat','Status'].map(h => <th key={h} className="text-left px-3 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
+                  <tbody>{carriers.length === 0 ? <tr><td colSpan={10} className="text-center py-8 text-gray-400">Belum ada pengangkut</td></tr> : carriers.map(c => (
                     <tr key={c.id} className="border-b hover:bg-gray-50">
                       <td className="px-3 py-3 font-medium">{c.carrier_code}</td>
                       <td className="px-3 py-3">{c.carrier_name}</td>
@@ -630,7 +630,7 @@ export default function TMSPage() {
           {/* BILLING */}
           {!loading && tab === 'billing' && (
             <div>
-              <SectionHeader title="Freight Billing" onExport={() => handleExport('billing')} onAdd={() => { setForm({ bill_type: 'invoice_customer', currency: 'IDR', status: 'draft' }); setModal('add-bill'); }} addLabel="Buat Tagihan" />
+              <SectionHeader title="Penagihan Pengiriman" onExport={() => handleExport('billing')} onAdd={() => { setForm({ bill_type: 'invoice_customer', currency: 'IDR', status: 'draft' }); setModal('add-bill'); }} addLabel="Buat Tagihan" />
               <div className="bg-white rounded-xl border overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b bg-gray-50">{['No. Tagihan','Tipe','Tanggal','Jatuh Tempo','Customer/Carrier','Total','Terbayar','Sisa','Pembayaran','Status'].map(h => <th key={h} className="text-left px-3 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
@@ -722,18 +722,18 @@ export default function TMSPage() {
           {/* ═══ DISPATCH ═══ */}
           {!loading && tab === 'dispatch' && (
             <div className="space-y-6">
-              <SectionHeader title="Dispatch Workflow" />
+              <SectionHeader title="Alur Kerja Pengiriman" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard icon={Package} label="Menunggu Dispatch" value={fmt(dispatchQueue.filter((s: any) => s.status === 'confirmed').length)} color="yellow" />
-                <StatCard icon={Send} label="Sudah Dispatch" value={fmt(dispatchQueue.filter((s: any) => s.status === 'dispatched' || s.status === 'in_transit').length)} color="blue" />
+                <StatCard icon={Package} label="Menunggu Pengiriman" value={fmt(dispatchQueue.filter((s: any) => s.status === 'confirmed').length)} color="yellow" />
+                <StatCard icon={Send} label="Sudah Dikirim" value={fmt(dispatchQueue.filter((s: any) => s.status === 'dispatched' || s.status === 'in_transit').length)} color="blue" />
                 <StatCard icon={CheckCircle} label="Selesai" value={fmt(dispatchQueue.filter((s: any) => s.status === 'delivered').length)} color="green" />
                 <StatCard icon={Truck} label="Kendaraan Tersedia" value={fmt(fmsVehicles.filter((v: any) => v.status === 'available').length)} color="indigo" />
               </div>
               <div className="bg-white rounded-xl border overflow-x-auto">
-                <div className="px-4 py-3 border-b bg-yellow-50"><h4 className="font-medium text-yellow-700 flex items-center gap-2"><Send className="w-4 h-4" />Shipment Siap Dispatch</h4></div>
+                <div className="px-4 py-3 border-b bg-yellow-50"><h4 className="font-medium text-yellow-700 flex items-center gap-2"><Send className="w-4 h-4" />Pengiriman Siap Dikirim</h4></div>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b bg-gray-50">{['No. Shipment','Penerima','Tujuan','Berat','Prioritas','Status','Aksi'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
-                  <tbody>{dispatchQueue.length === 0 ? <tr><td colSpan={7} className="text-center py-8 text-gray-400">Tidak ada shipment menunggu</td></tr> : dispatchQueue.map((s: any) => (
+                  <tbody>{dispatchQueue.length === 0 ? <tr><td colSpan={7} className="text-center py-8 text-gray-400">Tidak ada pengiriman menunggu</td></tr> : dispatchQueue.map((s: any) => (
                     <tr key={s.id} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium">{s.shipment_number}</td>
                       <td className="px-4 py-3">{s.consignee_name || '-'}</td>
@@ -743,7 +743,7 @@ export default function TMSPage() {
                       <td className="px-4 py-3"><StatusBadge status={s.status} /></td>
                       <td className="px-4 py-3">
                         {(s.status === 'confirmed' || s.status === 'assigned') && (
-                          <button onClick={() => { setForm({ shipment_id: s.id, shipment_number: s.shipment_number }); setModal('dispatch-assign'); }} className="text-xs text-indigo-600 hover:underline font-medium">Assign & Dispatch</button>
+                          <button onClick={() => { setForm({ shipment_id: s.id, shipment_number: s.shipment_number }); setModal('dispatch-assign'); }} className="text-xs text-indigo-600 hover:underline font-medium">Tugaskan & Kirim</button>
                         )}
                       </td>
                     </tr>
@@ -756,16 +756,16 @@ export default function TMSPage() {
           {/* ═══ TRACKING ═══ */}
           {!loading && tab === 'tracking' && (
             <div className="space-y-6">
-              <SectionHeader title="Shipment Tracking" />
+              <SectionHeader title="Pelacakan Pengiriman" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard icon={Activity} label="Sedang Dilacak" value={fmt(tracking.length)} color="indigo" />
-                <StatCard icon={Navigation} label="In Transit" value={fmt(tracking.filter((t: any) => t.current_status === 'in_transit').length)} color="yellow" />
-                <StatCard icon={CheckCircle} label="Delivered" value={fmt(tracking.filter((t: any) => t.current_status === 'delivered').length)} color="green" />
-                <StatCard icon={AlertCircle} label="Delayed" value={fmt(tracking.filter((t: any) => t.is_delayed).length)} color="red" />
+                <StatCard icon={Navigation} label="Dalam Perjalanan" value={fmt(tracking.filter((t: any) => t.current_status === 'in_transit').length)} color="yellow" />
+                <StatCard icon={CheckCircle} label="Terkirim" value={fmt(tracking.filter((t: any) => t.current_status === 'delivered').length)} color="green" />
+                <StatCard icon={AlertCircle} label="Terlambat" value={fmt(tracking.filter((t: any) => t.is_delayed).length)} color="red" />
               </div>
               <div className="bg-white rounded-xl border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-gray-50">{['Shipment','Penerima','Tujuan','Status','Lokasi Terakhir','Update','ETA','Delayed'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
+                  <thead><tr className="border-b bg-gray-50">{['Pengiriman','Penerima','Tujuan','Status','Lokasi Terakhir','Pembaruan','ETA','Terlambat'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
                   <tbody>{tracking.length === 0 ? <tr><td colSpan={8} className="text-center py-8 text-gray-400">Belum ada data tracking</td></tr> : tracking.map((t: any) => (
                     <tr key={t.id} className={`border-b hover:bg-gray-50 ${t.is_delayed ? 'bg-red-50' : ''}`}>
                       <td className="px-4 py-3 font-medium">{t.shipment_number}</td>
@@ -786,10 +786,10 @@ export default function TMSPage() {
           {/* ═══ CARRIER SCORES ═══ */}
           {!loading && tab === 'carrier-scores' && (
             <div className="space-y-6">
-              <SectionHeader title="Carrier Performance Scoring" />
+              <SectionHeader title="Penilaian Performa Pengangkut" />
               <div className="bg-white rounded-xl border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-gray-50">{['#','Carrier','Shipment','On-Time %','Damage %','Claim','Cost/kg','Rating','Score','Grade'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
+                  <thead><tr className="border-b bg-gray-50">{['#','Pengangkut','Pengiriman','Tepat Waktu %','Kerusakan %','Klaim','Biaya/kg','Peringkat','Skor','Nilai'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
                   <tbody>{carrierScores.length === 0 ? <tr><td colSpan={10} className="text-center py-8 text-gray-400">Belum ada data</td></tr> : carrierScores.map((c: any, i: number) => (
                     <tr key={c.carrier_id || i} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-3"><span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>{i+1}</span></td>
@@ -812,17 +812,17 @@ export default function TMSPage() {
           {/* ═══ DELIVERY SLA ═══ */}
           {!loading && tab === 'delivery-sla' && (
             <div className="space-y-6">
-              <SectionHeader title="Delivery SLA Management" onAdd={() => { setForm({ sla_type: 'delivery_time', priority: 'normal', target_hours: 24, penalty_type: 'percentage', penalty_value: 5 }); setModal('add-sla'); }} addLabel="Tambah SLA" />
+              <SectionHeader title="Manajemen SLA Pengiriman" onAdd={() => { setForm({ sla_type: 'delivery_time', priority: 'normal', target_hours: 24, penalty_type: 'percentage', penalty_value: 5 }); setModal('add-sla'); }} addLabel="Tambah SLA" />
               {slaPerformance && (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <StatCard icon={Target} label="Total Shipment" value={fmt(slaPerformance.total_shipments)} color="indigo" />
+                  <StatCard icon={Target} label="Total Pengiriman" value={fmt(slaPerformance.total_shipments)} color="indigo" />
                   <StatCard icon={CheckCircle} label="Tepat Waktu" value={fmt(slaPerformance.on_time)} color="green" sub={`${Number(slaPerformance.on_time_pct).toFixed(1)}%`} />
                   <StatCard icon={AlertCircle} label="Terlambat" value={fmt(slaPerformance.late)} color="red" sub={`${Number(slaPerformance.late_pct).toFixed(1)}%`} />
                   <StatCard icon={Clock} label="Avg Delivery (jam)" value={Number(slaPerformance.avg_delivery_hours).toFixed(1)} color="blue" />
                 </div>
               )}
               <div className="bg-white rounded-xl border overflow-x-auto">
-                <div className="px-4 py-3 border-b"><h4 className="font-medium text-gray-700">SLA Rules</h4></div>
+                <div className="px-4 py-3 border-b"><h4 className="font-medium text-gray-700">Aturan SLA</h4></div>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b bg-gray-50">{['Nama','Tipe','Service','Prioritas','Target (jam)','Penalti','Status'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
                   <tbody>{deliverySlas.length === 0 ? <tr><td colSpan={7} className="text-center py-8 text-gray-400">Belum ada SLA rule</td></tr> : deliverySlas.map((s: any) => (
@@ -844,20 +844,20 @@ export default function TMSPage() {
           {/* ═══ LOGISTICS ANALYTICS ═══ */}
           {!loading && tab === 'logistics-analytics' && logisticsKpi && (
             <div className="space-y-6">
-              <SectionHeader title="Logistics KPI & Analytics" />
+              <SectionHeader title="KPI & Analitik Logistik" />
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <StatCard icon={Package} label="Total Shipment" value={fmt(logisticsKpi.overview?.total_shipments)} color="indigo" />
-                <StatCard icon={CheckCircle} label="Delivered" value={fmt(logisticsKpi.overview?.delivered)} color="green" />
-                <StatCard icon={DollarSign} label="Revenue" value={fmtRp(logisticsKpi.overview?.total_revenue)} color="emerald" />
+                <StatCard icon={Package} label="Total Pengiriman" value={fmt(logisticsKpi.overview?.total_shipments)} color="indigo" />
+                <StatCard icon={CheckCircle} label="Terkirim" value={fmt(logisticsKpi.overview?.delivered)} color="green" />
+                <StatCard icon={DollarSign} label="Pendapatan" value={fmtRp(logisticsKpi.overview?.total_revenue)} color="emerald" />
                 <StatCard icon={TrendingUp} label="On-Time %" value={`${Number(logisticsKpi.overview?.on_time_pct || 0).toFixed(1)}%`} color="blue" />
-                <StatCard icon={Truck} label="Avg Cost/Shipment" value={fmtRp(logisticsKpi.overview?.avg_cost_per_shipment)} color="orange" />
+                <StatCard icon={Truck} label="Rata-rata Biaya/Pengiriman" value={fmtRp(logisticsKpi.overview?.avg_cost_per_shipment)} color="orange" />
                 <StatCard icon={Clock} label="Avg Delivery (jam)" value={Number(logisticsKpi.overview?.avg_delivery_hours || 0).toFixed(1)} color="purple" />
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Revenue by Service - Doughnut Chart */}
                 {logisticsKpi.revenueByService?.length > 0 && (
                   <div className="bg-white rounded-xl border p-5 shadow-sm">
-                    <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2"><DollarSign className="w-4 h-4 text-green-500" />Revenue per Service Type</h4>
+                    <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2"><DollarSign className="w-4 h-4 text-green-500" />Pendapatan per Tipe Layanan</h4>
                     <div className="flex items-center gap-4">
                       <ResponsiveContainer width="50%" height={200}>
                         <PieChart>
@@ -879,7 +879,7 @@ export default function TMSPage() {
                 {/* Top Routes */}
                 {logisticsKpi.topRoutes?.length > 0 && (
                   <div className="bg-white rounded-xl border p-5 shadow-sm">
-                    <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2"><Map className="w-4 h-4 text-blue-500" />Top Routes</h4>
+                    <h4 className="font-semibold text-gray-700 mb-4 flex items-center gap-2"><Map className="w-4 h-4 text-blue-500" />Rute Teratas</h4>
                     {logisticsKpi.topRoutes.length > 0 ? (
                       <ResponsiveContainer width="100%" height={Math.max(160, logisticsKpi.topRoutes.length * 32)}>
                         <BarChart layout="vertical" data={logisticsKpi.topRoutes.map((r:any)=>({name:r.route_name?.length>15?r.route_name.slice(0,15)+'..':r.route_name,trips:Number(r.trip_count),km:Number(r.total_distance)}))}>
@@ -916,7 +916,7 @@ export default function TMSPage() {
                     </AreaChart>
                   </ResponsiveContainer>
                   <div className="mt-4 overflow-x-auto"><table className="w-full text-sm">
-                    <thead><tr className="border-b">{['Bulan','Shipment','Delivered','Revenue','On-Time %','Avg Hours'].map(h => <th key={h} className="text-left px-3 py-2 text-xs font-medium text-gray-500">{h}</th>)}</tr></thead>
+                    <thead><tr className="border-b">{['Bulan','Pengiriman','Terkirim','Pendapatan','Tepat Waktu %','Rata-rata Jam'].map(h => <th key={h} className="text-left px-3 py-2 text-xs font-medium text-gray-500">{h}</th>)}</tr></thead>
                     <tbody>{logisticsKpi.monthlyTrend.map((m: any) => (
                       <tr key={m.month} className="border-b hover:bg-gray-50">
                         <td className="px-3 py-2 font-medium">{m.month}</td>
@@ -940,7 +940,7 @@ export default function TMSPage() {
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
               <div className="flex items-center justify-between px-6 py-4 border-b">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {modal === 'add-shipment' ? 'Buat Shipment' : modal === 'add-trip' ? 'Buat Trip' : modal === 'add-carrier' ? 'Tambah Carrier' : modal === 'add-route' ? 'Tambah Rute' : modal === 'add-bill' ? 'Buat Tagihan' : modal === 'add-zone' ? 'Tambah Zona' : modal === 'add-rate-card' ? 'Tambah Tarif' : modal === 'add-warehouse' ? 'Tambah Gudang' : modal === 'add-pod' ? 'Catat POD' : modal === 'add-sla' ? 'Tambah SLA Rule' : modal === 'dispatch-assign' ? 'Assign & Dispatch' : 'Form'}
+                  {modal === 'add-shipment' ? 'Buat Pengiriman' : modal === 'add-trip' ? 'Buat Perjalanan' : modal === 'add-carrier' ? 'Tambah Pengangkut' : modal === 'add-route' ? 'Tambah Rute' : modal === 'add-bill' ? 'Buat Tagihan' : modal === 'add-zone' ? 'Tambah Zona' : modal === 'add-rate-card' ? 'Tambah Tarif' : modal === 'add-warehouse' ? 'Tambah Gudang' : modal === 'add-pod' ? 'Catat POD' : modal === 'add-sla' ? 'Tambah Aturan SLA' : modal === 'dispatch-assign' ? 'Tugaskan & Kirim' : 'Formulir'}
                 </h3>
                 <button onClick={() => setModal(null)} className="p-1 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
               </div>
@@ -958,8 +958,8 @@ export default function TMSPage() {
                     <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Tujuan *</label><input required className={inputCls} value={form.destination_name || ''} onChange={e => setForm({...form, destination_name: e.target.value})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Berat (kg)</label><input type="number" className={inputCls} value={form.total_weight_kg || ''} onChange={e => setForm({...form, total_weight_kg: parseFloat(e.target.value)})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Jumlah Koli</label><input type="number" className={inputCls} value={form.total_pieces || ''} onChange={e => setForm({...form, total_pieces: parseInt(e.target.value)})} /></div>
-                    <div><label className="text-xs font-medium text-gray-600">Carrier</label><select className={inputCls} value={form.carrier_id || ''} onChange={e => setForm({...form, carrier_id: e.target.value})}><option value="">-</option>{carriers.map(c => <option key={c.id} value={c.id}>{c.carrier_name}</option>)}</select></div>
-                    <div><label className="text-xs font-medium text-gray-600">Biaya Freight</label><input type="number" className={inputCls} value={form.freight_charge || ''} onChange={e => setForm({...form, freight_charge: parseFloat(e.target.value), total_charge: parseFloat(e.target.value)})} /></div>
+                    <div><label className="text-xs font-medium text-gray-600">Pengangkut</label><select className={inputCls} value={form.carrier_id || ''} onChange={e => setForm({...form, carrier_id: e.target.value})}><option value="">-</option>{carriers.map(c => <option key={c.id} value={c.id}>{c.carrier_name}</option>)}</select></div>
+                    <div><label className="text-xs font-medium text-gray-600">Biaya Pengiriman</label><input type="number" className={inputCls} value={form.freight_charge || ''} onChange={e => setForm({...form, freight_charge: parseFloat(e.target.value), total_charge: parseFloat(e.target.value)})} /></div>
                     <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Deskripsi Barang</label><input className={inputCls} value={form.goods_description || ''} onChange={e => setForm({...form, goods_description: e.target.value})} /></div>
                   </div>
                 </>}
@@ -969,9 +969,9 @@ export default function TMSPage() {
                     <div><label className="text-xs font-medium text-gray-600">Tipe</label><select className={inputCls} value={form.trip_type || 'delivery'} onChange={e => setForm({...form, trip_type: e.target.value})}><option value="delivery">Delivery</option><option value="pickup">Pickup</option><option value="transfer">Transfer</option><option value="charter">Charter</option></select></div>
                     <div><label className="text-xs font-medium text-gray-600">Rute</label><select className={inputCls} value={form.route_id || ''} onChange={e => setForm({...form, route_id: e.target.value})}><option value="">-</option>{routes.map(r => <option key={r.id} value={r.id}>{r.route_code} - {r.route_name}</option>)}</select></div>
                     <div><label className="text-xs font-medium text-gray-600">Kendaraan *</label><select required className={inputCls} value={form.vehicle_id || ''} onChange={e => setForm({...form, vehicle_id: e.target.value})}><option value="">Pilih</option>{fmsVehicles.filter((v: any) => v.status === 'available').map((v: any) => <option key={v.id} value={v.id}>{v.vehicle_code} - {v.license_plate}</option>)}</select></div>
-                    <div><label className="text-xs font-medium text-gray-600">Driver *</label><select required className={inputCls} value={form.driver_id || ''} onChange={e => setForm({...form, driver_id: e.target.value})}><option value="">Pilih</option>{fmsDrivers.filter((d: any) => d.availability === 'available').map((d: any) => <option key={d.id} value={d.id}>{d.driver_code} - {d.full_name}</option>)}</select></div>
-                    <div><label className="text-xs font-medium text-gray-600">Planned Start</label><input type="datetime-local" className={inputCls} value={form.planned_start || ''} onChange={e => setForm({...form, planned_start: e.target.value})} /></div>
-                    <div><label className="text-xs font-medium text-gray-600">Planned End</label><input type="datetime-local" className={inputCls} value={form.planned_end || ''} onChange={e => setForm({...form, planned_end: e.target.value})} /></div>
+                    <div><label className="text-xs font-medium text-gray-600">Pengemudi *</label><select required className={inputCls} value={form.driver_id || ''} onChange={e => setForm({...form, driver_id: e.target.value})}><option value="">Pilih</option>{fmsDrivers.filter((d: any) => d.availability === 'available').map((d: any) => <option key={d.id} value={d.id}>{d.driver_code} - {d.full_name}</option>)}</select></div>
+                    <div><label className="text-xs font-medium text-gray-600">Rencana Mulai</label><input type="datetime-local" className={inputCls} value={form.planned_start || ''} onChange={e => setForm({...form, planned_start: e.target.value})} /></div>
+                    <div><label className="text-xs font-medium text-gray-600">Rencana Selesai</label><input type="datetime-local" className={inputCls} value={form.planned_end || ''} onChange={e => setForm({...form, planned_end: e.target.value})} /></div>
                     <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Lokasi Awal</label><input className={inputCls} value={form.start_location || ''} onChange={e => setForm({...form, start_location: e.target.value})} /></div>
                     <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Catatan</label><input className={inputCls} value={form.notes || ''} onChange={e => setForm({...form, notes: e.target.value})} /></div>
                   </div>
@@ -1067,13 +1067,13 @@ export default function TMSPage() {
                 {modal === 'dispatch-assign' && <>
                   <div className="space-y-3">
                     <div className="bg-indigo-50 rounded-lg p-3 text-center">
-                      <p className="text-xs text-gray-500">Shipment</p>
+                      <p className="text-xs text-gray-500">Pengiriman</p>
                       <p className="text-lg font-bold text-indigo-700">{form.shipment_number}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div><label className="text-xs font-medium text-gray-600">Kendaraan *</label><select required className={inputCls} value={form.vehicle_id || ''} onChange={e => setForm({...form, vehicle_id: e.target.value})}><option value="">Pilih</option>{fmsVehicles.filter((v: any) => v.status === 'available').map((v: any) => <option key={v.id} value={v.id}>{v.vehicle_code} - {v.license_plate}</option>)}</select></div>
-                      <div><label className="text-xs font-medium text-gray-600">Driver *</label><select required className={inputCls} value={form.driver_id || ''} onChange={e => setForm({...form, driver_id: e.target.value})}><option value="">Pilih</option>{fmsDrivers.filter((d: any) => d.availability === 'available').map((d: any) => <option key={d.id} value={d.id}>{d.driver_code} - {d.full_name}</option>)}</select></div>
-                      <div><label className="text-xs font-medium text-gray-600">Planned Start</label><input type="datetime-local" className={inputCls} value={form.planned_start || ''} onChange={e => setForm({...form, planned_start: e.target.value})} /></div>
+                      <div><label className="text-xs font-medium text-gray-600">Pengemudi *</label><select required className={inputCls} value={form.driver_id || ''} onChange={e => setForm({...form, driver_id: e.target.value})}><option value="">Pilih</option>{fmsDrivers.filter((d: any) => d.availability === 'available').map((d: any) => <option key={d.id} value={d.id}>{d.driver_code} - {d.full_name}</option>)}</select></div>
+                      <div><label className="text-xs font-medium text-gray-600">Rencana Mulai</label><input type="datetime-local" className={inputCls} value={form.planned_start || ''} onChange={e => setForm({...form, planned_start: e.target.value})} /></div>
                       <div><label className="text-xs font-medium text-gray-600">ETA</label><input type="datetime-local" className={inputCls} value={form.eta || ''} onChange={e => setForm({...form, eta: e.target.value})} /></div>
                       <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Catatan</label><input className={inputCls} value={form.notes || ''} onChange={e => setForm({...form, notes: e.target.value})} /></div>
                     </div>

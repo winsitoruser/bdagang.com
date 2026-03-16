@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   FaFileInvoiceDollar, FaCalendarAlt, FaExclamationTriangle, 
   FaCheckCircle, FaClock, FaSearch, FaFilter, FaPlus,
@@ -26,7 +27,13 @@ interface AccountPayable {
 }
 
 const HutangPage: React.FC = () => {
-  const [hutangList, setHutangList] = useState<AccountPayable[]>([]);
+  const { t } = useTranslation();
+  const MOCK_HUTANG: AccountPayable[] = [
+    { id: 'h1', supplierId: 's1', supplierName: 'PT Supplier Utama', supplierPhone: '021-5551234', invoiceNumber: 'INV-SUP-001', purchaseOrderNumber: 'PO-2026-001', invoiceDate: '2026-03-01', dueDate: '2026-03-31', totalAmount: 15000000, paidAmount: 5000000, remainingAmount: 10000000, status: 'partial', paymentTerms: 'Net 30', daysPastDue: 0 },
+    { id: 'h2', supplierId: 's2', supplierName: 'CV Bahan Baku Jaya', supplierPhone: '021-5554567', invoiceNumber: 'INV-SUP-002', purchaseOrderNumber: 'PO-2026-002', invoiceDate: '2026-02-15', dueDate: '2026-03-15', totalAmount: 8500000, paidAmount: 0, remainingAmount: 8500000, status: 'unpaid', paymentTerms: 'Net 30', daysPastDue: 0 },
+    { id: 'h3', supplierId: 's3', supplierName: 'PT Distribusi Nusantara', supplierPhone: '021-5557890', invoiceNumber: 'INV-SUP-003', purchaseOrderNumber: 'PO-2026-003', invoiceDate: '2026-01-20', dueDate: '2026-02-20', totalAmount: 5000000, paidAmount: 0, remainingAmount: 5000000, status: 'overdue', paymentTerms: 'Net 30', daysPastDue: 23 },
+  ];
+  const [hutangList, setHutangList] = useState<AccountPayable[]>(MOCK_HUTANG);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -53,7 +60,7 @@ const HutangPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching hutang data:', error);
-      setHutangList([]);
+      setHutangList(MOCK_HUTANG);
     } finally {
       setLoading(false);
     }

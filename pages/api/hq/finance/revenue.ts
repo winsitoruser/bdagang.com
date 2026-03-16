@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
 
 let PosTransaction: any, Branch: any, FinanceTransaction: any;
 try {
@@ -84,6 +85,8 @@ export default withHQAuth(handler, { module: 'finance_pro' });
 
 async function getRevenue(req: NextApiRequest, res: NextApiResponse) {
   const { period = 'month', branchId } = req.query;
+  const ctx = getTenantContext(req);
+  const tenantWhere: any = ctx.tenantId ? { tenantId: ctx.tenantId } : {};
 
   // Calculate date range
   const now = new Date();
@@ -102,7 +105,7 @@ async function getRevenue(req: NextApiRequest, res: NextApiResponse) {
 
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB query timeout')), 5000));
         const dbQuery = async () => {
-          const branches = await Branch.findAll({ where: { isActive: true }, attributes: ['id', 'code', 'name'], order: [['name', 'ASC']] });
+          const branches = await Branch.findAll({ where: { isActive: true, ...tenantWhere }, attributes: ['id', 'code', 'name'], order: [['name', 'ASC']] });
           if (branches.length === 0) return null;
 
           const branchRevenue = await Promise.all(branches.map(async (b: any) => {

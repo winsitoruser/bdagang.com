@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import CustomersLayout from '@/components/customers/CustomersLayout';
+import { useTranslation } from '@/lib/i18n';
 import { FaUser, FaPhone, FaEnvelope, FaMapMarkerAlt, FaSave, FaTimes, FaBuilding, FaIdCard, FaBriefcase } from 'react-icons/fa';
 
 const CustomerNewPage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import HQLayout from '../../../components/hq/HQLayout';
 import {
@@ -42,6 +43,7 @@ const iconOptions = ['📦', '🌾', '🍚', '🫗', '🍬', '🥖', '🥤', '�
 const colorOptions = ['#F59E0B', '#3B82F6', '#10B981', '#8B5CF6', '#EC4899', '#06B6D4', '#0EA5E9', '#EF4444', '#84CC16', '#F97316'];
 
 export default function InventoryCategories() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -280,13 +282,13 @@ export default function InventoryCategories() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1 text-sm text-gray-500">
               <Package className="w-4 h-4" />
-              <span>{category.productCount} produk</span>
+              <span>{category.productCount} {t('inventory.catProductUnit')}</span>
             </div>
             <button
               onClick={() => handleToggleStatus(category)}
               className={`px-2 py-1 rounded text-xs ${category.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}
             >
-              {category.isActive ? 'Aktif' : 'Nonaktif'}
+              {category.isActive ? t('inventory.catActive') : t('inventory.catInactive')}
             </button>
             <div className="flex items-center gap-1">
               <button onClick={() => openEdit(category)} className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
@@ -321,25 +323,25 @@ export default function InventoryCategories() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Kategori Produk</h1>
-              <p className="text-gray-500">Kelola kategori dan sub-kategori produk</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('inventory.catTitle')}</h1>
+              <p className="text-gray-500">{t('inventory.catSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={fetchCategories} disabled={loading} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
+              {t('inventory.catRefresh')}
             </button>
             <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
-              Export
+              {t('inventory.catExport')}
             </button>
             <button
               onClick={() => { resetForm(); setIsEditing(false); setShowModal(true); }}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
-              Tambah Kategori
+              {t('inventory.catAdd')}
             </button>
           </div>
         </div>
@@ -353,7 +355,7 @@ export default function InventoryCategories() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-                <p className="text-sm text-gray-500">Total Kategori</p>
+                <p className="text-sm text-gray-500">{t('inventory.catTotal')}</p>
               </div>
             </div>
           </div>
@@ -364,7 +366,7 @@ export default function InventoryCategories() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.parent}</p>
-                <p className="text-sm text-gray-500">Kategori Utama</p>
+                <p className="text-sm text-gray-500">{t('inventory.catParent')}</p>
               </div>
             </div>
           </div>
@@ -375,7 +377,7 @@ export default function InventoryCategories() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.child}</p>
-                <p className="text-sm text-gray-500">Sub-Kategori</p>
+                <p className="text-sm text-gray-500">{t('inventory.catChild')}</p>
               </div>
             </div>
           </div>
@@ -386,7 +388,7 @@ export default function InventoryCategories() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalProducts}</p>
-                <p className="text-sm text-gray-500">Total Produk</p>
+                <p className="text-sm text-gray-500">{t('inventory.catTotalProducts')}</p>
               </div>
             </div>
           </div>
@@ -397,7 +399,7 @@ export default function InventoryCategories() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
-                <p className="text-sm text-gray-500">Aktif</p>
+                <p className="text-sm text-gray-500">{t('inventory.catActive')}</p>
               </div>
             </div>
           </div>
@@ -411,7 +413,7 @@ export default function InventoryCategories() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Cari kategori..."
+                  placeholder={t('inventory.catSearchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64 focus:ring-2 focus:ring-blue-500"
@@ -441,7 +443,7 @@ export default function InventoryCategories() {
           ) : viewMode === 'tree' ? (
             <div>
               {filteredCategories.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">Tidak ada kategori ditemukan</div>
+                <div className="text-center py-12 text-gray-500">{t('inventory.catNotFound')}</div>
               ) : (
                 filteredCategories.map(category => renderCategoryTree(category))
               )}
@@ -457,7 +459,7 @@ export default function InventoryCategories() {
                 >
                   <div className="text-3xl mb-2">{category.icon}</div>
                   <p className="font-medium text-gray-900 text-sm">{category.name}</p>
-                  <p className="text-xs text-gray-500">{category.productCount} produk</p>
+                  <p className="text-xs text-gray-500">{category.productCount} {t('inventory.catProductUnit')}</p>
                   {category.parentName && (
                     <p className="text-xs text-gray-400 mt-1">↳ {category.parentName}</p>
                   )}
@@ -472,7 +474,7 @@ export default function InventoryCategories() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl w-full max-w-lg">
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">{isEditing ? 'Edit Kategori' : 'Tambah Kategori'}</h2>
+                <h2 className="text-xl font-bold text-gray-900">{isEditing ? t('inventory.catEdit') : t('inventory.catAdd')}</h2>
                 <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
@@ -480,7 +482,7 @@ export default function InventoryCategories() {
               <div className="p-6 space-y-4">
                 <div className="flex items-start gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Icon</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('inventory.catIconLabel')}</label>
                     <div className="grid grid-cols-6 gap-1 p-2 border border-gray-300 rounded-lg max-h-32 overflow-y-auto">
                       {iconOptions.map(icon => (
                         <button
@@ -494,28 +496,28 @@ export default function InventoryCategories() {
                     </div>
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama Kategori *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.catNameLabel')}</label>
                     <input
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="Nama kategori"
+                      placeholder={t('inventory.catNamePlaceholder')}
                     />
                     <div className="mt-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.catSlugLabel')}</label>
                       <input
                         type="text"
                         value={formData.slug}
                         onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        placeholder="nama-kategori"
+                        placeholder={t('inventory.catSlugPlaceholder')}
                       />
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.catDescLabel')}</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
@@ -525,20 +527,20 @@ export default function InventoryCategories() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Kategori Induk</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.catParentLabel')}</label>
                     <select
                       value={formData.parentId}
                       onChange={(e) => setFormData(prev => ({ ...prev, parentId: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     >
-                      <option value="">Tidak ada (Kategori Utama)</option>
+                      <option value="">{t('inventory.catNoParent')}</option>
                       {categories.map(cat => (
                         <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Warna</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('inventory.catColorLabel')}</label>
                     <div className="flex flex-wrap gap-1">
                       {colorOptions.map(color => (
                         <button
@@ -559,12 +561,12 @@ export default function InventoryCategories() {
                     onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded"
                   />
-                  <label htmlFor="isActive" className="text-sm text-gray-700">Aktif</label>
+                  <label htmlFor="isActive" className="text-sm text-gray-700">{t('inventory.catActive')}</label>
                 </div>
               </div>
               <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
                 <button onClick={() => setShowModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                  Batal
+                  {t('inventory.catCancel')}
                 </button>
                 <button
                   onClick={isEditing ? handleUpdate : handleCreate}
@@ -572,7 +574,7 @@ export default function InventoryCategories() {
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
-                  {saving ? 'Menyimpan...' : 'Simpan'}
+                  {saving ? t('inventory.catSaving') : t('inventory.catSave')}
                 </button>
               </div>
             </div>
@@ -583,23 +585,23 @@ export default function InventoryCategories() {
         {showDeleteConfirm && selectedCategory && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl w-full max-w-md p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Hapus Kategori</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{t('inventory.catDelete')}</h3>
               <p className="text-gray-600 mb-6">
-                Apakah Anda yakin ingin menghapus kategori "{selectedCategory.name}"?
+                {t('inventory.catDeleteConfirm')} "{selectedCategory.name}"?
                 {selectedCategory.children && selectedCategory.children.length > 0 && (
-                  <span className="block mt-2 text-red-600 text-sm">Kategori ini memiliki sub-kategori yang harus dihapus terlebih dahulu.</span>
+                  <span className="block mt-2 text-red-600 text-sm">{t('inventory.catDeleteHasChildren')}</span>
                 )}
               </p>
               <div className="flex justify-end gap-3">
                 <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                  Batal
+                  {t('inventory.catCancel')}
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={selectedCategory.children && selectedCategory.children.length > 0}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
                 >
-                  Hapus
+                  {t('inventory.catDeleteBtn')}
                 </button>
               </div>
             </div>

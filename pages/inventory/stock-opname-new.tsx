@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -45,6 +46,7 @@ interface StockOpnameItem {
 const StockOpnamePageNew: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t, formatCurrency } = useTranslation();
   
   const [activeTab, setActiveTab] = useState('counting');
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,13 +77,6 @@ const StockOpnamePageNew: React.FC = () => {
     loadProducts();
   }, []);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const loadProducts = async () => {
     setLoading(true);

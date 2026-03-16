@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTranslation } from '@/lib/i18n';
 import {
   FaTimes, FaExclamationTriangle, FaCheckCircle, FaSearch,
   FaCamera, FaFileAlt, FaUserCheck, FaPrint, FaDownload,
@@ -37,6 +38,7 @@ const VarianceResolutionModal: React.FC<VarianceResolutionModalProps> = ({
   varianceItem,
   onSubmit
 }) => {
+  const { formatCurrency } = useTranslation();
   const [activeTab, setActiveTab] = useState('recount');
   const [recountValue, setRecountValue] = useState<number>(0);
   const [recountBy, setRecountBy] = useState<string>('');
@@ -63,13 +65,6 @@ const VarianceResolutionModal: React.FC<VarianceResolutionModalProps> = ({
   const [approvalLevel, setApprovalLevel] = useState<string>('');
   const [approverComments, setApproverComments] = useState<string>('');
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const getVarianceBadge = (category: string) => {
     const badges = {

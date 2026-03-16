@@ -30,7 +30,7 @@ export function ModuleGuard({
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <FaSpinner className="animate-spin h-12 w-12 mx-auto text-sky-600 mb-4" />
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">Memuat...</p>
         </div>
       </div>
     );

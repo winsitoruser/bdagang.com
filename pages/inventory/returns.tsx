@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +45,7 @@ interface ReturnOrder {
 const ReturnsManagementPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t, formatCurrency, formatDate } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -122,7 +124,7 @@ const ReturnsManagementPage: React.FC = () => {
     setSetupLoading(true);
     
     if (isAutoSetup) {
-      toast.loading('Menyiapkan database Returns Management...', { id: 'auto-setup' });
+      toast.loading(t('inventory.returns.setupLoading'), { id: 'auto-setup' });
     }
 
     try {
@@ -130,14 +132,14 @@ const ReturnsManagementPage: React.FC = () => {
       if (response.data.success) {
         if (isAutoSetup) {
           toast.success(
-            'Database berhasil disiapkan! Sistem Returns Management siap digunakan.',
+            t('inventory.returns.setupSuccess'),
             { id: 'auto-setup', duration: 4000 }
           );
         } else {
           toast.success(
             response.data.alreadyExists 
-              ? 'Table sudah ada, siap digunakan!' 
-              : 'Table berhasil dibuat! Sistem siap digunakan.',
+              ? t('inventory.returns.tableExists') 
+              : t('inventory.returns.tableCreated'),
             { duration: 4000 }
           );
         }
@@ -149,12 +151,12 @@ const ReturnsManagementPage: React.FC = () => {
       console.error('Error setting up returns table:', error);
       if (isAutoSetup) {
         toast.error(
-          'Gagal setup otomatis. Klik tombol "Setup Database" untuk mencoba lagi.',
+          t('inventory.returns.autoSetupFailed'),
           { id: 'auto-setup', duration: 5000 }
         );
       } else {
         toast.error(
-          error.response?.data?.message || 'Gagal membuat table. Periksa koneksi database.',
+          error.response?.data?.message || t('inventory.returns.setupFailed'),
           { duration: 5000 }
         );
       }
@@ -171,12 +173,12 @@ const ReturnsManagementPage: React.FC = () => {
       });
 
       if (response.data.success) {
-        toast.success('Return berhasil disetujui!', { duration: 3000 });
+        toast.success(t('inventory.returns.approveSuccess'), { duration: 3000 });
         await fetchReturnsData();
         await fetchReturnsStats();
       }
     } catch (error: any) {
-      toast.error('Gagal menyetujui return', { duration: 3000 });
+      toast.error(t('inventory.returns.approveFailed'), { duration: 3000 });
     }
   };
 
@@ -187,7 +189,7 @@ const ReturnsManagementPage: React.FC = () => {
 
   const confirmRejectReturn = async () => {
     if (!rejectReason) {
-      toast.error('Mohon pilih alasan penolakan', { duration: 3000 });
+      toast.error(t('inventory.returns.selectRejectReason'), { duration: 3000 });
       return;
     }
 
@@ -198,7 +200,7 @@ const ReturnsManagementPage: React.FC = () => {
       });
 
       if (response.data.success) {
-        toast.success('Return berhasil ditolak!', { duration: 3000 });
+        toast.success(t('inventory.returns.rejectSuccess'), { duration: 3000 });
         setShowRejectModal(false);
         setRejectReason('');
         setRejectNotes('');
@@ -206,7 +208,7 @@ const ReturnsManagementPage: React.FC = () => {
         await fetchReturnsStats();
       }
     } catch (error: any) {
-      toast.error('Gagal menolak return', { duration: 3000 });
+      toast.error(t('inventory.returns.rejectFailed'), { duration: 3000 });
     }
   };
 
@@ -258,14 +260,14 @@ const ReturnsManagementPage: React.FC = () => {
     
     // Invoice/Distributor info
     const invoiceNumber = returnData.invoice_number || '-';
-    const invoiceDate = returnData.invoice_date ? new Date(returnData.invoice_date).toLocaleDateString('id-ID') : '-';
+    const invoiceDate = returnData.invoice_date ? formatDate(returnData.invoice_date) : '-';
     const distributorName = returnData.distributor_name || '-';
     const distributorPhone = returnData.distributor_phone || '-';
-    const purchaseDate = returnData.purchase_date ? new Date(returnData.purchase_date).toLocaleDateString('id-ID') : '-';
+    const purchaseDate = returnData.purchase_date ? formatDate(returnData.purchase_date) : '-';
     
     // Approval info
     const approvedBy = returnData.approved_by || '-';
-    const approvalDate = returnData.approval_date ? new Date(returnData.approval_date).toLocaleDateString('id-ID') : '-';
+    const approvalDate = returnData.approval_date ? formatDate(returnData.approval_date) : '-';
 
     const printContent = `
       <!DOCTYPE html>
@@ -854,20 +856,13 @@ const ReturnsManagementPage: React.FC = () => {
     }
   ];
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const getTypeBadge = (type: string) => {
     const config = {
-      supplier: { color: 'bg-blue-100 text-blue-700', label: 'Retur Supplier' },
-      customer: { color: 'bg-green-100 text-green-700', label: 'Retur Customer' },
-      internal: { color: 'bg-purple-100 text-purple-700', label: 'Retur Internal' },
-      damaged: { color: 'bg-red-100 text-red-700', label: 'Barang Rusak' }
+      supplier: { color: 'bg-blue-100 text-blue-700', label: t('inventory.returns.supplierReturn') },
+      customer: { color: 'bg-green-100 text-green-700', label: t('inventory.returns.customerReturn') },
+      internal: { color: 'bg-purple-100 text-purple-700', label: t('inventory.returns.internalReturn') },
+      damaged: { color: 'bg-red-100 text-red-700', label: t('inventory.returns.damagedGoods') }
     };
     const typeConfig = config[type as keyof typeof config] || config.supplier;
     return <Badge className={typeConfig.color}>{typeConfig.label}</Badge>;
@@ -875,11 +870,11 @@ const ReturnsManagementPage: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const config = {
-      pending: { color: 'bg-yellow-100 text-yellow-700', label: 'Menunggu' },
-      approved: { color: 'bg-blue-100 text-blue-700', label: 'Disetujui' },
-      processing: { color: 'bg-indigo-100 text-indigo-700', label: 'Diproses' },
-      completed: { color: 'bg-green-100 text-green-700', label: 'Selesai' },
-      rejected: { color: 'bg-red-100 text-red-700', label: 'Ditolak' }
+      pending: { color: 'bg-yellow-100 text-yellow-700', label: t('inventory.returns.pending') },
+      approved: { color: 'bg-blue-100 text-blue-700', label: t('inventory.returns.approved') },
+      processing: { color: 'bg-indigo-100 text-indigo-700', label: t('inventory.returns.processing') },
+      completed: { color: 'bg-green-100 text-green-700', label: t('inventory.returns.completed') },
+      rejected: { color: 'bg-red-100 text-red-700', label: t('inventory.returns.rejected') }
     };
     const statusConfig = config[status as keyof typeof config] || config.pending;
     return <Badge className={statusConfig.color}>{statusConfig.label}</Badge>;
@@ -887,11 +882,11 @@ const ReturnsManagementPage: React.FC = () => {
 
   const getConditionBadge = (condition: string) => {
     const config = {
-      damaged: { color: 'bg-red-100 text-red-700', label: 'Rusak' },
-      expired: { color: 'bg-orange-100 text-orange-700', label: 'Kadaluarsa' },
-      wrong_item: { color: 'bg-yellow-100 text-yellow-700', label: 'Salah Item' },
-      defective: { color: 'bg-red-100 text-red-700', label: 'Cacat' },
-      other: { color: 'bg-gray-100 text-gray-700', label: 'Lainnya' }
+      damaged: { color: 'bg-red-100 text-red-700', label: t('inventory.returns.damaged') },
+      expired: { color: 'bg-orange-100 text-orange-700', label: t('inventory.returns.expired') },
+      wrong_item: { color: 'bg-yellow-100 text-yellow-700', label: t('inventory.returns.wrongItem') },
+      defective: { color: 'bg-red-100 text-red-700', label: t('inventory.returns.defective') },
+      other: { color: 'bg-gray-100 text-gray-700', label: t('inventory.returns.other') }
     };
     const conditionConfig = config[condition as keyof typeof config] || config.other;
     return <Badge className={conditionConfig.color}>{conditionConfig.label}</Badge>;
@@ -954,7 +949,7 @@ const ReturnsManagementPage: React.FC = () => {
   return (
     <DashboardLayout>
       <Head>
-        <title>Manajemen Retur | BEDAGANG Cloud POS</title>
+        <title>{t('inventory.returns.pageTitle')}</title>
       </Head>
 
       <Toaster position="top-right" />
@@ -965,10 +960,9 @@ const ReturnsManagementPage: React.FC = () => {
             <div className="flex items-start gap-3">
               <FaExclamationTriangle className="text-amber-600 text-xl mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <h3 className="font-semibold text-amber-900 mb-1">Setup Database Diperlukan</h3>
+                <h3 className="font-semibold text-amber-900 mb-1">{t('inventory.returns.setupRequired')}</h3>
                 <p className="text-sm text-amber-800 mb-3">
-                  Table <code className="bg-amber-100 px-1.5 py-0.5 rounded text-xs">returns</code> belum dibuat. 
-                  Klik tombol di bawah untuk membuat table secara otomatis.
+                  Table <code className="bg-amber-100 px-1.5 py-0.5 rounded text-xs">returns</code> {t('inventory.returns.tableNotCreated')}
                 </p>
                 <Button
                   onClick={() => setupReturnsTable(false)}
@@ -976,7 +970,7 @@ const ReturnsManagementPage: React.FC = () => {
                   className="bg-amber-600 hover:bg-amber-700 text-white"
                   size="sm"
                 >
-                  {setupLoading ? 'Membuat Table...' : 'Setup Database Sekarang'}
+                  {setupLoading ? t('inventory.returns.creatingTable') : t('inventory.returns.setupNow')}
                 </Button>
               </div>
             </div>
@@ -994,8 +988,8 @@ const ReturnsManagementPage: React.FC = () => {
                     <FaUndo className="w-7 h-7" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold">Manajemen Retur</h1>
-                    <p className="text-red-100 text-sm">Kelola retur supplier, customer, dan internal</p>
+                    <h1 className="text-3xl font-bold">{t('inventory.returns.title')}</h1>
+                    <p className="text-red-100 text-sm">{t('inventory.returns.subtitle')}</p>
                   </div>
                 </div>
               </div>
@@ -1004,30 +998,30 @@ const ReturnsManagementPage: React.FC = () => {
                 className="bg-white/20 hover:bg-white/30 backdrop-blur-sm"
               >
                 <FaPlus className="mr-2" />
-                Buat Retur Baru
+                {t('inventory.returns.createNew')}
               </Button>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <p className="text-xs text-red-100">Total Retur</p>
+                <p className="text-xs text-red-100">{t('inventory.returns.totalReturns')}</p>
                 <p className="text-2xl font-bold">{displayStats.total}</p>
               </div>
               <div className="bg-yellow-500/30 backdrop-blur-sm rounded-lg p-3 border border-yellow-400/30">
-                <p className="text-xs text-yellow-100">Menunggu</p>
+                <p className="text-xs text-yellow-100">{t('inventory.returns.pending')}</p>
                 <p className="text-2xl font-bold">{displayStats.pending}</p>
               </div>
               <div className="bg-indigo-500/30 backdrop-blur-sm rounded-lg p-3 border border-indigo-400/30">
-                <p className="text-xs text-indigo-100">Diproses</p>
+                <p className="text-xs text-indigo-100">{t('inventory.returns.processing')}</p>
                 <p className="text-2xl font-bold">{displayStats.processing}</p>
               </div>
               <div className="bg-green-500/30 backdrop-blur-sm rounded-lg p-3 border border-green-400/30">
-                <p className="text-xs text-green-100">Selesai</p>
+                <p className="text-xs text-green-100">{t('inventory.returns.completed')}</p>
                 <p className="text-2xl font-bold">{displayStats.completed}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <p className="text-xs text-red-100">Total Refund</p>
+                <p className="text-xs text-red-100">{t('inventory.returns.totalRefund')}</p>
                 <p className="text-lg font-bold">{formatCurrency(displayStats.totalRefund)}</p>
               </div>
             </div>
@@ -1042,7 +1036,7 @@ const ReturnsManagementPage: React.FC = () => {
                 <div className="relative">
                   <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <Input
-                    placeholder="Cari nomor retur atau lokasi..."
+                    placeholder={t('inventory.returns.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -1055,23 +1049,23 @@ const ReturnsManagementPage: React.FC = () => {
                   onChange={(e) => setFilterType(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
-                  <option value="all">Semua Tipe</option>
-                  <option value="supplier">Retur Supplier</option>
-                  <option value="customer">Retur Customer</option>
-                  <option value="internal">Retur Internal</option>
-                  <option value="damaged">Barang Rusak</option>
+                  <option value="all">{t('inventory.returns.allTypes')}</option>
+                  <option value="supplier">{t('inventory.returns.supplierReturn')}</option>
+                  <option value="customer">{t('inventory.returns.customerReturn')}</option>
+                  <option value="internal">{t('inventory.returns.internalReturn')}</option>
+                  <option value="damaged">{t('inventory.returns.damagedGoods')}</option>
                 </select>
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
-                  <option value="all">Semua Status</option>
-                  <option value="pending">Menunggu</option>
-                  <option value="approved">Disetujui</option>
-                  <option value="processing">Diproses</option>
-                  <option value="completed">Selesai</option>
-                  <option value="rejected">Ditolak</option>
+                  <option value="all">{t('inventory.returns.allStatus')}</option>
+                  <option value="pending">{t('inventory.returns.pending')}</option>
+                  <option value="approved">{t('inventory.returns.approved')}</option>
+                  <option value="processing">{t('inventory.returns.processing')}</option>
+                  <option value="completed">{t('inventory.returns.completed')}</option>
+                  <option value="rejected">{t('inventory.returns.rejected')}</option>
                 </select>
               </div>
             </div>
@@ -1081,7 +1075,7 @@ const ReturnsManagementPage: React.FC = () => {
         {/* Returns List */}
         <Card className="shadow-lg border-0">
           <CardHeader>
-            <CardTitle>Daftar Retur</CardTitle>
+            <CardTitle>{t('inventory.returns.returnList')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -1090,16 +1084,16 @@ const ReturnsManagementPage: React.FC = () => {
                   <tr className="border-b border-gray-200 bg-gray-50">
                     <th className="text-left p-3 text-sm font-semibold text-gray-700">
                       <button onClick={() => handleSort('return_number')} className="flex items-center space-x-1 hover:text-blue-600">
-                        <span>No. Retur</span>
+                        <span>{t('inventory.returns.returnNo')}</span>
                         {getSortIcon('return_number')}
                       </button>
                     </th>
-                    <th className="text-left p-3 text-sm font-semibold text-gray-700">Tipe</th>
+                    <th className="text-left p-3 text-sm font-semibold text-gray-700">{t('inventory.returns.type')}</th>
                     <th className="text-left p-3 text-sm font-semibold text-gray-700">Customer</th>
-                    <th className="text-left p-3 text-sm font-semibold text-gray-700">Produk</th>
+                    <th className="text-left p-3 text-sm font-semibold text-gray-700">{t('inventory.returns.product')}</th>
                     <th className="text-left p-3 text-sm font-semibold text-gray-700">
                       <button onClick={() => handleSort('return_date')} className="flex items-center space-x-1 hover:text-blue-600">
-                        <span>Tanggal</span>
+                        <span>{t('inventory.returns.date')}</span>
                         {getSortIcon('return_date')}
                       </button>
                     </th>
@@ -1116,7 +1110,7 @@ const ReturnsManagementPage: React.FC = () => {
                       </button>
                     </th>
                     <th className="text-center p-3 text-sm font-semibold text-gray-700">Status</th>
-                    <th className="text-center p-3 text-sm font-semibold text-gray-700">Aksi</th>
+                    <th className="text-center p-3 text-sm font-semibold text-gray-700">{t('inventory.returns.action')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1148,7 +1142,7 @@ const ReturnsManagementPage: React.FC = () => {
                         <p className="text-sm text-gray-900">{productName}</p>
                       </td>
                       <td className="p-3">
-                        <p className="text-sm text-gray-900">{new Date(returnDate).toLocaleDateString('id-ID')}</p>
+                        <p className="text-sm text-gray-900">{formatDate(returnDate)}</p>
                       </td>
                       <td className="p-3 text-center">
                         <p className="font-semibold text-gray-900">{quantity} {unit}</p>
@@ -1168,7 +1162,7 @@ const ReturnsManagementPage: React.FC = () => {
                               setSelectedReturn(returnOrder);
                               setShowDetailModal(true);
                             }}
-                            title="Lihat Detail"
+                            title={t('inventory.returns.viewDetail')}
                           >
                             <FaEye />
                           </Button>
@@ -1176,7 +1170,7 @@ const ReturnsManagementPage: React.FC = () => {
                             size="sm"
                             variant="outline"
                             onClick={async () => await handlePrintReturn(returnOrder)}
-                            title="Print Dokumen"
+                            title={t('inventory.returns.printDocument')}
                           >
                             <FaPrint />
                           </Button>
@@ -1186,7 +1180,7 @@ const ReturnsManagementPage: React.FC = () => {
                                 size="sm" 
                                 className="bg-green-600 hover:bg-green-700 text-white"
                                 onClick={() => handleApproveReturn(returnOrder.id)}
-                                title="Setujui"
+                                title={t('inventory.returns.approve')}
                               >
                                 <FaCheck />
                               </Button>
@@ -1194,7 +1188,7 @@ const ReturnsManagementPage: React.FC = () => {
                                 size="sm" 
                                 className="bg-red-600 hover:bg-red-700 text-white"
                                 onClick={() => handleRejectReturn(returnOrder.id)}
-                                title="Tolak"
+                                title={t('inventory.returns.reject')}
                               >
                                 <FaTimes />
                               </Button>
@@ -1220,7 +1214,7 @@ const ReturnsManagementPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold">{selectedReturn.return_number || selectedReturn.returnNumber}</h2>
-                  <p className="text-red-100 text-sm mt-1">Detail Lengkap Retur</p>
+                  <p className="text-red-100 text-sm mt-1">{t('inventory.returns.fullDetail')}</p>
                 </div>
                 <button
                   onClick={() => setShowDetailModal(false)}
@@ -1237,21 +1231,21 @@ const ReturnsManagementPage: React.FC = () => {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center">
                       <FaUser className="mr-2 text-blue-600" />
-                      Informasi Customer
+                      {t('inventory.returns.customerInfo')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Nama:</span>
+                      <span className="text-gray-600">{t('inventory.returns.name')}:</span>
                       <span className="font-semibold">{selectedReturn.customer_name || selectedReturn.customerName || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Telepon:</span>
+                      <span className="text-gray-600">{t('inventory.returns.phone')}:</span>
                       <span className="font-semibold">{selectedReturn.customer_phone || selectedReturn.customerPhone || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Tanggal Retur:</span>
-                      <span className="font-semibold">{new Date(selectedReturn.return_date || selectedReturn.returnDate).toLocaleDateString('id-ID')}</span>
+                      <span className="text-gray-600">{t('inventory.returns.returnDate')}:</span>
+                      <span className="font-semibold">{formatDate(selectedReturn.return_date || selectedReturn.returnDate)}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -1260,12 +1254,12 @@ const ReturnsManagementPage: React.FC = () => {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center">
                       <FaBox className="mr-2 text-green-600" />
-                      Informasi Produk
+                      {t('inventory.returns.productInfo')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Produk:</span>
+                      <span className="text-gray-600">{t('inventory.returns.product')}:</span>
                       <span className="font-semibold">{selectedReturn.product_name || selectedReturn.productName}</span>
                     </div>
                     <div className="flex justify-between">
@@ -1273,7 +1267,7 @@ const ReturnsManagementPage: React.FC = () => {
                       <span className="font-semibold">{selectedReturn.product_sku || selectedReturn.productSku || '-'}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Jumlah:</span>
+                      <span className="text-gray-600">{t('inventory.returns.quantity')}:</span>
                       <span className="font-semibold">{selectedReturn.quantity} {selectedReturn.unit || 'pcs'}</span>
                     </div>
                   </CardContent>
@@ -1285,21 +1279,21 @@ const ReturnsManagementPage: React.FC = () => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center">
                     <FaUndo className="mr-2 text-red-600" />
-                    Detail Retur
+                    {t('inventory.returns.returnDetail')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <p className="text-gray-600 mb-1">Alasan</p>
+                      <p className="text-gray-600 mb-1">{t('inventory.returns.reason')}</p>
                       <p className="font-semibold">{selectedReturn.return_reason || selectedReturn.reason}</p>
                     </div>
                     <div>
-                      <p className="text-gray-600 mb-1">Tipe Retur</p>
+                      <p className="text-gray-600 mb-1">{t('inventory.returns.returnType')}</p>
                       <p className="font-semibold">{selectedReturn.return_type || selectedReturn.returnType}</p>
                     </div>
                     <div>
-                      <p className="text-gray-600 mb-1">Kondisi</p>
+                      <p className="text-gray-600 mb-1">{t('inventory.returns.condition')}</p>
                       <p className="font-semibold">{selectedReturn.condition}</p>
                     </div>
                     <div>
@@ -1315,12 +1309,12 @@ const ReturnsManagementPage: React.FC = () => {
                 <CardHeader className="pb-3 bg-red-50">
                   <CardTitle className="text-base flex items-center">
                     <FaMoneyBillWave className="mr-2 text-green-600" />
-                    Ringkasan Keuangan
+                    {t('inventory.returns.financialSummary')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Harga Original:</span>
+                    <span className="text-gray-600">{t('inventory.returns.originalPrice')}:</span>
                     <span className="font-semibold">{formatCurrency(selectedReturn.original_price || selectedReturn.originalPrice || 0)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -1328,7 +1322,7 @@ const ReturnsManagementPage: React.FC = () => {
                     <span className="font-semibold text-red-600">- {formatCurrency(selectedReturn.restocking_fee || selectedReturn.restockingFee || 0)}</span>
                   </div>
                   <div className="border-t pt-3 flex justify-between">
-                    <span className="text-lg font-bold">Total Refund:</span>
+                    <span className="text-lg font-bold">{t('inventory.returns.totalRefund')}:</span>
                     <span className="text-2xl font-bold text-green-600">{formatCurrency(selectedReturn.refund_amount || selectedReturn.totalRefund || 0)}</span>
                   </div>
                 </CardContent>
@@ -1337,7 +1331,7 @@ const ReturnsManagementPage: React.FC = () => {
               {/* Notes */}
               {selectedReturn.notes && (
                 <div className="p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded mb-6">
-                  <p className="text-sm font-semibold text-gray-700 mb-1">Catatan:</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-1">{t('inventory.returns.notes')}:</p>
                   <p className="text-sm text-gray-700">{selectedReturn.notes}</p>
                 </div>
               )}
@@ -1349,7 +1343,7 @@ const ReturnsManagementPage: React.FC = () => {
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <FaPrint className="mr-2" />
-                  Print Dokumen
+                  {t('inventory.returns.printDocument')}
                 </Button>
                 {selectedReturn.status === 'pending' && (
                   <>
@@ -1361,7 +1355,7 @@ const ReturnsManagementPage: React.FC = () => {
                       className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                     >
                       <FaCheck className="mr-2" />
-                      Setujui
+                      {t('inventory.returns.approve')}
                     </Button>
                     <Button
                       onClick={() => {
@@ -1371,7 +1365,7 @@ const ReturnsManagementPage: React.FC = () => {
                       className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                     >
                       <FaTimes className="mr-2" />
-                      Tolak
+                      {t('inventory.returns.reject')}
                     </Button>
                   </>
                 )}
@@ -1389,7 +1383,7 @@ const ReturnsManagementPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <FaExclamationTriangle className="text-2xl" />
-                  <h2 className="text-xl font-bold">Tolak Retur</h2>
+                  <h2 className="text-xl font-bold">{t('inventory.returns.rejectReturn')}</h2>
                 </div>
                 <button
                   onClick={() => {
@@ -1406,41 +1400,41 @@ const ReturnsManagementPage: React.FC = () => {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Alasan Penolakan *
+                  {t('inventory.returns.rejectReason')} *
                 </label>
                 <select
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
-                  <option value="">-- Pilih Alasan --</option>
-                  <option value="Produk tidak memenuhi syarat retur">Produk tidak memenuhi syarat retur</option>
-                  <option value="Melewati batas waktu retur">Melewati batas waktu retur</option>
-                  <option value="Bukti pembelian tidak valid">Bukti pembelian tidak valid</option>
-                  <option value="Kondisi produk tidak sesuai">Kondisi produk tidak sesuai</option>
-                  <option value="Produk sudah digunakan">Produk sudah digunakan</option>
-                  <option value="Tidak ada stok pengganti">Tidak ada stok pengganti</option>
-                  <option value="Kebijakan toko tidak mengizinkan">Kebijakan toko tidak mengizinkan</option>
-                  <option value="Lainnya">Lainnya</option>
+                  <option value="">{t('inventory.returns.selectReason')}</option>
+                  <option value="Produk tidak memenuhi syarat retur">{t('inventory.returns.reasonNotEligible')}</option>
+                  <option value="Melewati batas waktu retur">{t('inventory.returns.reasonTimePassed')}</option>
+                  <option value="Bukti pembelian tidak valid">{t('inventory.returns.reasonInvalidProof')}</option>
+                  <option value="Kondisi produk tidak sesuai">{t('inventory.returns.reasonBadCondition')}</option>
+                  <option value="Produk sudah digunakan">{t('inventory.returns.reasonUsed')}</option>
+                  <option value="Tidak ada stok pengganti">{t('inventory.returns.reasonNoStock')}</option>
+                  <option value="Kebijakan toko tidak mengizinkan">{t('inventory.returns.reasonPolicy')}</option>
+                  <option value="Lainnya">{t('inventory.returns.other')}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Catatan Tambahan
+                  {t('inventory.returns.additionalNotes')}
                 </label>
                 <textarea
                   value={rejectNotes}
                   onChange={(e) => setRejectNotes(e.target.value)}
                   rows={4}
-                  placeholder="Jelaskan alasan penolakan secara detail..."
+                  placeholder={t('inventory.returns.rejectDetailPlaceholder')}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 />
               </div>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p className="text-xs text-yellow-800">
-                  <strong>Perhatian:</strong> Penolakan retur akan dicatat dan customer akan diberitahu. Pastikan alasan yang dipilih sudah sesuai.
+                  <strong>{t('inventory.returns.attention')}:</strong> {t('inventory.returns.rejectWarning')}
                 </p>
               </div>
 
@@ -1454,7 +1448,7 @@ const ReturnsManagementPage: React.FC = () => {
                   variant="outline"
                   className="flex-1"
                 >
-                  Batal
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={confirmRejectReturn}
@@ -1462,7 +1456,7 @@ const ReturnsManagementPage: React.FC = () => {
                   className="flex-1 bg-red-600 hover:bg-red-700 text-white disabled:bg-gray-300 disabled:cursor-not-allowed"
                 >
                   <FaTimes className="mr-2" />
-                  Konfirmasi Tolak
+                  {t('inventory.returns.confirmReject')}
                 </Button>
               </div>
             </div>

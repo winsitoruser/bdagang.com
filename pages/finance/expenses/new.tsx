@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { useSession } from 'next-auth/react';
+import { useTranslation } from '@/lib/i18n';
 import {
   ExclamationTriangleIcon,
   ArrowLeftIcon,
@@ -19,6 +20,7 @@ interface ExpenseCategory {
 export default function NewExpensePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

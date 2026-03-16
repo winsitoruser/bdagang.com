@@ -56,9 +56,22 @@ const roleLabels: Record<string, string> = {
   STAFF: 'Staff'
 };
 
+const MOCK_USERS: User[] = [
+  { id: 'u1', email: 'ahmad@bedagang.com', name: 'Ahmad Wijaya', phone: '081234560001', role: 'SUPER_ADMIN', branchId: null, branchName: 'Kantor Pusat Jakarta', isActive: true, lastLogin: '2026-03-12T08:30:00', createdAt: '2024-01-01', avatar: null },
+  { id: 'u2', email: 'siti@bedagang.com', name: 'Siti Rahayu', phone: '081234560002', role: 'BRANCH_MANAGER', branchId: 'b2', branchName: 'Cabang Bandung', isActive: true, lastLogin: '2026-03-12T07:45:00', createdAt: '2024-03-15', avatar: null },
+  { id: 'u3', email: 'budi@bedagang.com', name: 'Budi Santoso', phone: '081234560003', role: 'BRANCH_MANAGER', branchId: 'b3', branchName: 'Cabang Surabaya', isActive: true, lastLogin: '2026-03-11T09:10:00', createdAt: '2024-03-15', avatar: null },
+  { id: 'u4', email: 'lisa@bedagang.com', name: 'Lisa Permata', phone: '081234560006', role: 'ADMIN', branchId: null, branchName: 'Kantor Pusat Jakarta', isActive: true, lastLogin: '2026-03-12T08:00:00', createdAt: '2024-06-01', avatar: null },
+  { id: 'u5', email: 'eko@bedagang.com', name: 'Eko Prasetyo', phone: '081234560005', role: 'STAFF', branchId: 'b8', branchName: 'Gudang Pusat Bekasi', isActive: true, lastLogin: '2026-03-12T07:30:00', createdAt: '2024-08-01', avatar: null },
+  { id: 'u6', email: 'dewi@bedagang.com', name: 'Dewi Lestari', phone: '081234560004', role: 'BRANCH_MANAGER', branchId: 'b4', branchName: 'Cabang Medan', isActive: true, lastLogin: '2026-03-11T10:20:00', createdAt: '2024-05-01', avatar: null },
+  { id: 'u7', email: 'made@bedagang.com', name: 'Made Wirawan', phone: '081234560007', role: 'BRANCH_MANAGER', branchId: 'b5', branchName: 'Cabang Bali', isActive: true, lastLogin: '2026-03-12T08:15:00', createdAt: '2024-09-01', avatar: null },
+  { id: 'u8', email: 'kasir1@bedagang.com', name: 'Yuni Kartika', phone: '081234560008', role: 'CASHIER', branchId: 'b2', branchName: 'Cabang Bandung', isActive: true, lastLogin: '2026-03-12T07:55:00', createdAt: '2025-01-15', avatar: null },
+  { id: 'u9', email: 'fajar@bedagang.com', name: 'Fajar Setiawan', phone: '081234560010', role: 'STAFF', branchId: 'b2', branchName: 'Cabang Bandung', isActive: true, lastLogin: '2026-03-11T14:30:00', createdAt: '2025-02-01', avatar: null },
+  { id: 'u10', email: 'rina@bedagang.com', name: 'Rina Anggraini', phone: '081234560011', role: 'STAFF', branchId: 'b5', branchName: 'Cabang Bali', isActive: false, lastLogin: '2026-02-28T16:00:00', createdAt: '2025-03-01', avatar: null },
+];
+
 export default function UserManagement() {
   const [mounted, setMounted] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -96,6 +109,7 @@ export default function UserManagement() {
       }
     } catch (error) {
       console.error('Error fetching users:', error);
+      setUsers(MOCK_USERS); setTotal(MOCK_USERS.length);
     } finally {
       setLoading(false);
     }

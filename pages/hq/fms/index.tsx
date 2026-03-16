@@ -15,30 +15,30 @@ type TabType = 'dashboard' | 'vehicles' | 'drivers' | 'maintenance' | 'fuel' | '
 
 const TAB_GROUPS: { label: string; icon: any; tabs: { id: TabType; label: string; icon: any }[] }[] = [
   { label: 'Utama', icon: LayoutDashboard, tabs: [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Dasbor', icon: LayoutDashboard },
     { id: 'vehicles', label: 'Kendaraan', icon: Truck },
-    { id: 'drivers', label: 'Driver', icon: Users },
+    { id: 'drivers', label: 'Pengemudi', icon: Users },
   ]},
   { label: 'Operasional', icon: Wrench, tabs: [
-    { id: 'maintenance', label: 'Maintenance', icon: Wrench },
+    { id: 'maintenance', label: 'Pemeliharaan', icon: Wrench },
     { id: 'fuel', label: 'BBM', icon: Fuel },
-    { id: 'rentals', label: 'Rental', icon: KeyRound },
+    { id: 'rentals', label: 'Penyewaan', icon: KeyRound },
     { id: 'inspections', label: 'Inspeksi', icon: ClipboardList },
     { id: 'incidents', label: 'Insiden', icon: AlertTriangle },
   ]},
-  { label: 'Tracking', icon: Navigation, tabs: [
+  { label: 'Pelacakan', icon: Navigation, tabs: [
     { id: 'gps', label: 'GPS Live', icon: Navigation },
     { id: 'geofences', label: 'Geofence', icon: Crosshair },
     { id: 'violations', label: 'Pelanggaran', icon: Zap },
   ]},
   { label: 'Analitik', icon: BarChart3, tabs: [
-    { id: 'analytics', label: 'Fleet Analytics', icon: BarChart3 },
-    { id: 'tires', label: 'Ban', icon: Disc },
+    { id: 'analytics', label: 'Analitik Armada', icon: BarChart3 },
+    { id: 'tires', label: 'Manajemen Ban', icon: Disc },
     { id: 'costs', label: 'Biaya', icon: DollarSign },
   ]},
   { label: 'Admin', icon: FileText, tabs: [
     { id: 'documents', label: 'Dokumen', icon: FileText },
-    { id: 'reminders', label: 'Reminder', icon: Bell },
+    { id: 'reminders', label: 'Pengingat', icon: Bell },
   ]},
 ];
 
@@ -63,6 +63,30 @@ const fmt = (n: any) => Number(n || 0).toLocaleString('id-ID');
 const fmtRp = (n: any) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString('id-ID') : '-';
 
+const MOCK_FMS_DASHBOARD = {
+  totalVehicles: 28, activeVehicles: 22, inMaintenance: 3, retired: 3,
+  totalDrivers: 35, activeDrivers: 30, onTrip: 18, availableDrivers: 12,
+  totalFuelCost: 85000000, avgFuelEfficiency: 12.5, totalMaintenanceCost: 42000000,
+  upcomingInspections: 5, overdueDocuments: 2, activeRentals: 4,
+  fleetUtilization: 78, avgDriverScore: 85,
+};
+
+const MOCK_FMS_VEHICLES = [
+  { id: 'v1', plate_number: 'B 1234 ABC', brand: 'Toyota', model: 'Avanza', year: 2023, type: 'van', status: 'in_use', assigned_driver: 'Hendra Gunawan', branch: 'Cabang Bandung', mileage: 45200, fuel_type: 'gasoline', last_service: '2026-02-15' },
+  { id: 'v2', plate_number: 'B 5678 DEF', brand: 'Mitsubishi', model: 'L300', year: 2022, type: 'truck', status: 'available', assigned_driver: null, branch: 'Gudang Pusat Bekasi', mileage: 68500, fuel_type: 'diesel', last_service: '2026-03-01' },
+  { id: 'v3', plate_number: 'D 9012 GHI', brand: 'Daihatsu', model: 'Gran Max', year: 2024, type: 'van', status: 'in_use', assigned_driver: 'Agus Setiawan', branch: 'Cabang Surabaya', mileage: 12800, fuel_type: 'gasoline', last_service: '2026-03-05' },
+  { id: 'v4', plate_number: 'B 3456 JKL', brand: 'Isuzu', model: 'Elf', year: 2021, type: 'truck', status: 'maintenance', assigned_driver: null, branch: 'Gudang Pusat Bekasi', mileage: 95000, fuel_type: 'diesel', last_service: '2026-01-20' },
+  { id: 'v5', plate_number: 'DK 7890 MNO', brand: 'Suzuki', model: 'Carry', year: 2023, type: 'van', status: 'in_use', assigned_driver: 'Wayan Darma', branch: 'Cabang Bali', mileage: 28600, fuel_type: 'gasoline', last_service: '2026-02-28' },
+];
+
+const MOCK_FMS_DRIVERS = [
+  { id: 'd1', name: 'Hendra Gunawan', license_number: 'SIM-A-123456', license_type: 'A', license_expiry: '2027-06-15', phone: '081234567201', status: 'on_trip', assigned_vehicle: 'B 1234 ABC', branch: 'Cabang Bandung', score: 92 },
+  { id: 'd2', name: 'Agus Setiawan', license_number: 'SIM-B1-789012', license_type: 'B1', license_expiry: '2026-12-01', phone: '081234567202', status: 'on_trip', assigned_vehicle: 'D 9012 GHI', branch: 'Cabang Surabaya', score: 88 },
+  { id: 'd3', name: 'Wayan Darma', license_number: 'SIM-A-345678', license_type: 'A', license_expiry: '2027-03-20', phone: '081234567203', status: 'on_trip', assigned_vehicle: 'DK 7890 MNO', branch: 'Cabang Bali', score: 85 },
+  { id: 'd4', name: 'Joko Susilo', license_number: 'SIM-B1-901234', license_type: 'B1', license_expiry: '2026-08-10', phone: '081234567204', status: 'available', assigned_vehicle: null, branch: 'Gudang Pusat Bekasi', score: 78 },
+  { id: 'd5', name: 'Rudi Hartono', license_number: 'SIM-A-567890', license_type: 'A', license_expiry: '2027-01-05', phone: '081234567205', status: 'off_duty', assigned_vehicle: null, branch: 'Cabang Medan', score: 90 },
+];
+
 export default function FMSPage() {
   const [mounted, setMounted] = useState(false);
   const [tab, setTab] = useState<TabType>('dashboard');
@@ -74,9 +98,9 @@ export default function FMSPage() {
   const [form, setForm] = useState<any>({});
 
   // Data states
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [drivers, setDrivers] = useState<any[]>([]);
+  const [dashboard, setDashboard] = useState<any>(MOCK_FMS_DASHBOARD);
+  const [vehicles, setVehicles] = useState<any[]>(MOCK_FMS_VEHICLES);
+  const [drivers, setDrivers] = useState<any[]>(MOCK_FMS_DRIVERS);
   const [maintenanceRecords, setMaintenanceRecords] = useState<any[]>([]);
   const [fuelRecords, setFuelRecords] = useState<any[]>([]);
   const [fuelSummary, setFuelSummary] = useState<any[]>([]);
@@ -242,7 +266,12 @@ export default function FMSPage() {
           break;
         }
       }
-    } catch (e) { console.error('FMS fetch error:', e); }
+    } catch (e) {
+      console.error('FMS fetch error:', e);
+      if (tab === 'dashboard') setDashboard(MOCK_FMS_DASHBOARD);
+      if (tab === 'vehicles') setVehicles(MOCK_FMS_VEHICLES);
+      if (tab === 'drivers') setDrivers(MOCK_FMS_DRIVERS);
+    }
     setLoading(false);
   }, [tab]);
 
@@ -334,7 +363,7 @@ export default function FMSPage() {
   const handleRefreshKpi = async () => {
     try {
       const r = await apiA('refresh-kpi', undefined, 'POST');
-      if (r.success) { showToast(r.message || 'KPI refreshed'); fetchAnalytics(); }
+      if (r.success) { showToast(r.message || 'KPI diperbarui'); fetchAnalytics(); }
       else showToast(r.error || 'Gagal refresh KPI');
     } catch { showToast('Error refresh KPI'); }
   };
@@ -364,7 +393,7 @@ export default function FMSPage() {
       <h3 className="text-base sm:text-lg font-semibold text-gray-900">{title}</h3>
       <div className="flex items-center gap-2 flex-shrink-0">
         <button onClick={fetchData} className="p-2 hover:bg-gray-100 rounded-lg" title="Refresh"><RefreshCw className="w-4 h-4 text-gray-500" /></button>
-        {onExport && <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50"><DownloadIcon className="w-4 h-4" /><span className="hidden sm:inline">Export CSV</span><span className="sm:hidden">Export</span></button>}
+        {onExport && <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50"><DownloadIcon className="w-4 h-4" /><span className="hidden sm:inline">Ekspor CSV</span><span className="sm:hidden">Ekspor</span></button>}
         {onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"><Plus className="w-4 h-4" />{addLabel || 'Tambah'}</button>}
       </div>
     </div>
@@ -387,7 +416,7 @@ export default function FMSPage() {
           {/* Title Bar */}
           <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2 truncate"><Truck className="w-6 h-6 text-blue-600 flex-shrink-0" />Fleet Management</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2 truncate"><Truck className="w-6 h-6 text-blue-600 flex-shrink-0" />Manajemen Armada</h1>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <div className="relative hidden sm:block"><Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" /><input className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-52 lg:w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Cari..." value={search} onChange={e => setSearch(e.target.value)} /></div>
@@ -443,17 +472,17 @@ export default function FMSPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <StatCard icon={Truck} label="Total Kendaraan" value={fmt(dashboard.vehicles?.total)} color="blue" sub={`${fmt(dashboard.vehicles?.available)} tersedia`} />
                 <StatCard icon={Car} label="Sedang Digunakan" value={fmt(dashboard.vehicles?.in_use)} color="purple" />
-                <StatCard icon={Wrench} label="Maintenance" value={fmt(dashboard.vehicles?.maintenance)} color="yellow" />
-                <StatCard icon={Users} label="Driver Aktif" value={fmt(dashboard.drivers?.active)} color="green" sub={`${fmt(dashboard.drivers?.on_trip)} on trip`} />
+                <StatCard icon={Wrench} label="Pemeliharaan" value={fmt(dashboard.vehicles?.maintenance)} color="yellow" />
+                <StatCard icon={Users} label="Driver Aktif" value={fmt(dashboard.drivers?.active)} color="green" sub={`${fmt(dashboard.drivers?.on_trip)} dalam perjalanan`} />
                 <StatCard icon={KeyRound} label="Rental Aktif" value={fmt(dashboard.rentals?.active)} color="indigo" sub={fmtRp(dashboard.rentals?.revenue)} />
-                <StatCard icon={AlertTriangle} label="Insiden Open" value={fmt(dashboard.incidents?.open_count)} color="red" />
+                <StatCard icon={AlertTriangle} label="Insiden Terbuka" value={fmt(dashboard.incidents?.open_count)} color="red" />
               </div>
 
               {/* ── Row 1: Cost Trend (Area) + Vehicle Status (Doughnut) ── */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 bg-white rounded-xl border p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-blue-500" />Trend Biaya Operasional</h3>
-                  <p className="text-xs text-gray-400 mb-4">BBM & Maintenance — 12 bulan terakhir</p>
+                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-blue-500" />Tren Biaya Operasional</h3>
+                  <p className="text-xs text-gray-400 mb-4">BBM & Pemeliharaan — 12 bulan terakhir</p>
                   {(chartData?.fuelTrend?.length > 0 || chartData?.monthlyMaintenance?.length > 0) ? (
                     <ResponsiveContainer width="100%" height={260}>
                       <AreaChart data={(() => {
@@ -470,10 +499,10 @@ export default function FMSPage() {
                         <Tooltip formatter={(v:number) => fmtRp(v)} />
                         <Legend />
                         <Area type="monotone" dataKey="bbm" name="BBM" stroke="#F59E0B" fill="url(#gBbm)" strokeWidth={2} />
-                        <Area type="monotone" dataKey="maintenance" name="Maintenance" stroke="#3B82F6" fill="url(#gMnt)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="maintenance" name="Pemeliharaan" stroke="#3B82F6" fill="url(#gMnt)" strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
-                  ) : <div className="flex items-center justify-center h-[260px] text-gray-400 text-sm">Belum ada data trend</div>}
+                  ) : <div className="flex items-center justify-center h-[260px] text-gray-400 text-sm">Belum ada data tren</div>}
                 </div>
                 <div className="bg-white rounded-xl border p-5 shadow-sm">
                   <h3 className="font-semibold text-gray-900 mb-4">Status Kendaraan</h3>
@@ -499,7 +528,7 @@ export default function FMSPage() {
               {/* ── Row 2: Maintenance Bar + Fuel Doughnut ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl border p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><Wrench className="w-5 h-5 text-yellow-500" />Maintenance per Kategori</h3>
+                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><Wrench className="w-5 h-5 text-yellow-500" />Pemeliharaan per Kategori</h3>
                   <p className="text-xs text-gray-400 mb-4">6 bulan terakhir</p>
                   {chartData?.maintenanceByCategory?.length > 0 ? (
                     <ResponsiveContainer width="100%" height={220}>
@@ -543,10 +572,10 @@ export default function FMSPage() {
               {/* ── Row 3: Maintenance & Fuel Info Cards ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl border p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Wrench className="w-4 h-4 text-blue-500" />Maintenance Bulan Ini</h3>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Wrench className="w-4 h-4 text-blue-500" />Pemeliharaan Bulan Ini</h3>
                   <div className="grid grid-cols-3 gap-3">
                     <div className="text-center p-3 bg-yellow-50 rounded-lg"><p className="text-2xl font-bold text-yellow-700">{fmt(dashboard.maintenance?.scheduled)}</p><p className="text-xs text-gray-500">Terjadwal</p></div>
-                    <div className="text-center p-3 bg-blue-50 rounded-lg"><p className="text-2xl font-bold text-blue-700">{fmt(dashboard.maintenance?.in_progress)}</p><p className="text-xs text-gray-500">In Progress</p></div>
+                    <div className="text-center p-3 bg-blue-50 rounded-lg"><p className="text-2xl font-bold text-blue-700">{fmt(dashboard.maintenance?.in_progress)}</p><p className="text-xs text-gray-500">Sedang Berjalan</p></div>
                     <div className="text-center p-3 bg-green-50 rounded-lg"><p className="text-2xl font-bold text-green-700">{fmt(dashboard.maintenance?.completed)}</p><p className="text-xs text-gray-500">Selesai</p></div>
                   </div>
                   <p className="mt-3 text-sm text-gray-500">Total Biaya: <span className="font-semibold text-gray-900">{fmtRp(dashboard.maintenance?.month_cost)}</span></p>
@@ -581,7 +610,7 @@ export default function FMSPage() {
               {/* ── Incident Trend (Line Chart) ── */}
               {chartData?.incidentTrend?.length > 0 && (
                 <div className="bg-white rounded-xl border p-5 shadow-sm">
-                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-red-500" />Trend Insiden</h3>
+                  <h3 className="font-semibold text-gray-900 mb-0.5 flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-red-500" />Tren Insiden</h3>
                   <p className="text-xs text-gray-400 mb-4">12 bulan terakhir</p>
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={chartData.incidentTrend.map((i:any)=>({month:i.month?.slice(5),jumlah:Number(i.count),biaya:Number(i.cost)}))}>
@@ -601,7 +630,7 @@ export default function FMSPage() {
               {/* ── Expiring Documents Alert ── */}
               {dashboard.expiringDocs?.length > 0 && (
                 <div className="bg-white rounded-xl border border-red-200 p-5 shadow-sm">
-                  <h3 className="font-semibold text-red-600 mb-3 flex items-center gap-2"><Info className="w-5 h-5" />Dokumen Segera Expired (30 hari)</h3>
+                  <h3 className="font-semibold text-red-600 mb-3 flex items-center gap-2"><Info className="w-5 h-5" />Dokumen Segera Kedaluwarsa (30 hari)</h3>
                   <div className="space-y-2">{dashboard.expiringDocs.map((d: any) => (
                     <div key={d.id} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                       <div><span className="font-medium text-gray-900">{d.entity_code}</span> — <span className="text-sm text-gray-600">{d.document_type?.toUpperCase()}</span> #{d.document_number}</div>
@@ -637,7 +666,7 @@ export default function FMSPage() {
                       <td className="px-4 py-3">{fmt(v.current_odometer_km)} km</td>
                       <td className="px-4 py-3"><StatusBadge status={v.status} /></td>
                       <td className="px-4 py-3">{v.driver_name || <span className="text-gray-400">-</span>}</td>
-                      <td className="px-4 py-3"><button onClick={() => { setForm({ vehicle_id: v.id, driver_id: '' }); setModal('assign-vehicle'); }} className="text-xs text-blue-600 hover:underline">Assign</button></td>
+                      <td className="px-4 py-3"><button onClick={() => { setForm({ vehicle_id: v.id, driver_id: '' }); setModal('assign-vehicle'); }} className="text-xs text-blue-600 hover:underline">Tugaskan</button></td>
                     </tr>
                   ))}</tbody>
                 </table>
@@ -650,7 +679,7 @@ export default function FMSPage() {
               <SectionHeader title="Daftar Driver" onExport={() => handleExport('drivers')} onAdd={() => { setForm({ employment_type: 'permanent', license_type: 'SIM B1', status: 'active' }); setModal('add-driver'); }} addLabel="Tambah Driver" />
               <div className="bg-white rounded-xl border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-gray-50">{['Kode','Nama','Telepon','SIM','Tipe SIM','Kontrak','Trip','Jarak','Safety','Status','Availability'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
+                  <thead><tr className="border-b bg-gray-50">{['Kode','Nama','Telepon','SIM','Tipe SIM','Kontrak','Trip','Jarak','Safety','Status','Ketersediaan'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
                   <tbody>{filteredDrivers.length === 0 ? <tr><td colSpan={11} className="text-center py-8 text-gray-400">Belum ada driver</td></tr> : filteredDrivers.map(d => (
                     <tr key={d.id} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium">{d.driver_code}</td>
@@ -673,11 +702,11 @@ export default function FMSPage() {
 
           {!loading && tab === 'maintenance' && (
             <div>
-              <SectionHeader title="Work Order Maintenance" onExport={() => handleExport('maintenance')} onAdd={() => { setForm({ category: 'preventive', priority: 'medium', maintenance_type: 'general' }); setModal('add-maintenance'); }} addLabel="Buat Work Order" />
+              <SectionHeader title="Perintah Kerja Pemeliharaan" onExport={() => handleExport('maintenance')} onAdd={() => { setForm({ category: 'preventive', priority: 'medium', maintenance_type: 'general' }); setModal('add-maintenance'); }} addLabel="Buat Work Order" />
               <div className="bg-white rounded-xl border overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="border-b bg-gray-50">{['WO#','Kendaraan','Tipe','Kategori','Prioritas','Vendor','Biaya','Status','Tanggal'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
-                  <tbody>{maintenanceRecords.length === 0 ? <tr><td colSpan={9} className="text-center py-8 text-gray-400">Belum ada work order</td></tr> : maintenanceRecords.map(m => (
+                  <tbody>{maintenanceRecords.length === 0 ? <tr><td colSpan={9} className="text-center py-8 text-gray-400">Belum ada perintah kerja</td></tr> : maintenanceRecords.map(m => (
                     <tr key={m.id} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium">{m.work_order_number}</td>
                       <td className="px-4 py-3">{m.vehicle_code} ({m.license_plate})</td>
@@ -742,7 +771,7 @@ export default function FMSPage() {
                   {/* Monthly Cost Trend */}
                   {costSummary.monthly?.length > 0 && (
                     <div className="bg-white rounded-xl border p-5 shadow-sm">
-                      <h4 className="font-semibold text-gray-700 mb-0.5 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-blue-500" />Trend Biaya Bulanan</h4>
+                      <h4 className="font-semibold text-gray-700 mb-0.5 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-blue-500" />Tren Biaya Bulanan</h4>
                       <p className="text-xs text-gray-400 mb-4">6 bulan terakhir</p>
                       <ResponsiveContainer width="100%" height={220}>
                         <AreaChart data={costSummary.monthly.map((m:any)=>({month:m.month?.slice(5),total:Number(m.total)}))}>
@@ -820,7 +849,7 @@ export default function FMSPage() {
               <SectionHeader title="Dokumen Kendaraan & Driver" onAdd={() => { setForm({ entity_type: 'vehicle', document_type: 'stnk', reminder_days: 30 }); setModal('add-document'); }} addLabel="Tambah Dokumen" />
               <div className="bg-white rounded-xl border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-gray-50">{['Entitas','Kode','Tipe Dokumen','No. Dokumen','Terbit','Expired','Status'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
+                  <thead><tr className="border-b bg-gray-50">{['Entitas','Kode','Tipe Dokumen','No. Dokumen','Terbit','Kedaluwarsa','Status'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
                   <tbody>{documents.length === 0 ? <tr><td colSpan={7} className="text-center py-8 text-gray-400">Belum ada dokumen</td></tr> : documents.map(d => {
                     const isExpired = d.expiry_date && new Date(d.expiry_date) < new Date();
                     const isSoon = d.expiry_date && !isExpired && new Date(d.expiry_date) < new Date(Date.now() + 30*86400000);
@@ -844,7 +873,7 @@ export default function FMSPage() {
           {/* ═══ GPS LIVE TRACKING ═══ */}
           {!loading && tab === 'gps' && (
             <div className="space-y-6">
-              <SectionHeader title="GPS Live Tracking" />
+              <SectionHeader title="Pelacakan GPS Langsung" />
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard icon={Navigation} label="Kendaraan Terlacak" value={fmt(gpsLive.length)} color="blue" />
                 <StatCard icon={Activity} label="Sedang Bergerak" value={fmt(gpsLive.filter((g: any) => Number(g.speed_kmh) > 0).length)} color="green" />
@@ -892,15 +921,15 @@ export default function FMSPage() {
           {/* ═══ GEOFENCES ═══ */}
           {!loading && tab === 'geofences' && (
             <div className="space-y-6">
-              <SectionHeader title="Geofence Management" onAdd={() => { setForm({ fence_type: 'circle', category: 'depot', radius_m: 500, alert_on_enter: true, alert_on_exit: true, color: '#3B82F6' }); setModal('add-geofence'); }} addLabel="Tambah Geofence" />
+              <SectionHeader title="Manajemen Geofence" onAdd={() => { setForm({ fence_type: 'circle', category: 'depot', radius_m: 500, alert_on_enter: true, alert_on_exit: true, color: '#3B82F6' }); setModal('add-geofence'); }} addLabel="Tambah Geofence" />
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <StatCard icon={Crosshair} label="Total Geofence" value={fmt(geofences.length)} color="blue" />
                 <StatCard icon={CheckCircle} label="Aktif" value={fmt(geofences.filter((g: any) => g.is_active).length)} color="green" />
-                <StatCard icon={Activity} label="Event (7 hari)" value={fmt(geofences.reduce((s: number, g: any) => s + Number(g.recent_events || 0), 0))} color="purple" />
+                <StatCard icon={Activity} label="Kejadian (7 hari)" value={fmt(geofences.reduce((s: number, g: any) => s + Number(g.recent_events || 0), 0))} color="purple" />
               </div>
               <div className="bg-white rounded-xl border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-gray-50">{['Kode','Nama','Tipe','Kategori','Radius','Alert','Speed Limit','Event','Status'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
+                  <thead><tr className="border-b bg-gray-50">{['Kode','Nama','Tipe','Kategori','Radius','Peringatan','Batas Kecepatan','Event','Status'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
                   <tbody>{geofences.length === 0 ? <tr><td colSpan={9} className="text-center py-8 text-gray-400">Belum ada geofence</td></tr> : geofences.map((g: any) => (
                     <tr key={g.id} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium">{g.fence_code}</td>
@@ -967,7 +996,7 @@ export default function FMSPage() {
               )}
               <div className="bg-white rounded-xl border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-gray-50">{['Tanggal','Driver','Kendaraan','Tipe','Severity','Kecepatan','Poin','Denda','Status'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
+                  <thead><tr className="border-b bg-gray-50">{['Tanggal','Driver','Kendaraan','Tipe','Tingkat','Kecepatan','Poin','Denda','Status'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
                   <tbody>{violations.length === 0 ? <tr><td colSpan={9} className="text-center py-8 text-gray-400">Tidak ada pelanggaran</td></tr> : violations.map((v: any) => (
                     <tr key={v.id} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-3 text-xs">{new Date(v.violation_date).toLocaleString('id-ID')}</td>
@@ -991,7 +1020,7 @@ export default function FMSPage() {
             <div className="space-y-4">
               {/* Analytics Header: period selector + sub-tabs + actions */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-blue-600" />Fleet Analytics</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-blue-600" />Analitik Armada</h3>
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="flex items-center bg-white border rounded-lg overflow-hidden">
                     {[{v:'7d',l:'7D'},{v:'30d',l:'30D'},{v:'90d',l:'90D'},{v:'6m',l:'6M'},{v:'12m',l:'1Y'},{v:'ytd',l:'YTD'}].map(p=>(
@@ -1004,10 +1033,10 @@ export default function FMSPage() {
               {/* Analytics sub-tabs */}
               <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide pb-1">
                 {([
-                  {id:'overview',label:'Overview',icon:LayoutDashboard},
+                  {id:'overview',label:'Ringkasan',icon:LayoutDashboard},
                   {id:'cost',label:'Biaya',icon:DollarSign},
                   {id:'fuel',label:'BBM',icon:Fuel},
-                  {id:'maintenance',label:'Maintenance',icon:Wrench},
+                  {id:'maintenance',label:'Pemeliharaan',icon:Wrench},
                   {id:'drivers',label:'Driver',icon:Users},
                   {id:'lifecycle',label:'Kendaraan',icon:Truck},
                   {id:'incidents',label:'Insiden',icon:AlertTriangle},
@@ -1023,21 +1052,21 @@ export default function FMSPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     <StatCard icon={Truck} label="Total Kendaraan" value={fmt(analyticsOverview.fleet?.total_vehicles)} color="blue" />
                     <StatCard icon={Activity} label="Digunakan" value={fmt(analyticsOverview.fleet?.in_use)} color="green" sub={`${analyticsOverview.fleet?.utilization_pct||0}% utilisasi`} />
-                    <StatCard icon={Wrench} label="Maintenance" value={fmt(analyticsOverview.fleet?.in_maintenance)} color="yellow" />
+                    <StatCard icon={Wrench} label="Pemeliharaan" value={fmt(analyticsOverview.fleet?.in_maintenance)} color="yellow" />
                     <StatCard icon={DollarSign} label="Total Biaya" value={fmtRp(analyticsOverview.costs?.total_cost)} color="red" sub={analyticsOverview.costs?.change ? `${Number(analyticsOverview.costs.change)>0?'+':''}${analyticsOverview.costs.change}% vs prev` : undefined} />
                     <StatCard icon={Fuel} label="BBM" value={fmtRp(analyticsOverview.fuel?.cost)} color="orange" sub={analyticsOverview.fuel?.change ? `${Number(analyticsOverview.fuel.change)>0?'+':''}${analyticsOverview.fuel.change}% vs prev` : undefined} />
                     <StatCard icon={AlertTriangle} label="Insiden" value={fmt(analyticsOverview.incidents?.total)} color="red" sub={`${fmt(analyticsOverview.incidents?.critical)} kritis`} />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <StatCard icon={Users} label="Driver Aktif" value={fmt(analyticsOverview.drivers?.active)} color="blue" sub={`Safety ${analyticsOverview.drivers?.avg_safety||0}%`} />
-                    <StatCard icon={Shield} label="On-Time Rate" value={`${analyticsOverview.drivers?.avg_on_time||0}%`} color="green" />
-                    <StatCard icon={Wrench} label="Maintenance Cost" value={fmtRp(analyticsOverview.maintenance?.cost)} color="purple" sub={`${fmt(analyticsOverview.maintenance?.completed)} selesai`} />
+                    <StatCard icon={Shield} label="Ketepatan Waktu" value={`${analyticsOverview.drivers?.avg_on_time||0}%`} color="green" />
+                    <StatCard icon={Wrench} label="Biaya Pemeliharaan" value={fmtRp(analyticsOverview.maintenance?.cost)} color="purple" sub={`${fmt(analyticsOverview.maintenance?.completed)} selesai`} />
                     <StatCard icon={Zap} label="Pelanggaran" value={fmt(analyticsOverview.violations?.total)} color="red" sub={`Denda ${fmtRp(analyticsOverview.violations?.fines)}`} />
                   </div>
                   {/* Utilization Trend Chart */}
                   {analyticsUtilTrend.length > 0 && (
                     <div className="bg-white rounded-xl border p-4 shadow-sm">
-                      <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-blue-500" />Trend Utilisasi & KPI Harian</h4>
+                      <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-blue-500" />Tren Utilisasi & KPI Harian</h4>
                       <ResponsiveContainer width="100%" height={280}>
                         <AreaChart data={analyticsUtilTrend}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -1047,14 +1076,14 @@ export default function FMSPage() {
                           <Tooltip formatter={(v:number,n:string)=>[n.includes('cost')||n.includes('fuel')?fmtRp(v):fmt(v),n.replace(/_/g,' ')]} />
                           <Legend />
                           <Area yAxisId="left" type="monotone" dataKey="utilization_rate" name="Utilisasi %" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.15} />
-                          <Area yAxisId="right" type="monotone" dataKey="total_fuel_cost" name="BBM Cost" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.1} />
+                          <Area yAxisId="right" type="monotone" dataKey="total_fuel_cost" name="Biaya BBM" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.1} />
                           <Line yAxisId="left" type="monotone" dataKey="total_incidents" name="Insiden" stroke="#EF4444" strokeWidth={2} dot={false} />
                         </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   )}
                   <div className="flex gap-2 flex-wrap">
-                    <button onClick={()=>handleAnalyticsExport('kpi-history')} disabled={analyticsExporting} className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50"><DownloadIcon className="w-3.5 h-3.5" />Export KPI History</button>
+                    <button onClick={()=>handleAnalyticsExport('kpi-history')} disabled={analyticsExporting} className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50"><DownloadIcon className="w-3.5 h-3.5" />Ekspor Riwayat KPI</button>
                   </div>
                 </div>
               )}
@@ -1065,7 +1094,7 @@ export default function FMSPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {analyticsCost.byCategory?.length > 0 && (
                       <div className="bg-white rounded-xl border p-4 shadow-sm">
-                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><DollarSign className="w-4 h-4 text-orange-500" />Breakdown Kategori Biaya</h4>
+                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><DollarSign className="w-4 h-4 text-orange-500" />Rincian Kategori Biaya</h4>
                         <div className="flex items-center gap-3">
                           <ResponsiveContainer width="45%" height={200}>
                             <PieChart><Pie data={analyticsCost.byCategory.map((c:any)=>({name:c.cost_category?.replace(/_/g,' '),value:Number(c.total||0)}))} dataKey="value" cx="50%" cy="50%" innerRadius={30} outerRadius={65} paddingAngle={3}>
@@ -1083,7 +1112,7 @@ export default function FMSPage() {
                     )}
                     {analyticsCost.trend?.length > 0 && (
                       <div className="bg-white rounded-xl border p-4 shadow-sm">
-                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-blue-500" />Trend Biaya Bulanan</h4>
+                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-blue-500" />Tren Biaya Bulanan</h4>
                         <ResponsiveContainer width="100%" height={200}>
                           <BarChart data={(() => { const m: any = {}; analyticsCost.trend.forEach((r:any)=>{ if(!m[r.month]) m[r.month]={month:r.month}; m[r.month][r.cost_category||'other']=Number(r.total||0); }); return Object.values(m); })()}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="month" tickFormatter={(v:string)=>v?.slice(5)} tick={CLS} /><YAxis tick={CLS} tickFormatter={(v:number)=>`${(v/1e6).toFixed(0)}M`} />
@@ -1120,7 +1149,7 @@ export default function FMSPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {analyticsFuel.trend?.length > 0 && (
                       <div className="bg-white rounded-xl border p-4 shadow-sm">
-                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-orange-500" />Trend BBM Bulanan</h4>
+                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-orange-500" />Tren BBM Bulanan</h4>
                         <ResponsiveContainer width="100%" height={220}>
                           <AreaChart data={analyticsFuel.trend}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="month" tickFormatter={(v:string)=>v?.slice(5)} tick={CLS} />
@@ -1171,19 +1200,19 @@ export default function FMSPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {analyticsMaint.trend?.length > 0 && (
                       <div className="bg-white rounded-xl border p-4 shadow-sm">
-                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-purple-500" />Trend Biaya Maintenance</h4>
+                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-purple-500" />Tren Biaya Pemeliharaan</h4>
                         <ResponsiveContainer width="100%" height={220}>
                           <BarChart data={analyticsMaint.trend}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="month" tickFormatter={(v:string)=>v?.slice(5)} tick={CLS} />
                             <YAxis tick={CLS} tickFormatter={(v:number)=>`${(v/1e6).toFixed(0)}M`} /><Tooltip formatter={(v:number)=>fmtRp(v)} /><Legend />
-                            <Bar dataKey="parts" name="Parts" fill="#8B5CF6" stackId="a" /><Bar dataKey="labor" name="Labor" fill="#06B6D4" stackId="a" />
+                            <Bar dataKey="parts" name="Suku Cadang" fill="#8B5CF6" stackId="a" /><Bar dataKey="labor" name="Tenaga Kerja" fill="#06B6D4" stackId="a" />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
                     )}
                     {analyticsMaint.byCategory?.length > 0 && (
                       <div className="bg-white rounded-xl border p-4 shadow-sm">
-                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><PieChartIcon className="w-4 h-4 text-blue-500" />Maintenance by Kategori</h4>
+                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><PieChartIcon className="w-4 h-4 text-blue-500" />Pemeliharaan per Kategori</h4>
                         <ResponsiveContainer width="100%" height={220}>
                           <PieChart><Pie data={analyticsMaint.byCategory.map((c:any)=>({name:c.category?.replace(/_/g,' '),value:Number(c.cost||0)}))} dataKey="value" cx="50%" cy="50%" innerRadius={35} outerRadius={70} paddingAngle={3}>
                             {analyticsMaint.byCategory.map((_:any,i:number)=><Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]} />)}
@@ -1194,11 +1223,11 @@ export default function FMSPage() {
                   </div>
                   {analyticsMaint.topVehicles?.length > 0 && (
                     <div className="bg-white rounded-xl border p-4 shadow-sm">
-                      <div className="flex items-center justify-between mb-3"><h4 className="font-semibold text-gray-700 flex items-center gap-2"><Wrench className="w-4 h-4 text-yellow-500" />Top Kendaraan by Maintenance Cost</h4>
+                      <div className="flex items-center justify-between mb-3"><h4 className="font-semibold text-gray-700 flex items-center gap-2"><Wrench className="w-4 h-4 text-yellow-500" />Kendaraan Teratas Biaya Pemeliharaan</h4>
                         <button onClick={()=>handleAnalyticsExport('maintenance-summary')} disabled={analyticsExporting} className="flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-gray-600 rounded-lg text-xs hover:bg-gray-50"><DownloadIcon className="w-3 h-3" />Export</button>
                       </div>
                       <div className="overflow-x-auto"><table className="w-full text-sm">
-                        <thead><tr className="border-b">{['Kendaraan','Plat','Jumlah WO','Total Cost','Avg Downtime'].map(h=><th key={h} className="text-left px-3 py-2 text-xs font-medium text-gray-500">{h}</th>)}</tr></thead>
+                        <thead><tr className="border-b">{['Kendaraan','Plat','Jumlah WO','Total Biaya','Rata-rata Downtime'].map(h=><th key={h} className="text-left px-3 py-2 text-xs font-medium text-gray-500">{h}</th>)}</tr></thead>
                         <tbody>{analyticsMaint.topVehicles.map((v:any)=>(
                           <tr key={v.vehicle_code} className="border-b hover:bg-gray-50">
                             <td className="px-3 py-2 font-medium">{v.vehicle_code}</td><td className="px-3 py-2">{v.license_plate}</td>
@@ -1210,7 +1239,7 @@ export default function FMSPage() {
                   )}
                   {analyticsMaint.byVendor?.length > 0 && (
                     <div className="bg-white rounded-xl border p-4 shadow-sm">
-                      <h4 className="font-semibold text-gray-700 mb-3">Top Vendor Maintenance</h4>
+                      <h4 className="font-semibold text-gray-700 mb-3">Vendor Pemeliharaan Teratas</h4>
                       <div className="space-y-2">{analyticsMaint.byVendor.map((v:any,i:number)=>(
                         <div key={v.vendor_name} className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
                           <div className="flex items-center gap-2"><span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold">{i+1}</span><span className="text-sm font-medium">{v.vendor_name}</span><span className="text-xs text-gray-400">{v.count} WO</span></div>
@@ -1236,7 +1265,7 @@ export default function FMSPage() {
                   )}
                   {analyticsDriver.leaderboard?.length > 0 && (
                     <div className="bg-white rounded-xl border p-4 shadow-sm">
-                      <div className="flex items-center justify-between mb-3"><h4 className="font-semibold text-gray-700 flex items-center gap-2"><Users className="w-4 h-4 text-blue-500" />Driver Leaderboard</h4>
+                      <div className="flex items-center justify-between mb-3"><h4 className="font-semibold text-gray-700 flex items-center gap-2"><Users className="w-4 h-4 text-blue-500" />Peringkat Driver</h4>
                         <button onClick={()=>handleAnalyticsExport('driver-scorecard')} disabled={analyticsExporting} className="flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-gray-600 rounded-lg text-xs hover:bg-gray-50"><DownloadIcon className="w-3 h-3" />Export</button>
                       </div>
                       <div className="overflow-x-auto"><table className="w-full text-sm">
@@ -1301,7 +1330,7 @@ export default function FMSPage() {
                         <button onClick={()=>handleAnalyticsExport('vehicle-tco')} disabled={analyticsExporting} className="flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-gray-600 rounded-lg text-xs hover:bg-gray-50"><DownloadIcon className="w-3 h-3" />Export</button>
                       </div>
                       <div className="overflow-x-auto"><table className="w-full text-sm">
-                        <thead><tr className="border-b">{['Kendaraan','Tipe','Tahun','Odometer','BBM (Period)','Maint (Period)','Insiden (Period)','Lifetime Cost'].map(h=><th key={h} className="text-left px-3 py-2 text-xs font-medium text-gray-500">{h}</th>)}</tr></thead>
+                        <thead><tr className="border-b">{['Kendaraan','Tipe','Tahun','Odometer','BBM (Periode)','Pemeliharaan (Periode)','Insiden (Periode)','Biaya Seumur Hidup'].map(h=><th key={h} className="text-left px-3 py-2 text-xs font-medium text-gray-500">{h}</th>)}</tr></thead>
                         <tbody>{analyticsLifecycle.tco.slice(0,15).map((v:any)=>(
                           <tr key={v.vehicle_code} className="border-b hover:bg-gray-50">
                             <td className="px-3 py-2 font-medium">{v.vehicle_code}</td><td className="px-3 py-2 capitalize">{v.vehicle_type}</td><td className="px-3 py-2">{v.year||'-'}</td>
@@ -1333,7 +1362,7 @@ export default function FMSPage() {
                     )}
                     {analyticsIncident.trend?.length > 0 && (
                       <div className="bg-white rounded-xl border p-4 shadow-sm">
-                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-orange-500" />Trend Insiden</h4>
+                        <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-orange-500" />Tren Insiden</h4>
                         <ResponsiveContainer width="100%" height={220}>
                           <AreaChart data={analyticsIncident.trend}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" /><XAxis dataKey="month" tickFormatter={(v:string)=>v?.slice(5)} tick={CLS} />
@@ -1380,7 +1409,7 @@ export default function FMSPage() {
                   <StatCard icon={CheckCircle} label="Terpasang" value={fmt(tireSummary.in_use)} color="green" />
                   <StatCard icon={Package} label="Spare" value={fmt(tireSummary.spare)} color="yellow" />
                   <StatCard icon={RefreshCw} label="Retread" value={fmt(tireSummary.retread)} color="purple" />
-                  <StatCard icon={XCircle} label="Disposed" value={fmt(tireSummary.disposed)} color="gray" />
+                  <StatCard icon={XCircle} label="Dibuang" value={fmt(tireSummary.disposed)} color="gray" />
                   <StatCard icon={AlertTriangle} label="Perlu Ganti" value={fmt(tireSummary.need_replace)} color="red" />
                 </div>
               )}
@@ -1412,19 +1441,19 @@ export default function FMSPage() {
           {!loading && tab === 'reminders' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Reminder & Jadwal Maintenance</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Pengingat & Jadwal Pemeliharaan</h3>
                 <div className="flex items-center gap-2">
-                  <button onClick={async () => { const r = await apiE('generate-reminders', 'POST'); showToast(r.message || 'Done'); fetchData(); }} className="flex items-center gap-1.5 px-3 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600"><Zap className="w-4 h-4" />Auto-Generate</button>
-                  <button onClick={() => { setForm({ reminder_type: 'maintenance_due', entity_type: 'vehicle', priority: 'medium', days_before: 7 }); setModal('add-reminder'); }} className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"><Plus className="w-4 h-4" />Tambah Reminder</button>
-                  <button onClick={() => { setForm({ schedule_type: 'time_based', maintenance_type: 'general', alert_before_days: 7 }); setModal('add-schedule'); }} className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"><Plus className="w-4 h-4" />Jadwal Maintenance</button>
+                  <button onClick={async () => { const r = await apiE('generate-reminders', 'POST'); showToast(r.message || 'Done'); fetchData(); }} className="flex items-center gap-1.5 px-3 py-2 bg-yellow-500 text-white rounded-lg text-sm font-medium hover:bg-yellow-600"><Zap className="w-4 h-4" />Buat Otomatis</button>
+                  <button onClick={() => { setForm({ reminder_type: 'maintenance_due', entity_type: 'vehicle', priority: 'medium', days_before: 7 }); setModal('add-reminder'); }} className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"><Plus className="w-4 h-4" />Tambah Pengingat</button>
+                  <button onClick={() => { setForm({ schedule_type: 'time_based', maintenance_type: 'general', alert_before_days: 7 }); setModal('add-schedule'); }} className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"><Plus className="w-4 h-4" />Jadwal Pemeliharaan</button>
                 </div>
               </div>
               {/* Active Reminders */}
               <div className="bg-white rounded-xl border overflow-x-auto">
-                <div className="px-4 py-3 border-b"><h4 className="font-medium text-gray-700 flex items-center gap-2"><Bell className="w-4 h-4" />Reminder Aktif</h4></div>
+                <div className="px-4 py-3 border-b"><h4 className="font-medium text-gray-700 flex items-center gap-2"><Bell className="w-4 h-4" />Pengingat Aktif</h4></div>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b bg-gray-50">{['Tipe','Entitas','Judul','Jatuh Tempo','Prioritas','Status','Aksi'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
-                  <tbody>{reminders.length === 0 ? <tr><td colSpan={7} className="text-center py-8 text-gray-400">Tidak ada reminder aktif</td></tr> : reminders.map((r: any) => {
+                  <tbody>{reminders.length === 0 ? <tr><td colSpan={7} className="text-center py-8 text-gray-400">Tidak ada pengingat aktif</td></tr> : reminders.map((r: any) => {
                     const overdue = r.due_date && new Date(r.due_date) < new Date();
                     return (
                       <tr key={r.id} className={`border-b hover:bg-gray-50 ${overdue ? 'bg-red-50' : ''}`}>
@@ -1434,7 +1463,7 @@ export default function FMSPage() {
                         <td className="px-4 py-3"><span className={overdue ? 'text-red-600 font-medium' : ''}>{fmtDate(r.due_date)}</span></td>
                         <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${r.priority === 'critical' ? 'bg-red-100 text-red-700' : r.priority === 'high' ? 'bg-orange-100 text-orange-700' : r.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>{r.priority}</span></td>
                         <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-                        <td className="px-4 py-3">{r.status !== 'resolved' && <button onClick={async () => { await apiE('resolve-reminder', 'PUT', { id: r.id }); showToast('Resolved'); fetchData(); }} className="text-xs text-green-600 hover:underline">Resolve</button>}</td>
+                        <td className="px-4 py-3">{r.status !== 'resolved' && <button onClick={async () => { await apiE('resolve-reminder', 'PUT', { id: r.id }); showToast('Diselesaikan'); fetchData(); }} className="text-xs text-green-600 hover:underline">Selesaikan</button>}</td>
                       </tr>
                     );
                   })}</tbody>
@@ -1442,9 +1471,9 @@ export default function FMSPage() {
               </div>
               {/* Maintenance Schedules */}
               <div className="bg-white rounded-xl border overflow-x-auto">
-                <div className="px-4 py-3 border-b"><h4 className="font-medium text-gray-700 flex items-center gap-2"><Calendar className="w-4 h-4" />Jadwal Maintenance</h4></div>
+                <div className="px-4 py-3 border-b"><h4 className="font-medium text-gray-700 flex items-center gap-2"><Calendar className="w-4 h-4" />Jadwal Pemeliharaan</h4></div>
                 <table className="w-full text-sm">
-                  <thead><tr className="border-b bg-gray-50">{['Kendaraan','Plat','Tipe Maintenance','Interval','Jatuh Tempo','Odometer','Est. Biaya','Urgency'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
+                  <thead><tr className="border-b bg-gray-50">{['Kendaraan','Plat','Tipe Pemeliharaan','Interval','Jatuh Tempo','Odometer','Est. Biaya','Urgensi'].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>)}</tr></thead>
                   <tbody>{schedules.length === 0 ? <tr><td colSpan={8} className="text-center py-8 text-gray-400">Belum ada jadwal</td></tr> : schedules.map((s: any) => (
                     <tr key={s.id} className={`border-b hover:bg-gray-50 ${s.urgency === 'overdue' ? 'bg-red-50' : s.urgency === 'due_soon' ? 'bg-yellow-50' : ''}`}>
                       <td className="px-4 py-3 font-medium">{s.vehicle_code}</td>
@@ -1454,7 +1483,7 @@ export default function FMSPage() {
                       <td className="px-4 py-3">{fmtDate(s.next_due_at)}</td>
                       <td className="px-4 py-3">{fmt(s.current_odometer_km)} km</td>
                       <td className="px-4 py-3">{Number(s.estimated_cost) > 0 ? fmtRp(s.estimated_cost) : '-'}</td>
-                      <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.urgency === 'overdue' ? 'bg-red-100 text-red-700' : s.urgency === 'due_soon' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{s.urgency === 'overdue' ? 'Overdue' : s.urgency === 'due_soon' ? 'Segera' : 'OK'}</span></td>
+                      <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.urgency === 'overdue' ? 'bg-red-100 text-red-700' : s.urgency === 'due_soon' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{s.urgency === 'overdue' ? 'Terlambat' : s.urgency === 'due_soon' ? 'Segera' : 'OK'}</span></td>
                     </tr>
                   ))}</tbody>
                 </table>
@@ -1469,7 +1498,7 @@ export default function FMSPage() {
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
               <div className="flex items-center justify-between px-6 py-4 border-b">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {modal === 'add-vehicle' ? 'Tambah Kendaraan' : modal === 'add-driver' ? 'Tambah Driver' : modal === 'add-maintenance' ? 'Buat Work Order' : modal === 'add-fuel' ? 'Catat Pengisian BBM' : modal === 'add-rental' ? 'Buat Kontrak Rental' : modal === 'add-inspection' ? 'Buat Inspeksi' : modal === 'add-incident' ? 'Lapor Insiden' : modal === 'add-cost' ? 'Catat Biaya' : modal === 'add-document' ? 'Tambah Dokumen' : modal === 'assign-vehicle' ? 'Assign Kendaraan ke Driver' : modal === 'add-geofence' ? 'Tambah Geofence' : modal === 'add-tire' ? 'Tambah Ban' : modal === 'add-violation' ? 'Catat Pelanggaran' : modal === 'add-reminder' ? 'Buat Reminder' : modal === 'add-schedule' ? 'Jadwal Maintenance' : modal === 'add-rental-payment' ? 'Catat Pembayaran Rental' : 'Form'}
+                  {modal === 'add-vehicle' ? 'Tambah Kendaraan' : modal === 'add-driver' ? 'Tambah Driver' : modal === 'add-maintenance' ? 'Buat Work Order' : modal === 'add-fuel' ? 'Catat Pengisian BBM' : modal === 'add-rental' ? 'Buat Kontrak Rental' : modal === 'add-inspection' ? 'Buat Inspeksi' : modal === 'add-incident' ? 'Lapor Insiden' : modal === 'add-cost' ? 'Catat Biaya' : modal === 'add-document' ? 'Tambah Dokumen' : modal === 'assign-vehicle' ? 'Tugaskan Kendaraan ke Driver' : modal === 'add-geofence' ? 'Tambah Geofence' : modal === 'add-tire' ? 'Tambah Ban' : modal === 'add-violation' ? 'Catat Pelanggaran' : modal === 'add-reminder' ? 'Buat Pengingat' : modal === 'add-schedule' ? 'Jadwal Pemeliharaan' : modal === 'add-rental-payment' ? 'Catat Pembayaran Rental' : 'Form'}
                 </h3>
                 <button onClick={() => setModal(null)} className="p-1 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
               </div>
@@ -1497,7 +1526,7 @@ export default function FMSPage() {
                     <div><label className="text-xs font-medium text-gray-600">Email</label><input type="email" className={inputCls} value={form.email || ''} onChange={e => setForm({...form, email: e.target.value})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">No. SIM</label><input className={inputCls} value={form.license_number || ''} onChange={e => setForm({...form, license_number: e.target.value})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Tipe SIM</label><select className={inputCls} value={form.license_type || 'SIM B1'} onChange={e => setForm({...form, license_type: e.target.value})}><option value="SIM A">SIM A</option><option value="SIM B1">SIM B1</option><option value="SIM B2">SIM B2</option><option value="SIM C">SIM C</option></select></div>
-                    <div><label className="text-xs font-medium text-gray-600">SIM Expired</label><input type="date" className={inputCls} value={form.license_expiry_date || ''} onChange={e => setForm({...form, license_expiry_date: e.target.value})} /></div>
+                    <div><label className="text-xs font-medium text-gray-600">SIM Kedaluwarsa</label><input type="date" className={inputCls} value={form.license_expiry_date || ''} onChange={e => setForm({...form, license_expiry_date: e.target.value})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Tipe Kontrak</label><select className={inputCls} value={form.employment_type || 'permanent'} onChange={e => setForm({...form, employment_type: e.target.value})}><option value="permanent">Tetap</option><option value="contract">Kontrak</option><option value="freelance">Freelance</option><option value="outsource">Outsource</option></select></div>
                     <div><label className="text-xs font-medium text-gray-600">Gaji Pokok</label><input type="number" className={inputCls} value={form.base_salary || ''} onChange={e => setForm({...form, base_salary: parseFloat(e.target.value)})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Uang Jalan/Trip</label><input type="number" className={inputCls} value={form.allowance_per_trip || ''} onChange={e => setForm({...form, allowance_per_trip: parseFloat(e.target.value)})} /></div>
@@ -1539,7 +1568,7 @@ export default function FMSPage() {
                     <div><label className="text-xs font-medium text-gray-600">Mulai *</label><input required type="date" className={inputCls} value={form.start_date || ''} onChange={e => setForm({...form, start_date: e.target.value})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Selesai *</label><input required type="date" className={inputCls} value={form.end_date || ''} onChange={e => setForm({...form, end_date: e.target.value})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Kontrak</label><select className={inputCls} value={form.contract_type || 'daily'} onChange={e => setForm({...form, contract_type: e.target.value})}><option value="daily">Harian</option><option value="weekly">Mingguan</option><option value="monthly">Bulanan</option><option value="yearly">Tahunan</option><option value="project_based">Per Proyek</option></select></div>
-                    <div><label className="text-xs font-medium text-gray-600">Rate Amount</label><input type="number" className={inputCls} value={form.rate_amount || ''} onChange={e => setForm({...form, rate_amount: parseFloat(e.target.value), total_amount: parseFloat(e.target.value)})} /></div>
+                    <div><label className="text-xs font-medium text-gray-600">Jumlah Tarif</label><input type="number" className={inputCls} value={form.rate_amount || ''} onChange={e => setForm({...form, rate_amount: parseFloat(e.target.value), total_amount: parseFloat(e.target.value)})} /></div>
                     <div><label className="flex items-center gap-2 mt-5"><input type="checkbox" checked={form.include_driver || false} onChange={e => setForm({...form, include_driver: e.target.checked})} /><span className="text-sm">Termasuk Driver</span></label></div>
                     <div><label className="flex items-center gap-2 mt-5"><input type="checkbox" checked={form.include_fuel || false} onChange={e => setForm({...form, include_fuel: e.target.checked})} /><span className="text-sm">Termasuk BBM</span></label></div>
                   </div>
@@ -1557,8 +1586,8 @@ export default function FMSPage() {
                 {modal === 'add-incident' && <>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Kendaraan *</label><select required className={inputCls} value={form.vehicle_id || ''} onChange={e => setForm({...form, vehicle_id: e.target.value})}><option value="">Pilih</option>{vehicles.map(v => <option key={v.id} value={v.id}>{v.vehicle_code} - {v.license_plate}</option>)}</select></div>
-                    <div><label className="text-xs font-medium text-gray-600">Tipe</label><select className={inputCls} value={form.incident_type || 'accident'} onChange={e => setForm({...form, incident_type: e.target.value})}><option value="accident">Kecelakaan</option><option value="breakdown">Breakdown</option><option value="theft">Pencurian</option><option value="vandalism">Vandalisme</option><option value="traffic_violation">Pelanggaran Lalu Lintas</option></select></div>
-                    <div><label className="text-xs font-medium text-gray-600">Severity</label><select className={inputCls} value={form.severity || 'minor'} onChange={e => setForm({...form, severity: e.target.value})}><option value="minor">Minor</option><option value="moderate">Moderate</option><option value="major">Major</option><option value="total_loss">Total Loss</option></select></div>
+                    <div><label className="text-xs font-medium text-gray-600">Tipe</label><select className={inputCls} value={form.incident_type || 'accident'} onChange={e => setForm({...form, incident_type: e.target.value})}><option value="accident">Kecelakaan</option><option value="breakdown">Mogok</option><option value="theft">Pencurian</option><option value="vandalism">Vandalisme</option><option value="traffic_violation">Pelanggaran Lalu Lintas</option></select></div>
+                    <div><label className="text-xs font-medium text-gray-600">Tingkat</label><select className={inputCls} value={form.severity || 'minor'} onChange={e => setForm({...form, severity: e.target.value})}><option value="minor">Ringan</option><option value="moderate">Sedang</option><option value="major">Berat</option><option value="total_loss">Total Loss</option></select></div>
                     <div><label className="text-xs font-medium text-gray-600">Lokasi</label><input className={inputCls} value={form.location || ''} onChange={e => setForm({...form, location: e.target.value})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Biaya Perbaikan</label><input type="number" className={inputCls} value={form.repair_cost || ''} onChange={e => setForm({...form, repair_cost: parseFloat(e.target.value), total_cost: parseFloat(e.target.value)})} /></div>
                     <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Deskripsi</label><textarea className={inputCls} rows={2} value={form.description || ''} onChange={e => setForm({...form, description: e.target.value})} /></div>
@@ -1583,14 +1612,14 @@ export default function FMSPage() {
                     <div><label className="text-xs font-medium text-gray-600">Tipe Dokumen</label><select className={inputCls} value={form.document_type || 'stnk'} onChange={e => setForm({...form, document_type: e.target.value})}><option value="stnk">STNK</option><option value="bpkb">BPKB</option><option value="kir">KIR</option><option value="sim">SIM</option><option value="insurance">Asuransi</option><option value="contract">Kontrak</option><option value="permit">Izin</option></select></div>
                     <div><label className="text-xs font-medium text-gray-600">No. Dokumen</label><input className={inputCls} value={form.document_number || ''} onChange={e => setForm({...form, document_number: e.target.value})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Tanggal Terbit</label><input type="date" className={inputCls} value={form.issued_date || ''} onChange={e => setForm({...form, issued_date: e.target.value})} /></div>
-                    <div><label className="text-xs font-medium text-gray-600">Tanggal Expired</label><input type="date" className={inputCls} value={form.expiry_date || ''} onChange={e => setForm({...form, expiry_date: e.target.value})} /></div>
+                    <div><label className="text-xs font-medium text-gray-600">Tanggal Kedaluwarsa</label><input type="date" className={inputCls} value={form.expiry_date || ''} onChange={e => setForm({...form, expiry_date: e.target.value})} /></div>
                   </div>
                 </>}
 
                 {modal === 'assign-vehicle' && <>
                   <div className="grid grid-cols-1 gap-3">
                     <div><label className="text-xs font-medium text-gray-600">Driver *</label><select required className={inputCls} value={form.driver_id || ''} onChange={e => setForm({...form, driver_id: e.target.value})}><option value="">Pilih Driver</option>{drivers.filter(d => d.availability === 'available').map(d => <option key={d.id} value={d.id}>{d.driver_code} - {d.full_name}</option>)}</select></div>
-                    <div><label className="text-xs font-medium text-gray-600">Alasan</label><input className={inputCls} value={form.reason || ''} onChange={e => setForm({...form, reason: e.target.value})} placeholder="Assignment baru" /></div>
+                    <div><label className="text-xs font-medium text-gray-600">Alasan</label><input className={inputCls} value={form.reason || ''} onChange={e => setForm({...form, reason: e.target.value})} placeholder="Penugasan baru" /></div>
                   </div>
                 </>}
 
@@ -1598,16 +1627,16 @@ export default function FMSPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div><label className="text-xs font-medium text-gray-600">Kode *</label><input required className={inputCls} value={form.fence_code || ''} onChange={e => setForm({...form, fence_code: e.target.value})} placeholder="GF-001" /></div>
                     <div><label className="text-xs font-medium text-gray-600">Nama *</label><input required className={inputCls} value={form.fence_name || ''} onChange={e => setForm({...form, fence_name: e.target.value})} placeholder="Depot Jakarta" /></div>
-                    <div><label className="text-xs font-medium text-gray-600">Tipe</label><select className={inputCls} value={form.fence_type || 'circle'} onChange={e => setForm({...form, fence_type: e.target.value})}><option value="circle">Lingkaran</option><option value="polygon">Polygon</option><option value="route_corridor">Route Corridor</option></select></div>
-                    <div><label className="text-xs font-medium text-gray-600">Kategori</label><select className={inputCls} value={form.category || 'depot'} onChange={e => setForm({...form, category: e.target.value})}><option value="depot">Depot</option><option value="customer">Customer</option><option value="restricted">Restricted</option><option value="speed_zone">Speed Zone</option><option value="rest_area">Rest Area</option></select></div>
+                    <div><label className="text-xs font-medium text-gray-600">Tipe</label><select className={inputCls} value={form.fence_type || 'circle'} onChange={e => setForm({...form, fence_type: e.target.value})}><option value="circle">Lingkaran</option><option value="polygon">Polygon</option><option value="route_corridor">Koridor Rute</option></select></div>
+                    <div><label className="text-xs font-medium text-gray-600">Kategori</label><select className={inputCls} value={form.category || 'depot'} onChange={e => setForm({...form, category: e.target.value})}><option value="depot">Depot</option><option value="customer">Customer</option><option value="restricted">Terbatas</option><option value="speed_zone">Zona Kecepatan</option><option value="rest_area">Tempat Istirahat</option></select></div>
                     <div><label className="text-xs font-medium text-gray-600">Lat</label><input type="number" step="0.0000001" className={inputCls} value={form.center_lat || ''} onChange={e => setForm({...form, center_lat: parseFloat(e.target.value)})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Lng</label><input type="number" step="0.0000001" className={inputCls} value={form.center_lng || ''} onChange={e => setForm({...form, center_lng: parseFloat(e.target.value)})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Radius (m)</label><input type="number" className={inputCls} value={form.radius_m || 500} onChange={e => setForm({...form, radius_m: parseInt(e.target.value)})} /></div>
-                    <div><label className="text-xs font-medium text-gray-600">Speed Limit (km/h)</label><input type="number" className={inputCls} value={form.speed_limit_kmh || ''} onChange={e => setForm({...form, speed_limit_kmh: parseInt(e.target.value)})} /></div>
+                    <div><label className="text-xs font-medium text-gray-600">Batas Kecepatan (km/h)</label><input type="number" className={inputCls} value={form.speed_limit_kmh || ''} onChange={e => setForm({...form, speed_limit_kmh: parseInt(e.target.value)})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Warna</label><input type="color" className="w-full h-9 rounded-lg border border-gray-200" value={form.color || '#3B82F6'} onChange={e => setForm({...form, color: e.target.value})} /></div>
                     <div className="flex flex-col gap-2 justify-center">
-                      <label className="flex items-center gap-2"><input type="checkbox" checked={form.alert_on_enter !== false} onChange={e => setForm({...form, alert_on_enter: e.target.checked})} /><span className="text-xs">Alert Masuk</span></label>
-                      <label className="flex items-center gap-2"><input type="checkbox" checked={form.alert_on_exit !== false} onChange={e => setForm({...form, alert_on_exit: e.target.checked})} /><span className="text-xs">Alert Keluar</span></label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={form.alert_on_enter !== false} onChange={e => setForm({...form, alert_on_enter: e.target.checked})} /><span className="text-xs">Peringatan Masuk</span></label>
+                      <label className="flex items-center gap-2"><input type="checkbox" checked={form.alert_on_exit !== false} onChange={e => setForm({...form, alert_on_exit: e.target.checked})} /><span className="text-xs">Peringatan Keluar</span></label>
                     </div>
                   </div>
                 </>}
@@ -1622,8 +1651,8 @@ export default function FMSPage() {
                     <div><label className="text-xs font-medium text-gray-600">Ukuran</label><input className={inputCls} value={form.size || ''} onChange={e => setForm({...form, size: e.target.value})} placeholder="295/80R22.5" /></div>
                     <div><label className="text-xs font-medium text-gray-600">Maks KM</label><input type="number" className={inputCls} value={form.max_km || 50000} onChange={e => setForm({...form, max_km: parseInt(e.target.value)})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Harga Beli</label><input type="number" className={inputCls} value={form.purchase_price || ''} onChange={e => setForm({...form, purchase_price: parseFloat(e.target.value)})} /></div>
-                    <div><label className="text-xs font-medium text-gray-600">Tread Depth (mm)</label><input type="number" step="0.1" className={inputCls} value={form.current_tread_depth || 8} onChange={e => setForm({...form, current_tread_depth: parseFloat(e.target.value)})} /></div>
-                    <div><label className="text-xs font-medium text-gray-600">Min Tread (mm)</label><input type="number" step="0.1" className={inputCls} value={form.min_tread_depth || 2} onChange={e => setForm({...form, min_tread_depth: parseFloat(e.target.value)})} /></div>
+                    <div><label className="text-xs font-medium text-gray-600">Kedalaman Tapak (mm)</label><input type="number" step="0.1" className={inputCls} value={form.current_tread_depth || 8} onChange={e => setForm({...form, current_tread_depth: parseFloat(e.target.value)})} /></div>
+                    <div><label className="text-xs font-medium text-gray-600">Min Tapak (mm)</label><input type="number" step="0.1" className={inputCls} value={form.min_tread_depth || 2} onChange={e => setForm({...form, min_tread_depth: parseFloat(e.target.value)})} /></div>
                   </div>
                 </>}
 
@@ -1631,8 +1660,8 @@ export default function FMSPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Driver *</label><select required className={inputCls} value={form.driver_id || ''} onChange={e => setForm({...form, driver_id: e.target.value})}><option value="">Pilih</option>{drivers.map(d => <option key={d.id} value={d.id}>{d.driver_code} - {d.full_name}</option>)}</select></div>
                     <div><label className="text-xs font-medium text-gray-600">Kendaraan</label><select className={inputCls} value={form.vehicle_id || ''} onChange={e => setForm({...form, vehicle_id: e.target.value})}><option value="">Pilih</option>{vehicles.map(v => <option key={v.id} value={v.id}>{v.vehicle_code}</option>)}</select></div>
-                    <div><label className="text-xs font-medium text-gray-600">Tipe</label><select className={inputCls} value={form.violation_type || 'speeding'} onChange={e => setForm({...form, violation_type: e.target.value})}><option value="speeding">Speeding</option><option value="harsh_braking">Harsh Braking</option><option value="harsh_acceleration">Harsh Acceleration</option><option value="idle_excess">Idle Berlebih</option><option value="unauthorized_stop">Stop Tidak Sah</option><option value="route_deviation">Deviasi Rute</option><option value="fatigue_driving">Fatigue Driving</option><option value="phone_use">Phone Use</option></select></div>
-                    <div><label className="text-xs font-medium text-gray-600">Severity</label><select className={inputCls} value={form.severity || 'minor'} onChange={e => setForm({...form, severity: e.target.value})}><option value="warning">Warning</option><option value="minor">Minor</option><option value="major">Major</option><option value="critical">Critical</option></select></div>
+                    <div><label className="text-xs font-medium text-gray-600">Tipe</label><select className={inputCls} value={form.violation_type || 'speeding'} onChange={e => setForm({...form, violation_type: e.target.value})}><option value="speeding">Ngebut</option><option value="harsh_braking">Pengereman Keras</option><option value="harsh_acceleration">Akselerasi Keras</option><option value="idle_excess">Idle Berlebih</option><option value="unauthorized_stop">Berhenti Tidak Sah</option><option value="route_deviation">Deviasi Rute</option><option value="fatigue_driving">Mengemudi Kelelahan</option><option value="phone_use">Penggunaan HP</option></select></div>
+                    <div><label className="text-xs font-medium text-gray-600">Tingkat</label><select className={inputCls} value={form.severity || 'minor'} onChange={e => setForm({...form, severity: e.target.value})}><option value="warning">Peringatan</option><option value="minor">Ringan</option><option value="major">Berat</option><option value="critical">Kritis</option></select></div>
                     <div><label className="text-xs font-medium text-gray-600">Kecepatan (km/h)</label><input type="number" className={inputCls} value={form.speed_kmh || ''} onChange={e => setForm({...form, speed_kmh: parseFloat(e.target.value)})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Poin Pengurangan</label><input type="number" className={inputCls} value={form.deduction_points || 1} onChange={e => setForm({...form, deduction_points: parseInt(e.target.value)})} /></div>
                     <div><label className="text-xs font-medium text-gray-600">Denda (Rp)</label><input type="number" className={inputCls} value={form.fine_amount || ''} onChange={e => setForm({...form, fine_amount: parseFloat(e.target.value)})} /></div>
@@ -1642,7 +1671,7 @@ export default function FMSPage() {
 
                 {modal === 'add-reminder' && <>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><label className="text-xs font-medium text-gray-600">Tipe</label><select className={inputCls} value={form.reminder_type || 'maintenance_due'} onChange={e => setForm({...form, reminder_type: e.target.value})}><option value="document_expiry">Dokumen Expired</option><option value="maintenance_due">Maintenance Due</option><option value="insurance_expiry">Asuransi Expired</option><option value="kir_expiry">KIR Expired</option><option value="sim_expiry">SIM Expired</option><option value="rental_end">Rental Selesai</option><option value="inspection_due">Inspeksi Due</option></select></div>
+                    <div><label className="text-xs font-medium text-gray-600">Tipe</label><select className={inputCls} value={form.reminder_type || 'maintenance_due'} onChange={e => setForm({...form, reminder_type: e.target.value})}><option value="document_expiry">Dokumen Kedaluwarsa</option><option value="maintenance_due">Pemeliharaan Jatuh Tempo</option><option value="insurance_expiry">Asuransi Kedaluwarsa</option><option value="kir_expiry">KIR Kedaluwarsa</option><option value="sim_expiry">SIM Kedaluwarsa</option><option value="rental_end">Rental Selesai</option><option value="inspection_due">Inspeksi Jatuh Tempo</option></select></div>
                     <div><label className="text-xs font-medium text-gray-600">Entitas</label><select className={inputCls} value={form.entity_type || 'vehicle'} onChange={e => setForm({...form, entity_type: e.target.value, entity_id: ''})}><option value="vehicle">Kendaraan</option><option value="driver">Driver</option></select></div>
                     <div className="col-span-2"><label className="text-xs font-medium text-gray-600">{form.entity_type === 'vehicle' ? 'Kendaraan' : 'Driver'}</label><select className={inputCls} value={form.entity_id || ''} onChange={e => setForm({...form, entity_id: e.target.value})}><option value="">Pilih</option>{form.entity_type === 'vehicle' ? vehicles.map(v => <option key={v.id} value={v.id}>{v.vehicle_code} - {v.license_plate}</option>) : drivers.map(d => <option key={d.id} value={d.id}>{d.driver_code} - {d.full_name}</option>)}</select></div>
                     <div className="col-span-2"><label className="text-xs font-medium text-gray-600">Judul *</label><input required className={inputCls} value={form.title || ''} onChange={e => setForm({...form, title: e.target.value})} /></div>

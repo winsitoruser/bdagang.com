@@ -30,14 +30,12 @@ const PromoVoucherPage: React.FC = () => {
   const [modalType, setModalType] = useState<'promo' | 'voucher'>('promo');
   
   // Data states
-  const [promos, setPromos] = useState<any[]>([]);
-  const [vouchers, setVouchers] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    totalActivePromos: 0,
-    totalActiveVouchers: 0,
-    totalUsageThisMonth: 0,
-    totalDiscountGiven: 0
-  });
+  const MOCK_PROMOS = [{ id: 'p1', name: 'Diskon Weekend 20%', code: 'WEEKEND20', type: 'percentage', value: 20, minPurchase: 100000, maxDiscount: 50000, startDate: '2026-03-01', endDate: '2026-03-31', usageLimit: 500, usedCount: 185, status: 'active', autoApply: false }, { id: 'p2', name: 'Cashback Rp 25.000', code: 'CASH25K', type: 'fixed', value: 25000, minPurchase: 150000, maxDiscount: 25000, startDate: '2026-03-10', endDate: '2026-04-10', usageLimit: 200, usedCount: 42, status: 'active', autoApply: true }];
+  const MOCK_VOUCHERS = [{ id: 'v1', code: 'VCH-LOYAL-001', description: 'Voucher loyal customer', category: 'loyalty', type: 'fixed', value: 50000, minPurchase: 200000, maxDiscount: 50000, validFrom: '2026-03-01', validUntil: '2026-06-30', usageLimit: 1, usedCount: 0, status: 'active' }];
+  const MOCK_PV_STATS = { totalActivePromos: 5, totalActiveVouchers: 12, totalUsageThisMonth: 342, totalDiscountGiven: 8500000 };
+  const [promos, setPromos] = useState<any[]>(MOCK_PROMOS);
+  const [vouchers, setVouchers] = useState<any[]>(MOCK_VOUCHERS);
+  const [stats, setStats] = useState(MOCK_PV_STATS);
   
   // Form states
   const [promoFormData, setPromoFormData] = useState({
@@ -125,6 +123,9 @@ const PromoVoucherPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching data:', error);
+      setStats(MOCK_PV_STATS);
+      if (activeTab === 'promo') setPromos(MOCK_PROMOS);
+      else setVouchers(MOCK_VOUCHERS);
     } finally {
       setLoading(false);
     }

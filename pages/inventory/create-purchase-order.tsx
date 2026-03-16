@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,7 @@ interface OrderItem {
 const CreatePurchaseOrderPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t, formatCurrency } = useTranslation();
   const [selectedItems, setSelectedItems] = useState<OrderItem[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'critical' | 'low' | 'normal'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -164,13 +166,6 @@ const CreatePurchaseOrderPage: React.FC = () => {
     return selectedItems.reduce((sum, item) => sum + (item.product.cost * item.quantity), 0);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const handleBack = () => {
     if (hasUnsavedChanges) {

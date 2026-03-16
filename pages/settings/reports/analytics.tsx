@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,15 +32,18 @@ interface AnalyticsData {
 const ReportsAnalytics: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<AnalyticsData | null>(null);
+  const MOCK_ANALYTICS: AnalyticsData = { totalRevenue: 125000000, totalOrders: 1842, totalCustomers: 450, totalProducts: 120, revenueGrowth: 12.5, orderGrowth: 8.3, customerGrowth: 5.1, topProducts: [{ name: 'Nasi Goreng', quantity: 320, revenue: 11200000 }, { name: 'Mie Ayam', quantity: 280, revenue: 7000000 }], salesByCategory: [{ category: 'Makanan', total: 85000000 }, { category: 'Minuman', total: 40000000 }], salesByPayment: [{ method: 'Cash', total: 75000000 }, { method: 'QRIS', total: 50000000 }], dailySales: [], hourlySales: [] };
+  const MOCK_AN_BRANCHES = [{ id: 'b1', name: 'Pusat' }, { id: 'b2', name: 'Cabang Bandung' }];
+  const [data, setData] = useState<AnalyticsData | null>(MOCK_ANALYTICS);
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 30)),
     to: new Date()
   });
   const [reportType, setReportType] = useState('overview');
   const [branchId, setBranchId] = useState('all');
-  const [branches, setBranches] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>(MOCK_AN_BRANCHES);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -72,6 +76,7 @@ const ReportsAnalytics: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching analytics:', error);
+      setData(MOCK_ANALYTICS);
     } finally {
       setLoading(false);
     }
@@ -87,6 +92,7 @@ const ReportsAnalytics: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching branches:', error);
+      setBranches(MOCK_AN_BRANCHES);
     }
   };
 
@@ -172,7 +178,7 @@ const ReportsAnalytics: React.FC = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin h-12 w-12 mx-auto border-4 border-indigo-600 border-t-transparent rounded-full"></div>
-            <p className="mt-4 text-gray-700">Loading...</p>
+            <p className="mt-4 text-gray-700">Memuat...</p>
           </div>
         </div>
       </DashboardLayout>

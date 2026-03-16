@@ -237,6 +237,40 @@ db.MfgProductionCost = require('./MfgProductionCost')(sequelize);
 db.MfgShiftProduction = require('./MfgShiftProduction')(sequelize);
 db.MfgSetting = require('./MfgSetting')(sequelize);
 
+// Project Management Models
+db.PjmProject = require('./PjmProject')(sequelize);
+db.PjmTask = require('./PjmTask')(sequelize);
+db.PjmMilestone = require('./PjmMilestone')(sequelize);
+db.PjmTimesheet = require('./PjmTimesheet')(sequelize);
+db.PjmResource = require('./PjmResource')(sequelize);
+db.PjmRisk = require('./PjmRisk')(sequelize);
+db.PjmBudget = require('./PjmBudget')(sequelize);
+db.PjmDocument = require('./PjmDocument')(sequelize);
+db.PjmSetting = require('./PjmSetting')(sequelize);
+
+// E-Procurement Models
+db.EprVendor = require('./EprVendor')(sequelize);
+db.EprRfq = require('./EprRfq')(sequelize);
+db.EprRfqItem = require('./EprRfqItem')(sequelize);
+db.EprRfqResponse = require('./EprRfqResponse')(sequelize);
+db.EprTender = require('./EprTender')(sequelize);
+db.EprTenderBid = require('./EprTenderBid')(sequelize);
+db.EprProcurementRequest = require('./EprProcurementRequest')(sequelize);
+db.EprContract = require('./EprContract')(sequelize);
+db.EprEvaluation = require('./EprEvaluation')(sequelize);
+db.EprSetting = require('./EprSetting')(sequelize);
+
+// Export-Import Models
+db.EximShipment = require('./EximShipment')(sequelize);
+db.EximDocument = require('./EximDocument')(sequelize);
+db.EximCustoms = require('./EximCustoms')(sequelize);
+db.EximLC = require('./EximLC')(sequelize);
+db.EximContainer = require('./EximContainer')(sequelize);
+db.EximPartner = require('./EximPartner')(sequelize);
+db.EximCost = require('./EximCost')(sequelize);
+db.EximHsCode = require('./EximHsCode')(sequelize);
+db.EximSetting = require('./EximSetting')(sequelize);
+
 // Finance Models
 db.FinanceAccount = require('./FinanceAccount');
 db.FinanceBudget = require('./FinanceBudget');

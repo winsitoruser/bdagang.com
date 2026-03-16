@@ -38,9 +38,15 @@ const deviceTypeConfig: Record<string, { icon: any; label: string; color: string
   manual: { icon: Edit, label: 'Manual', color: 'bg-gray-100 text-gray-700' },
 };
 
+const MOCK_DEVICES: Device[] = [
+  { id: 'd1', deviceName: 'Fingerprint HQ Lantai 1', deviceType: 'fingerprint', deviceBrand: 'ZKTeco', deviceModel: 'K40', serialNumber: 'ZK-2024-001', ipAddress: '192.168.1.100', port: 4370, connectionType: 'tcp', syncMode: 'auto', status: 'active', isOnline: true, registeredUsers: 142, maxCapacity: 3000, totalSynced: 28540, lastSyncAt: '2026-03-15T08:00:00Z', lastSyncStatus: 'success', location: 'Lobby Lt.1', branch: { id: 'b1', name: 'Kantor Pusat Jakarta', code: 'HQ-001' } },
+  { id: 'd2', deviceName: 'Face Recognition HQ Lt.2', deviceType: 'face_recognition', deviceBrand: 'Hikvision', deviceModel: 'DS-K1T671M', serialNumber: 'HK-2025-003', ipAddress: '192.168.1.101', port: 80, connectionType: 'tcp', syncMode: 'auto', status: 'active', isOnline: true, registeredUsers: 85, maxCapacity: 1500, totalSynced: 15200, lastSyncAt: '2026-03-15T08:05:00Z', lastSyncStatus: 'success', location: 'Lobby Lt.2', branch: { id: 'b1', name: 'Kantor Pusat Jakarta', code: 'HQ-001' } },
+  { id: 'd3', deviceName: 'Fingerprint Bandung', deviceType: 'fingerprint', deviceBrand: 'ZKTeco', deviceModel: 'K40', serialNumber: 'ZK-2024-005', ipAddress: '192.168.2.100', port: 4370, connectionType: 'tcp', syncMode: 'auto', status: 'active', isOnline: false, registeredUsers: 38, maxCapacity: 3000, totalSynced: 8900, lastSyncAt: '2026-03-14T17:00:00Z', lastSyncStatus: 'success', location: 'Pintu Utama', branch: { id: 'b2', name: 'Cabang Bandung', code: 'BR-002' } },
+];
+
 export default function DeviceManagementPage() {
   const [mounted, setMounted] = useState(false);
-  const [devices, setDevices] = useState<Device[]>([]);
+  const [devices, setDevices] = useState<Device[]>(MOCK_DEVICES);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -64,6 +70,7 @@ export default function DeviceManagementPage() {
       }
     } catch (error) {
       console.error('Error fetching devices:', error);
+      setDevices(MOCK_DEVICES);
     } finally {
       setLoading(false);
     }

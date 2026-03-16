@@ -153,11 +153,11 @@ export default function DriverDetailPage() {
           <div className="border-b border-gray-200">
             <div className="flex">
               {[
-                { id: 'overview', label: 'Overview', icon: User },
-                { id: 'performance', label: 'Performance', icon: TrendingUp },
-                { id: 'trips', label: 'Trip History', icon: MapPin },
-                { id: 'safety', label: 'Safety Record', icon: Shield },
-                { id: 'earnings', label: 'Earnings', icon: DollarSign }
+                { id: 'overview', label: 'Ringkasan', icon: User },
+                { id: 'performance', label: 'Kinerja', icon: TrendingUp },
+                { id: 'trips', label: 'Riwayat Perjalanan', icon: MapPin },
+                { id: 'safety', label: 'Catatan Keselamatan', icon: Shield },
+                { id: 'earnings', label: 'Pendapatan', icon: DollarSign }
               ].map(tab => (
                 <button
                   key={tab.id}

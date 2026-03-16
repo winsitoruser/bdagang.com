@@ -116,7 +116,7 @@ export default function EnhancedAdminDashboard() {
 
   const statCards = [
     {
-      title: 'Total Tenants',
+      title: 'Total Tenant',
       value: analytics.totalTenants,
       icon: Building2,
       color: 'blue',
@@ -126,7 +126,7 @@ export default function EnhancedAdminDashboard() {
       changeType: 'increase'
     },
     {
-      title: 'Total Users',
+      title: 'Total Pengguna',
       value: analytics.totalUsers,
       icon: Users,
       color: 'green',
@@ -136,7 +136,7 @@ export default function EnhancedAdminDashboard() {
       changeType: 'increase'
     },
     {
-      title: 'Active Modules',
+      title: 'Modul Aktif',
       value: analytics.totalModules,
       icon: Boxes,
       color: 'purple',

@@ -44,6 +44,9 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, action: stri
     case 'work-order-detail': return getWorkOrderDetail(req, res);
     case 'qc-templates': return getQCTemplates(req, res);
     case 'qc-inspections': return getQCInspections(req, res);
+    case 'qc-control-points': return getControlPoints(req, res);
+    case 'qc-coa-list': return getCoAList(req, res);
+    case 'qc-inspection-detail': return getQCInspectionDetail(req, res);
     case 'machines': return getMachines(req, res);
     case 'maintenance': return getMaintenanceRecords(req, res);
     case 'production-plans': return getProductionPlans(req, res);
@@ -531,9 +534,20 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse, action: str
     case 'wo-complete': return completeWorkOrder(req, res);
     case 'wo-issue-material': return issueMaterial(req, res);
     case 'wo-record-output': return recordOutput(req, res);
+    case 'wo-pause': return pauseWorkOrder(req, res);
+    case 'wo-resume': return resumeWorkOrder(req, res);
+    case 'wo-operation-start': return startOperation(req, res);
+    case 'wo-operation-pause': return pauseOperation(req, res);
+    case 'wo-operation-resume': return resumeOperation(req, res);
+    case 'wo-operation-stop': return stopOperation(req, res);
+    case 'wo-operation-scrap': return recordOperationScrap(req, res);
+    case 'wo-auto-issue': return autoIssueMaterials(req, res);
+    case 'wo-backflush': return backflushMaterials(req, res);
     case 'qc-template': return createQCTemplate(req, res);
     case 'qc-inspection': return createQCInspection(req, res);
     case 'qc-complete': return completeQCInspection(req, res);
+    case 'qc-control-point': return createControlPoint(req, res);
+    case 'qc-coa': return generateCoA(req, res);
     case 'machine': return createMachine(req, res);
     case 'maintenance': return createMaintenance(req, res);
     case 'production-plan': return createProductionPlan(req, res);
@@ -1079,4 +1093,339 @@ async function handleDelete(req: NextApiRequest, res: NextApiResponse, action: s
 
   await sequelize.query(`DELETE FROM ${table} WHERE id = :id`, { replacements: { id } });
   return res.status(200).json(successResponse({ id }, undefined, 'Deleted successfully'));
+}
+
+// ==========================================
+// WO TIMER / PAUSE / RESUME
+// ==========================================
+async function pauseWorkOrder(req: NextApiRequest, res: NextApiResponse) {
+  const { id, reason } = req.body;
+  if (!id) return res.status(400).json(errorResponse('MISSING_ID', 'Work Order ID required'));
+
+  await sequelize.query(`UPDATE mfg_work_orders SET status = 'on_hold', updated_at = NOW() WHERE id = :id AND status = 'in_progress'`, { replacements: { id } });
+  // Pause all running operations
+  await sequelize.query(`
+    UPDATE mfg_wo_operations SET timer_status = 'paused', timer_paused_at = NOW(), 
+      pause_count = pause_count + 1, pause_reasons = pause_reasons || :reason::jsonb, updated_at = NOW()
+    WHERE work_order_id = :id AND timer_status = 'running'
+  `, { replacements: { id, reason: JSON.stringify([{ reason: reason || 'WO paused', at: new Date().toISOString() }]) } });
+
+  return res.status(200).json(successResponse({ id }, undefined, 'Work Order paused'));
+}
+
+async function resumeWorkOrder(req: NextApiRequest, res: NextApiResponse) {
+  const { id } = req.body;
+  if (!id) return res.status(400).json(errorResponse('MISSING_ID', 'Work Order ID required'));
+
+  await sequelize.query(`UPDATE mfg_work_orders SET status = 'in_progress', updated_at = NOW() WHERE id = :id AND status = 'on_hold'`, { replacements: { id } });
+  // Resume paused operations - accumulate pause duration
+  await sequelize.query(`
+    UPDATE mfg_wo_operations SET timer_status = 'running',
+      total_pause_seconds = total_pause_seconds + COALESCE(EXTRACT(EPOCH FROM (NOW() - timer_paused_at))::INTEGER, 0),
+      timer_paused_at = NULL, updated_at = NOW()
+    WHERE work_order_id = :id AND timer_status = 'paused'
+  `, { replacements: { id } });
+
+  return res.status(200).json(successResponse({ id }, undefined, 'Work Order resumed'));
+}
+
+// ==========================================
+// OPERATION TIMER (Start/Pause/Resume/Stop per operation)
+// ==========================================
+async function startOperation(req: NextApiRequest, res: NextApiResponse) {
+  const { id, operator_id } = req.body;
+  if (!id) return res.status(400).json(errorResponse('MISSING_ID', 'Operation ID required'));
+
+  await sequelize.query(`
+    UPDATE mfg_wo_operations SET status = 'in_progress', timer_status = 'running', 
+      timer_started_at = NOW(), actual_start = COALESCE(actual_start, NOW()),
+      operator_id = COALESCE(:operator_id, operator_id), updated_at = NOW()
+    WHERE id = :id AND status IN ('pending', 'in_progress') AND timer_status IN ('idle', 'stopped')
+  `, { replacements: { id, operator_id: operator_id || null } });
+
+  return res.status(200).json(successResponse({ id }, undefined, 'Operation timer started'));
+}
+
+async function pauseOperation(req: NextApiRequest, res: NextApiResponse) {
+  const { id, reason } = req.body;
+  if (!id) return res.status(400).json(errorResponse('MISSING_ID', 'Operation ID required'));
+
+  await sequelize.query(`
+    UPDATE mfg_wo_operations SET timer_status = 'paused', timer_paused_at = NOW(),
+      pause_count = pause_count + 1,
+      pause_reasons = pause_reasons || :reason::jsonb,
+      updated_at = NOW()
+    WHERE id = :id AND timer_status = 'running'
+  `, { replacements: { id, reason: JSON.stringify([{ reason: reason || 'Paused', at: new Date().toISOString() }]) } });
+
+  return res.status(200).json(successResponse({ id }, undefined, 'Operation paused'));
+}
+
+async function resumeOperation(req: NextApiRequest, res: NextApiResponse) {
+  const { id } = req.body;
+  if (!id) return res.status(400).json(errorResponse('MISSING_ID', 'Operation ID required'));
+
+  await sequelize.query(`
+    UPDATE mfg_wo_operations SET timer_status = 'running',
+      total_pause_seconds = total_pause_seconds + COALESCE(EXTRACT(EPOCH FROM (NOW() - timer_paused_at))::INTEGER, 0),
+      timer_paused_at = NULL, updated_at = NOW()
+    WHERE id = :id AND timer_status = 'paused'
+  `, { replacements: { id } });
+
+  return res.status(200).json(successResponse({ id }, undefined, 'Operation resumed'));
+}
+
+async function stopOperation(req: NextApiRequest, res: NextApiResponse) {
+  const { id, quantity_output, quantity_rejected } = req.body;
+  if (!id) return res.status(400).json(errorResponse('MISSING_ID', 'Operation ID required'));
+
+  // Calculate total work time
+  await sequelize.query(`
+    UPDATE mfg_wo_operations SET status = 'completed', timer_status = 'stopped',
+      actual_end = NOW(),
+      total_work_seconds = COALESCE(EXTRACT(EPOCH FROM (NOW() - timer_started_at))::INTEGER, 0) - total_pause_seconds,
+      run_time_actual = (COALESCE(EXTRACT(EPOCH FROM (NOW() - timer_started_at))::INTEGER, 0) - total_pause_seconds) / 60,
+      quantity_output = COALESCE(:qty_out, quantity_output),
+      quantity_rejected = COALESCE(:qty_rej, quantity_rejected),
+      updated_at = NOW()
+    WHERE id = :id AND timer_status IN ('running', 'paused')
+  `, { replacements: { id, qty_out: quantity_output || null, qty_rej: quantity_rejected || null } });
+
+  return res.status(200).json(successResponse({ id }, undefined, 'Operation completed'));
+}
+
+async function recordOperationScrap(req: NextApiRequest, res: NextApiResponse) {
+  const { id, scrap_quantity, scrap_reason, scrap_type, product_id, work_order_id } = req.body;
+  if (!id || !scrap_quantity) return res.status(400).json(errorResponse('VALIDATION', 'Operation ID and scrap quantity required'));
+
+  const t = await sequelize.transaction();
+  try {
+    // Update operation scrap
+    await sequelize.query(`
+      UPDATE mfg_wo_operations SET scrap_quantity = COALESCE(scrap_quantity, 0) + :qty, 
+        scrap_reason = :reason, scrap_type = :type, quantity_rejected = COALESCE(quantity_rejected, 0) + :qty, updated_at = NOW()
+      WHERE id = :id
+    `, { replacements: { id, qty: scrap_quantity, reason: scrap_reason || null, type: scrap_type || 'defect' }, transaction: t });
+
+    // Auto-create waste record
+    if (work_order_id) {
+      await sequelize.query(`
+        INSERT INTO mfg_waste_records (tenant_id, work_order_id, product_id, waste_type, quantity, reason, operation_id)
+        SELECT t.id, :wo_id, :product_id, :type, :qty, :reason, :op_id FROM tenants t LIMIT 1
+      `, { replacements: { wo_id: work_order_id, product_id: product_id || null, type: scrap_type || 'defect', qty: scrap_quantity, reason: scrap_reason || null, op_id: id }, transaction: t });
+    }
+
+    await t.commit();
+    return res.status(200).json(successResponse({ id }, undefined, 'Scrap recorded'));
+  } catch (error: any) { await t.rollback(); throw error; }
+}
+
+// ==========================================
+// AUTO ISSUE & BACKFLUSH
+// ==========================================
+async function autoIssueMaterials(req: NextApiRequest, res: NextApiResponse) {
+  const { work_order_id } = req.body;
+  if (!work_order_id) return res.status(400).json(errorResponse('MISSING_ID', 'Work Order ID required'));
+
+  const t = await sequelize.transaction();
+  try {
+    // Lock/reserve materials - mark as issued and deduct from stock
+    const [materials] = await sequelize.query(`
+      SELECT wm.* FROM mfg_wo_materials wm WHERE wm.work_order_id = :wo_id AND wm.status = 'pending'
+    `, { replacements: { wo_id: work_order_id }, transaction: t });
+
+    let issued = 0;
+    for (const mat of materials) {
+      const qtyToIssue = parseFloat(mat.planned_quantity) - parseFloat(mat.issued_quantity || 0);
+      if (qtyToIssue <= 0) continue;
+
+      // Check stock availability
+      const [stock] = await sequelize.query(`
+        SELECT COALESCE(SUM(quantity), 0) as available FROM inventory_stock WHERE product_id = :pid
+      `, { replacements: { pid: mat.product_id }, transaction: t });
+
+      const available = parseFloat(stock[0]?.available || 0);
+      const issueQty = Math.min(qtyToIssue, available);
+      if (issueQty <= 0) continue;
+
+      // Deduct from stock
+      await sequelize.query(`
+        UPDATE inventory_stock SET quantity = GREATEST(quantity - :qty, 0), updated_at = NOW() WHERE product_id = :pid
+      `, { replacements: { qty: issueQty, pid: mat.product_id }, transaction: t });
+
+      // Record stock movement
+      await sequelize.query(`
+        INSERT INTO stock_movements (tenant_id, product_id, movement_type, quantity, reference_type, reference_id, notes, movement_date, created_at)
+        SELECT t.id, :pid, 'out', :qty, 'manufacturing', :wo_id, 'Auto-issue for WO', NOW(), NOW() FROM tenants t LIMIT 1
+      `, { replacements: { pid: mat.product_id, qty: issueQty, wo_id: work_order_id }, transaction: t });
+
+      // Update material status
+      await sequelize.query(`
+        UPDATE mfg_wo_materials SET issued_quantity = issued_quantity + :qty, 
+          status = CASE WHEN issued_quantity + :qty >= planned_quantity THEN 'issued' ELSE 'partial' END,
+          issued_at = NOW(), updated_at = NOW()
+        WHERE id = :id
+      `, { replacements: { id: mat.id, qty: issueQty }, transaction: t });
+
+      issued++;
+    }
+
+    await t.commit();
+    return res.status(200).json(successResponse({ issued, work_order_id }, undefined, `${issued} materials auto-issued`));
+  } catch (error: any) { await t.rollback(); throw error; }
+}
+
+async function backflushMaterials(req: NextApiRequest, res: NextApiResponse) {
+  const { work_order_id, actual_quantity } = req.body;
+  if (!work_order_id) return res.status(400).json(errorResponse('MISSING_ID', 'Work Order ID required'));
+
+  const t = await sequelize.transaction();
+  try {
+    // Get BOM ratio: actual produced / planned quantity
+    const [wo] = await sequelize.query(`SELECT planned_quantity, bom_id FROM mfg_work_orders WHERE id = :id`, { replacements: { id: work_order_id }, transaction: t });
+    if (!wo[0]) throw new Error('Work Order not found');
+
+    const planned = parseFloat(wo[0].planned_quantity || 1);
+    const actual = parseFloat(actual_quantity || planned);
+    const ratio = actual / planned;
+
+    // Consume materials based on BOM × ratio
+    const [materials] = await sequelize.query(`
+      SELECT wm.* FROM mfg_wo_materials wm WHERE wm.work_order_id = :wo_id AND wm.status != 'consumed'
+    `, { replacements: { wo_id: work_order_id }, transaction: t });
+
+    let consumed = 0;
+    for (const mat of materials) {
+      const consumeQty = parseFloat(mat.planned_quantity) * ratio - parseFloat(mat.consumed_quantity || 0);
+      if (consumeQty <= 0) continue;
+
+      await sequelize.query(`
+        UPDATE inventory_stock SET quantity = GREATEST(quantity - :qty, 0), updated_at = NOW() WHERE product_id = :pid
+      `, { replacements: { qty: consumeQty, pid: mat.product_id }, transaction: t });
+
+      await sequelize.query(`
+        INSERT INTO stock_movements (tenant_id, product_id, movement_type, quantity, reference_type, reference_id, notes, movement_date, created_at)
+        SELECT t.id, :pid, 'out', :qty, 'manufacturing', :wo_id, 'Backflush consumption', NOW(), NOW() FROM tenants t LIMIT 1
+      `, { replacements: { pid: mat.product_id, qty: consumeQty, wo_id: work_order_id }, transaction: t });
+
+      await sequelize.query(`
+        UPDATE mfg_wo_materials SET consumed_quantity = consumed_quantity + :qty, status = 'consumed', updated_at = NOW() WHERE id = :id
+      `, { replacements: { id: mat.id, qty: consumeQty }, transaction: t });
+
+      consumed++;
+    }
+
+    await t.commit();
+    return res.status(200).json(successResponse({ consumed, ratio: ratio.toFixed(2) }, undefined, `Backflush: ${consumed} materials consumed`));
+  } catch (error: any) { await t.rollback(); throw error; }
+}
+
+// ==========================================
+// QC CONTROL POINTS & CoA
+// ==========================================
+async function getControlPoints(req: NextApiRequest, res: NextApiResponse) {
+  const [rows] = await sequelize.query(`
+    SELECT cp.*, p.name as product_name, wc.name as work_center_name, qt.template_name,
+      ro.operation_name as routing_operation_name
+    FROM mfg_qc_control_points cp
+    LEFT JOIN products p ON cp.product_id = p.id
+    LEFT JOIN mfg_work_centers wc ON cp.work_center_id = wc.id
+    LEFT JOIN mfg_qc_templates qt ON cp.template_id = qt.id
+    LEFT JOIN mfg_routing_operations ro ON cp.routing_operation_id = ro.id
+    ORDER BY cp.name
+  `);
+  return res.status(200).json(successResponse(rows));
+}
+
+async function createControlPoint(req: NextApiRequest, res: NextApiResponse) {
+  const { name, description, trigger_type, trigger_value, trigger_unit, product_id, routing_operation_id, work_center_id, template_id, is_mandatory, stop_on_fail, tolerance_specs } = req.body;
+  if (!name) return res.status(400).json(errorResponse('VALIDATION', 'Name required'));
+
+  const [rows] = await sequelize.query(`
+    INSERT INTO mfg_qc_control_points (tenant_id, name, description, trigger_type, trigger_value, trigger_unit, product_id, routing_operation_id, work_center_id, template_id, is_mandatory, stop_on_fail, tolerance_specs)
+    SELECT t.id, :name, :desc, :trigger_type, :trigger_value, :trigger_unit, :product_id, :ro_id, :wc_id, :tmpl_id, :mandatory, :stop_fail, :tolerance
+    FROM tenants t LIMIT 1 RETURNING *
+  `, { replacements: { name, desc: description || null, trigger_type: trigger_type || 'quantity', trigger_value: trigger_value || 100, trigger_unit: trigger_unit || 'pcs', product_id: product_id || null, ro_id: routing_operation_id || null, wc_id: work_center_id || null, tmpl_id: template_id || null, mandatory: is_mandatory !== false, stop_fail: stop_on_fail !== false, tolerance: JSON.stringify(tolerance_specs || []) } });
+
+  return res.status(201).json(successResponse(rows[0], undefined, 'Control point created'));
+}
+
+async function getCoAList(req: NextApiRequest, res: NextApiResponse) {
+  const { work_order_id, status } = req.query;
+  let where = 'WHERE 1=1';
+  const replacements: any = {};
+  if (work_order_id) { where += ' AND c.work_order_id = :wo_id'; replacements.wo_id = work_order_id; }
+  if (status && status !== 'all') { where += ' AND c.status = :status'; replacements.status = status; }
+
+  const [rows] = await sequelize.query(`
+    SELECT c.*, p.name as product_name, wo.wo_number, e1.name as issued_by_name, e2.name as approved_by_name
+    FROM mfg_qc_coa c
+    LEFT JOIN products p ON c.product_id = p.id
+    LEFT JOIN mfg_work_orders wo ON c.work_order_id = wo.id
+    LEFT JOIN employees e1 ON c.issued_by = e1.id
+    LEFT JOIN employees e2 ON c.approved_by = e2.id
+    ${where}
+    ORDER BY c.created_at DESC
+  `, { replacements });
+
+  return res.status(200).json(successResponse(rows));
+}
+
+async function generateCoA(req: NextApiRequest, res: NextApiResponse) {
+  const { inspection_id, work_order_id, product_id, batch_number, lot_number, manufacturing_date, expiry_date, remarks } = req.body;
+
+  // Generate CoA number
+  const [seqResult] = await sequelize.query(`SELECT COUNT(*) + 1 as seq FROM mfg_qc_coa WHERE created_at >= DATE_TRUNC('month', NOW())`);
+  const seq = String(seqResult[0]?.seq || 1).padStart(4, '0');
+  const now = new Date();
+  const coaNo = `COA-${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}-${seq}`;
+
+  // Get test results from inspection if provided
+  let testResults: any[] = [];
+  let specs: any[] = [];
+  if (inspection_id) {
+    const [results] = await sequelize.query(`
+      SELECT parameter_name, parameter_type, expected_value, actual_value, uom, min_value, max_value, result, severity
+      FROM mfg_qc_results WHERE inspection_id = :id
+    `, { replacements: { id: inspection_id } });
+    testResults = results;
+
+    const [tmplData] = await sequelize.query(`
+      SELECT qt.parameters FROM mfg_qc_templates qt
+      JOIN mfg_qc_inspections qi ON qi.template_id = qt.id WHERE qi.id = :id
+    `, { replacements: { id: inspection_id } });
+    if (tmplData[0]?.parameters) {
+      specs = typeof tmplData[0].parameters === 'string' ? JSON.parse(tmplData[0].parameters) : tmplData[0].parameters;
+    }
+  }
+
+  const allPassed = testResults.every((r: any) => r.result !== 'fail');
+
+  const [rows] = await sequelize.query(`
+    INSERT INTO mfg_qc_coa (tenant_id, coa_number, inspection_id, work_order_id, product_id, batch_number, lot_number, manufacturing_date, expiry_date, test_results, specifications, conclusion, remarks, status)
+    SELECT t.id, :coa_no, :insp_id, :wo_id, :product_id, :batch, :lot, :mfg_date, :exp_date, :results, :specs, :conclusion, :remarks, 'issued'
+    FROM tenants t LIMIT 1 RETURNING *
+  `, { replacements: { coa_no: coaNo, insp_id: inspection_id || null, wo_id: work_order_id || null, product_id: product_id || null, batch: batch_number || null, lot: lot_number || null, mfg_date: manufacturing_date || null, exp_date: expiry_date || null, results: JSON.stringify(testResults), specs: JSON.stringify(specs), conclusion: allPassed ? 'compliant' : 'non_compliant', remarks: remarks || null } });
+
+  return res.status(201).json(successResponse(rows[0], undefined, 'Certificate of Analysis generated'));
+}
+
+async function getQCInspectionDetail(req: NextApiRequest, res: NextApiResponse) {
+  const { id } = req.query;
+  if (!id) return res.status(400).json(errorResponse('MISSING_ID', 'Inspection ID required'));
+
+  const [insp] = await sequelize.query(`
+    SELECT qi.*, p.name as product_name, wo.wo_number, e.name as inspector_name, qt.template_name, qt.parameters as template_params
+    FROM mfg_qc_inspections qi
+    LEFT JOIN products p ON qi.product_id = p.id
+    LEFT JOIN mfg_work_orders wo ON qi.work_order_id = wo.id
+    LEFT JOIN employees e ON qi.inspector_id = e.id
+    LEFT JOIN mfg_qc_templates qt ON qi.template_id = qt.id
+    WHERE qi.id = :id
+  `, { replacements: { id } });
+  if (!insp[0]) return res.status(404).json(errorResponse('NOT_FOUND', 'Inspection not found'));
+
+  const [results] = await sequelize.query(`SELECT * FROM mfg_qc_results WHERE inspection_id = :id ORDER BY created_at`, { replacements: { id } });
+
+  return res.status(200).json(successResponse({ ...insp[0], results }));
 }

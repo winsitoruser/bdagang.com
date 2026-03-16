@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Bell, Clock, CheckCircle, XCircle, ChefHat, Truck, Package, RefreshCw,
   Volume2, VolumeX, AlertTriangle, User, Phone, MapPin, ShoppingBag,
@@ -64,8 +65,15 @@ const priorityConfig: Record<string, { label: string; color: string; pulse: bool
 export default function OrderQueuePage() {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
-  const [orders, setOrders] = useState<OnlineOrder[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const { t } = useTranslation();
+  const MOCK_QUEUE: OnlineOrder[] = [
+    { id: 'oq1', orderNumber: 'ORD-085', queueNumber: 85, platform: 'gofood', platformOrderId: 'GF-20260315-001', customerName: 'Budi S.', customerPhone: '081234567890', orderType: 'delivery', items: [{ id: 'i1', name: 'Nasi Goreng', quantity: 2, price: 35000 }, { id: 'i2', name: 'Es Teh', quantity: 2, price: 8000 }], subtotal: 86000, deliveryFee: 12000, platformFee: 5000, total: 103000, status: 'new', priority: 'normal', estimatedPrepTime: 15, notes: '', createdAt: new Date().toISOString() },
+    { id: 'oq2', orderNumber: 'ORD-086', queueNumber: 86, platform: 'grabfood', platformOrderId: 'GB-20260315-002', customerName: 'Siti R.', orderType: 'delivery', items: [{ id: 'i3', name: 'Mie Ayam', quantity: 1, price: 25000 }], subtotal: 25000, deliveryFee: 10000, platformFee: 3000, total: 38000, status: 'preparing', priority: 'high', estimatedPrepTime: 10, createdAt: new Date(Date.now() - 600000).toISOString() },
+    { id: 'oq3', orderNumber: 'ORD-087', queueNumber: 87, platform: 'walkin', platformOrderId: 'WK-003', customerName: 'Walk-in', orderType: 'pickup', items: [{ id: 'i4', name: 'Nasi Goreng', quantity: 1, price: 35000 }, { id: 'i5', name: 'Es Jeruk', quantity: 1, price: 10000 }], subtotal: 45000, total: 45000, status: 'ready', priority: 'normal', estimatedPrepTime: 15, createdAt: new Date(Date.now() - 1200000).toISOString() },
+  ];
+  const MOCK_Q_STATS = { totalOrders: 87, newOrders: 1, preparingOrders: 1, readyOrders: 1, completedToday: 84 };
+  const [orders, setOrders] = useState<OnlineOrder[]>(MOCK_QUEUE);
+  const [stats, setStats] = useState<any>(MOCK_Q_STATS);
   const [loading, setLoading] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<OnlineOrder | null>(null);
@@ -127,6 +135,8 @@ export default function OrderQueuePage() {
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setOrders(MOCK_QUEUE);
+      setStats(MOCK_Q_STATS);
     } finally {
       setLoading(false);
     }

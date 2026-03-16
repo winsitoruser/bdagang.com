@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
 
 let FinanceReceivable: any, FinancePayable: any, FinanceReceivablePayment: any, FinancePayablePayment: any;
 try {
@@ -53,12 +54,15 @@ export default withHQAuth(handler, { module: 'finance_pro' });
 
 async function getAccounts(req: NextApiRequest, res: NextApiResponse) {
   try {
+    const ctx = getTenantContext(req);
+    const tenantWhere: any = ctx.tenantId ? { tenantId: ctx.tenantId } : {};
+
     if (FinanceReceivable && FinancePayable) {
       try {
         const { Op } = require('sequelize');
         const now = new Date();
-        const receivables = await FinanceReceivable.findAll({ order: [['dueDate', 'ASC']] });
-        const payables = await FinancePayable.findAll({ order: [['dueDate', 'ASC']] });
+        const receivables = await FinanceReceivable.findAll({ where: { ...tenantWhere }, order: [['dueDate', 'ASC']] });
+        const payables = await FinancePayable.findAll({ where: { ...tenantWhere }, order: [['dueDate', 'ASC']] });
 
         const totalReceivables = receivables.reduce((s: number, r: any) => s + parseFloat(r.balance || 0), 0);
         const totalPayables = payables.reduce((s: number, p: any) => s + parseFloat(p.balance || 0), 0);

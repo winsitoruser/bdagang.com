@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +43,7 @@ interface HistoryEntry {
 
 const ProductionHistoryPage: React.FC = () => {
   const router = useRouter();
+  const { t, formatDate } = useTranslation();
   const { toast } = useToast();
   
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -73,8 +75,8 @@ const ProductionHistoryPage: React.FC = () => {
     } catch (error) {
       console.error('Error fetching history:', error);
       toast({
-        title: '❌ Gagal Memuat Riwayat',
-        description: 'Terjadi kesalahan saat memuat riwayat produksi',
+        title: t('inventory.production.historyLoadFailed'),
+        description: t('inventory.production.historyLoadError'),
         variant: 'destructive'
       });
     } finally {
@@ -102,12 +104,12 @@ const ProductionHistoryPage: React.FC = () => {
       quality_checked: 'bg-indigo-100 text-indigo-700'
     };
     const labels = {
-      created: 'Dibuat',
-      started: 'Dimulai',
-      updated: 'Diperbarui',
-      completed: 'Diselesaikan',
-      cancelled: 'Dibatalkan',
-      quality_checked: 'QC Check'
+      created: t('inventory.production.historyCreated'),
+      started: t('inventory.production.historyStarted'),
+      updated: t('inventory.production.historyUpdated'),
+      completed: t('inventory.production.historyCompleted'),
+      cancelled: t('inventory.production.historyCancelled'),
+      quality_checked: t('inventory.production.historyQCCheck')
     };
     return (
       <Badge className={colors[type as keyof typeof colors] || 'bg-gray-100'}>
@@ -116,7 +118,7 @@ const ProductionHistoryPage: React.FC = () => {
     );
   };
 
-  const formatDate = (dateString: string) => {
+  const formatRelativeDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -124,18 +126,12 @@ const ProductionHistoryPage: React.FC = () => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Baru saja';
-    if (diffMins < 60) return `${diffMins} menit yang lalu`;
-    if (diffHours < 24) return `${diffHours} jam yang lalu`;
-    if (diffDays < 7) return `${diffDays} hari yang lalu`;
+    if (diffMins < 1) return t('inventory.production.justNow');
+    if (diffMins < 60) return `${diffMins} ${t('inventory.production.minutesAgo')}`;
+    if (diffHours < 24) return `${diffHours} ${t('inventory.production.hoursAgo')}`;
+    if (diffDays < 7) return `${diffDays} ${t('inventory.production.daysAgo')}`;
 
-    return date.toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return formatDate(date, 'datetime');
   };
 
   const filteredHistory = history.filter(entry =>
@@ -150,7 +146,7 @@ const ProductionHistoryPage: React.FC = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin h-12 w-12 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Memuat riwayat...</p>
+            <p className="text-gray-600">{t('inventory.production.loadingHistory')}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -171,20 +167,20 @@ const ProductionHistoryPage: React.FC = () => {
                   className="flex items-center space-x-2"
                 >
                   <FaArrowLeft />
-                  <span>Kembali</span>
+                  <span>{t('common.back')}</span>
                 </Button>
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
                     <FaHistory className="text-indigo-600" />
-                    <span>Riwayat Produksi</span>
+                    <span>{t('inventory.production.productionHistory')}</span>
                   </h1>
                   <p className="text-gray-600 mt-1">
-                    Timeline lengkap semua aktivitas produksi
+                    {t('inventory.production.historySubtitle')}
                   </p>
                 </div>
               </div>
               <Badge variant="outline" className="text-lg px-4 py-2">
-                {filteredHistory.length} Entri
+                {filteredHistory.length} {t('inventory.production.entries')}
               </Badge>
             </div>
           </div>
@@ -197,7 +193,7 @@ const ProductionHistoryPage: React.FC = () => {
                   <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <Input
                     type="text"
-                    placeholder="Cari batch atau aktivitas..."
+                    placeholder={t('inventory.production.searchHistory')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -210,12 +206,12 @@ const ProductionHistoryPage: React.FC = () => {
                     onChange={(e) => setFilterType(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="all">Semua Aktivitas</option>
-                    <option value="created">Dibuat</option>
-                    <option value="started">Dimulai</option>
-                    <option value="updated">Diperbarui</option>
-                    <option value="completed">Diselesaikan</option>
-                    <option value="cancelled">Dibatalkan</option>
+                    <option value="all">{t('inventory.production.allActivities')}</option>
+                    <option value="created">{t('inventory.production.historyCreated')}</option>
+                    <option value="started">{t('inventory.production.historyStarted')}</option>
+                    <option value="updated">{t('inventory.production.historyUpdated')}</option>
+                    <option value="completed">{t('inventory.production.historyCompleted')}</option>
+                    <option value="cancelled">{t('inventory.production.historyCancelled')}</option>
                   </select>
                 </div>
               </div>
@@ -229,12 +225,12 @@ const ProductionHistoryPage: React.FC = () => {
                 <div className="text-center">
                   <FaHistory className="text-6xl text-gray-300 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    Tidak Ada Riwayat
+                    {t('inventory.production.noHistory')}
                   </h3>
                   <p className="text-gray-600">
                     {searchQuery
-                      ? 'Tidak ada riwayat yang cocok dengan pencarian Anda'
-                      : 'Belum ada aktivitas produksi'}
+                      ? t('inventory.production.noHistorySearch')
+                      : t('inventory.production.noHistoryYet')}
                   </p>
                 </div>
               </CardContent>
@@ -275,7 +271,7 @@ const ProductionHistoryPage: React.FC = () => {
                             onClick={() => router.push(`/inventory/production/${entry.production_id}`)}
                           >
                             <FaIndustry className="mr-2" />
-                            Lihat Produksi
+                            {t('inventory.production.viewProduction')}
                           </Button>
                         </div>
 
@@ -305,7 +301,7 @@ const ProductionHistoryPage: React.FC = () => {
                         <div className="flex items-center space-x-4 text-xs text-gray-500">
                           <div className="flex items-center">
                             <FaCalendar className="mr-1" />
-                            {formatDate(entry.created_at)}
+                            {formatRelativeDate(entry.created_at)}
                           </div>
                           {entry.changedBy && (
                             <div className="flex items-center">
@@ -328,17 +324,17 @@ const ProductionHistoryPage: React.FC = () => {
                     disabled={page === 1}
                     variant="outline"
                   >
-                    Sebelumnya
+                    {t('common.previous')}
                   </Button>
                   <span className="text-sm text-gray-600">
-                    Halaman {page} dari {totalPages}
+                    {t('common.page')} {page} {t('common.of')} {totalPages}
                   </span>
                   <Button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                     variant="outline"
                   >
-                    Selanjutnya
+                    {t('common.next')}
                   </Button>
                 </div>
               )}

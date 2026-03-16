@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
+import { FinancePageSkeleton } from '../../../components/finance/FinanceSkeleton';
 import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, RefreshCw, Download,
@@ -78,15 +80,41 @@ const formatFullCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
+const MOCK_PL_SUMMARY: PLSummary = {
+  revenue: 4250000000, cogs: 1700000000, grossProfit: 2550000000, grossMargin: 60,
+  operatingExpenses: 1650000000, operatingIncome: 900000000, operatingMargin: 21.2,
+  otherIncome: 35000000, otherExpenses: 15000000, ebitda: 1050000000,
+  depreciation: 85000000, interestExpense: 25000000, taxExpense: 175000000,
+  netIncome: 850000000, netMargin: 20, previousNetIncome: 780000000, growth: 9.0,
+};
+
+const MOCK_PL_ITEMS: PLLineItem[] = [
+  { id: '1', name: 'Pendapatan Penjualan', currentPeriod: 4250000000, previousPeriod: 3920000000, change: 330000000, changePercent: 8.4 },
+  { id: '2', name: 'Harga Pokok Penjualan (COGS)', currentPeriod: -1700000000, previousPeriod: -1568000000, change: -132000000, changePercent: 8.4 },
+  { id: '3', name: 'Laba Kotor', currentPeriod: 2550000000, previousPeriod: 2352000000, change: 198000000, changePercent: 8.4, isSubtotal: true },
+  { id: '4', name: 'Biaya Gaji & Tunjangan', currentPeriod: -520000000, previousPeriod: -510000000, change: -10000000, changePercent: 2.0, indent: 1 },
+  { id: '5', name: 'Biaya Utilitas', currentPeriod: -145000000, previousPeriod: -135000000, change: -10000000, changePercent: 7.4, indent: 1 },
+  { id: '6', name: 'Biaya Marketing', currentPeriod: -185000000, previousPeriod: -190000000, change: 5000000, changePercent: -2.6, indent: 1 },
+  { id: '7', name: 'Total Biaya Operasional', currentPeriod: -1650000000, previousPeriod: -1540000000, change: -110000000, changePercent: 7.1, isSubtotal: true },
+  { id: '8', name: 'Laba Bersih', currentPeriod: 850000000, previousPeriod: 780000000, change: 70000000, changePercent: 9.0, isTotal: true },
+];
+
+const MOCK_BRANCH_PL: BranchPL[] = [
+  { id: 'b1', name: 'Kantor Pusat Jakarta', code: 'HQ-001', revenue: 1200000000, cogs: 480000000, grossProfit: 720000000, opex: 420000000, netIncome: 300000000, margin: 25 },
+  { id: 'b2', name: 'Cabang Bandung', code: 'BR-002', revenue: 850000000, cogs: 340000000, grossProfit: 510000000, opex: 290000000, netIncome: 220000000, margin: 25.9 },
+  { id: 'b3', name: 'Cabang Surabaya', code: 'BR-003', revenue: 780000000, cogs: 312000000, grossProfit: 468000000, opex: 310000000, netIncome: 158000000, margin: 20.3 },
+  { id: 'b5', name: 'Cabang Bali', code: 'BR-005', revenue: 680000000, cogs: 272000000, grossProfit: 408000000, opex: 195000000, netIncome: 213000000, margin: 31.3 },
+];
+
 export default function ProfitLossReport() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
+  const { period } = useFinancePeriod();
   const [comparePeriod, setComparePeriod] = useState<'previous' | 'yoy'>('previous');
   const [industry, setIndustry] = useState('general');
-  const [summary, setSummary] = useState<PLSummary>(defaultPLSummary);
-  const [plItems, setPLItems] = useState<PLLineItem[]>([]);
-  const [branchPL, setBranchPL] = useState<BranchPL[]>([]);
+  const [summary, setSummary] = useState<PLSummary>(MOCK_PL_SUMMARY);
+  const [plItems, setPLItems] = useState<PLLineItem[]>(MOCK_PL_ITEMS);
+  const [branchPL, setBranchPL] = useState<BranchPL[]>(MOCK_BRANCH_PL);
   const [expandedSections, setExpandedSections] = useState<string[]>(['revenue', 'cogs', 'opex']);
   const [viewMode, setViewMode] = useState<'statement' | 'branch' | 'trend' | 'margins'>('statement');
 
@@ -103,6 +131,9 @@ export default function ProfitLossReport() {
       }
     } catch (error) {
       console.error('Error fetching P&L data:', error);
+      setSummary(MOCK_PL_SUMMARY);
+      setPLItems(MOCK_PL_ITEMS);
+      setBranchPL(MOCK_BRANCH_PL);
     } finally {
       setLoading(false);
     }
@@ -187,11 +218,7 @@ export default function ProfitLossReport() {
             <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <select value={period} onChange={(e) => setPeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-              <option value="month">Bulan Ini</option>
-              <option value="quarter">Kuartal Ini</option>
-              <option value="year">Tahun Ini</option>
-            </select>
+            <PeriodSelector />
             <select value={comparePeriod} onChange={(e) => setComparePeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               <option value="previous">vs Periode Sebelumnya</option>
               <option value="yoy">vs Tahun Lalu</option>
@@ -252,10 +279,10 @@ export default function ProfitLossReport() {
         {/* View Mode Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
           {([
-            { v: 'statement' as const, l: 'Statement', icon: FileText },
-            { v: 'branch' as const, l: 'By Branch', icon: Building2 },
+            { v: 'statement' as const, l: 'Laporan', icon: FileText },
+            { v: 'branch' as const, l: 'Per Cabang', icon: Building2 },
             { v: 'trend' as const, l: 'Trend', icon: TrendingUp },
-            { v: 'margins' as const, l: 'Margin Analysis', icon: PieChartIcon },
+            { v: 'margins' as const, l: 'Analisis Margin', icon: PieChartIcon },
           ]).map(t => (
             <button key={t.v} onClick={() => setViewMode(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
               <t.icon className="w-4 h-4" />{t.l}
@@ -382,10 +409,10 @@ export default function ProfitLossReport() {
             </div>
             <div className="grid grid-cols-4 gap-4">
               {[
-                { label: 'Gross Margin', value: summary.grossMargin, benchmark: industry === 'fnb' ? 65 : industry === 'retail' ? 35 : 40, color: 'blue' },
-                { label: 'Operating Margin', value: summary.operatingMargin, benchmark: industry === 'fnb' ? 15 : industry === 'retail' ? 8 : 25, color: 'green' },
-                { label: 'EBITDA Margin', value: summary.revenue > 0 ? Math.round((summary.ebitda / summary.revenue) * 100) : 0, benchmark: industry === 'fnb' ? 18 : industry === 'retail' ? 10 : 28, color: 'purple' },
-                { label: 'Net Margin', value: summary.netMargin, benchmark: industry === 'fnb' ? 10 : industry === 'retail' ? 5 : 20, color: 'teal' },
+                { label: 'Margin Kotor', value: summary.grossMargin, benchmark: industry === 'fnb' ? 65 : industry === 'retail' ? 35 : 40, color: 'blue' },
+                { label: 'Margin Operasi', value: summary.operatingMargin, benchmark: industry === 'fnb' ? 15 : industry === 'retail' ? 8 : 25, color: 'green' },
+                { label: 'Margin EBITDA', value: summary.revenue > 0 ? Math.round((summary.ebitda / summary.revenue) * 100) : 0, benchmark: industry === 'fnb' ? 18 : industry === 'retail' ? 10 : 28, color: 'purple' },
+                { label: 'Margin Bersih', value: summary.netMargin, benchmark: industry === 'fnb' ? 10 : industry === 'retail' ? 5 : 20, color: 'teal' },
               ].map(m => {
                 const diff = m.value - m.benchmark;
                 return (

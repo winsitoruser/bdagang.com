@@ -409,8 +409,8 @@ export default function SubscriptionsManagement() {
           {!loading && subscriptions.length === 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
               <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No subscriptions found</h3>
-              <p className="text-gray-500">Try adjusting your filters or search terms</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Tidak ada langganan ditemukan</h3>
+              <p className="text-gray-500">Coba sesuaikan filter atau kata kunci pencarian</p>
             </div>
           )}
         </div>

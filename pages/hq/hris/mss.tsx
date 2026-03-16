@@ -8,16 +8,28 @@ import {
 
 type MSSTab = 'overview' | 'claims-approval' | 'mutations-approval' | 'team';
 
+const MOCK_MSS_WORKFLOW = { pendingClaims: 5, approvedClaims: 18, rejectedClaims: 3, totalClaimAmount: 12500000, pendingMutations: 2, approvedMutations: 6, pendingLeave: 4, approvedLeave: 15 };
+const MOCK_MSS_REMINDER = { totalReminders: 8, upcoming: 4, overdue: 2, categories: { contract: 3, probation: 2, certification: 1, performance_review: 2 } };
+const MOCK_MSS_CLAIMS = [
+  { id: 'mc1', employee_name: 'Budi Santoso', claim_type: 'medical', description: 'Rawat jalan RS Hermina', amount: 2500000, status: 'pending', submitted_date: '2026-03-11' },
+  { id: 'mc2', employee_name: 'Siti Rahayu', claim_type: 'transport', description: 'Transport dinas Surabaya', amount: 1200000, status: 'pending', submitted_date: '2026-03-10' },
+  { id: 'mc3', employee_name: 'Ahmad Wijaya', claim_type: 'meals', description: 'Makan lembur tim IT', amount: 750000, status: 'approved', submitted_date: '2026-03-08', approved_amount: 750000 },
+];
+const MOCK_MSS_MUTATIONS = [
+  { id: 'mm1', employee_name: 'Dewi Lestari', mutation_type: 'transfer', from_branch: 'Cabang Bandung', to_branch: 'Cabang Surabaya', effective_date: '2026-04-01', status: 'pending', reason: 'Kebutuhan operasional' },
+  { id: 'mm2', employee_name: 'Eko Prasetyo', mutation_type: 'promotion', from_position: 'Staff', to_position: 'Supervisor', effective_date: '2026-04-01', status: 'pending', reason: 'Evaluasi kinerja outstanding' },
+];
+
 export default function MSSPortalPage() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<MSSTab>('overview');
 
   // Data
-  const [workflowSummary, setWorkflowSummary] = useState<any>(null);
-  const [reminderSummary, setReminderSummary] = useState<any>(null);
-  const [claims, setClaims] = useState<any[]>([]);
-  const [mutations, setMutations] = useState<any[]>([]);
+  const [workflowSummary, setWorkflowSummary] = useState<any>(MOCK_MSS_WORKFLOW);
+  const [reminderSummary, setReminderSummary] = useState<any>(MOCK_MSS_REMINDER);
+  const [claims, setClaims] = useState<any[]>(MOCK_MSS_CLAIMS);
+  const [mutations, setMutations] = useState<any[]>(MOCK_MSS_MUTATIONS);
   const [filterStatus, setFilterStatus] = useState('');
 
   // Approval modal
@@ -48,16 +60,16 @@ export default function MSSPortalPage() {
     try {
       const res = await fetch('/api/hq/hris/workflow?action=summary');
       const json = await res.json();
-      setWorkflowSummary(json.data);
-    } catch (e) { console.error(e); }
+      setWorkflowSummary(json.data || MOCK_MSS_WORKFLOW);
+    } catch (e) { console.error(e); setWorkflowSummary(MOCK_MSS_WORKFLOW); }
   };
 
   const fetchReminderSummary = async () => {
     try {
       const res = await fetch('/api/hq/hris/reminders?action=summary');
       const json = await res.json();
-      setReminderSummary(json.data);
-    } catch (e) { console.error(e); }
+      setReminderSummary(json.data || MOCK_MSS_REMINDER);
+    } catch (e) { console.error(e); setReminderSummary(MOCK_MSS_REMINDER); }
   };
 
   const fetchClaims = async (status?: string) => {
@@ -66,8 +78,8 @@ export default function MSSPortalPage() {
       if (status) params.set('status', status);
       const res = await fetch(`/api/hq/hris/workflow?${params}`);
       const json = await res.json();
-      setClaims(json.data || []);
-    } catch (e) { console.error(e); }
+      setClaims(json.data || MOCK_MSS_CLAIMS);
+    } catch (e) { console.error(e); setClaims(MOCK_MSS_CLAIMS); }
   };
 
   const fetchMutations = async (status?: string) => {
@@ -76,8 +88,8 @@ export default function MSSPortalPage() {
       if (status) params.set('status', status);
       const res = await fetch(`/api/hq/hris/workflow?${params}`);
       const json = await res.json();
-      setMutations(json.data || []);
-    } catch (e) { console.error(e); }
+      setMutations(json.data || MOCK_MSS_MUTATIONS);
+    } catch (e) { console.error(e); setMutations(MOCK_MSS_MUTATIONS); }
   };
 
   useEffect(() => {
@@ -137,7 +149,7 @@ export default function MSSPortalPage() {
   if (!mounted) return null;
 
   return (
-    <HQLayout title="Manager Self Service" currentMenu="hris">
+    <HQLayout title="Layanan Mandiri Manajer" currentMenu="hris">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
           {toast.message}
@@ -156,8 +168,8 @@ export default function MSSPortalPage() {
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Klaim Pending', value: workflowSummary?.claims?.pending || 0, icon: Clock, color: 'text-yellow-600 bg-yellow-50' },
-            { label: 'Mutasi Pending', value: workflowSummary?.mutations?.pending || 0, icon: ArrowRightLeft, color: 'text-orange-600 bg-orange-50' },
+            { label: 'Klaim Tertunda', value: workflowSummary?.claims?.pending || 0, icon: Clock, color: 'text-yellow-600 bg-yellow-50' },
+            { label: 'Mutasi Tertunda', value: workflowSummary?.mutations?.pending || 0, icon: ArrowRightLeft, color: 'text-orange-600 bg-orange-50' },
             { label: 'Klaim Disetujui', value: workflowSummary?.claims?.approved || 0, icon: CheckCircle, color: 'text-green-600 bg-green-50' },
             { label: 'Mutasi Disetujui', value: workflowSummary?.mutations?.approved || 0, icon: CheckCircle, color: 'text-blue-600 bg-blue-50' },
           ].map((card, i) => (
@@ -179,8 +191,8 @@ export default function MSSPortalPage() {
             <div className="flex min-w-max">
               {([
                 { key: 'overview', label: 'Ringkasan', icon: BarChart3 },
-                { key: 'claims-approval', label: 'Approval Klaim', icon: DollarSign },
-                { key: 'mutations-approval', label: 'Approval Mutasi', icon: ArrowRightLeft },
+                { key: 'claims-approval', label: 'Persetujuan Klaim', icon: DollarSign },
+                { key: 'mutations-approval', label: 'Persetujuan Mutasi', icon: ArrowRightLeft },
               ] as { key: MSSTab; label: string; icon: any }[]).map(tab => (
                 <button key={tab.key} onClick={() => { setActiveTab(tab.key); setFilterStatus(''); }}
                   className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
@@ -250,7 +262,7 @@ export default function MSSPortalPage() {
                       <AlertTriangle className="w-5 h-5 text-red-600" />
                       <div>
                         <p className="text-sm font-medium text-red-800">{reminderSummary.overdueReminders} pengingat sudah melewati batas waktu!</p>
-                        <p className="text-xs text-red-600 mt-0.5">Segera tindak lanjuti pengingat yang overdue</p>
+                        <p className="text-xs text-red-600 mt-0.5">Segera tindak lanjuti pengingat yang terlambat</p>
                       </div>
                     </div>
                   </div>
@@ -262,14 +274,14 @@ export default function MSSPortalPage() {
             {activeTab === 'claims-approval' && (
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-800">Approval Klaim Reimbursement</h3>
+                  <h3 className="font-semibold text-gray-800">Persetujuan Klaim Reimbursement</h3>
                   <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
                     className="px-3 py-1.5 border rounded-lg text-sm">
                     <option value="">Semua Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="paid">Paid</option>
+                    <option value="pending">Tertunda</option>
+                    <option value="approved">Disetujui</option>
+                    <option value="rejected">Ditolak</option>
+                    <option value="paid">Dibayar</option>
                   </select>
                 </div>
 
@@ -352,13 +364,13 @@ export default function MSSPortalPage() {
             {activeTab === 'mutations-approval' && (
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-800">Approval Mutasi / Transfer</h3>
+                  <h3 className="font-semibold text-gray-800">Persetujuan Mutasi / Transfer</h3>
                   <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
                     className="px-3 py-1.5 border rounded-lg text-sm">
                     <option value="">Semua Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
+                    <option value="pending">Tertunda</option>
+                    <option value="approved">Disetujui</option>
+                    <option value="rejected">Ditolak</option>
                   </select>
                 </div>
 

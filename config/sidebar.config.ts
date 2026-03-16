@@ -66,6 +66,16 @@ import {
   Gauge,
   Factory,
   Cog,
+  Brain,
+  HardHat,
+  Scan,
+  GraduationCap,
+  PenTool,
+  Ship,
+  Anchor,
+  BookOpen,
+  Car,
+  Code2,
   type LucideIcon
 } from 'lucide-react';
 
@@ -115,7 +125,15 @@ export type ModuleCode =
   | 'marketing'
   | 'tms'
   | 'fms'
-  | 'manufacturing';
+  | 'manufacturing'
+  | 'asset_management'
+  | 'project_management'
+  | 'e_procurement'
+  | 'export_import'
+  | 'knowledge_base'
+  | 'requisitions'
+  | 'billing'
+  | 'website_builder';
 
 export type LayoutType = 'hq' | 'branch' | 'admin';
 
@@ -163,7 +181,7 @@ export const hqSidebarConfig: SidebarConfig = {
   logo: {
     icon: Building2,
     title: 'Bedagang',
-    subtitle: 'HQ Platform',
+    subtitle: 'Platform Pusat',
     href: '/hq/home'
   },
   groups: [
@@ -173,14 +191,14 @@ export const hqSidebarConfig: SidebarConfig = {
       items: [
         { 
           id: 'home',
-          name: 'Home', 
+          name: 'Beranda', 
           href: '/hq/home', 
           icon: LayoutDashboard,
           modules: ['dashboard']
         },
         { 
           id: 'dashboard',
-          name: 'Dashboard Operasional', 
+          name: 'Dasbor Operasional', 
           href: '/hq/dashboard', 
           icon: BarChart3,
           modules: ['dashboard']
@@ -204,37 +222,37 @@ export const hqSidebarConfig: SidebarConfig = {
         },
         { 
           id: 'warehouse-inventory',
-          name: 'Warehouse & Inventory', 
+          name: 'Gudang & Inventori', 
           icon: Package,
           modules: ['inventory', 'products'],
           children: [
-            { id: 'wh-dashboard', name: 'Dashboard', href: '/hq/inventory', icon: LayoutDashboard },
-            { id: 'wh-products', name: 'Master Produk', href: '/hq/products', icon: Package },
+            { id: 'wh-dashboard', name: 'Dasbor', href: '/hq/inventory', icon: LayoutDashboard },
+            { id: 'wh-products', name: 'Produk Utama', href: '/hq/products', icon: Package },
             { id: 'wh-stock', name: 'Stok Global', href: '/hq/inventory/stock', icon: Package },
             { id: 'wh-categories', name: 'Kategori Produk', href: '/hq/inventory/categories', icon: Layers },
-            { id: 'wh-pricing', name: 'Harga & Pricing', href: '/hq/inventory/pricing', icon: DollarSign },
-            { id: 'wh-transfers', name: 'Transfer & Requisition', href: '/hq/inventory/transfers', icon: ArrowRightLeft },
-            { id: 'wh-po', name: 'Purchase Order', href: '/hq/purchase-orders', icon: ShoppingCart },
-            { id: 'wh-suppliers', name: 'Supplier', href: '/hq/suppliers', icon: Truck },
+            { id: 'wh-pricing', name: 'Harga & Penetapan Harga', href: '/hq/inventory/pricing', icon: DollarSign },
+            { id: 'wh-transfers', name: 'Transfer & Permintaan', href: '/hq/inventory/transfers', icon: ArrowRightLeft },
+            { id: 'wh-po', name: 'Pesanan Pembelian', href: '/hq/purchase-orders', icon: ShoppingCart },
+            { id: 'wh-suppliers', name: 'Pemasok', href: '/hq/suppliers', icon: Truck },
             { id: 'wh-receipts', name: 'Penerimaan Barang', href: '/hq/inventory/receipts', icon: FileText },
             { id: 'wh-stocktake', name: 'Stock Opname', href: '/hq/inventory/stocktake', icon: ClipboardList },
-            { id: 'wh-alerts', name: 'Alerts', href: '/hq/inventory/alerts', icon: AlertCircle },
+            { id: 'wh-alerts', name: 'Peringatan', href: '/hq/inventory/alerts', icon: AlertCircle },
           ]
         },
         { 
           id: 'fms',
-          name: 'Fleet Management', 
+          name: 'Manajemen Armada', 
           icon: Truck,
           modules: ['fms'],
           children: [
             // Utama
-            { id: 'fms-dashboard', name: 'Dashboard FMS', href: '/hq/fms', icon: LayoutDashboard },
-            { id: 'fms-vehicles', name: 'Kendaraan', href: '/hq/fms?tab=vehicles', icon: Truck },
-            { id: 'fms-drivers', name: 'Driver', href: '/hq/fms?tab=drivers', icon: Users },
+            { id: 'fms-dashboard', name: 'Dasbor FMS', href: '/hq/fms', icon: LayoutDashboard },
+            { id: 'fms-vehicles', name: 'Daftar Kendaraan', href: '/hq/fms?tab=vehicles', icon: Truck },
+            { id: 'fms-drivers', name: 'Pengemudi', href: '/hq/fms?tab=drivers', icon: Users },
             // Operasional
-            { id: 'fms-maintenance', name: 'Maintenance', href: '/hq/fms?tab=maintenance', icon: Wrench },
+            { id: 'fms-maintenance', name: 'Pemeliharaan', href: '/hq/fms?tab=maintenance', icon: Wrench },
             { id: 'fms-fuel', name: 'BBM', href: '/hq/fms?tab=fuel', icon: Fuel },
-            { id: 'fms-rentals', name: 'Rental', href: '/hq/fms?tab=rentals', icon: KeyRound },
+            { id: 'fms-rentals', name: 'Penyewaan Kendaraan', href: '/hq/fms?tab=rentals', icon: KeyRound },
             { id: 'fms-inspections', name: 'Inspeksi', href: '/hq/fms?tab=inspections', icon: ClipboardList },
             { id: 'fms-incidents', name: 'Insiden', href: '/hq/fms?tab=incidents', icon: AlertTriangle },
             // Tracking
@@ -242,38 +260,91 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'fms-geofences', name: 'Geofence', href: '/hq/fms?tab=geofences', icon: Crosshair },
             { id: 'fms-violations', name: 'Pelanggaran', href: '/hq/fms?tab=violations', icon: Zap },
             // Analitik
-            { id: 'fms-analytics', name: 'Fleet Analytics', href: '/hq/fms?tab=analytics', icon: BarChart3 },
-            { id: 'fms-tires', name: 'Manajemen Ban', href: '/hq/fms?tab=tires', icon: Disc },
+            { id: 'fms-analytics', name: 'Analitik Armada', href: '/hq/fms?tab=analytics', icon: BarChart3 },
+            { id: 'fms-tires', name: 'Kelola Ban', href: '/hq/fms?tab=tires', icon: Disc },
             { id: 'fms-costs', name: 'Biaya', href: '/hq/fms?tab=costs', icon: DollarSign },
             // Admin
             { id: 'fms-documents', name: 'Dokumen', href: '/hq/fms?tab=documents', icon: FileText },
-            { id: 'fms-reminders', name: 'Reminder', href: '/hq/fms?tab=reminders', icon: Bell },
+            { id: 'fms-reminders', name: 'Pengingat', href: '/hq/fms?tab=reminders', icon: Bell },
           ]
         },
         { 
           id: 'tms',
-          name: 'Transportation Management', 
+          name: 'Manajemen Transportasi', 
           icon: Send,
           modules: ['tms'],
           children: [
             // Utama
-            { id: 'tms-dashboard', name: 'Dashboard TMS', href: '/hq/tms', icon: LayoutDashboard },
-            { id: 'tms-shipments', name: 'Shipment', href: '/hq/tms?tab=shipments', icon: Package },
-            { id: 'tms-trips', name: 'Trip', href: '/hq/tms?tab=trips', icon: Navigation },
+            { id: 'tms-dashboard', name: 'Dasbor TMS', href: '/hq/tms', icon: LayoutDashboard },
+            { id: 'tms-shipments', name: 'Pengiriman', href: '/hq/tms?tab=shipments', icon: Package },
+            { id: 'tms-trips', name: 'Perjalanan', href: '/hq/tms?tab=trips', icon: Navigation },
             // Operasional
-            { id: 'tms-dispatch', name: 'Dispatch', href: '/hq/tms?tab=dispatch', icon: Send },
-            { id: 'tms-tracking', name: 'Tracking', href: '/hq/tms?tab=tracking', icon: Activity },
-            { id: 'tms-carriers', name: 'Carrier', href: '/hq/tms?tab=carriers', icon: Building2 },
+            { id: 'tms-dispatch', name: 'Pengiriman Barang', href: '/hq/tms?tab=dispatch', icon: Send },
+            { id: 'tms-tracking', name: 'Pelacakan', href: '/hq/tms?tab=tracking', icon: Activity },
+            { id: 'tms-carriers', name: 'Pengangkut', href: '/hq/tms?tab=carriers', icon: Building2 },
             { id: 'tms-routes', name: 'Rute', href: '/hq/tms?tab=routes', icon: MapPin },
             // Analitik
-            { id: 'tms-kpi', name: 'Logistics KPI', href: '/hq/tms?tab=logistics-analytics', icon: BarChart3 },
-            { id: 'tms-carrier-scores', name: 'Carrier Score', href: '/hq/tms?tab=carrier-scores', icon: Star },
-            { id: 'tms-sla', name: 'Delivery SLA', href: '/hq/tms?tab=delivery-sla', icon: Timer },
+            { id: 'tms-kpi', name: 'KPI Logistik', href: '/hq/tms?tab=logistics-analytics', icon: BarChart3 },
+            { id: 'tms-carrier-scores', name: 'Skor Pengangkut', href: '/hq/tms?tab=carrier-scores', icon: Star },
+            { id: 'tms-sla', name: 'SLA Pengiriman', href: '/hq/tms?tab=delivery-sla', icon: Timer },
             // Admin
-            { id: 'tms-billing', name: 'Billing', href: '/hq/tms?tab=billing', icon: Receipt },
+            { id: 'tms-billing', name: 'Penagihan', href: '/hq/tms?tab=billing', icon: Receipt },
             { id: 'tms-zones', name: 'Zona', href: '/hq/tms?tab=zones', icon: Globe },
-            { id: 'tms-rate-cards', name: 'Tarif', href: '/hq/tms?tab=rate-cards', icon: CreditCard },
+            { id: 'tms-rate-cards', name: 'Daftar Tarif', href: '/hq/tms?tab=rate-cards', icon: CreditCard },
             { id: 'tms-warehouses', name: 'Gudang', href: '/hq/tms?tab=warehouses', icon: Warehouse },
+          ]
+        },
+        { 
+          id: 'fleet',
+          name: 'Manajemen Armada (Legacy)', 
+          icon: Car,
+          modules: ['fleet'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'],
+          children: [
+            { id: 'fleet-dashboard', name: 'Dasbor Armada', href: '/hq/fleet', icon: LayoutDashboard },
+            { id: 'fleet-vehicles', name: 'Kendaraan', href: '/hq/fleet/vehicles', icon: Car },
+            { id: 'fleet-drivers', name: 'Pengemudi', href: '/hq/fleet/drivers', icon: Users },
+            { id: 'fleet-tracking', name: 'Pelacakan', href: '/hq/fleet/tracking', icon: Navigation },
+            { id: 'fleet-maintenance', name: 'Pemeliharaan', href: '/hq/fleet/maintenance', icon: Wrench },
+            { id: 'fleet-fuel', name: 'BBM', href: '/hq/fleet/fuel', icon: Fuel },
+            { id: 'fleet-costs', name: 'Biaya', href: '/hq/fleet/costs', icon: DollarSign },
+            { id: 'fleet-routes', name: 'Rute', href: '/hq/fleet/routes', icon: MapPin },
+            { id: 'fleet-kpi', name: 'KPI Armada', href: '/hq/fleet/kpi', icon: Target },
+          ]
+        },
+        {
+          id: 'requisitions',
+          name: 'Permintaan Barang',
+          icon: ClipboardList,
+          modules: ['requisitions'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'],
+          children: [
+            { id: 'req-list', name: 'Daftar Permintaan', href: '/hq/requisitions', icon: ClipboardList },
+          ]
+        }
+      ]
+    },
+    {
+      id: 'asset-management',
+      title: 'Manajemen Aset',
+      items: [
+        {
+          id: 'assets',
+          name: 'Manajemen Aset',
+          icon: HardHat,
+          modules: ['asset_management'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'],
+          children: [
+            { id: 'asset-dashboard', name: 'Dasbor', href: '/hq/assets', icon: LayoutDashboard },
+            { id: 'asset-registry', name: 'Daftar Aset', href: '/hq/assets?tab=registry', icon: Package },
+            { id: 'asset-categories', name: 'Kategori', href: '/hq/assets?tab=categories', icon: Layers },
+            { id: 'asset-movements', name: 'Mutasi & Transfer', href: '/hq/assets?tab=movements', icon: ArrowRightLeft },
+            { id: 'asset-depreciation', name: 'Penyusutan', href: '/hq/assets?tab=depreciation', icon: TrendingUp },
+            { id: 'asset-maintenance', name: 'Pemeliharaan', href: '/hq/assets?tab=maintenance', icon: Wrench },
+            { id: 'asset-licenses', name: 'Lisensi Perangkat Lunak', href: '/hq/assets?tab=licenses', icon: Shield },
+            { id: 'asset-tenancy', name: 'Penyewaan', href: '/hq/assets?tab=tenancy', icon: Building2 },
+            { id: 'asset-alerts', name: 'Peringatan', href: '/hq/assets?tab=alerts', icon: AlertCircle },
+            { id: 'asset-settings', name: 'Pengaturan', href: '/hq/assets?tab=settings', icon: Settings },
           ]
         }
       ]
@@ -284,23 +355,99 @@ export const hqSidebarConfig: SidebarConfig = {
       items: [
         {
           id: 'manufacturing',
-          name: 'Manufacturing',
+          name: 'Manufaktur',
           icon: Factory,
           modules: ['manufacturing'],
           roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'],
           children: [
-            { id: 'mfg-dashboard', name: 'Dashboard', href: '/hq/manufacturing', icon: LayoutDashboard },
-            { id: 'mfg-work-orders', name: 'Work Orders', href: '/hq/manufacturing?tab=work-orders', icon: ClipboardList },
-            { id: 'mfg-bom', name: 'Bill of Materials', href: '/hq/manufacturing?tab=bom', icon: Layers },
-            { id: 'mfg-routings', name: 'Routing', href: '/hq/manufacturing?tab=routings', icon: Activity },
-            { id: 'mfg-work-centers', name: 'Work Centers', href: '/hq/manufacturing?tab=work-centers', icon: Building2 },
-            { id: 'mfg-machines', name: 'Mesin & Equipment', href: '/hq/manufacturing?tab=machines', icon: Cog },
-            { id: 'mfg-quality', name: 'Quality Control', href: '/hq/manufacturing?tab=quality', icon: Shield },
-            { id: 'mfg-planning', name: 'Production Plan', href: '/hq/manufacturing?tab=planning', icon: Calendar },
-            { id: 'mfg-oee', name: 'OEE Analytics', href: '/hq/manufacturing?tab=oee', icon: Gauge },
-            { id: 'mfg-costs', name: 'Production Costing', href: '/hq/manufacturing?tab=costs', icon: DollarSign },
-            { id: 'mfg-waste', name: 'Waste & Scrap', href: '/hq/manufacturing?tab=waste', icon: AlertTriangle },
+            { id: 'mfg-dashboard', name: 'Dasbor', href: '/hq/manufacturing', icon: LayoutDashboard },
+            { id: 'mfg-work-orders', name: 'Perintah Kerja', href: '/hq/manufacturing?tab=work-orders', icon: ClipboardList },
+            { id: 'mfg-bom', name: 'Daftar Material (BOM)', href: '/hq/manufacturing?tab=bom', icon: Layers },
+            { id: 'mfg-routings', name: 'Routing Produksi', href: '/hq/manufacturing?tab=routings', icon: Activity },
+            { id: 'mfg-work-centers', name: 'Pusat Kerja', href: '/hq/manufacturing?tab=work-centers', icon: Building2 },
+            { id: 'mfg-machines', name: 'Mesin & Peralatan', href: '/hq/manufacturing?tab=machines', icon: Cog },
+            { id: 'mfg-quality', name: 'Kontrol Kualitas', href: '/hq/manufacturing?tab=quality', icon: Shield },
+            { id: 'mfg-planning', name: 'Rencana Produksi', href: '/hq/manufacturing?tab=planning', icon: Calendar },
+            { id: 'mfg-oee', name: 'Analitik OEE', href: '/hq/manufacturing?tab=oee', icon: Gauge },
+            { id: 'mfg-costs', name: 'Biaya Produksi', href: '/hq/manufacturing?tab=costs', icon: DollarSign },
+            { id: 'mfg-maintenance', name: 'Pemeliharaan', href: '/hq/manufacturing?tab=maintenance', icon: Wrench },
+            { id: 'mfg-plm', name: 'PLM (Siklus Hidup)', href: '/hq/manufacturing?tab=plm', icon: Layers },
+            { id: 'mfg-cogm', name: 'COGM', href: '/hq/manufacturing?tab=cogm', icon: DollarSign },
+            { id: 'mfg-subcontract', name: 'Subkontrak', href: '/hq/manufacturing?tab=subcontracting', icon: Truck },
+            { id: 'mfg-waste', name: 'Limbah & Sisa', href: '/hq/manufacturing?tab=waste', icon: AlertTriangle },
             { id: 'mfg-settings', name: 'Pengaturan', href: '/hq/manufacturing?tab=settings', icon: Settings },
+          ]
+        }
+      ]
+    },
+    {
+      id: 'project-management',
+      title: 'Manajemen Proyek',
+      items: [
+        {
+          id: 'project-management',
+          name: 'Manajemen Proyek',
+          icon: Briefcase,
+          modules: ['project_management'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'],
+          children: [
+            { id: 'pjm-dashboard', name: 'Dasbor', href: '/hq/project-management', icon: LayoutDashboard },
+            { id: 'pjm-projects', name: 'Proyek', href: '/hq/project-management?tab=projects', icon: Briefcase },
+            { id: 'pjm-tasks', name: 'Tugas', href: '/hq/project-management?tab=tasks', icon: ClipboardList },
+            { id: 'pjm-milestones', name: 'Milestone', href: '/hq/project-management?tab=milestones', icon: Target },
+            { id: 'pjm-timesheets', name: 'Lembar Waktu', href: '/hq/project-management?tab=timesheets', icon: Timer },
+            { id: 'pjm-resources', name: 'Sumber Daya', href: '/hq/project-management?tab=resources', icon: Users },
+            { id: 'pjm-risks', name: 'Risiko', href: '/hq/project-management?tab=risks', icon: AlertTriangle },
+            { id: 'pjm-budgets', name: 'Anggaran', href: '/hq/project-management?tab=budgets', icon: DollarSign },
+            { id: 'pjm-documents', name: 'Dokumen', href: '/hq/project-management?tab=documents', icon: FileText },
+          ]
+        }
+      ]
+    },
+    {
+      id: 'e-procurement',
+      title: 'E-Pengadaan',
+      items: [
+        {
+          id: 'e-procurement',
+          name: 'E-Pengadaan',
+          icon: ShoppingCart,
+          modules: ['e_procurement'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'],
+          children: [
+            { id: 'epr-dashboard', name: 'Dasbor', href: '/hq/e-procurement', icon: LayoutDashboard },
+            { id: 'epr-vendors', name: 'Vendor', href: '/hq/e-procurement?tab=vendors', icon: Building2 },
+            { id: 'epr-requests', name: 'Permintaan', href: '/hq/e-procurement?tab=procurement-requests', icon: ClipboardList },
+            { id: 'epr-rfqs', name: 'RFQ', href: '/hq/e-procurement?tab=rfqs', icon: Send },
+            { id: 'epr-tenders', name: 'Tender', href: '/hq/e-procurement?tab=tenders', icon: Award },
+            { id: 'epr-contracts', name: 'Kontrak', href: '/hq/e-procurement?tab=contracts', icon: FileText },
+            { id: 'epr-evaluations', name: 'Evaluasi Vendor', href: '/hq/e-procurement?tab=evaluations', icon: Star },
+            { id: 'epr-analytics', name: 'Analitik', href: '/hq/e-procurement?tab=analytics', icon: BarChart3 },
+          ]
+        }
+      ]
+    },
+    {
+      id: 'export-import',
+      title: 'Ekspor & Impor',
+      items: [
+        {
+          id: 'export-import',
+          name: 'Ekspor-Impor',
+          icon: Ship,
+          modules: ['export_import'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'],
+          children: [
+            { id: 'exim-dashboard', name: 'Dasbor', href: '/hq/export-import', icon: LayoutDashboard },
+            { id: 'exim-shipments', name: 'Pengiriman', href: '/hq/export-import?tab=shipments', icon: Ship },
+            { id: 'exim-customs', name: 'Kepabeanan', href: '/hq/export-import?tab=customs', icon: Shield },
+            { id: 'exim-lcs', name: 'Surat Kredit (L/C)', href: '/hq/export-import?tab=lcs', icon: CreditCard },
+            { id: 'exim-containers', name: 'Kontainer', href: '/hq/export-import?tab=containers', icon: Package },
+            { id: 'exim-documents', name: 'Dokumen', href: '/hq/export-import?tab=documents', icon: FileText },
+            { id: 'exim-partners', name: 'Mitra', href: '/hq/export-import?tab=partners', icon: Building2 },
+            { id: 'exim-costs', name: 'Biaya', href: '/hq/export-import?tab=costs', icon: DollarSign },
+            { id: 'exim-hs-codes', name: 'Kode HS', href: '/hq/export-import?tab=hs-codes', icon: Scan },
+            { id: 'exim-analytics', name: 'Analitik', href: '/hq/export-import?tab=analytics', icon: BarChart3 },
           ]
         }
       ]
@@ -318,7 +465,7 @@ export const hqSidebarConfig: SidebarConfig = {
           children: [
             { id: 'user-all', name: 'Semua Pengguna', href: '/hq/users', icon: Users },
             { id: 'user-roles', name: 'Role & Akses', href: '/hq/users/roles', icon: Shield },
-            { id: 'user-managers', name: 'Branch Manager', href: '/hq/users/managers', icon: UserCog },
+            { id: 'user-managers', name: 'Manajer Cabang', href: '/hq/users/managers', icon: UserCog },
           ]
         },
         { 
@@ -328,70 +475,73 @@ export const hqSidebarConfig: SidebarConfig = {
           modules: ['hris'],
           roles: ['super_admin', 'owner', 'hq_admin', 'hr_staff'],
           children: [
-            { id: 'hris-dashboard', name: 'Dashboard HRIS', href: '/hq/hris', icon: LayoutDashboard },
+            { id: 'hris-dashboard', name: 'Dasbor HRIS', href: '/hq/hris', icon: LayoutDashboard },
             { id: 'hris-kpi', name: 'KPI Karyawan', href: '/hq/hris/kpi', icon: Target },
-            { id: 'hris-kpi-settings', name: 'KPI Settings', href: '/hq/hris/kpi-settings', icon: Settings },
+            { id: 'hris-kpi-settings', name: 'Pengaturan KPI', href: '/hq/hris/kpi-settings', icon: Settings },
             { id: 'hris-attendance', name: 'Kehadiran & Absensi', href: '/hq/hris/attendance', icon: CalendarCheck },
-            { id: 'hris-attendance-devices', name: 'Kelola Device', href: '/hq/hris/attendance/devices', icon: Fingerprint },
-            { id: 'hris-performance', name: 'Performance Review', href: '/hq/hris/performance', icon: Award },
+            { id: 'hris-attendance-devices', name: 'Kelola Perangkat', href: '/hq/hris/attendance/devices', icon: Fingerprint },
+            { id: 'hris-performance', name: 'Penilaian Kinerja', href: '/hq/hris/performance', icon: Award },
             { id: 'hris-leave', name: 'Manajemen Cuti', href: '/hq/hris/leave', icon: CalendarDays },
-            { id: 'hris-payroll', name: 'Payroll', href: '/hq/hris/payroll', icon: Banknote },
+            { id: 'hris-payroll', name: 'Penggajian', href: '/hq/hris/payroll', icon: Banknote },
             { id: 'hris-employees', name: 'Database Karyawan', href: '/hq/hris/employees', icon: Users },
             { id: 'hris-organization', name: 'Struktur Organisasi', href: '/hq/hris/organization', icon: Network },
             { id: 'hris-workflow', name: 'Klaim & Mutasi', href: '/hq/hris/mss', icon: ArrowRightLeft },
-            { id: 'hris-ess', name: 'Employee Self Service', href: '/hq/hris/ess', icon: Heart },
-            { id: 'hris-mss', name: 'Manager Self Service', href: '/hq/hris/mss', icon: Shield },
-            { id: 'hris-ir', name: 'Industrial Relations', href: '/hq/hris/industrial-relations', icon: Shield },
-            { id: 'hris-workforce', name: 'Workforce Analytics', href: '/hq/hris/workforce-analytics', icon: BarChart3 },
-            { id: 'hris-engagement', name: 'Engagement & Culture', href: '/hq/hris/engagement', icon: MessageCircle },
-            { id: 'hris-travel', name: 'Travel & Expense', href: '/hq/hris/travel-expense', icon: Plane },
-            { id: 'hris-project', name: 'Project Management', href: '/hq/hris/project-management', icon: Briefcase },
+            { id: 'hris-ess', name: 'Layanan Mandiri Karyawan', href: '/hq/hris/ess', icon: Heart },
+            { id: 'hris-mss', name: 'Layanan Mandiri Manajer', href: '/hq/hris/mss', icon: Shield },
+            { id: 'hris-ir', name: 'Hubungan Industrial', href: '/hq/hris/industrial-relations', icon: Shield },
+            { id: 'hris-workforce', name: 'Analitik Tenaga Kerja', href: '/hq/hris/workforce-analytics', icon: BarChart3 },
+            { id: 'hris-engagement', name: 'Keterlibatan & Budaya', href: '/hq/hris/engagement', icon: MessageCircle },
+            { id: 'hris-travel', name: 'Perjalanan & Biaya', href: '/hq/hris/travel-expense', icon: Plane },
+            { id: 'hris-project', name: 'Manajemen Proyek', href: '/hq/hris/project-management', icon: Briefcase },
+            { id: 'hris-training-dev', name: 'Pelatihan & Pengembangan', href: '/hq/hris/training-development', icon: GraduationCap },
+            { id: 'hris-training-scoring', name: 'Skor & Penilaian', href: '/hq/hris/training-scoring', icon: PenTool },
+            { id: 'hris-recruitment', name: 'Rekrutmen', href: '/hq/hris/recruitment', icon: UserPlus },
           ]
         }
       ]
     },
     {
       id: 'sales-marketing',
-      title: 'Sales & Marketing',
+      title: 'Penjualan & Pemasaran',
       items: [
         {
           id: 'sfa',
-          name: 'CRM & Sales Force',
+          name: 'CRM & Tenaga Penjualan',
           icon: Briefcase,
           modules: ['crm', 'sfa'],
           roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager', 'staff'],
           children: [
-            { id: 'sfa-dashboard', name: 'Dashboard CRM', href: '/hq/sfa', icon: LayoutDashboard, modules: ['crm', 'sfa'] },
-            { id: 'sfa-leads', name: 'Leads & Pipeline', href: '/hq/sfa', icon: TrendingUp, modules: ['sfa'] },
-            { id: 'crm-customers', name: 'Customer 360°', href: '/hq/sfa', icon: Heart, modules: ['crm'] },
+            { id: 'sfa-dashboard', name: 'Dasbor CRM', href: '/hq/sfa', icon: LayoutDashboard, modules: ['crm', 'sfa'] },
+            { id: 'sfa-leads', name: 'Prospek & Pipeline', href: '/hq/sfa', icon: TrendingUp, modules: ['sfa'] },
+            { id: 'crm-customers', name: 'Pelanggan 360°', href: '/hq/sfa', icon: Heart, modules: ['crm'] },
             { id: 'crm-communications', name: 'Komunikasi', href: '/hq/sfa', icon: MessageCircle, modules: ['crm'] },
-            { id: 'crm-tasks', name: 'Task & Kalender', href: '/hq/sfa', icon: CalendarCheck, modules: ['crm'] },
-            { id: 'crm-forecasting', name: 'Forecasting', href: '/hq/sfa', icon: TrendingUp, modules: ['crm'] },
+            { id: 'crm-tasks', name: 'Tugas & Kalender', href: '/hq/sfa', icon: CalendarCheck, modules: ['crm'] },
+            { id: 'crm-forecasting', name: 'Peramalan', href: '/hq/sfa', icon: TrendingUp, modules: ['crm'] },
             { id: 'crm-tickets', name: 'Tiket & SLA', href: '/hq/sfa', icon: Ticket, modules: ['crm'] },
-            { id: 'crm-automation', name: 'Automasi', href: '/hq/sfa', icon: Network, modules: ['crm'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
-            { id: 'sfa-teams', name: 'Tim & Territory', href: '/hq/sfa', icon: Users, modules: ['sfa'] },
-            { id: 'sfa-visits', name: 'Kunjungan & Coverage', href: '/hq/sfa', icon: Navigation, modules: ['sfa'] },
-            { id: 'sfa-orders', name: 'Order & Quotation', href: '/hq/sfa', icon: ShoppingCart, modules: ['sfa'] },
-            { id: 'sfa-targets', name: 'Target & Achievement', href: '/hq/sfa', icon: Target, modules: ['sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
+            { id: 'crm-automation', name: 'Otomasi', href: '/hq/sfa', icon: Network, modules: ['crm'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
+            { id: 'sfa-teams', name: 'Tim & Wilayah', href: '/hq/sfa', icon: Users, modules: ['sfa'] },
+            { id: 'sfa-visits', name: 'Kunjungan & Cakupan', href: '/hq/sfa', icon: Navigation, modules: ['sfa'] },
+            { id: 'sfa-orders', name: 'Pesanan & Penawaran', href: '/hq/sfa', icon: ShoppingCart, modules: ['sfa'] },
+            { id: 'sfa-targets', name: 'Target & Pencapaian', href: '/hq/sfa', icon: Target, modules: ['sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
             { id: 'sfa-incentives', name: 'Insentif & Komisi', href: '/hq/sfa', icon: Award, modules: ['sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
             { id: 'sfa-intelligence', name: 'Merchandising & Kompetitor', href: '/hq/sfa', icon: ClipboardList, modules: ['sfa'] },
-            { id: 'sfa-approval', name: 'Survey & Approval', href: '/hq/sfa', icon: Shield, modules: ['sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
+            { id: 'sfa-approval', name: 'Survei & Persetujuan', href: '/hq/sfa', icon: Shield, modules: ['sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
             { id: 'sfa-settings', name: 'Pengaturan', href: '/hq/sfa', icon: Settings, modules: ['crm', 'sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
-            { id: 'sfa-import-export', name: 'Import / Export', href: '/hq/sfa', icon: FileSpreadsheet, modules: ['crm', 'sfa'] },
+            { id: 'sfa-import-export', name: 'Impor / Ekspor', href: '/hq/sfa', icon: FileSpreadsheet, modules: ['crm', 'sfa'] },
           ]
         },
         {
           id: 'marketing',
-          name: 'Marketing & Campaign',
+          name: 'Pemasaran & Kampanye',
           icon: Megaphone,
           modules: ['marketing'],
           roles: ['super_admin', 'owner', 'hq_admin'],
           children: [
-            { id: 'mkt-dashboard', name: 'Dashboard Marketing', href: '/hq/marketing', icon: LayoutDashboard },
-            { id: 'mkt-campaigns', name: 'Campaign', href: '/hq/marketing', icon: Megaphone },
+            { id: 'mkt-dashboard', name: 'Dasbor Pemasaran', href: '/hq/marketing', icon: LayoutDashboard },
+            { id: 'mkt-campaigns', name: 'Kampanye', href: '/hq/marketing', icon: Megaphone },
             { id: 'mkt-promotions', name: 'Promosi', href: '/hq/marketing', icon: Gift },
             { id: 'mkt-segments', name: 'Segmentasi Pelanggan', href: '/hq/marketing', icon: Users },
-            { id: 'mkt-budgets', name: 'Budget Marketing', href: '/hq/marketing', icon: DollarSign },
+            { id: 'mkt-budgets', name: 'Anggaran Pemasaran', href: '/hq/marketing', icon: DollarSign },
           ]
         }
       ]
@@ -402,7 +552,7 @@ export const hqSidebarConfig: SidebarConfig = {
       items: [
         { 
           id: 'finance-lite',
-          name: 'Keuangan Lite', 
+          name: 'Keuangan Ringkas', 
           icon: Wallet,
           modules: ['finance_lite'],
           roles: ['super_admin', 'owner', 'hq_admin', 'finance_staff'],
@@ -413,20 +563,21 @@ export const hqSidebarConfig: SidebarConfig = {
         },
         { 
           id: 'finance-pro',
-          name: 'Keuangan Pro', 
+          name: 'Keuangan Lengkap', 
           icon: Wallet,
           modules: ['finance_pro'],
           roles: ['super_admin', 'owner', 'hq_admin', 'finance_staff'],
           children: [
-            { id: 'fin-dashboard', name: 'Dashboard Keuangan', href: '/hq/finance', icon: LayoutDashboard },
-            { id: 'fin-revenue', name: 'Analisis Revenue', href: '/hq/finance/revenue', icon: TrendingUp },
+            { id: 'fin-dashboard', name: 'Dasbor Keuangan', href: '/hq/finance', icon: LayoutDashboard },
+            { id: 'fin-revenue', name: 'Analisis Pendapatan', href: '/hq/finance/revenue', icon: TrendingUp },
             { id: 'fin-expenses', name: 'Pengeluaran', href: '/hq/finance/expenses', icon: CreditCard },
             { id: 'fin-pl', name: 'Laba Rugi', href: '/hq/finance/profit-loss', icon: FileSpreadsheet },
             { id: 'fin-cashflow', name: 'Arus Kas', href: '/hq/finance/cash-flow', icon: ArrowRightLeft },
-            { id: 'fin-invoices', name: 'Invoice', href: '/hq/finance/invoices', icon: FileText },
+            { id: 'fin-invoices', name: 'Faktur', href: '/hq/finance/invoices', icon: FileText },
             { id: 'fin-accounts', name: 'Piutang & Hutang', href: '/hq/finance/accounts', icon: Receipt },
             { id: 'fin-budget', name: 'Anggaran', href: '/hq/finance/budget', icon: PiggyBank },
             { id: 'fin-tax', name: 'Pajak', href: '/hq/finance/tax', icon: Calculator },
+            { id: 'fin-ai-guardian', name: 'Penjaga AI', href: '/hq/finance/ai-guardian', icon: Brain },
           ]
         }
       ]
@@ -441,15 +592,20 @@ export const hqSidebarConfig: SidebarConfig = {
           icon: BarChart3,
           modules: ['reports'],
           children: [
+            { id: 'rep-hub', name: 'Pusat Laporan', href: '/hq/reports', icon: BarChart3 },
             { id: 'rep-sales', name: 'Laporan Penjualan', href: '/hq/reports/sales', icon: TrendingUp },
             { id: 'rep-consolidated', name: 'Laporan Konsolidasi', href: '/hq/reports/consolidated', icon: FileBarChart },
             { id: 'rep-inventory', name: 'Laporan Stok', href: '/hq/reports/inventory', icon: Package },
             { id: 'rep-finance', name: 'Laporan Keuangan', href: '/hq/reports/finance', icon: DollarSign },
+            { id: 'rep-customers', name: 'Laporan Pelanggan', href: '/hq/reports/customers', icon: Users },
+            { id: 'rep-hris', name: 'Laporan SDM', href: '/hq/reports/hris', icon: UserCheck },
+            { id: 'rep-procurement', name: 'Laporan Pengadaan', href: '/hq/reports/procurement', icon: Truck },
+            { id: 'rep-data-analysis', name: 'Olah Data & Analisis', href: '/hq/reports/data-analysis', icon: Activity },
           ]
         },
         { 
           id: 'audit',
-          name: 'Audit Log', 
+          name: 'Log Audit', 
           href: '/hq/audit-logs', 
           icon: History,
           modules: ['audit'],
@@ -463,14 +619,14 @@ export const hqSidebarConfig: SidebarConfig = {
       items: [
         {
           id: 'whatsapp',
-          name: 'WhatsApp Business',
+          name: 'WhatsApp Bisnis',
           icon: MessageCircle,
           modules: ['whatsapp_business'],
           roles: ['super_admin', 'owner', 'hq_admin'],
           children: [
-            { id: 'wa-dashboard', name: 'Dashboard WA', href: '/hq/whatsapp', icon: LayoutDashboard },
-            { id: 'wa-broadcast', name: 'Broadcast', href: '/hq/whatsapp/broadcast', icon: Bell },
-            { id: 'wa-templates', name: 'Template Pesan', href: '/hq/whatsapp/templates', icon: FileText },
+            { id: 'wa-dashboard', name: 'Dasbor WA', href: '/hq/whatsapp', icon: LayoutDashboard },
+            { id: 'wa-broadcast', name: 'Siaran', href: '/hq/whatsapp/broadcast', icon: Bell },
+            { id: 'wa-templates', name: 'Templat Pesan', href: '/hq/whatsapp/templates', icon: FileText },
             { id: 'wa-settings', name: 'Pengaturan WA', href: '/hq/whatsapp/settings', icon: Settings },
           ]
         },
@@ -481,11 +637,44 @@ export const hqSidebarConfig: SidebarConfig = {
           modules: ['marketplace_integration'],
           roles: ['super_admin', 'owner', 'hq_admin'],
           children: [
-            { id: 'mp-dashboard', name: 'Dashboard Marketplace', href: '/hq/marketplace', icon: LayoutDashboard },
-            { id: 'mp-channels', name: 'Channel Toko', href: '/hq/marketplace/channels', icon: Store },
-            { id: 'mp-products', name: 'Sync Produk', href: '/hq/marketplace/products', icon: Package },
-            { id: 'mp-orders', name: 'Order Marketplace', href: '/hq/marketplace/orders', icon: ShoppingCart },
+            { id: 'mp-dashboard', name: 'Dasbor Marketplace', href: '/hq/marketplace', icon: LayoutDashboard },
+            { id: 'mp-channels', name: 'Kanal Toko', href: '/hq/marketplace/channels', icon: Store },
+            { id: 'mp-products', name: 'Sinkron Produk', href: '/hq/marketplace/products', icon: Package },
+            { id: 'mp-orders', name: 'Pesanan Marketplace', href: '/hq/marketplace/orders', icon: ShoppingCart },
             { id: 'mp-settings', name: 'Pengaturan', href: '/hq/marketplace/settings', icon: Settings },
+          ]
+        }
+      ]
+    },
+    {
+      id: 'website-builder',
+      title: 'Website Builder',
+      items: [
+        {
+          id: 'website-builder',
+          name: 'Website Builder',
+          icon: Code2,
+          modules: ['website_builder'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'],
+          children: [
+            { id: 'wb-pages', name: 'Halaman Saya', href: '/hq/website-builder', icon: FileText },
+            { id: 'wb-editor', name: 'Buka Editor', href: '/hq/website-builder/editor', icon: PenTool },
+          ]
+        }
+      ]
+    },
+    {
+      id: 'knowledge',
+      title: 'Basis Pengetahuan',
+      items: [
+        {
+          id: 'knowledge-base',
+          name: 'Basis Pengetahuan',
+          icon: BookOpen,
+          modules: ['knowledge_base'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager', 'staff'],
+          children: [
+            { id: 'kb-index', name: 'Daftar Artikel', href: '/hq/knowledge-base', icon: BookOpen },
           ]
         }
       ]
@@ -500,11 +689,25 @@ export const hqSidebarConfig: SidebarConfig = {
           icon: Settings,
           modules: ['settings'],
           children: [
-            { id: 'set-modules', name: 'Modul Manajemen', href: '/hq/settings/modules', icon: Package },
-            { id: 'set-global', name: 'Global Settings', href: '/hq/settings', icon: Globe },
+            { id: 'set-modules', name: 'Kelola Modul', href: '/hq/settings/modules', icon: Package },
+            { id: 'set-global', name: 'Pengaturan Global', href: '/hq/settings', icon: Globe },
             { id: 'set-integrations', name: 'Integrasi Pihak Ketiga', href: '/hq/settings/integrations', icon: Plug },
             { id: 'set-taxes', name: 'Pajak & Biaya', href: '/hq/settings/taxes', icon: FileText },
             { id: 'set-notifications', name: 'Notifikasi', href: '/hq/settings/notifications', icon: Bell },
+            { id: 'set-billing', name: 'Info Tagihan', href: '/hq/billing-info', icon: CreditCard },
+          ]
+        },
+        {
+          id: 'module-management',
+          name: 'Manajemen Modul',
+          icon: Package,
+          modules: ['settings'],
+          roles: ['super_admin', 'owner', 'hq_admin'],
+          children: [
+            { id: 'mod-analytics', name: 'Analitik Modul', href: '/hq/modules/analytics', icon: BarChart3 },
+            { id: 'mod-config', name: 'Konfigurasi', href: '/hq/modules/configuration', icon: Settings },
+            { id: 'mod-features', name: 'Fitur', href: '/hq/modules/features', icon: Layers },
+            { id: 'mod-flows', name: 'Alur Kerja', href: '/hq/modules/flows', icon: Activity },
           ]
         }
       ]
@@ -541,13 +744,13 @@ export const branchSidebarConfig: SidebarConfig = {
       items: [
         { id: 'tables', name: 'Manajemen Meja', href: '/tables', icon: Utensils, modules: ['tables'] },
         { id: 'reservations', name: 'Reservasi', href: '/reservations', icon: Calendar, modules: ['reservations'] },
-        { id: 'kitchen', name: 'Management Kitchen', href: '/kitchen', icon: ChefHat, modules: ['kitchen'] },
+        { id: 'kitchen', name: 'Manajemen Dapur', href: '/kitchen', icon: ChefHat, modules: ['kitchen'] },
         { id: 'promo', name: 'Promo & Voucher', href: '/promo-voucher', icon: Ticket, modules: ['promo'] },
       ]
     },
     {
       id: 'backoffice',
-      title: 'BACKOFFICE',
+      title: 'KANTOR BELAKANG',
       items: [
         { id: 'finance', name: 'Keuangan', href: '/finance', icon: Wallet, modules: ['finance'] },
         { id: 'reports', name: 'Laporan', href: '/reports', icon: BarChart3, modules: ['reports'] },
@@ -565,7 +768,7 @@ export const adminSidebarConfig: SidebarConfig = {
   logo: {
     icon: Shield,
     title: 'Bedagang',
-    subtitle: 'Admin Panel',
+    subtitle: 'Panel Admin',
     href: '/admin/dashboard'
   },
   groups: [
@@ -573,19 +776,19 @@ export const adminSidebarConfig: SidebarConfig = {
       id: 'main',
       title: 'Utama',
       items: [
-        { id: 'dashboard', name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-        { id: 'tenants', name: 'Tenants', href: '/admin/tenants', icon: Building2 },
-        { id: 'users', name: 'Users', href: '/admin/users', icon: Users },
-        { id: 'modules', name: 'Modules', href: '/admin/modules', icon: Package },
-        { id: 'business-types', name: 'Business Types', href: '/admin/business-types', icon: Store },
+        { id: 'dashboard', name: 'Dasbor', href: '/admin/dashboard', icon: LayoutDashboard },
+        { id: 'tenants', name: 'Penyewa', href: '/admin/tenants', icon: Building2 },
+        { id: 'users', name: 'Pengguna', href: '/admin/users', icon: Users },
+        { id: 'modules', name: 'Modul', href: '/admin/modules', icon: Package },
+        { id: 'business-types', name: 'Tipe Bisnis', href: '/admin/business-types', icon: Store },
       ]
     },
     {
       id: 'system',
-      title: 'System',
+      title: 'Sistem',
       items: [
-        { id: 'logs', name: 'System Logs', href: '/admin/logs', icon: FileText },
-        { id: 'settings', name: 'Settings', href: '/admin/settings', icon: Settings },
+        { id: 'logs', name: 'Log Sistem', href: '/admin/logs', icon: FileText },
+        { id: 'settings', name: 'Pengaturan', href: '/admin/settings', icon: Settings },
       ]
     }
   ]

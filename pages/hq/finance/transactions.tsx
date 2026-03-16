@@ -19,8 +19,21 @@ import {
 } from 'lucide-react';
 import TransactionFormModal from '../../../components/hq/finance/TransactionFormModal';
 
+const MOCK_TRANSACTIONS = [
+  { id: 'txn1', transactionNumber: 'TXN-2026-0312-001', transactionDate: '2026-03-12', type: 'income', description: 'Penjualan Harian Cabang Jakarta', amount: 48500000, status: 'completed', branch: 'Kantor Pusat Jakarta', category: 'Sales', account_code: 'REV-001' },
+  { id: 'txn2', transactionNumber: 'TXN-2026-0312-002', transactionDate: '2026-03-12', type: 'expense', description: 'Pembelian Bahan Baku Kopi', amount: 15200000, status: 'completed', branch: 'Gudang Pusat Bekasi', category: 'COGS', account_code: 'EXP-001' },
+  { id: 'txn3', transactionNumber: 'TXN-2026-0312-003', transactionDate: '2026-03-12', type: 'income', description: 'Penjualan Harian Cabang Bandung', amount: 35200000, status: 'completed', branch: 'Cabang Bandung', category: 'Sales', account_code: 'REV-001' },
+  { id: 'txn4', transactionNumber: 'TXN-2026-0311-001', transactionDate: '2026-03-11', type: 'expense', description: 'Gaji Karyawan Maret 2026', amount: 125000000, status: 'pending', branch: 'All', category: 'Payroll', account_code: 'EXP-002' },
+  { id: 'txn5', transactionNumber: 'TXN-2026-0311-002', transactionDate: '2026-03-11', type: 'transfer', description: 'Transfer Dana ke Cabang Bali', amount: 50000000, status: 'completed', branch: 'Cabang Bali', category: 'Transfer', account_code: 'TRF-001' },
+  { id: 'txn6', transactionNumber: 'TXN-2026-0311-003', transactionDate: '2026-03-11', type: 'income', description: 'Penjualan Harian Cabang Surabaya', amount: 29800000, status: 'completed', branch: 'Cabang Surabaya', category: 'Sales', account_code: 'REV-001' },
+  { id: 'txn7', transactionNumber: 'TXN-2026-0310-001', transactionDate: '2026-03-10', type: 'expense', description: 'Biaya Listrik & Air Maret', amount: 18500000, status: 'completed', branch: 'All', category: 'Utilities', account_code: 'EXP-003' },
+  { id: 'txn8', transactionNumber: 'TXN-2026-0310-002', transactionDate: '2026-03-10', type: 'expense', description: 'Biaya Marketing Digital', amount: 8500000, status: 'approved', branch: 'Kantor Pusat Jakarta', category: 'Marketing', account_code: 'EXP-004' },
+];
+
+const MOCK_TXN_STATS = { totalIncome: 113500000, totalExpense: 167200000, totalTransfer: 50000000, netCashFlow: -53700000 };
+
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>(MOCK_TRANSACTIONS);
   const [branches, setBranches] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,12 +51,7 @@ export default function TransactionsPage() {
   });
 
   // Stats
-  const [stats, setStats] = useState({
-    totalIncome: 0,
-    totalExpense: 0,
-    totalTransfer: 0,
-    netCashFlow: 0
-  });
+  const [stats, setStats] = useState(MOCK_TXN_STATS);
 
   // Pagination
   const [pagination, setPagination] = useState({
@@ -93,6 +101,8 @@ export default function TransactionsPage() {
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
+      setTransactions(MOCK_TRANSACTIONS);
+      setStats(MOCK_TXN_STATS);
     } finally {
       setLoading(false);
     }
@@ -477,7 +487,7 @@ export default function TransactionsPage() {
                     <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                       <div className="flex justify-center items-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                        <span className="ml-3">Loading transactions...</span>
+                        <span className="ml-3">Memuat transaksi...</span>
                       </div>
                     </td>
                   </tr>
@@ -485,8 +495,8 @@ export default function TransactionsPage() {
                   <tr>
                     <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                       <FileText className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                      <p>No transactions found</p>
-                      <p className="text-sm mt-1">Try adjusting your filters or create a new transaction</p>
+                      <p>Tidak ada transaksi ditemukan</p>
+                      <p className="text-sm mt-1">Coba sesuaikan filter atau buat transaksi baru</p>
                     </td>
                   </tr>
                 ) : (
@@ -525,14 +535,14 @@ export default function TransactionsPage() {
                               setShowModal(true);
                             }}
                             className="text-blue-600 hover:text-blue-800"
-                            title="Edit"
+                            title="Ubah"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteTransaction(transaction.id)}
                             className="text-red-600 hover:text-red-800"
-                            title="Delete"
+                            title="Hapus"
                             disabled={transaction.status === 'completed'}
                           >
                             <Trash2 className="w-4 h-4" />

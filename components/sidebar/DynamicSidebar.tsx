@@ -165,7 +165,7 @@ export default function DynamicSidebar({
         {/* Coming soon badge */}
         {!sidebarCollapsed && item.comingSoon && (
           <span className="ml-auto flex-shrink-0 px-1.5 py-0.5 text-[10px] font-medium text-gray-400 bg-gray-100 rounded-full">
-            Soon
+            Segera
           </span>
         )}
 
@@ -282,7 +282,7 @@ export default function DynamicSidebar({
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900 truncate leading-tight">
-                  {session?.user?.name || 'User'}
+                  {session?.user?.name || 'Pengguna'}
                 </p>
                 <p className="text-xs text-gray-400 truncate leading-tight">
                   {session?.user?.email || ''}
@@ -319,7 +319,7 @@ export default function DynamicSidebar({
         className={`hidden lg:flex fixed top-20 z-50 items-center justify-center w-8 h-8 bg-white border border-gray-200 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 ${
           sidebarCollapsed ? 'left-16' : 'left-[17rem]'
         }`}
-        title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+        title={sidebarCollapsed ? 'Perluas Sidebar' : 'Kecilkan Sidebar'}
       >
         {sidebarCollapsed ? (
           <ChevronRight className="w-4 h-4 text-gray-600" />

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
 
 let FinanceTransaction: any, FinanceAccount: any;
 try {
@@ -70,6 +71,8 @@ export default withHQAuth(handler, { module: 'finance_pro' });
 async function getCashFlow(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { period = 'month' } = req.query;
+    const ctx = getTenantContext(req);
+    const tenantWhere: any = ctx.tenantId ? { tenantId: ctx.tenantId } : {};
 
     const now = new Date();
     let startDate = new Date();
@@ -86,12 +89,12 @@ async function getCashFlow(req: NextApiRequest, res: NextApiResponse) {
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('DB query timeout')), 5000));
 
         const dbQuery = async () => {
-          const where: any = { transactionDate: { [Op.between]: [startDate, now] }, status: 'completed' };
+          const where: any = { ...tenantWhere, transactionDate: { [Op.between]: [startDate, now] }, status: 'completed' };
           const incomeTotal = await FinanceTransaction.sum('amount', { where: { ...where, type: 'income' } }) || 0;
           const expenseTotal = await FinanceTransaction.sum('amount', { where: { ...where, type: 'expense' } }) || 0;
 
           const recentItems = await FinanceTransaction.findAll({
-            where: { transactionDate: { [Op.between]: [startDate, now] } },
+            where: { ...tenantWhere, transactionDate: { [Op.between]: [startDate, now] } },
             order: [['transactionDate', 'DESC']], limit: 20
           });
 

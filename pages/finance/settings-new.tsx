@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import FinanceLayout from "@/components/layouts/finance-layout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,6 +59,7 @@ import {
 const FinanceSettingsNewPage: NextPage = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch data using hooks

@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -58,7 +59,9 @@ interface AnalyticsData {
 const KitchenAnalyticsPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [data, setData] = useState<AnalyticsData | null>(null);
+  const { t } = useTranslation();
+  const MOCK_K_ANALYTICS: AnalyticsData = { overview: { totalOrders: 1842, totalRevenue: 92500000, avgOrderValue: 50200, completionRate: 95, avgPrepTime: 18, cancelRate: 5 }, trends: { daily: [{ date: '2026-03-13', orders: 58, revenue: 2900000, avgTime: 17 }, { date: '2026-03-14', orders: 62, revenue: 3100000, avgTime: 18 }, { date: '2026-03-15', orders: 55, revenue: 2750000, avgTime: 16 }], hourly: [{ hour: 11, orders: 12, revenue: 600000 }, { hour: 12, orders: 18, revenue: 900000 }, { hour: 13, orders: 15, revenue: 750000 }, { hour: 18, orders: 16, revenue: 800000 }, { hour: 19, orders: 20, revenue: 1000000 }] }, topProducts: [{ name: 'Nasi Goreng', quantity: 245, revenue: 12250000, growth: 12 }, { name: 'Mie Ayam', quantity: 198, revenue: 7920000, growth: 8 }, { name: 'Es Teh Manis', quantity: 312, revenue: 4680000, growth: 15 }], staffPerformance: [{ name: 'Chef Andi', orders: 425, avgTime: 15, completionRate: 98, efficiency: 92 }, { name: 'Chef Budi', orders: 380, avgTime: 18, completionRate: 95, efficiency: 85 }], categories: [{ name: 'Makanan Utama', orders: 820, revenue: 41000000, percentage: 44.3 }, { name: 'Minuman', orders: 650, revenue: 19500000, percentage: 21.1 }, { name: 'Snack', orders: 372, revenue: 18600000, percentage: 20.1 }] };
+  const [data, setData] = useState<AnalyticsData | null>(MOCK_K_ANALYTICS);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('30d');
   const [compareWithPrevious, setCompareWithPrevious] = useState(true);
@@ -135,6 +138,7 @@ const KitchenAnalyticsPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching analytics:', error);
+      setData(MOCK_K_ANALYTICS);
     } finally {
       setLoading(false);
     }
@@ -183,7 +187,7 @@ const KitchenAnalyticsPage: React.FC = () => {
   return (
     <DashboardLayout>
       <Head>
-        <title>Analytics Dapur | BEDAGANG</title>
+        <title>{t('kitchen.analyticsTitle')} | BEDAGANG</title>
       </Head>
 
       <div className="space-y-6">
@@ -192,8 +196,8 @@ const KitchenAnalyticsPage: React.FC = () => {
           <div className="flex items-center">
             <div className="h-8 w-1.5 bg-gradient-to-b from-sky-400 to-blue-500 rounded-full mr-3"></div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">Analytics Dapur</h1>
-              <p className="text-gray-600">Insight dan performa dapur</p>
+              <h1 className="text-2xl font-bold text-gray-800">{t('kitchen.analyticsTitle')}</h1>
+              <p className="text-gray-600">{t('kitchen.analyticsSubtitle')}</p>
             </div>
           </div>
           

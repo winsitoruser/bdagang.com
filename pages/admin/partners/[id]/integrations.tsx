@@ -421,7 +421,7 @@ export default function PartnerIntegrations() {
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-bold text-gray-900">
-                  {editingIntegration ? 'Edit Integration' : 'Add Integration'}
+                  {editingIntegration ? 'Ubah Integrasi' : 'Tambah Integrasi'}
                 </h2>
                 <button
                   onClick={() => {
@@ -564,14 +564,14 @@ export default function PartnerIntegrations() {
                   }}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  Cancel
+                  Batal
                 </button>
                 <button
                   type="submit"
                   className="flex items-center space-x-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Save className="h-4 w-4" />
-                  <span>{editingIntegration ? 'Update' : 'Create'} Integration</span>
+                  <span>{editingIntegration ? 'Perbarui' : 'Buat'} Integrasi</span>
                 </button>
               </div>
             </form>

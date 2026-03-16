@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
+import { useTranslation } from '@/lib/i18n';
 import { useSession, signOut } from 'next-auth/react';
 import Head from 'next/head';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -610,6 +611,7 @@ const BUSINESS_TYPES: BusinessType[] = [
 
 export default function WelcomeOnboarding() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: session } = useSession();
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState('');

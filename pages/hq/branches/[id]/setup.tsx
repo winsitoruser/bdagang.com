@@ -73,13 +73,26 @@ export default function BranchSetupWizard() {
   const { id } = router.query;
   const branchId = id as string;
 
+  const MOCK_SETUP_STEPS: SetupStep[] = [
+    { step: 1, name: 'Informasi Dasar', key: 'basic', description: 'Jam operasional dan info dasar', isCompleted: true, isOptional: false },
+    { step: 2, name: 'Modul Aktif', key: 'modules', description: 'Pilih modul yang akan diaktifkan', isCompleted: true, isOptional: false },
+    { step: 3, name: 'Pengguna', key: 'users', description: 'Tambah pengguna cabang', isCompleted: false, isOptional: false },
+    { step: 4, name: 'Inventori', key: 'inventory', description: 'Pengaturan stok awal', isCompleted: false, isOptional: false },
+    { step: 5, name: 'Pembayaran', key: 'payment', description: 'Metode pembayaran', isCompleted: false, isOptional: false },
+    { step: 6, name: 'Printer', key: 'printer', description: 'Konfigurasi printer', isCompleted: false, isOptional: true },
+  ];
+  const MOCK_MODULES: ModuleItem[] = [
+    { code: 'pos', name: 'Point of Sale', description: 'Kasir & transaksi', icon: 'ShoppingCart', isCore: true, isEnabled: true },
+    { code: 'inventory', name: 'Inventory', description: 'Manajemen stok', icon: 'Package', isCore: true, isEnabled: true },
+    { code: 'kitchen', name: 'Kitchen Display', description: 'Tampilan dapur', icon: 'ChefHat', isCore: false, isEnabled: false },
+  ];
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [steps, setSteps] = useState<SetupStep[]>([]);
-  const [progress, setProgress] = useState(0);
-  const [branchInfo, setBranchInfo] = useState<BranchInfo | null>(null);
+  const [steps, setSteps] = useState<SetupStep[]>(MOCK_SETUP_STEPS);
+  const [progress, setProgress] = useState(33);
+  const [branchInfo, setBranchInfo] = useState<BranchInfo | null>({ id: 'b1', name: 'Cabang Baru', code: 'BR-NEW', type: 'standard' });
   const [initStatus, setInitStatus] = useState<{
     isFullyInitialized: boolean;
     services: Record<string, { initialized: boolean; count?: number }>;
@@ -97,7 +110,7 @@ export default function BranchSetupWizard() {
   ]);
 
   // Step 2: Modules
-  const [modules, setModules] = useState<ModuleItem[]>([]);
+  const [modules, setModules] = useState<ModuleItem[]>(MOCK_MODULES);
 
   // Step 3: Users
   const [users, setUsers] = useState([
@@ -147,6 +160,8 @@ export default function BranchSetupWizard() {
       }
     } catch (error) {
       console.error('Error fetching setup status:', error);
+      setSteps(MOCK_SETUP_STEPS);
+      setProgress(33);
     } finally {
       setLoading(false);
     }
@@ -176,6 +191,7 @@ export default function BranchSetupWizard() {
       }
     } catch (error) {
       console.error('Error fetching branch info:', error);
+      setBranchInfo({ id: branchId, name: 'Cabang Baru', code: 'BR-NEW', type: 'standard' });
     }
   };
 
@@ -188,6 +204,7 @@ export default function BranchSetupWizard() {
       }
     } catch (error) {
       console.error('Error fetching modules:', error);
+      setModules(MOCK_MODULES);
     }
   };
 
@@ -711,7 +728,7 @@ export default function BranchSetupWizard() {
                 Setup Cabang Baru
               </h1>
               <p className="text-gray-500">
-                {branchInfo?.name || 'Loading...'} • {branchInfo?.code || ''}
+                {branchInfo?.name || 'Memuat...'} • {branchInfo?.code || ''}
               </p>
             </div>
           </div>

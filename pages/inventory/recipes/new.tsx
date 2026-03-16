@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ interface RecipeIngredient {
 
 const NewRecipePage: React.FC = () => {
   const router = useRouter();
+  const { t, formatCurrency } = useTranslation();
   const { toast } = useToast();
   
   // Form state
@@ -153,13 +155,6 @@ const NewRecipePage: React.FC = () => {
     return getTotalCost() / batchSize;
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const handleSave = async () => {
     if (!recipeName || !recipeSku || ingredients.length === 0) {
@@ -240,7 +235,7 @@ const NewRecipePage: React.FC = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
+            <p className="text-gray-600">Memuat...</p>
           </div>
         </div>
       </DashboardLayout>

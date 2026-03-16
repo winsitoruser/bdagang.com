@@ -3,12 +3,14 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import PriceChangeHistory from '@/components/inventory/PriceChangeHistory';
 import { FaHistory } from 'react-icons/fa';
 
 const PriceHistoryPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
 
   React.useEffect(() => {
     if (status === "unauthenticated") {
@@ -17,13 +19,13 @@ const PriceHistoryPage: React.FC = () => {
   }, [session, status, router]);
 
   if (status === "loading") {
-    return <div>Loading...</div>;
+    return <div>{t('common.loading')}</div>;
   }
 
   return (
     <DashboardLayout>
       <Head>
-        <title>Riwayat Perubahan Harga | BEDAGANG Cloud POS</title>
+        <title>{t('inventory.priceHistory.pageTitle')}</title>
       </Head>
 
       <PriceChangeHistory showAll={true} />
