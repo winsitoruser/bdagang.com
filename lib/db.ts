@@ -78,3 +78,15 @@ export default pool;
 
 // Export sequelize separately for legacy code
 export const sequelize = sequelizeInstance;
+
+/**
+ * Query helper function for PostgreSQL
+ */
+export async function query(text: string, params?: any[]) {
+  const client = await pool.connect();
+  try {
+    return await client.query(text, params);
+  } finally {
+    client.release();
+  }
+}

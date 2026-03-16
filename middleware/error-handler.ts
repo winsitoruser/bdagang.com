@@ -83,6 +83,11 @@ export function handleApiError(
 }
 
 /**
+ * Alias for handleApiError for backwards compatibility
+ */
+export const errorHandler = handleApiError;
+
+/**
  * Async error wrapper for API handlers
  */
 export function asyncHandler(

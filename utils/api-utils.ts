@@ -78,26 +78,26 @@ export function withApiHandler(handler: ApiHandler) {
 /**
  * Extract tenant ID from request
  */
-function extractTenantId(req: NextApiRequest): string | null {
+export function extractTenantId(req: NextApiRequest): string | null {
   // Try to get from headers
   const tenantId = req.headers['x-tenant-id'] as string;
   if (tenantId) return tenantId;
-  
+
   // Try to get from cookies
   if (req.cookies.tenantId) return req.cookies.tenantId;
-  
-  // Try to get from session 
+
+  // Try to get from session
   // (assuming session is stored in req.session, may need adjustment based on your auth setup)
   const session = (req as any).session;
   if (session?.tenantId) return session.tenantId;
-  
+
   return null;
 }
 
 /**
  * Extract user info from request
  */
-function extractUserInfo(req: NextApiRequest): { userId: string | null; userRole: string | null } {
+export function extractUserInfo(req: NextApiRequest): { userId: string | null; userRole: string | null } {
   // Default values
   let userId: string | null = null;
   let userRole: string | null = null;

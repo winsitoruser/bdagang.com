@@ -3,8 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { logger } from '@/server/monitoring';
 import { PaginatedResponse } from '@/types';
-import { Rack } from '@/models/inventory/Rack';
-import { Warehouse } from '@/models/inventory/Warehouse';
+import Rack from '@/models/inventory/Rack';
+import Warehouse from '@/models/inventory/Warehouse';
 import { v4 as uuidv4 } from 'uuid';
 
 const apiLogger = logger.child({ service: 'racks-api' });

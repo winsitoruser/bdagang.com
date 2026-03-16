@@ -7,6 +7,24 @@ export interface ApiResponse<T> {
 }
 
 /**
+ * Timeout wrapper for API requests
+ * @param promise Promise to wrap with timeout
+ * @param ms Timeout in milliseconds
+ * @returns Promise result or throws timeout error
+ */
+export async function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number = 5000
+): Promise<T> {
+  const timeout = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Request timed out after ${ms}ms`));
+    }, ms);
+  });
+  return Promise.race([promise, timeout]);
+}
+
+/**
  * Standardized error handling for API requests
  * @param response Fetch response object
  * @param showToast Whether to show toast notifications (not used in server-side)

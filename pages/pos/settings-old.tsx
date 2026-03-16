@@ -1184,3 +1184,13 @@
 // export default dynamic(() => Promise.resolve(SettingsPage), {
 //   ssr: false
 // });
+
+// Temporary placeholder component to prevent build errors
+export default function OldSettingsPlaceholder() {
+  return (
+    <div className="p-4">
+      <h1 className="text-xl font-bold">POS Settings</h1>
+      <p className="mt-2 text-gray-600">This page is under maintenance. Please use the new settings page.</p>
+    </div>
+  );
+}
