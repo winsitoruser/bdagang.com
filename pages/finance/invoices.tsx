@@ -180,7 +180,7 @@ const getInventoryStatusInfo = (invoice: Invoice) => {
 
 // Fungsi untuk format Rp currency
 const formatCurrency = (amount: number) => {
-  return `Rp${amount.toLocaleString('id-ID')}`;
+  return `Rp${(amount ?? 0).toLocaleString('id-ID')}`;
 };
 
 const InvoicesPage: NextPage = () => {
@@ -1096,9 +1096,9 @@ const InvoicesPage: NextPage = () => {
                               <TableRow key={item.id} className="hover:bg-sky-50/50">
                                 <TableCell className="font-medium">{index + 1}</TableCell>
                                 <TableCell>{item.product}</TableCell>
-                                <TableCell className="text-right">{item.quantity.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-                                <TableCell className="text-right font-medium">{formatCurrency(item.total)}</TableCell>
+                                <TableCell className="text-right">{(item.quantity ?? 0).toLocaleString()}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(item.price ?? 0)}</TableCell>
+                                <TableCell className="text-right font-medium">{formatCurrency(item.total ?? 0)}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>

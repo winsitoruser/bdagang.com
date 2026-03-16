@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   try {
     // Import adapter functions
-    const { getProfitLossReport } = require('../../../../server/sequelize/adapters/finance-adapter');
+    const { getProfitLossReport } = require('../../../server/sequelize/adapters/finance-adapter');
     
     // Handle berdasarkan HTTP method
     if (req.method === 'GET') {

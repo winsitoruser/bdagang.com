@@ -14,6 +14,3 @@ export interface Rack {
 }
 
 export default Rack;
-
-// Named export for compatibility
-export { Rack as default };

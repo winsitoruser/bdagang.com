@@ -244,7 +244,7 @@ const HardwareSettingsPage: React.FC = () => {
           // For Bluetooth, we need to handle printing on the client side
           if (confirm('Siap untuk mencetak test struk via Bluetooth? Pastikan printer sudah terhubung.')) {
             // Import the Bluetooth printer service dynamically
-            const BluetoothPrinter = (await import('../../../lib/bluetooth-printer')).default;
+            const BluetoothPrinter = (await import('../../lib/bluetooth-printer')).default;
             const btPrinter = new BluetoothPrinter();
             
             try {

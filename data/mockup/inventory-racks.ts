@@ -33,3 +33,10 @@ export const mockRacks = [
 ];
 
 export default mockRacks;
+
+/**
+ * Create mock racks data
+ */
+export function createMockRacks() {
+  return mockRacks;
+}

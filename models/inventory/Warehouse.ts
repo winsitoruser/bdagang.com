@@ -12,6 +12,3 @@ export interface Warehouse {
 }
 
 export default Warehouse;
-
-// Named export for compatibility
-export { Warehouse as default };
