@@ -20,7 +20,7 @@ COPY . .
 # Next.js standalone requires NODE_ENV production
 ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=4096"
-ENV NEXT_PRIVATE_MAX_WORKER_THREADS=2
+ENV NEXT_PRIVATE_MAX_WORKER_THREADS=1
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
