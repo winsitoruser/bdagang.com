@@ -31,14 +31,7 @@ import {
   UserRole,
   ModuleCode
 } from '@/config/sidebar.config';
-import { TranslationProvider } from '@/components/providers/TranslationProvider';
 import { useTranslation, Language, Currency, languageNames, languageFlags, currencySymbols, currencyNames, currencyFlags } from '@/lib/i18n';
-import { hqTranslations } from '@/lib/translations/hq';
-import { modulePageTranslations, mergeTranslations } from '@/lib/translations/hq-module-pages';
-import { moduleDetailTranslations } from '@/lib/translations/hq-module-detail';
-import { moduleArticleTranslations } from '@/lib/translations/hq-module-articles';
-
-const mergedHqTranslations = mergeTranslations(mergeTranslations(mergeTranslations(hqTranslations, modulePageTranslations), moduleDetailTranslations), moduleArticleTranslations);
 
 interface HQLayoutProps {
   children: React.ReactNode;
@@ -617,9 +610,5 @@ function HQLayoutContent({ children, title, subtitle, noPadding }: HQLayoutProps
 }
 
 export default function HQLayout(props: HQLayoutProps) {
-  return (
-    <TranslationProvider translations={mergedHqTranslations}>
-      <HQLayoutContent {...props} />
-    </TranslationProvider>
-  );
+  return <HQLayoutContent {...props} />;
 }

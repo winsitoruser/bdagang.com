@@ -244,7 +244,7 @@ export default function ExportImportPage() {
     </div>
   );
 
-  const DT = ({ cols, data, del }: { cols: { k: string; l: string; r?: (v: any, row: any) => React.ReactNode }[]; data: any[]; del?: string }) => (
+  const DT = ({ cols, data, del, t }: { cols: { k: string; l: string; r?: (v: any, row: any) => React.ReactNode }[]; data: any[]; del?: string; t: (key: string, params?: Record<string, string | number>) => string }) => (
     <div className="bg-white rounded-xl shadow-sm border overflow-x-auto"><table className="w-full text-sm"><thead className="bg-gray-50"><tr>{cols.map(c => <th key={c.k} className="px-4 py-3 text-left font-medium text-gray-600">{c.l}</th>)}{del && <th className="px-4 py-3 text-center font-medium text-gray-600">{t('exportImport.colActions')}</th>}</tr></thead><tbody className="divide-y">{data.map((row, i) => (<tr key={row.id || i} className="hover:bg-gray-50">{cols.map(c => <td key={c.k} className="px-4 py-3">{c.r ? c.r(row[c.k], row) : (row[c.k] ?? '-')}</td>)}{del && <td className="px-4 py-3 text-center"><button onClick={() => handleDelete(del, row.id)} className="p-1.5 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-400" /></button></td>}</tr>))}{data.length === 0 && <tr><td colSpan={cols.length + (del ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">{t('exportImport.noTableData')}</td></tr>}</tbody></table></div>
   );
 
@@ -534,7 +534,7 @@ export default function ExportImportPage() {
 
             {/* Row 7: Recent Shipments Table */}
             <ChartCard title={t('exportImport.recentShipmentsTitle')} subtitle={t('exportImport.recentShipmentsSub')}>
-              <DT cols={[
+              <DT t={t} cols={[
                 { k: 'shipment_number', l: 'No.', r: v => <span className="font-mono text-xs font-semibold text-blue-600">{v}</span> },
                 { k: 'trade_type', l: t('exportImport.colType'), r: v => <TBadge type={v} t={t} /> },
                 { k: 'title', l: t('exportImport.colShipment'), r: (v, r) => <><p className="font-medium text-gray-800">{v}</p><p className="text-xs text-gray-500">{r.partner_name || '-'}</p></> },
@@ -577,7 +577,7 @@ export default function ExportImportPage() {
 
           {activeTab === 'shipments' && (<div className="space-y-4">
             <Toolbar ph={t('exportImport.searchShipment')} showTT sts={[{v:'draft',l:t('exportImport.statusDraft')},{v:'booked',l:t('exportImport.statusBooked')},{v:'in_transit',l:t('exportImport.statusInTransit')},{v:'customs_clearance',l:t('exportImport.statusCustomsClearance')},{v:'delivered',l:t('exportImport.statusDelivered')},{v:'completed',l:t('exportImport.statusCompleted')}]} label={t('exportImport.createShipment')} />
-            <DT cols={[
+            <DT t={t} cols={[
               { k: 'shipment_number', l: 'No.', r: v => <span className="font-mono text-xs font-semibold text-blue-600">{v}</span> },
               { k: 'trade_type', l: t('exportImport.colType'), r: v => <TBadge type={v} t={t} /> },
               { k: 'title', l: t('exportImport.colShipment'), r: (v, r) => <><p className="font-medium">{v}</p><p className="text-xs text-gray-500">{r.partner_name || '-'}</p></> },
@@ -591,7 +591,7 @@ export default function ExportImportPage() {
 
           {activeTab === 'customs' && (<div className="space-y-4">
             <Toolbar ph={t('exportImport.searchDeclaration')} sts={[{v:'pending',l:t('exportImport.statusPending')},{v:'submitted',l:t('exportImport.statusSubmitted')},{v:'cleared',l:t('exportImport.statusCleared')},{v:'red_lane',l:t('exportImport.statusRedLane')}]} label={t('exportImport.addDeclaration')} />
-            <DT cols={[
+            <DT t={t} cols={[
               { k: 'declaration_number', l: t('exportImport.colDeclarationNo'), r: v => <span className="font-mono text-xs">{v || '-'}</span> },
               { k: 'declaration_type', l: t('exportImport.colType'), r: v => <span className={`px-2 py-1 rounded text-xs font-bold ${v === 'PEB' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{v}</span> },
               { k: 'shipment_number', l: t('exportImport.colShipment'), r: v => <span className="font-mono text-xs">{v}</span> },
@@ -605,7 +605,7 @@ export default function ExportImportPage() {
 
           {activeTab === 'lcs' && (<div className="space-y-4">
             <Toolbar ph={t('exportImport.searchLc')} sts={[{v:'draft',l:t('exportImport.statusDraft')},{v:'issued',l:t('exportImport.statusIssued')},{v:'presented',l:t('exportImport.statusPresented')},{v:'paid',l:t('exportImport.statusPaid')},{v:'expired',l:t('exportImport.statusExpired')}]} label={t('exportImport.createLc')} />
-            <DT cols={[
+            <DT t={t} cols={[
               { k: 'lc_number', l: t('exportImport.colLcNo'), r: v => <span className="font-mono text-xs">{v}</span> },
               { k: 'lc_type', l: t('exportImport.colType'), r: v => <span className="capitalize text-xs">{v}</span> },
               { k: 'status', l: t('exportImport.colStatus'), r: v => <Badge value={v} /> },
@@ -618,7 +618,7 @@ export default function ExportImportPage() {
 
           {activeTab === 'containers' && (<div className="space-y-4">
             <Toolbar ph={t('exportImport.searchContainer')} sts={[{v:'empty',l:t('exportImport.statusEmpty')},{v:'loaded',l:t('exportImport.statusLoaded')},{v:'in_transit',l:t('exportImport.statusInTransit')}]} label={t('exportImport.addContainer')} />
-            <DT cols={[
+            <DT t={t} cols={[
               { k: 'container_number', l: t('exportImport.colContainerNo'), r: v => <span className="font-mono text-xs font-bold">{v}</span> },
               { k: 'container_type', l: t('exportImport.colType'), r: v => <span className="font-mono text-xs">{v}</span> },
               { k: 'shipment_number', l: t('exportImport.colShipment'), r: v => <span className="font-mono text-xs">{v}</span> },
@@ -632,7 +632,7 @@ export default function ExportImportPage() {
 
           {activeTab === 'documents' && (<div className="space-y-4">
             <Toolbar ph={t('exportImport.searchDocument')} sts={[{v:'draft',l:t('exportImport.statusDraft')},{v:'issued',l:t('exportImport.statusIssued')},{v:'verified',l:t('exportImport.statusVerified')}]} label={t('exportImport.uploadDocument')} />
-            <DT cols={[
+            <DT t={t} cols={[
               { k: 'document_type', l: t('exportImport.colType'), r: v => <span className="capitalize font-medium">{(v || '').replace(/_/g, ' ')}</span> },
               { k: 'document_number', l: t('exportImport.colNumber'), r: v => v || '-' },
               { k: 'shipment_number', l: t('exportImport.colShipment'), r: v => <span className="font-mono text-xs">{v}</span> },
@@ -645,7 +645,7 @@ export default function ExportImportPage() {
 
           {activeTab === 'partners' && (<div className="space-y-4">
             <Toolbar ph={t('exportImport.searchPartner')} sts={[{v:'active',l:t('exportImport.statusActive')},{v:'inactive',l:t('exportImport.statusInactive')}]} label={t('exportImport.addPartner')} />
-            <DT cols={[
+            <DT t={t} cols={[
               { k: 'partner_code', l: t('exportImport.colCode'), r: v => <span className="font-mono text-xs">{v}</span> },
               { k: 'name', l: t('exportImport.colName'), r: v => <span className="font-medium">{v}</span> },
               { k: 'partner_type', l: t('exportImport.colType'), r: v => <span className="capitalize">{(v || '').replace(/_/g, ' ')}</span> },
@@ -658,7 +658,7 @@ export default function ExportImportPage() {
 
           {activeTab === 'costs' && (<div className="space-y-4">
             <Toolbar ph={t('exportImport.searchCost')} sts={[{v:'pending',l:t('exportImport.statusPending')},{v:'approved',l:t('exportImport.statusApproved')},{v:'paid',l:t('exportImport.statusPaid')}]} label={t('exportImport.addCost')} />
-            <DT cols={[
+            <DT t={t} cols={[
               { k: 'cost_category', l: t('exportImport.colCategory'), r: v => <span className="capitalize font-medium">{(v || '').replace(/_/g, ' ')}</span> },
               { k: 'description', l: t('exportImport.colDescription'), r: v => v || '-' },
               { k: 'shipment_number', l: t('exportImport.colShipment'), r: v => <span className="font-mono text-xs">{v}</span> },
@@ -671,7 +671,7 @@ export default function ExportImportPage() {
 
           {activeTab === 'hs-codes' && (<div className="space-y-4">
             <Toolbar ph={t('exportImport.searchHsCode')} sts={[]} label={t('exportImport.addHsCode')} />
-            <DT cols={[
+            <DT t={t} cols={[
               { k: 'hs_code', l: t('exportImport.formHsCode'), r: v => <span className="font-mono font-bold">{v}</span> },
               { k: 'description', l: t('exportImport.colDescription'), r: v => <span className="text-xs">{(v || '').substring(0, 80)}</span> },
               { k: 'chapter', l: t('exportImport.colChapter'), r: v => v || '-' },
