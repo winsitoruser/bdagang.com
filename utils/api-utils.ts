@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { ApiError, errorHandler } from '@/middleware/error-handler';
+import { ApiError, asyncHandler } from '@/middleware/error-handler';
 import { DatabaseService } from '@/services/database-service';
 import sequelize from '@/lib/db';
 
@@ -26,7 +26,7 @@ export interface ApiContext {
  * Wraps an API handler with standard error handling, validation, and database access
  */
 export function withApiHandler(handler: ApiHandler) {
-  return errorHandler(async (req: NextApiRequest, res: NextApiResponse) => {
+  return asyncHandler(async (req: NextApiRequest, res: NextApiResponse) => {
     // Initialize database service if not already initialized
     const dbService = DatabaseService.getInstance();
     
