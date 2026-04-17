@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import { useTranslation } from '@/lib/i18n';
+import { CanAccess, PageGuard } from '../../../components/permissions';
 import TransactionFormModal from '../../../components/hq/finance/TransactionFormModal';
 import Link from 'next/link';
 import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
@@ -337,6 +338,10 @@ export default function ExpenseManagement() {
     : expenses.filter(e => e.status === filterStatus);
 
   return (
+    <PageGuard
+      anyPermission={['finance.view', 'finance.*', 'finance_expenses.view']}
+      title="Manajemen Pengeluaran"
+    >
     <HQLayout>
       <div className="space-y-6">
         {/* Header */}
@@ -358,13 +363,15 @@ export default function ExpenseManagement() {
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              {t('finance.add')} {t('finance.expenses')}
-            </button>
+            <CanAccess anyPermission={['finance_expenses.create', 'finance.*']}>
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                {t('finance.add')} {t('finance.expenses')}
+              </button>
+            </CanAccess>
             
             {/* Transaction Form Modal */}
             <TransactionFormModal
@@ -646,5 +653,6 @@ export default function ExpenseManagement() {
 
       </div>
     </HQLayout>
+    </PageGuard>
   );
 }

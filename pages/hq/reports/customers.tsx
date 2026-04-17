@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area
+  PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area, ComposedChart
 } from 'recharts';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
@@ -185,7 +185,7 @@ export default function CustomerReport() {
             <h3 className="font-semibold text-gray-900 mb-4">Trend Akuisisi Pelanggan</h3>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={acquisitionTrend}>
+                <ComposedChart data={acquisitionTrend}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
@@ -193,8 +193,8 @@ export default function CustomerReport() {
                   <Legend />
                   <Area type="monotone" dataKey="newCustomers" name="Pelanggan Baru" stroke="#10B981" fill="#10B981" fillOpacity={0.2} />
                   <Area type="monotone" dataKey="churnedCustomers" name="Churned" stroke="#EF4444" fill="#EF4444" fillOpacity={0.2} />
-                  <Line type="monotone" dataKey="netGrowth" name="Net Growth" stroke="#3B82F6" strokeWidth={2} />
-                </AreaChart>
+                  <Line type="monotone" dataKey="netGrowth" name="Net Growth" stroke="#3B82F6" strokeWidth={2} dot={{ r: 3 }} />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
           </div>

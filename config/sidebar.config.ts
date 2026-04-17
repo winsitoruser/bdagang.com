@@ -79,6 +79,7 @@ import {
   Smartphone,
   QrCode,
   Percent,
+  Sparkles,
   type LucideIcon
 } from 'lucide-react';
 
@@ -308,11 +309,14 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'fleet-vehicles', name: 'Kendaraan', href: '/hq/fleet/vehicles', icon: Car },
             { id: 'fleet-drivers', name: 'Pengemudi', href: '/hq/fleet/drivers', icon: Users },
             { id: 'fleet-tracking', name: 'Pelacakan', href: '/hq/fleet/tracking', icon: Navigation },
+            { id: 'fleet-live', name: 'Live Tracking', href: '/hq/fleet/live', icon: Zap },
             { id: 'fleet-maintenance', name: 'Pemeliharaan', href: '/hq/fleet/maintenance', icon: Wrench },
             { id: 'fleet-fuel', name: 'BBM', href: '/hq/fleet/fuel', icon: Fuel },
             { id: 'fleet-costs', name: 'Biaya', href: '/hq/fleet/costs', icon: DollarSign },
+            { id: 'fleet-expenses', name: 'Expense Driver', href: '/hq/fleet/expenses', icon: Wallet },
             { id: 'fleet-routes', name: 'Rute', href: '/hq/fleet/routes', icon: MapPin },
             { id: 'fleet-kpi', name: 'KPI Armada', href: '/hq/fleet/kpi', icon: Target },
+            { id: 'fleet-leaderboard', name: 'Leaderboard Driver', href: '/hq/fleet/leaderboard', icon: Award },
           ]
         },
         {
@@ -468,6 +472,7 @@ export const hqSidebarConfig: SidebarConfig = {
           children: [
             { id: 'user-all', name: 'Semua Pengguna', href: '/hq/users', icon: Users },
             { id: 'user-roles', name: 'Role & Akses', href: '/hq/users/roles', icon: Shield },
+            { id: 'user-perm-explorer', name: 'Permission Explorer', href: '/hq/users/permissions-explorer', icon: Sparkles },
             { id: 'user-managers', name: 'Manajer Cabang', href: '/hq/users/managers', icon: UserCog },
           ]
         },

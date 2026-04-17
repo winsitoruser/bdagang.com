@@ -120,6 +120,9 @@ db.FleetRouteAssignment = require('./FleetRouteAssignment');
 db.FleetGpsLocation = require('./FleetGpsLocation');
 db.FleetMaintenanceSchedule = require('./FleetMaintenanceSchedule');
 db.FleetFuelTransaction = require('./FleetFuelTransaction');
+db.FleetVehicleInspection = require('./FleetVehicleInspection');
+db.FleetDeliveryProof = require('./FleetDeliveryProof');
+db.FleetDriverExpense = require('./FleetDriverExpense');
 
 // Third-party Integration Models
 db.IntegrationProvider = require('./IntegrationProvider');
@@ -282,7 +285,6 @@ db.FinancePayablePayment = require('./FinancePayablePayment');
 db.FinanceReceivable = require('./FinanceReceivable');
 db.FinanceReceivablePayment = require('./FinanceReceivablePayment');
 db.FinanceTransaction = require('./FinanceTransaction');
-db.Invoice = require('./Invoice');
 
 // Kitchen Extended Models
 db.KitchenRecipe = require('./KitchenRecipe');
@@ -302,17 +304,26 @@ db.InternalRequisitionItem = require('./InternalRequisitionItem');
 
 // Additional Models
 db.AuditLog = require('./AuditLog');
-db.BillingCycle = require('./BillingCycle');
 db.NotificationSetting = require('./NotificationSetting');
 db.OutletIntegration = require('./OutletIntegration');
 db.PartnerIntegration = require('./PartnerIntegration');
-db.Plan = require('./Plan');
 db.PriceTier = require('./PriceTier');
 db.PrinterConfig = require('./PrinterConfig');
 db.Role = require('./Role');
 db.SystemBackup = require('./SystemBackup');
 db.Unit = require('./Unit');
 db.Voucher = require('./Voucher');
+
+// Subscription & Billing Models (factory-style - MUST be invoked with sequelize)
+db.Plan = require('./Plan')(sequelize);
+db.PlanLimit = require('./PlanLimit')(sequelize);
+db.Subscription = require('./Subscription')(sequelize);
+db.BillingCycle = require('./BillingCycle')(sequelize);
+db.Invoice = require('./Invoice')(sequelize);
+db.InvoiceItem = require('./InvoiceItem')(sequelize);
+db.PaymentTransaction = require('./PaymentTransaction')(sequelize);
+db.UsageMetric = require('./UsageMetric')(sequelize);
+db.ModulePricing = require('./ModulePricing')(sequelize);
 
 // Load associations if they exist
 // Associations are defined in the models themselves or in separate files

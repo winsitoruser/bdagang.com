@@ -3,6 +3,7 @@ import HQLayout from '../../../components/hq/HQLayout';
 import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { PageGuard } from '../../../components/permissions';
 import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
 import { FinancePageSkeleton } from '../../../components/finance/FinanceSkeleton';
 import DocumentExportButton from '@/components/documents/DocumentExportButton';
@@ -203,6 +204,11 @@ export default function ProfitLossReport() {
   ];
 
   return (
+    <PageGuard
+      anyPermission={['finance.view_pnl', 'reports.finance', 'finance.*']}
+      title="Laporan Laba Rugi"
+      description="Laporan keuangan P&L lintas cabang (data sensitif)."
+    >
     <HQLayout>
       <div className="space-y-6">
         {/* Header */}
@@ -484,5 +490,6 @@ export default function ProfitLossReport() {
         )}
       </div>
     </HQLayout>
+    </PageGuard>
   );
 }

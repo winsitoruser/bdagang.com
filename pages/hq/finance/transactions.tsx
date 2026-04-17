@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import { useTranslation } from '@/lib/i18n';
+import { CanAccess, PageGuard } from '../../../components/permissions';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -285,6 +286,10 @@ export default function TransactionsPage() {
   };
 
   return (
+    <PageGuard
+      anyPermission={['finance.view', 'finance.*', 'finance_transactions.view']}
+      title="Transaksi Finance"
+    >
     <HQLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
@@ -293,6 +298,7 @@ export default function TransactionsPage() {
             <h1 className="text-3xl font-bold text-gray-900">{t('finance.trxTitle')}</h1>
             <p className="text-gray-600 mt-1">{t('finance.trxSubtitle')}</p>
           </div>
+          <CanAccess anyPermission={['finance_transactions.create', 'finance.*']}>
           <button
             onClick={() => {
               setSelectedTransaction(null);
@@ -303,6 +309,7 @@ export default function TransactionsPage() {
             <Plus className="w-5 h-5" />
             {t('finance.newTransaction')}
           </button>
+          </CanAccess>
         </div>
 
         {/* Stats Cards */}
@@ -531,24 +538,28 @@ export default function TransactionsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedTransaction(transaction);
-                              setShowModal(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Ubah"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTransaction(transaction.id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Hapus"
-                            disabled={transaction.status === 'completed'}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <CanAccess anyPermission={['finance_transactions.update', 'finance.*']}>
+                            <button
+                              onClick={() => {
+                                setSelectedTransaction(transaction);
+                                setShowModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800"
+                              title="Ubah"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          </CanAccess>
+                          <CanAccess anyPermission={['finance_transactions.delete', 'finance.*']}>
+                            <button
+                              onClick={() => handleDeleteTransaction(transaction.id)}
+                              className="text-red-600 hover:text-red-800"
+                              title="Hapus"
+                              disabled={transaction.status === 'completed'}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </CanAccess>
                         </div>
                       </td>
                     </tr>
@@ -598,5 +609,6 @@ export default function TransactionsPage() {
         accounts={accounts}
       />
     </HQLayout>
+    </PageGuard>
   );
 }

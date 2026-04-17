@@ -323,7 +323,21 @@ export default function ModuleManagement() {
   return (
     <HQLayout title={t('moduleManagement.title')} subtitle={t('moduleManagement.subtitleFull')}>
       <div className="space-y-6">
-        
+
+        {/* Subscribe Add-on Banner */}
+        <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 rounded-2xl p-5 text-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-6 h-6" />
+            <div>
+              <p className="font-semibold text-sm">Aktifkan modul lebih lengkap</p>
+              <p className="text-xs text-white/80">Tambahkan modul HRIS, SFA, Manufaktur, Fleet, dan lain-lain sesuai kebutuhan bisnis Anda.</p>
+            </div>
+          </div>
+          <a href="/hq/billing-info/plans" className="inline-flex items-center gap-2 px-4 py-2 bg-white text-purple-700 rounded-xl font-semibold text-sm hover:bg-purple-50">
+            Berlangganan Modul <ArrowRight className="w-4 h-4" />
+          </a>
+        </div>
+
         {/* Tabs */}
         <div className="bg-white rounded-xl border border-gray-200 p-1">
           <div className="flex gap-1">

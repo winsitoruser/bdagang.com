@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
 import { useTranslation } from '@/lib/i18n';
+import { CanAccess, PageGuard, useFilteredColumns, type PermissionAwareColumn } from '@/components/permissions';
 import {
   Users, Search, Plus, Eye, Edit, Trash2, X, Save, ChevronRight,
   Building2, Briefcase, GraduationCap, Award, FileText, Heart,
@@ -286,9 +287,95 @@ export default function EmployeeManagementPage() {
     return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-600'}`}>{labels[status] || status}</span>;
   };
 
+  // ==============================
+  // Kolom tabel dengan guard permission (useFilteredColumns)
+  // Kolom "Gaji" & "NIK" hanya tampil jika punya permission yg sesuai.
+  // ==============================
+  const columnDefs: Array<PermissionAwareColumn & { render: (emp: any) => React.ReactNode; align?: 'left' | 'center' | 'right' }> = [
+    {
+      key: 'employee',
+      header: t('hris.employee'),
+      render: (emp) => (
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+            {(emp.name || '?')[0]}
+          </div>
+          <div>
+            <p className="font-medium text-gray-800">{emp.name}</p>
+            <p className="text-xs text-gray-400">{emp.employee_id} • {emp.email}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'nik',
+      header: 'NIK',
+      permission: 'employees.view_salary',
+      render: (emp) => (
+        <span className="text-xs text-gray-500 font-mono">{emp.nik || '—'}</span>
+      )
+    },
+    {
+      key: 'department',
+      header: t('hris.department'),
+      render: (emp) => <span className="text-gray-600">{DEPT_LABELS[emp.department] || emp.department}</span>
+    },
+    {
+      key: 'position',
+      header: t('hris.position'),
+      render: (emp) => <span className="text-gray-600">{emp.position}</span>
+    },
+    {
+      key: 'branch',
+      header: t('hris.branchLabel'),
+      render: (emp) => <span className="text-gray-500 text-xs">{emp.branch_name || '-'}</span>
+    },
+    {
+      key: 'salary',
+      header: 'Gaji Pokok',
+      permission: 'employees.view_salary',
+      render: (emp) => (
+        <span className="text-xs text-gray-700 font-semibold">
+          {emp.base_salary ? fmtCurrency(emp.base_salary) : '—'}
+        </span>
+      )
+    },
+    {
+      key: 'contract',
+      header: t('hris.contractType'),
+      render: (emp) => (
+        <>
+          <span className="text-xs">{emp.contract_type || '-'}</span>
+          {emp.contract_end && <p className="text-[10px] text-gray-400">s/d {fmtDate(emp.contract_end)}</p>}
+        </>
+      )
+    },
+    {
+      key: 'status',
+      header: t('hris.status'),
+      render: (emp) => statusBadge(emp.status)
+    },
+    {
+      key: 'actions',
+      header: t('hris.actions'),
+      align: 'center',
+      render: () => (
+        <button className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
+          <Eye className="w-4 h-4" />
+        </button>
+      )
+    }
+  ];
+  const visibleColumns = useFilteredColumns(columnDefs);
+
   if (!mounted) return null;
 
   return (
+    <PageGuard
+      anyPermission={['employees.view', 'employees.*', 'hris.*']}
+      title="Database Karyawan"
+      description="Data kepegawaian (PII & sensitif)."
+    >
     <HQLayout title={t('hris.employeeDbTitle')} currentMenu="hris">
       {/* Toast */}
       {toast && (
@@ -345,52 +432,37 @@ export default function EmployeeManagementPage() {
               <div className="mt-2 text-xs text-gray-500">{t('hris.employeesFound', { count: total })}</div>
             </div>
 
-            {/* Employee Table */}
+            {/* Employee Table — kolom Gaji/NIK otomatis disembunyikan via useFilteredColumns */}
             <div className="bg-white rounded-xl border overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">{t('hris.employee')}</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">{t('hris.department')}</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">{t('hris.position')}</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">{t('hris.branchLabel')}</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">{t('hris.contractType')}</th>
-                      <th className="text-left px-4 py-3 font-medium text-gray-600">{t('hris.status')}</th>
-                      <th className="text-center px-4 py-3 font-medium text-gray-600">{t('hris.actions')}</th>
+                      {visibleColumns.map((col: any) => (
+                        <th
+                          key={col.key}
+                          className={`px-4 py-3 font-medium text-gray-600 ${col.align === 'center' ? 'text-center' : 'text-left'}`}
+                        >
+                          {col.header}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {loading ? (
-                      <tr><td colSpan={7} className="text-center py-8 text-gray-400">{t('hris.loadingData')}</td></tr>
+                      <tr><td colSpan={visibleColumns.length} className="text-center py-8 text-gray-400">{t('hris.loadingData')}</td></tr>
                     ) : employees.length === 0 ? (
-                      <tr><td colSpan={7} className="text-center py-8 text-gray-400">{t('hris.noEmployeeData')}</td></tr>
+                      <tr><td colSpan={visibleColumns.length} className="text-center py-8 text-gray-400">{t('hris.noEmployeeData')}</td></tr>
                     ) : employees.map((emp: any) => (
                       <tr key={emp.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => fetchDetail(emp.id)}>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
-                              {(emp.name || '?')[0]}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-800">{emp.name}</p>
-                              <p className="text-xs text-gray-400">{emp.employee_id} • {emp.email}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">{DEPT_LABELS[emp.department] || emp.department}</td>
-                        <td className="px-4 py-3 text-gray-600">{emp.position}</td>
-                        <td className="px-4 py-3 text-gray-500 text-xs">{emp.branch_name || '-'}</td>
-                        <td className="px-4 py-3">
-                          <span className="text-xs">{emp.contract_type || '-'}</span>
-                          {emp.contract_end && <p className="text-[10px] text-gray-400">s/d {fmtDate(emp.contract_end)}</p>}
-                        </td>
-                        <td className="px-4 py-3">{statusBadge(emp.status)}</td>
-                        <td className="px-4 py-3 text-center">
-                          <button className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </td>
+                        {visibleColumns.map((col: any) => (
+                          <td
+                            key={col.key}
+                            className={`px-4 py-3 ${col.align === 'center' ? 'text-center' : ''}`}
+                          >
+                            {col.render(emp)}
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
@@ -485,19 +557,21 @@ export default function EmployeeManagementPage() {
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-semibold text-gray-800">{t('hris.personalInfo')}</h3>
-                      {!editMode ? (
-                        <button onClick={() => { setEditMode(true); setPersonalForm({ ...selectedEmployee }); }}
-                          className="flex items-center gap-1 px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50">
-                          <Edit className="w-3.5 h-3.5" /> {t('hris.edit')}
-                        </button>
-                      ) : (
-                        <div className="flex gap-2">
-                          <button onClick={() => setEditMode(false)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50">{t('hris.cancel')}</button>
-                          <button onClick={savePersonal} className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                            <Save className="w-3.5 h-3.5" /> {t('hris.save')}
+                      <CanAccess permission="employees.update">
+                        {!editMode ? (
+                          <button onClick={() => { setEditMode(true); setPersonalForm({ ...selectedEmployee }); }}
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50">
+                            <Edit className="w-3.5 h-3.5" /> {t('hris.edit')}
                           </button>
-                        </div>
-                      )}
+                        ) : (
+                          <div className="flex gap-2">
+                            <button onClick={() => setEditMode(false)} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-gray-50">{t('hris.cancel')}</button>
+                            <button onClick={savePersonal} className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                              <Save className="w-3.5 h-3.5" /> {t('hris.save')}
+                            </button>
+                          </div>
+                        )}
+                      </CanAccess>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -794,10 +868,12 @@ export default function EmployeeManagementPage() {
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-semibold text-gray-800">{t('hris.contractHistory')}</h3>
-                      <button onClick={() => openSubModal('contract')}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        <Plus className="w-3.5 h-3.5" /> {t('hris.add')}
-                      </button>
+                      <CanAccess permission="employees.update">
+                        <button onClick={() => openSubModal('contract')}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                          <Plus className="w-3.5 h-3.5" /> {t('hris.add')}
+                        </button>
+                      </CanAccess>
                     </div>
                     {(selectedEmployee.contracts || []).length === 0 ? (
                       <p className="text-center text-gray-400 py-8">{t('hris.noContractData')}</p>
@@ -817,11 +893,22 @@ export default function EmployeeManagementPage() {
                                   {fmtDate(c.start_date)} - {c.end_date ? fmtDate(c.end_date) : 'Tidak Terbatas'}
                                 </p>
                                 {c.position && <p className="text-xs text-gray-400">Posisi: {c.position} {c.department ? `• ${c.department}` : ''}</p>}
-                                {c.salary && <p className="text-xs text-gray-400">Gaji: {fmtCurrency(c.salary)}</p>}
+                                {c.salary && (
+                                  <CanAccess
+                                    permission="employees.view_salary"
+                                    fallback={<p className="text-xs text-gray-300 italic">Gaji: •••••••</p>}
+                                  >
+                                    <p className="text-xs text-gray-400">Gaji: {fmtCurrency(c.salary)}</p>
+                                  </CanAccess>
+                                )}
                               </div>
                               <div className="flex gap-1">
-                                <button onClick={() => openSubModal('contract', c)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Edit className="w-3.5 h-3.5" /></button>
-                                <button onClick={() => deleteSubData('contract', c.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                                <CanAccess permission="employees.update">
+                                  <button onClick={() => openSubModal('contract', c)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"><Edit className="w-3.5 h-3.5" /></button>
+                                </CanAccess>
+                                <CanAccess permission="employees.delete">
+                                  <button onClick={() => deleteSubData('contract', c.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                                </CanAccess>
                               </div>
                             </div>
                           </div>
@@ -984,8 +1071,16 @@ export default function EmployeeManagementPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="text-xs font-medium text-gray-500">Posisi</label>
                     <input type="text" value={subForm.position || ''} onChange={e => setSubForm((f: any) => ({ ...f, position: e.target.value }))} className="w-full px-3 py-2 border rounded-lg text-sm mt-1" /></div>
-                  <div><label className="text-xs font-medium text-gray-500">Gaji</label>
-                    <input type="number" value={subForm.salary || ''} onChange={e => setSubForm((f: any) => ({ ...f, salary: e.target.value }))} className="w-full px-3 py-2 border rounded-lg text-sm mt-1" /></div>
+                  <CanAccess
+                    permission="employees.view_salary"
+                    fallback={
+                      <div><label className="text-xs font-medium text-gray-500">Gaji</label>
+                        <input type="text" value="••••••••" disabled readOnly className="w-full px-3 py-2 border rounded-lg text-sm mt-1 bg-gray-50 text-gray-400" /></div>
+                    }
+                  >
+                    <div><label className="text-xs font-medium text-gray-500">Gaji</label>
+                      <input type="number" value={subForm.salary || ''} onChange={e => setSubForm((f: any) => ({ ...f, salary: e.target.value }))} className="w-full px-3 py-2 border rounded-lg text-sm mt-1" /></div>
+                  </CanAccess>
                 </div>
                 <div><label className="text-xs font-medium text-gray-500">Catatan</label>
                   <textarea value={subForm.notes || ''} onChange={e => setSubForm((f: any) => ({ ...f, notes: e.target.value }))} className="w-full px-3 py-2 border rounded-lg text-sm mt-1" rows={2} /></div>
@@ -999,5 +1094,6 @@ export default function EmployeeManagementPage() {
         </div>
       )}
     </HQLayout>
+    </PageGuard>
   );
 }

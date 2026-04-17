@@ -7,6 +7,12 @@ const Role = sequelize.define('Role', {
     defaultValue: DataTypes.UUIDV4,
     primaryKey: true
   },
+  code: {
+    type: DataTypes.STRING(50),
+    allowNull: true,
+    unique: true,
+    comment: 'Kode unik upper_snake_case (HQ_ADMIN, CASHIER)'
+  },
   name: {
     type: DataTypes.STRING(100),
     allowNull: false,
@@ -16,6 +22,18 @@ const Role = sequelize.define('Role', {
     type: DataTypes.TEXT,
     allowNull: true
   },
+  level: {
+    type: DataTypes.INTEGER,
+    defaultValue: 5,
+    comment: '1=Super Admin, 2=HQ Admin, 3=Manager, 4=Supervisor, 5=Staff, 6=Auditor'
+  },
+  dataScope: {
+    type: DataTypes.STRING(20),
+    allowNull: false,
+    defaultValue: 'branch',
+    field: 'data_scope',
+    comment: 'all | tenant | region | branch | team | own'
+  },
   permissions: {
     type: DataTypes.JSON,
     allowNull: true,
@@ -24,27 +42,43 @@ const Role = sequelize.define('Role', {
   isSystem: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-    comment: 'System roles cannot be deleted'
+    field: 'is_system',
+    comment: 'Role sistem tidak dapat dihapus'
+  },
+  isActive: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+    field: 'is_active'
+  },
+  userCount: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    field: 'user_count',
+    comment: 'Cache jumlah user. Bisa di-recalc dengan COUNT(users)'
   },
   createdAt: {
     type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
+    defaultValue: DataTypes.NOW,
+    field: 'created_at'
   },
   updatedAt: {
     type: DataTypes.DATE,
-    defaultValue: DataTypes.NOW
+    defaultValue: DataTypes.NOW,
+    field: 'updated_at'
   }
 }, {
   tableName: 'roles',
-  timestamps: true
+  timestamps: true,
+  underscored: true
 });
 
-// Association with User model
-// Note: users table uses a string 'role' column, not a FK 'roleId' to roles table.
-// The hasMany association is commented out to prevent Sequelize from adding
-// a phantom 'roleId' column to all User queries.
+// Note: users.role_id FK → roles.id sudah dibuat di migrasi
+// `20260228000001-add-role-permissions-integration.js`.
+// Association ditambahkan di models/index.js agar User ↔ Role.
 Role.associate = (models) => {
-  // Role.hasMany(models.User, { foreignKey: 'roleId', as: 'users' });
+  if (models.User) {
+    Role.hasMany(models.User, { foreignKey: 'role_id', as: 'users' });
+  }
 };
 
 module.exports = Role;

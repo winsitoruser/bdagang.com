@@ -1,21 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import { toast } from 'react-hot-toast';
 import {
   DollarSign,
   RefreshCw,
   Download,
-  Search,
   TrendingUp,
-  TrendingDown,
   Building2,
-  CreditCard,
   Wallet,
   PieChart as PieChartIcon,
   BarChart3,
-  Calendar,
-  ArrowUpRight,
-  ArrowDownRight
+  Filter,
+  FileText,
+  CreditCard,
 } from 'lucide-react';
 import {
   BarChart,
@@ -29,10 +26,8 @@ import {
   Pie,
   Cell,
   Legend,
-  LineChart,
-  Line,
   AreaChart,
-  Area
+  Area,
 } from 'recharts';
 
 interface FinanceData {
@@ -44,6 +39,9 @@ interface FinanceData {
   grossProfit: number;
   operatingExpenses: number;
   netProfit: number;
+  transactions: number;
+  tax: number;
+  discount: number;
   grossMargin: number;
   netMargin: number;
   cashSales: number;
@@ -51,26 +49,86 @@ interface FinanceData {
   digitalSales: number;
 }
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+interface MonthlyTrend {
+  month: string;
+  revenue: number;
+  profit: number;
+  transactions: number;
+}
+
+interface PaymentBreakdown {
+  method: string;
+  amount: number;
+  transactions: number;
+  avgTicket: number;
+  percentage: number;
+}
+
+interface Summary {
+  revenue: number;
+  cogs: number;
+  grossProfit: number;
+  operatingExpenses: number;
+  netProfit: number;
+  cashSales: number;
+  cardSales: number;
+  digitalSales: number;
+  transactions: number;
+  tax: number;
+  discount: number;
+  avgGrossMargin: number;
+  avgNetMargin: number;
+}
+
+const PAYMENT_COLORS: Record<string, string> = {
+  Cash: '#10B981',
+  Card: '#3B82F6',
+  QRIS: '#8B5CF6',
+  'E-Wallet': '#F59E0B',
+  Transfer: '#EC4899',
+};
+
+const FALLBACK_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+
+type Period = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
 
 export default function FinanceReport() {
   const [mounted, setMounted] = useState(false);
-  const [financeData, setFinanceData] = useState<FinanceData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
+  const [period, setPeriod] = useState<Period>('month');
+  const [branchFilter, setBranchFilter] = useState<string>('all');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+
+  const [financeData, setFinanceData] = useState<FinanceData[]>([]);
+  const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrend[]>([]);
+  const [paymentBreakdown, setPaymentBreakdown] = useState<PaymentBreakdown[]>([]);
+  const [summary, setSummary] = useState<Summary | null>(null);
 
   const fetchFinanceData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/hq/reports/finance?period=${period}`);
-      if (response.ok) {
-        const json = await response.json();
-        const payload = json.data || json;
-        if (payload.financeData) setFinanceData(payload.financeData);
+      const params = new URLSearchParams();
+      params.set('period', period);
+      if (branchFilter !== 'all') params.set('branchId', branchFilter);
+      if (period === 'custom') {
+        if (customStart) params.set('startDate', customStart);
+        if (customEnd) params.set('endDate', customEnd);
+      }
+      const res = await fetch(`/api/hq/reports/finance?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        const d = json.data || json;
+        setFinanceData(d.financeData || []);
+        setMonthlyTrend(d.monthlyTrend || []);
+        setPaymentBreakdown(d.paymentBreakdown || []);
+        setSummary(d.summary || null);
+      } else {
+        toast.error('Gagal memuat laporan keuangan');
       }
     } catch (error) {
       console.error('Error fetching finance report:', error);
+      toast.error('Koneksi gagal saat memuat data keuangan');
     } finally {
       setLoading(false);
     }
@@ -79,7 +137,96 @@ export default function FinanceReport() {
   useEffect(() => {
     setMounted(true);
     fetchFinanceData();
-  }, [period]);
+  }, [period, branchFilter]);
+
+  const formatCurrency = (value: number) => {
+    if (!value && value !== 0) return 'Rp 0';
+    if (value >= 1_000_000_000) return `Rp ${(value / 1_000_000_000).toFixed(1)}M`;
+    if (value >= 1_000_000) return `Rp ${(value / 1_000_000).toFixed(0)}Jt`;
+    return `Rp ${value.toLocaleString('id-ID')}`;
+  };
+
+  const handleExport = (mode: 'summary' | 'detail' | 'trend') => {
+    let csvContent = '';
+    let filename = '';
+
+    if (mode === 'summary' && summary) {
+      filename = 'finance-summary';
+      csvContent = [
+        'Metric,Value',
+        `Revenue,${summary.revenue}`,
+        `COGS,${summary.cogs}`,
+        `Gross Profit,${summary.grossProfit}`,
+        `Operating Expenses,${summary.operatingExpenses}`,
+        `Net Profit,${summary.netProfit}`,
+        `Tax,${summary.tax}`,
+        `Discount,${summary.discount}`,
+        `Transactions,${summary.transactions}`,
+        `Avg Gross Margin,${summary.avgGrossMargin}%`,
+        `Avg Net Margin,${summary.avgNetMargin}%`,
+        '',
+        'Payment Method,Amount,Transactions,Avg Ticket,Percentage',
+        ...paymentBreakdown.map(p => [p.method, p.amount, p.transactions, p.avgTicket, `${p.percentage}%`].join(',')),
+      ].join('\n');
+    } else if (mode === 'detail') {
+      filename = 'finance-branches';
+      csvContent = [
+        ['Cabang', 'Kode', 'Revenue', 'COGS', 'Gross Profit', 'OpEx', 'Net Profit', 'Gross Margin %', 'Net Margin %', 'Cash', 'Card', 'Digital'].join(','),
+        ...financeData.map(f => [
+          f.branchName,
+          f.branchCode,
+          f.revenue,
+          f.cogs,
+          f.grossProfit,
+          f.operatingExpenses,
+          f.netProfit,
+          f.grossMargin,
+          f.netMargin,
+          f.cashSales,
+          f.cardSales,
+          f.digitalSales,
+        ].join(',')),
+      ].join('\n');
+    } else if (mode === 'trend') {
+      filename = 'finance-trend';
+      csvContent = [
+        'Month,Revenue (Jt),Profit (Jt),Transactions',
+        ...monthlyTrend.map(m => [m.month, m.revenue, m.profit, m.transactions].join(',')),
+      ].join('\n');
+    }
+
+    if (!csvContent) return;
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}-${period}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Export ${filename} berhasil`);
+  };
+
+  const profitByBranch = useMemo(
+    () =>
+      financeData
+        .map(f => ({
+          name: f.branchName.replace('Cabang ', '').replace('Kiosk ', ''),
+          profit: +(f.netProfit / 1_000_000).toFixed(1),
+          revenue: +(f.revenue / 1_000_000).toFixed(1),
+        }))
+        .sort((a, b) => b.profit - a.profit),
+    [financeData]
+  );
+
+  const paymentPieData = useMemo(
+    () =>
+      paymentBreakdown.map((p, idx) => ({
+        name: p.method,
+        value: p.amount,
+        color: PAYMENT_COLORS[p.method] || FALLBACK_COLORS[idx % FALLBACK_COLORS.length],
+      })),
+    [paymentBreakdown]
+  );
 
   if (!mounted) {
     return (
@@ -91,289 +238,329 @@ export default function FinanceReport() {
     );
   }
 
-  const formatCurrency = (value: number) => {
-    if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)}M`;
-    if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(0)}Jt`;
-    return `Rp ${value.toLocaleString('id-ID')}`;
-  };
-
-  const exportToCSV = () => {
-    const headers = ['Cabang', 'Kode', 'Revenue', 'COGS', 'Gross Profit', 'OpEx', 'Net Profit', 'Gross Margin', 'Net Margin'];
-    const rows = financeData.map(f => [
-      f.branchName, f.branchCode, f.revenue, f.cogs, f.grossProfit, f.operatingExpenses, f.netProfit, `${f.grossMargin}%`, `${f.netMargin}%`
-    ]);
-    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `finance-report-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('Export laporan keuangan berhasil');
-  };
-
-  const totalStats = {
-    revenue: financeData.reduce((sum, f) => sum + f.revenue, 0),
-    grossProfit: financeData.reduce((sum, f) => sum + f.grossProfit, 0),
-    netProfit: financeData.reduce((sum, f) => sum + f.netProfit, 0),
-    expenses: financeData.reduce((sum, f) => sum + f.operatingExpenses, 0),
-    cashSales: financeData.reduce((sum, f) => sum + f.cashSales, 0),
-    cardSales: financeData.reduce((sum, f) => sum + f.cardSales, 0),
-    digitalSales: financeData.reduce((sum, f) => sum + f.digitalSales, 0)
-  };
-
-  const avgGrossMargin = financeData.length > 0 
-    ? financeData.reduce((sum, f) => sum + f.grossMargin, 0) / financeData.length 
-    : 0;
-
-  const avgNetMargin = financeData.length > 0 
-    ? financeData.reduce((sum, f) => sum + f.netMargin, 0) / financeData.length 
-    : 0;
-
-  const profitByBranch = financeData.map(f => ({
-    name: f.branchName.replace('Cabang ', ''),
-    profit: f.netProfit / 1000000
-  })).sort((a, b) => b.profit - a.profit);
-
-  const paymentMethodData = [
-    { name: 'Cash', value: totalStats.cashSales, color: '#10B981' },
-    { name: 'Kartu', value: totalStats.cardSales, color: '#3B82F6' },
-    { name: 'Digital', value: totalStats.digitalSales, color: '#8B5CF6' }
-  ];
-
   return (
     <HQLayout title="Laporan Keuangan" subtitle="Analisis finansial seluruh cabang">
       <div className="space-y-6">
-        {/* Period Filter */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-gray-200">
-            {(['month', 'quarter', 'year'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  period === p ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
-                }`}
+        {/* Filter Bar */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-gray-500">
+                <Filter className="w-4 h-4" />
+                <span className="text-sm font-medium">Filter</span>
+              </div>
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value as Period)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
               >
-                {p === 'month' ? 'Bulan Ini' : p === 'quarter' ? 'Kuartal Ini' : 'Tahun Ini'}
+                <option value="today">Hari Ini</option>
+                <option value="week">7 Hari Terakhir</option>
+                <option value="month">Bulan Ini</option>
+                <option value="quarter">Kuartal Ini</option>
+                <option value="year">Tahun Ini</option>
+                <option value="custom">Custom Tanggal</option>
+              </select>
+              {period === 'custom' && (
+                <>
+                  <input
+                    type="date"
+                    value={customStart}
+                    onChange={(e) => setCustomStart(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <span className="text-gray-400 text-sm">-</span>
+                  <input
+                    type="date"
+                    value={customEnd}
+                    onChange={(e) => setCustomEnd(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <button
+                    onClick={fetchFinanceData}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                  >
+                    Terapkan
+                  </button>
+                </>
+              )}
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="all">Semua Cabang</option>
+                {financeData.map(b => (
+                  <option key={b.branchId} value={b.branchId}>
+                    {b.branchName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchFinanceData}
+                disabled={loading}
+                className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
               </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={fetchFinanceData}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-            <button
-              onClick={exportToCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
+              <div className="relative group">
+                <button className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                  <Download className="w-4 h-4" />
+                  Export
+                </button>
+                <div className="hidden group-hover:block absolute right-0 top-full pt-1 w-56 z-10">
+                  <div className="bg-white rounded-lg border border-gray-200 shadow-lg py-1">
+                    <button onClick={() => handleExport('summary')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-500" /> Ringkasan keuangan (CSV)
+                    </button>
+                    <button onClick={() => handleExport('detail')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-gray-500" /> Detail per cabang (CSV)
+                    </button>
+                    <button onClick={() => handleExport('trend')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-gray-500" /> Tren bulanan (CSV)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-5 gap-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <DollarSign className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(totalStats.revenue)}</p>
-                <p className="text-sm text-gray-500">Total Revenue</p>
-              </div>
-            </div>
+        {summary && (
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+            <StatCard icon={DollarSign} bg="bg-blue-100" color="text-blue-600" label="Total Revenue" value={formatCurrency(summary.revenue)} />
+            <StatCard icon={TrendingUp} bg="bg-green-100" color="text-green-600" label="Gross Profit" value={formatCurrency(summary.grossProfit)} />
+            <StatCard icon={Wallet} bg="bg-purple-100" color="text-purple-600" label="Net Profit" value={formatCurrency(summary.netProfit)} />
+            <StatCard icon={BarChart3} bg="bg-yellow-100" color="text-yellow-600" label="Avg Gross Margin" value={`${summary.avgGrossMargin.toFixed(1)}%`} />
+            <StatCard icon={PieChartIcon} bg="bg-teal-100" color="text-teal-600" label="Avg Net Margin" value={`${summary.avgNetMargin.toFixed(1)}%`} />
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-lg font-bold text-green-600">{formatCurrency(totalStats.grossProfit)}</p>
-                <p className="text-sm text-gray-500">Gross Profit</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Wallet className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-lg font-bold text-purple-600">{formatCurrency(totalStats.netProfit)}</p>
-                <p className="text-sm text-gray-500">Net Profit</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <BarChart3 className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{avgGrossMargin.toFixed(1)}%</p>
-                <p className="text-sm text-gray-500">Avg Gross Margin</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-teal-100 rounded-lg">
-                <PieChartIcon className="w-5 h-5 text-teal-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{avgNetMargin.toFixed(1)}%</p>
-                <p className="text-sm text-gray-500">Avg Net Margin</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Charts Row 1 */}
-        <div className="grid grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Trend Revenue & Profit (Juta)</h3>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(value: number) => [`Rp ${value} Jt`, '']} />
-                  <Legend />
-                  <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.2} />
-                  <Area type="monotone" dataKey="profit" name="Profit" stroke="#10B981" fill="#10B981" fillOpacity={0.2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Metode Pembayaran</h3>
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={paymentMethodData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {paymentMethodData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => [formatCurrency(value), '']} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
-        {/* Charts Row 2 */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Net Profit per Cabang (Juta)</h3>
-          <div className="h-72">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <ChartCard title="Trend Revenue & Profit (Juta)">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={profitByBranch} layout="vertical">
+              <AreaChart data={monthlyTrend}>
+                <defs>
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" tick={{ fontSize: 12 }} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={100} />
-                <Tooltip formatter={(value: number) => [`Rp ${value.toFixed(0)} Jt`, 'Net Profit']} />
-                <Bar dataKey="profit" fill="#10B981" radius={[0, 4, 4, 0]} />
-              </BarChart>
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${v}Jt`} />
+                <Tooltip formatter={(value: number, name: string) => [`Rp ${value.toFixed(1)} Jt`, name === 'revenue' ? 'Revenue' : 'Profit']} />
+                <Legend />
+                <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#3B82F6" fill="url(#revGrad)" />
+                <Area type="monotone" dataKey="profit" name="Profit" stroke="#10B981" fill="url(#profitGrad)" />
+              </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </ChartCard>
+          <ChartCard title="Metode Pembayaran">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={paymentPieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={2}
+                  dataKey="value"
+                  label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {paymentPieData.map((entry, idx) => (
+                    <Cell key={`pm-${idx}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartCard>
         </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+        {/* Net Profit per Cabang */}
+        <ChartCard title="Net Profit per Cabang (Juta)" className="w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={profitByBranch} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={(v) => `${v}Jt`} />
+              <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={120} />
+              <Tooltip formatter={(value: number) => [`Rp ${value.toFixed(1)} Jt`, 'Net Profit']} />
+              <Bar dataKey="profit" fill="#10B981" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        {/* Payment methods table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-4 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900">Detail Keuangan per Cabang</h3>
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-gray-500" /> Detail Metode Pembayaran
+            </h3>
           </div>
           <div className="overflow-x-auto">
-            {loading ? (
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Metode</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Nominal</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Transaksi</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg / Tx</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Persentase</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {paymentBreakdown.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-center text-gray-400">Tidak ada data metode pembayaran</td>
+                  </tr>
+                ) : (
+                  paymentBreakdown.map((p) => (
+                    <tr key={p.method} className="hover:bg-gray-50">
+                      <td className="px-6 py-3 font-medium text-gray-900">
+                        <span className="inline-flex items-center gap-2">
+                          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: PAYMENT_COLORS[p.method] || '#6B7280' }} />
+                          {p.method}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-right font-medium">{formatCurrency(p.amount)}</td>
+                      <td className="px-6 py-3 text-right text-gray-600">{p.transactions.toLocaleString('id-ID')}</td>
+                      <td className="px-6 py-3 text-right text-gray-600">{formatCurrency(p.avgTicket)}</td>
+                      <td className="px-6 py-3 text-center">
+                        <div className="flex items-center gap-2 justify-center">
+                          <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${p.percentage}%`, backgroundColor: PAYMENT_COLORS[p.method] || '#3B82F6' }} />
+                          </div>
+                          <span className="text-sm text-gray-600">{p.percentage.toFixed(1)}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Detail Table per Cabang */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Detail Keuangan per Cabang</h3>
+          </div>
+          <div className="overflow-x-auto">
+            {loading && financeData.length === 0 ? (
               <div className="flex items-center justify-center py-12">
                 <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
               </div>
             ) : (
               <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">Cabang</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500">Revenue</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500">COGS</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500">Gross Profit</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500">OpEx</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-500">Net Profit</th>
-                    <th className="text-center py-3 px-4 font-medium text-gray-500">Margin</th>
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-xs uppercase">Cabang</th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-500 text-xs uppercase">Revenue</th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-500 text-xs uppercase">COGS</th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-500 text-xs uppercase">Gross Profit</th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-500 text-xs uppercase">OpEx</th>
+                    <th className="text-right py-3 px-4 font-medium text-gray-500 text-xs uppercase">Net Profit</th>
+                    <th className="text-center py-3 px-4 font-medium text-gray-500 text-xs uppercase">Margin</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {financeData.map((finance) => (
-                    <tr key={finance.branchId} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-gray-100 rounded-lg">
-                            <Building2 className="w-4 h-4 text-gray-600" />
+                <tbody className="divide-y divide-gray-200">
+                  {financeData.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-400">Tidak ada data keuangan</td>
+                    </tr>
+                  ) : (
+                    financeData.map((f) => (
+                      <tr key={f.branchId} className="hover:bg-gray-50">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-gray-100 rounded-lg">
+                              <Building2 className="w-4 h-4 text-gray-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">{f.branchName}</p>
+                              <p className="text-sm text-gray-500">{f.branchCode}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{finance.branchName}</p>
-                            <p className="text-sm text-gray-500">{finance.branchCode}</p>
+                        </td>
+                        <td className="py-3 px-4 text-right font-medium">{formatCurrency(f.revenue)}</td>
+                        <td className="py-3 px-4 text-right text-gray-600">{formatCurrency(f.cogs)}</td>
+                        <td className="py-3 px-4 text-right text-green-600 font-medium">{formatCurrency(f.grossProfit)}</td>
+                        <td className="py-3 px-4 text-right text-red-600">{formatCurrency(f.operatingExpenses)}</td>
+                        <td className="py-3 px-4 text-right text-purple-600 font-bold">{formatCurrency(f.netProfit)}</td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                              GM {f.grossMargin.toFixed(1)}%
+                            </span>
+                            <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">
+                              NM {f.netMargin.toFixed(1)}%
+                            </span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-right font-medium">{formatCurrency(finance.revenue)}</td>
-                      <td className="py-3 px-4 text-right text-gray-600">{formatCurrency(finance.cogs)}</td>
-                      <td className="py-3 px-4 text-right text-green-600 font-medium">{formatCurrency(finance.grossProfit)}</td>
-                      <td className="py-3 px-4 text-right text-red-600">{formatCurrency(finance.operatingExpenses)}</td>
-                      <td className="py-3 px-4 text-right text-purple-600 font-bold">{formatCurrency(finance.netProfit)}</td>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                {summary && financeData.length > 0 && (
+                  <tfoot>
+                    <tr className="bg-gray-50 font-bold">
+                      <td className="py-3 px-4">Total</td>
+                      <td className="py-3 px-4 text-right">{formatCurrency(summary.revenue)}</td>
+                      <td className="py-3 px-4 text-right">{formatCurrency(summary.cogs)}</td>
+                      <td className="py-3 px-4 text-right text-green-600">{formatCurrency(summary.grossProfit)}</td>
+                      <td className="py-3 px-4 text-right text-red-600">{formatCurrency(summary.operatingExpenses)}</td>
+                      <td className="py-3 px-4 text-right text-purple-600">{formatCurrency(summary.netProfit)}</td>
                       <td className="py-3 px-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">
-                            {finance.grossMargin}%
-                          </span>
-                          <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-sm">
-                            {finance.netMargin}%
-                          </span>
-                        </div>
+                        <span className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-xs">
+                          Avg NM {summary.avgNetMargin.toFixed(1)}%
+                        </span>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-gray-50 font-bold">
-                    <td className="py-3 px-4">Total</td>
-                    <td className="py-3 px-4 text-right">{formatCurrency(totalStats.revenue)}</td>
-                    <td className="py-3 px-4 text-right">{formatCurrency(financeData.reduce((s, f) => s + f.cogs, 0))}</td>
-                    <td className="py-3 px-4 text-right text-green-600">{formatCurrency(totalStats.grossProfit)}</td>
-                    <td className="py-3 px-4 text-right text-red-600">{formatCurrency(totalStats.expenses)}</td>
-                    <td className="py-3 px-4 text-right text-purple-600">{formatCurrency(totalStats.netProfit)}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="px-2 py-1 bg-gray-200 text-gray-800 rounded text-sm">
-                        Avg {avgNetMargin.toFixed(1)}%
-                      </span>
-                    </td>
-                  </tr>
-                </tfoot>
+                  </tfoot>
+                )}
               </table>
             )}
           </div>
         </div>
       </div>
     </HQLayout>
+  );
+}
+
+function StatCard({ icon: Icon, bg, color, label, value }: { icon: any; bg: string; color: string; label: string; value: string }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+      <div className="flex items-center gap-3">
+        <div className={`p-3 ${bg} rounded-xl`}>
+          <Icon className={`w-5 h-5 ${color}`} />
+        </div>
+        <div>
+          <p className="text-sm text-gray-500">{label}</p>
+          <p className="text-xl font-bold text-gray-900">{value}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChartCard({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 ${className}`}>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+      <div className="h-80">{children}</div>
+    </div>
   );
 }

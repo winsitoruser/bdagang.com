@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
 import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
+import { PageGuard } from '@/components/permissions';
 import {
   DollarSign, Users, FileText, Clock, Calculator, Layers, CreditCard,
   Gift, Shield, BarChart3, TrendingUp, ChevronRight, ArrowLeft,
@@ -40,6 +41,11 @@ export default function PayrollIndexPage() {
   if (!mounted) return null;
 
   return (
+    <PageGuard
+      anyPermission={['payroll.view', 'payroll.*', 'employees.*']}
+      title="Modul Penggajian (Payroll)"
+      description="Modul sensitif: slip gaji, PPh 21, BPJS, dan THR karyawan."
+    >
     <HQLayout title="Modul Penggajian" subtitle="Pengelolaan penggajian karyawan komprehensif">
       <div className="space-y-6">
         {/* Header */}
@@ -128,5 +134,6 @@ export default function PayrollIndexPage() {
         </div>
       </div>
     </HQLayout>
+    </PageGuard>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import HQLayout from '@/components/hq/HQLayout';
 import { useTranslation } from '@/lib/i18n';
 import {
@@ -27,6 +28,9 @@ import {
   Star,
   Info,
   FileText,
+  Rocket,
+  Ban,
+  Play,
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -284,6 +288,56 @@ export default function BillingInfoPage() {
   const plan = sub?.plan;
   const usage = data.usage;
 
+  const handlePayInvoice = async (invoiceId: string) => {
+    if (!confirm('Lanjutkan pembayaran invoice ini melalui payment gateway?')) return;
+    try {
+      const res = await fetch(`/api/hq/billing/invoices/${invoiceId}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'midtrans' })
+      });
+      const j = await res.json();
+      if (j.success && j.data?.redirectUrl) {
+        window.location.href = j.data.redirectUrl;
+      } else if (!j.success) {
+        alert(j.error || 'Gagal membuat pembayaran');
+      }
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!confirm('Batalkan langganan di akhir periode? Anda masih bisa menggunakan layanan hingga akhir periode berjalan.')) return;
+    try {
+      const res = await fetch('/api/hq/subscription/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ atPeriodEnd: true })
+      });
+      const j = await res.json();
+      if (j.success) {
+        alert('Langganan akan dibatalkan di akhir periode');
+        fetchData();
+      } else {
+        alert(j.error);
+      }
+    } catch (e: any) { alert(e.message); }
+  };
+
+  const handleResume = async () => {
+    try {
+      const res = await fetch('/api/hq/subscription/resume', { method: 'POST' });
+      const j = await res.json();
+      if (j.success) {
+        alert('Langganan diaktifkan kembali');
+        fetchData();
+      } else {
+        alert(j.error);
+      }
+    } catch (e: any) { alert(e.message); }
+  };
+
   const tabs = [
     { id: 'overview' as const, label: t('billingInfo.tabOverview'), icon: BarChart3 },
     { id: 'usage' as const, label: t('billingInfo.tabUsage'), icon: TrendingUp },
@@ -293,6 +347,25 @@ export default function BillingInfoPage() {
 
   return (
     <HQLayout title={t('billingInfo.title')} subtitle={t('billingInfo.subtitle')}>
+      {/* Action bar */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Link href="/hq/billing-info/plans" className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm hover:shadow-md">
+          <Rocket className="w-4 h-4" /> Upgrade / Ganti Paket
+        </Link>
+        {sub?.cancelAtPeriodEnd ? (
+          <button onClick={handleResume} className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700">
+            <Play className="w-4 h-4" /> Lanjutkan Langganan
+          </button>
+        ) : (
+          <button onClick={handleCancel} className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-50">
+            <Ban className="w-4 h-4" /> Batalkan Langganan
+          </button>
+        )}
+        <button onClick={fetchData} className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl text-sm hover:bg-gray-50">
+          <RefreshCw className="w-4 h-4" /> Refresh
+        </button>
+      </div>
+
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6 overflow-x-auto">
         {tabs.map((tab) => {
@@ -314,9 +387,9 @@ export default function BillingInfoPage() {
         })}
       </div>
 
-      {activeTab === 'overview' && <OverviewTab data={data} />}
+      {activeTab === 'overview' && <OverviewTab data={data} onPay={handlePayInvoice} />}
       {activeTab === 'usage' && <UsageTab usage={usage} />}
-      {activeTab === 'invoices' && <InvoicesTab invoices={data.recentInvoices} billingHistory={data.billingHistory} />}
+      {activeTab === 'invoices' && <InvoicesTab invoices={data.recentInvoices} billingHistory={data.billingHistory} onPay={handlePayInvoice} />}
       {activeTab === 'modules' && <ModulesTab modules={data.modules} />}
     </HQLayout>
   );
@@ -325,7 +398,7 @@ export default function BillingInfoPage() {
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: Overview
 // ═══════════════════════════════════════════════════════════════════════════
-function OverviewTab({ data }: { data: BillingData }) {
+function OverviewTab({ data, onPay }: { data: BillingData; onPay: (invoiceId: string) => void }) {
   const sub = data.subscription;
   const plan = sub?.plan;
   const usage = data.usage;
@@ -465,6 +538,7 @@ function OverviewTab({ data }: { data: BillingData }) {
                     <th className="text-left px-4 py-3 font-semibold text-gray-600">Jatuh Tempo</th>
                     <th className="text-right px-4 py-3 font-semibold text-gray-600">Jumlah</th>
                     <th className="text-center px-4 py-3 font-semibold text-gray-600">Status</th>
+                    <th className="text-center px-4 py-3 font-semibold text-gray-600">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -478,6 +552,11 @@ function OverviewTab({ data }: { data: BillingData }) {
                         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusColor(inv.status)}`}>
                           {statusLabel(inv.status)}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {['sent', 'overdue', 'pending'].includes(inv.status) && (
+                          <button onClick={() => onPay(inv.id)} className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700">Bayar</button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -620,7 +699,7 @@ function UsageTab({ usage }: { usage: BillingData['usage'] }) {
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: Invoices
 // ═══════════════════════════════════════════════════════════════════════════
-function InvoicesTab({ invoices, billingHistory }: { invoices: BillingData['recentInvoices']; billingHistory: BillingData['billingHistory'] }) {
+function InvoicesTab({ invoices, billingHistory, onPay }: { invoices: BillingData['recentInvoices']; billingHistory: BillingData['billingHistory']; onPay: (invoiceId: string) => void }) {
   return (
     <div className="space-y-6">
       {/* Invoice Table */}
@@ -646,6 +725,7 @@ function InvoicesTab({ invoices, billingHistory }: { invoices: BillingData['rece
                     <th className="text-left px-4 py-3 font-semibold text-gray-600">Tanggal Bayar</th>
                     <th className="text-right px-4 py-3 font-semibold text-gray-600">Jumlah</th>
                     <th className="text-center px-4 py-3 font-semibold text-gray-600">Status</th>
+                    <th className="text-center px-4 py-3 font-semibold text-gray-600">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -662,6 +742,11 @@ function InvoicesTab({ invoices, billingHistory }: { invoices: BillingData['rece
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColor(inv.status)}`}>
                           {statusLabel(inv.status)}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {['sent', 'overdue', 'pending'].includes(inv.status) && (
+                          <button onClick={() => onPay(inv.id)} className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700">Bayar</button>
+                        )}
                       </td>
                     </tr>
                   ))}

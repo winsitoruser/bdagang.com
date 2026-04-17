@@ -103,17 +103,39 @@ export default function ConsolidatedReport() {
     setLoading(true);
     try {
       const [consolidatedRes, kpiRes] = await Promise.all([
-        fetch(`/api/admin/reports/consolidated?period=${period}`),
-        fetch('/api/hq/reports/enhanced?action=cross-module-kpis')
+        fetch(`/api/hq/reports/consolidated?period=${period}`),
+        fetch('/api/hq/reports/enhanced?action=cross-module-kpis'),
       ]);
       if (consolidatedRes.ok) {
         const result = await consolidatedRes.json();
-        setData(result.data || null);
-        setBranchPerformance(result.branches || []);
+        const payload = result.data || result || {};
+        const m = payload.metrics || {};
+        setData({
+          period: m.period || payload.period || '',
+          totalRevenue: m.totalRevenue || 0,
+          totalTransactions: m.totalTransactions || 0,
+          avgTicketSize: m.avgTicketSize || m.averageTicket || 0,
+          grossProfit: m.grossProfit || 0,
+          netProfit: m.netProfit || 0,
+          grossMargin: m.grossMargin || 0,
+          netMargin: m.netMargin || 0,
+          totalBranches: m.totalBranches || 0,
+          activeBranches: m.activeBranches || 0,
+          totalEmployees: m.totalEmployees || 0,
+          activeEmployees: m.activeEmployees || 0,
+          stockValue: m.stockValue || 0,
+          lowStockAlerts: m.lowStockAlerts || 0,
+        });
+        setBranchPerformance(payload.branchPerformance || []);
+        setChartTrendData(payload.chartTrendData || []);
+        setCategoryData(payload.categoryData || []);
+      } else {
+        setData(MOCK_CONSOLIDATED);
+        setBranchPerformance(MOCK_BRANCH_PERF);
       }
       if (kpiRes.ok) {
         const kd = await kpiRes.json();
-        setCrossModuleKPIs(kd.data || null);
+        setCrossModuleKPIs(kd.data || kd || null);
       }
     } catch (error) {
       console.error('Error fetching consolidated data:', error);

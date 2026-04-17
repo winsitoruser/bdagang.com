@@ -6,6 +6,7 @@ import { SessionProvider } from 'next-auth/react';
 import { Toaster } from 'react-hot-toast';
 import { BusinessTypeProvider } from '@/contexts/BusinessTypeContext';
 import { FinancePeriodProvider } from '@/contexts/FinancePeriodContext';
+import { PermissionProvider } from '@/contexts/PermissionContext';
 import { TranslationProvider } from '@/components/providers/TranslationProvider';
 import { appTranslations } from '@/lib/translations/app';
 import { websiteBuilderTranslations } from '@/lib/translations/website-builder';
@@ -59,14 +60,16 @@ const mergedTranslations: Record<Language, Record<string, any>> = {
 function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   return (
     <SessionProvider session={session}>
-      <TranslationProvider translations={mergedTranslations}>
-        <BusinessTypeProvider>
-          <FinancePeriodProvider>
-            <Component {...pageProps} />
-            <Toaster />
-          </FinancePeriodProvider>
-        </BusinessTypeProvider>
-      </TranslationProvider>
+      <PermissionProvider>
+        <TranslationProvider translations={mergedTranslations}>
+          <BusinessTypeProvider>
+            <FinancePeriodProvider>
+              <Component {...pageProps} />
+              <Toaster />
+            </FinancePeriodProvider>
+          </BusinessTypeProvider>
+        </TranslationProvider>
+      </PermissionProvider>
     </SessionProvider>
   );
 }

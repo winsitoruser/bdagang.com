@@ -38,18 +38,33 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  const userRoleNorm = (token.role as string)?.toLowerCase() || '';
+  const isAdmin   = ['admin', 'super_admin', 'superadmin'].includes(userRoleNorm);
+  const isDriver  = ['driver', 'fleet_driver', 'armada'].includes(userRoleNorm);
+
   // Admin routes - only for admin/super_admin
   if (pathname.startsWith('/admin/')) {
-    const userRole = (token.role as string)?.toLowerCase();
-    if (!['admin', 'super_admin', 'superadmin'].includes(userRole)) {
+    if (!isAdmin) {
+      return NextResponse.redirect(new URL(isDriver ? '/driver' : '/hq/dashboard', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Driver portal — only for users with driver role (admin boleh masuk utk support)
+  if (pathname === '/driver' || pathname.startsWith('/driver/')) {
+    if (!isDriver && !isAdmin) {
       return NextResponse.redirect(new URL('/hq/dashboard', request.url));
     }
     return NextResponse.next();
   }
 
+  // Sebaliknya: cegah driver mengakses HQ back-office (kecuali admin overlap)
+  if (isDriver && pathname.startsWith('/hq/')) {
+    return NextResponse.redirect(new URL('/driver', request.url));
+  }
+
   // Check if tenant needs onboarding (for non-admin users)
-  const userRole = (token.role as string)?.toLowerCase();
-  if (!['admin', 'super_admin', 'superadmin'].includes(userRole)) {
+  if (!isAdmin) {
     // Allow onboarding pages
     if (pathname.startsWith('/onboarding')) {
       return NextResponse.next();

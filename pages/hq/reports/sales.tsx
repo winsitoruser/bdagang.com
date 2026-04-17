@@ -1,23 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import { toast } from 'react-hot-toast';
-import { StatsCard } from '../../../components/hq/ui';
 import {
-  BarChart3,
   TrendingUp,
-  TrendingDown,
   DollarSign,
   ShoppingCart,
-  Calendar,
   Download,
-  Filter,
   RefreshCw,
   Building2,
-  ChevronDown,
   FileText,
-  PieChart,
+  PieChart as PieChartIcon,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Package,
+  CreditCard,
+  Calendar,
+  Filter,
 } from 'lucide-react';
 import {
   BarChart,
@@ -34,82 +32,119 @@ import {
   Cell,
   AreaChart,
   Area,
-  Legend
+  Legend,
+  ComposedChart,
 } from 'recharts';
 
-interface SalesData {
+interface BranchSales {
   branchId: string;
   branchName: string;
   branchCode: string;
-  totalSales: number;
-  totalTransactions: number;
-  avgTicketSize: number;
+  sales: number;
+  transactions: number;
+  avgTicket: number;
+  items: number;
+  discount: number;
   grossProfit: number;
   grossMargin: number;
+  growth: number;
+  target: number;
+  achievement: number;
+}
+
+interface ProductSales {
+  productId: string;
+  productName: string;
+  sku: string;
+  category: string;
+  quantitySold: number;
+  revenue: number;
+  avgPrice: number;
   growth: number;
 }
 
 interface DailySales {
   date: string;
+  dayName: string;
+  sales: number;
+  transactions: number;
+  avgTicket: number;
+}
+
+interface HourlySales {
+  hour: number;
   sales: number;
   transactions: number;
 }
 
+interface PaymentMethodSales {
+  method: string;
+  amount: number;
+  transactions: number;
+  percentage: number;
+}
+
+interface SalesSummary {
+  totalSales: number;
+  totalTransactions: number;
+  averageTicket: number;
+  totalItems: number;
+  averageItemsPerTransaction: number;
+  totalDiscount: number;
+  totalTax: number;
+  netSales: number;
+  grossProfit: number;
+  grossMargin: number;
+  salesGrowth: number;
+  transactionGrowth: number;
+}
+
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+
+type Period = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
 
 export default function SalesReport() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'today' | 'week' | 'month' | 'year'>('month');
+  const [period, setPeriod] = useState<Period>('month');
+  const [customStart, setCustomStart] = useState<string>('');
+  const [customEnd, setCustomEnd] = useState<string>('');
   const [branchFilter, setBranchFilter] = useState<string>('all');
-  const [salesData, setSalesData] = useState<SalesData[]>([]);
-  const [dailySales, setDailySales] = useState<DailySales[]>([]);
-  const [summary, setSummary] = useState({
-    totalSales: 0,
-    totalTransactions: 0,
-    avgTicketSize: 0,
-    totalProfit: 0,
-    avgMargin: 0,
-    salesGrowth: 0
-  });
+  const [searchProduct, setSearchProduct] = useState('');
 
-  const processSalesData = (data: any) => {
-    if (data.branchData) {
-      setSalesData(data.branchData.map((b: any) => ({
-        branchId: b.branchId,
-        branchName: b.branchName,
-        branchCode: b.branchCode,
-        totalSales: b.totalSales,
-        totalTransactions: b.totalTransactions,
-        avgTicketSize: b.avgTicketSize,
-        grossProfit: b.grossProfit,
-        grossMargin: b.grossMargin,
-        growth: 0
-      })));
-    }
-    if (data.summary) {
-      setSummary({
-        totalSales: data.summary.totalSales,
-        totalTransactions: data.summary.totalTransactions,
-        avgTicketSize: data.summary.avgTicketSize,
-        totalProfit: data.summary.totalGrossProfit,
-        avgMargin: data.summary.avgGrossMargin,
-        salesGrowth: data.summary.salesGrowth
-      });
-    }
-  };
+  const [summary, setSummary] = useState<SalesSummary | null>(null);
+  const [branchSales, setBranchSales] = useState<BranchSales[]>([]);
+  const [topProducts, setTopProducts] = useState<ProductSales[]>([]);
+  const [dailySales, setDailySales] = useState<DailySales[]>([]);
+  const [hourlySales, setHourlySales] = useState<HourlySales[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSales[]>([]);
 
   const fetchSalesData = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/admin/reports/consolidated?period=${period}`);
-      if (response.ok) {
-        const json = await response.json();
-        const payload = json.data || json;
-        processSalesData(payload.data || payload);
+      const params = new URLSearchParams();
+      params.set('period', period);
+      if (branchFilter !== 'all') params.set('branchId', branchFilter);
+      if (period === 'custom') {
+        if (customStart) params.set('startDate', customStart);
+        if (customEnd) params.set('endDate', customEnd);
+      }
+      const res = await fetch(`/api/hq/reports/sales?${params.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        const d = json.data || json;
+        setSummary(d.summary || null);
+        setBranchSales(d.branchSales || []);
+        setTopProducts(d.topProducts || []);
+        setDailySales(d.dailySales || []);
+        setHourlySales(d.hourlySales || []);
+        setPaymentMethods(d.paymentMethods || []);
+      } else {
+        toast.error('Gagal memuat data penjualan');
       }
     } catch (error) {
       console.error('Error fetching sales data:', error);
+      toast.error('Koneksi gagal saat memuat data');
     } finally {
       setLoading(false);
     }
@@ -120,9 +155,111 @@ export default function SalesReport() {
     fetchSalesData();
   }, [period, branchFilter]);
 
+  const formatCurrency = (value: number) => {
+    if (!value && value !== 0) return 'Rp 0';
+    if (value >= 1_000_000_000) return `Rp ${(value / 1_000_000_000).toFixed(1)}M`;
+    if (value >= 1_000_000) return `Rp ${(value / 1_000_000).toFixed(1)}Jt`;
+    return `Rp ${value.toLocaleString('id-ID')}`;
+  };
+
+  const handleExport = (format: 'csv' | 'summary') => {
+    if (!summary) return;
+
+    let csvContent = '';
+    const filenamePrefix = format === 'summary' ? 'sales-summary' : 'sales-branches';
+
+    if (format === 'summary') {
+      csvContent = [
+        'Section,Metric,Value',
+        `Summary,Total Penjualan,${summary.totalSales}`,
+        `Summary,Net Sales,${summary.netSales}`,
+        `Summary,Gross Profit,${summary.grossProfit}`,
+        `Summary,Gross Margin,${summary.grossMargin}%`,
+        `Summary,Total Transaksi,${summary.totalTransactions}`,
+        `Summary,Avg Ticket,${summary.averageTicket}`,
+        `Summary,Total Items,${summary.totalItems}`,
+        `Summary,Total Discount,${summary.totalDiscount}`,
+        `Summary,Sales Growth,${summary.salesGrowth}%`,
+        '',
+        'Branch,Code,Sales,Transactions,AvgTicket,GrossProfit,Margin%,Growth%,Achievement%',
+        ...branchSales.map(b => [b.branchName, b.branchCode, b.sales, b.transactions, b.avgTicket, b.grossProfit, b.grossMargin, b.growth, b.achievement].join(',')),
+        '',
+        'Top Products,SKU,Category,Quantity,Revenue,AvgPrice,Growth%',
+        ...topProducts.map(p => [p.productName, p.sku, p.category, p.quantitySold, p.revenue, p.avgPrice, p.growth].join(',')),
+        '',
+        'Payment Method,Amount,Transactions,Percentage',
+        ...paymentMethods.map(m => [m.method, m.amount, m.transactions, `${m.percentage}%`].join(',')),
+      ].join('\n');
+    } else {
+      csvContent = [
+        ['Cabang', 'Kode', 'Penjualan', 'Transaksi', 'Avg Ticket', 'Gross Profit', 'Margin %', 'Growth %', 'Achievement %'].join(','),
+        ...branchSales.map(b => [
+          b.branchName,
+          b.branchCode,
+          b.sales,
+          b.transactions,
+          b.avgTicket.toFixed(0),
+          b.grossProfit,
+          b.grossMargin.toFixed(1),
+          b.growth.toFixed(1),
+          b.achievement.toFixed(1),
+        ].join(',')),
+      ].join('\n');
+    }
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filenamePrefix}-${period}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Export laporan penjualan berhasil');
+  };
+
+  const branchChartData = useMemo(
+    () => branchSales.map(b => ({
+      name: b.branchName.replace('Cabang ', '').replace('Kiosk ', ''),
+      sales: +(b.sales / 1_000_000).toFixed(1),
+      profit: +(b.grossProfit / 1_000_000).toFixed(1),
+      transactions: b.transactions,
+    })),
+    [branchSales]
+  );
+
+  const pieData = useMemo(
+    () => branchSales.map(b => ({ name: b.branchName.replace('Cabang ', ''), value: b.sales })),
+    [branchSales]
+  );
+
+  const paymentPieData = useMemo(
+    () => paymentMethods.map((m, i) => ({ name: m.method, value: m.amount, color: COLORS[i % COLORS.length] })),
+    [paymentMethods]
+  );
+
+  const dailyChartData = useMemo(
+    () => dailySales.map(d => ({
+      ...d,
+      salesJt: +(d.sales / 1_000_000).toFixed(1),
+    })),
+    [dailySales]
+  );
+
+  const filteredProducts = useMemo(
+    () =>
+      topProducts.filter(
+        p =>
+          searchProduct === '' ||
+          p.productName.toLowerCase().includes(searchProduct.toLowerCase()) ||
+          p.sku.toLowerCase().includes(searchProduct.toLowerCase()) ||
+          p.category.toLowerCase().includes(searchProduct.toLowerCase())
+      ),
+    [topProducts, searchProduct]
+  );
+
   if (!mounted) {
     return (
-      <HQLayout>
+      <HQLayout title="Laporan Penjualan" subtitle="Analisis penjualan konsolidasi semua cabang">
         <div className="flex items-center justify-center py-24">
           <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
         </div>
@@ -130,243 +267,202 @@ export default function SalesReport() {
     );
   }
 
-  const handleExport = (format: 'csv' | 'pdf') => {
-    if (format === 'csv') {
-      const csvContent = [
-        ['Cabang', 'Kode', 'Total Penjualan', 'Transaksi', 'Avg Ticket', 'Gross Profit', 'Margin %', 'Growth %'].join(','),
-        ...salesData.map(d => [
-          d.branchName,
-          d.branchCode,
-          d.totalSales,
-          d.totalTransactions,
-          d.avgTicketSize.toFixed(0),
-          d.grossProfit,
-          d.grossMargin.toFixed(1),
-          d.growth.toFixed(1)
-        ].join(','))
-      ].join('\n');
-
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sales-report-${period}-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('Export laporan penjualan berhasil');
-    }
-  };
-
-  const formatCurrency = (value: number) => {
-    if (value >= 1000000000) return `Rp ${(value / 1000000000).toFixed(1)}M`;
-    if (value >= 1000000) return `Rp ${(value / 1000000).toFixed(1)}Jt`;
-    return `Rp ${value.toLocaleString('id-ID')}`;
-  };
-
-  const chartData = salesData.map(d => ({
-    name: d.branchName.replace('Cabang ', '').replace('Kiosk ', ''),
-    sales: d.totalSales / 1000000,
-    profit: d.grossProfit / 1000000,
-    transactions: d.totalTransactions
-  }));
-
-  const pieData = salesData.map(d => ({
-    name: d.branchName.replace('Cabang ', '').replace('Kiosk ', ''),
-    value: d.totalSales
-  }));
-
   return (
-    <HQLayout>
+    <HQLayout title="Laporan Penjualan" subtitle="Analisis penjualan konsolidasi semua cabang">
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Laporan Penjualan</h1>
-            <p className="text-gray-500">Analisis penjualan konsolidasi semua cabang</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="today">Hari Ini</option>
-              <option value="week">Minggu Ini</option>
-              <option value="month">Bulan Ini</option>
-              <option value="year">Tahun Ini</option>
-            </select>
-            <select
-              value={branchFilter}
-              onChange={(e) => setBranchFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">Semua Cabang</option>
-              {salesData.map(b => (
-                <option key={b.branchId} value={b.branchId}>{b.branchName}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => fetchSalesData()}
-              disabled={loading}
-              className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            <div className="relative">
-              <button onClick={() => handleExport('csv')} className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                <Download className="w-4 h-4" />
-                Export CSV
+        {/* Filter Bar */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center flex-wrap gap-2">
+              <div className="flex items-center gap-2 text-gray-500">
+                <Filter className="w-4 h-4" />
+                <span className="text-sm font-medium">Filter</span>
+              </div>
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value as Period)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="today">Hari Ini</option>
+                <option value="week">7 Hari Terakhir</option>
+                <option value="month">Bulan Ini</option>
+                <option value="quarter">Kuartal Ini</option>
+                <option value="year">Tahun Ini</option>
+                <option value="custom">Custom Tanggal</option>
+              </select>
+              {period === 'custom' && (
+                <>
+                  <input
+                    type="date"
+                    value={customStart}
+                    onChange={(e) => setCustomStart(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <span className="text-gray-400 text-sm">-</span>
+                  <input
+                    type="date"
+                    value={customEnd}
+                    onChange={(e) => setCustomEnd(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <button
+                    onClick={fetchSalesData}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                  >
+                    Terapkan
+                  </button>
+                </>
+              )}
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="all">Semua Cabang</option>
+                {branchSales.map(b => (
+                  <option key={b.branchId} value={b.branchId}>
+                    {b.branchName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={fetchSalesData}
+                disabled={loading}
+                className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
               </button>
+              <div className="relative group">
+                <button className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                  <Download className="w-4 h-4" />
+                  Export
+                </button>
+                <div className="hidden group-hover:block absolute right-0 top-full pt-1 w-56 z-10">
+                  <div className="bg-white rounded-lg border border-gray-200 shadow-lg py-1">
+                    <button onClick={() => handleExport('summary')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-500" /> Ringkasan lengkap (CSV)
+                    </button>
+                    <button onClick={() => handleExport('csv')} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-gray-500" /> Data per cabang (CSV)
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-6 gap-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Penjualan</p>
-                <p className="text-xl font-bold text-gray-900">{formatCurrency(summary.totalSales)}</p>
-                <div className={`flex items-center gap-1 text-xs mt-1 ${summary.salesGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {summary.salesGrowth >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                  {Math.abs(summary.salesGrowth).toFixed(1)}%
-                </div>
-              </div>
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <DollarSign className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
+        {summary && (
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+            <StatCard label="Total Penjualan" value={formatCurrency(summary.totalSales)} change={summary.salesGrowth} icon={DollarSign} bg="bg-blue-100" color="text-blue-600" />
+            <StatCard label="Transaksi" value={summary.totalTransactions.toLocaleString('id-ID')} change={summary.transactionGrowth} icon={ShoppingCart} bg="bg-green-100" color="text-green-600" />
+            <StatCard label="Avg Ticket" value={formatCurrency(summary.averageTicket)} icon={FileText} bg="bg-purple-100" color="text-purple-600" />
+            <StatCard label="Gross Profit" value={formatCurrency(summary.grossProfit)} icon={TrendingUp} bg="bg-emerald-100" color="text-emerald-600" />
+            <StatCard label="Gross Margin" value={`${summary.grossMargin.toFixed(1)}%`} icon={PieChartIcon} bg="bg-orange-100" color="text-orange-600" />
+            <StatCard label="Cabang Aktif" value={`${branchSales.length}`} icon={Building2} bg="bg-cyan-100" color="text-cyan-600" />
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Transaksi</p>
-                <p className="text-xl font-bold text-gray-900">{summary.totalTransactions.toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-green-100 rounded-xl">
-                <ShoppingCart className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Avg Ticket Size</p>
-                <p className="text-xl font-bold text-gray-900">{formatCurrency(summary.avgTicketSize)}</p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-xl">
-                <FileText className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Gross Profit</p>
-                <p className="text-xl font-bold text-gray-900">{formatCurrency(summary.totalProfit)}</p>
-              </div>
-              <div className="p-3 bg-emerald-100 rounded-xl">
-                <TrendingUp className="w-6 h-6 text-emerald-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Avg Margin</p>
-                <p className="text-xl font-bold text-gray-900">{summary.avgMargin.toFixed(1)}%</p>
-              </div>
-              <div className="p-3 bg-orange-100 rounded-xl">
-                <PieChart className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Cabang Aktif</p>
-                <p className="text-xl font-bold text-gray-900">{salesData.length}</p>
-              </div>
-              <div className="p-3 bg-cyan-100 rounded-xl">
-                <Building2 className="w-6 h-6 text-cyan-600" />
-              </div>
-            </div>
-          </div>
+        )}
+
+        {/* Charts Row 1: Branch Bar + Pie */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <ChartCard title="Penjualan per Cabang (Juta)">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={branchChartData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" tickFormatter={(v) => `${v}Jt`} />
+                <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
+                <Tooltip formatter={(value: number) => [`Rp ${value.toFixed(1)} Jt`, 'Penjualan']} />
+                <Bar dataKey="sales" fill="#3B82F6" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+          <ChartCard title="Distribusi Penjualan">
+            <ResponsiveContainer width="100%" height="100%">
+              <RechartsPie>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={2}
+                  dataKey="value"
+                  label={({ name, percent }: any) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                >
+                  {pieData.map((_, idx) => (
+                    <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+              </RechartsPie>
+            </ResponsiveContainer>
+          </ChartCard>
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-2 gap-6">
-          {/* Sales by Branch */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Penjualan per Cabang</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={(v) => `${v}Jt`} />
-                  <YAxis type="category" dataKey="name" width={100} />
-                  <Tooltip formatter={(value: number) => [`Rp ${value.toFixed(1)} Jt`, 'Penjualan']} />
-                  <Bar dataKey="sales" fill="#3B82F6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+        {/* Charts Row 2: Daily Trend */}
+        <ChartCard title="Tren Penjualan Harian" className="w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={dailyChartData}>
+              <defs>
+                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" tickFormatter={(v) => new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })} />
+              <YAxis tickFormatter={(v) => `${v}Jt`} />
+              <Tooltip
+                formatter={(value: number, name: string) => name === 'salesJt' ? [`Rp ${value.toFixed(1)}Jt`, 'Penjualan'] : [value, 'Transaksi']}
+                labelFormatter={(label) => new Date(label).toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long' })}
+              />
+              <Area type="monotone" dataKey="salesJt" stroke="#3B82F6" fillOpacity={1} fill="url(#colorSales)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartCard>
 
-          {/* Sales Distribution */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Distribusi Penjualan</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsPie>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                </RechartsPie>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Daily Trend */}
-          <div className="col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Tren Penjualan Harian</h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dailySales}>
-                  <defs>
-                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
-                    tickFormatter={(v) => new Date(v).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
-                  />
-                  <YAxis tickFormatter={(v) => `${(v / 1000000).toFixed(0)}Jt`} />
-                  <Tooltip 
-                    formatter={(value: number) => [formatCurrency(value), 'Penjualan']}
-                    labelFormatter={(label) => new Date(label).toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long' })}
-                  />
-                  <Area type="monotone" dataKey="sales" stroke="#3B82F6" fillOpacity={1} fill="url(#colorSales)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+        {/* Charts Row 3: Hourly + Payment */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <ChartCard title="Pola Jam Sibuk (Peak Hours)">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={hourlySales}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="hour" tickFormatter={(h) => `${h}:00`} />
+                <YAxis yAxisId="left" tickFormatter={(v) => `${(v / 1_000_000).toFixed(0)}Jt`} />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip formatter={(v: number, n: string) => [n === 'sales' ? formatCurrency(v) : v, n]} />
+                <Legend />
+                <Bar yAxisId="left" dataKey="sales" name="Revenue" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="transactions" name="Transaksi" stroke="#F59E0B" strokeWidth={2} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ChartCard>
+          <ChartCard title="Metode Pembayaran">
+            <ResponsiveContainer width="100%" height="100%">
+              <RechartsPie>
+                <Pie
+                  data={paymentPieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={2}
+                  dataKey="value"
+                  label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {paymentPieData.map((entry, idx) => (
+                    <Cell key={`cell-${idx}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Legend />
+              </RechartsPie>
+            </ResponsiveContainer>
+          </ChartCard>
         </div>
 
         {/* Branch Table */}
@@ -374,65 +470,234 @@ export default function SalesReport() {
           <div className="p-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">Detail per Cabang</h3>
           </div>
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabang</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Penjualan</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Transaksi</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Ticket</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Gross Profit</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Margin</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Growth</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {salesData.map((branch) => (
-                <tr key={branch.branchId} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">{branch.branchName}</div>
-                        <div className="text-sm text-gray-500">{branch.branchCode}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-right font-medium text-gray-900">{formatCurrency(branch.totalSales)}</td>
-                  <td className="px-6 py-4 text-right text-gray-600">{branch.totalTransactions.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-right text-gray-600">{formatCurrency(branch.avgTicketSize)}</td>
-                  <td className="px-6 py-4 text-right text-green-600 font-medium">{formatCurrency(branch.grossProfit)}</td>
-                  <td className="px-6 py-4 text-right text-gray-600">{branch.grossMargin.toFixed(1)}%</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={`inline-flex items-center gap-1 ${branch.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {branch.growth >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                      {Math.abs(branch.growth).toFixed(1)}%
-                    </span>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabang</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Penjualan</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Transaksi</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Ticket</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Gross Profit</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Margin</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Growth</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Achievement</th>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot className="bg-gray-50 font-medium">
-              <tr>
-                <td className="px-6 py-4 text-gray-900">Total</td>
-                <td className="px-6 py-4 text-right text-gray-900">{formatCurrency(summary.totalSales)}</td>
-                <td className="px-6 py-4 text-right text-gray-900">{summary.totalTransactions.toLocaleString()}</td>
-                <td className="px-6 py-4 text-right text-gray-900">{formatCurrency(summary.avgTicketSize)}</td>
-                <td className="px-6 py-4 text-right text-green-600">{formatCurrency(summary.totalProfit)}</td>
-                <td className="px-6 py-4 text-right text-gray-900">{summary.avgMargin.toFixed(1)}%</td>
-                <td className="px-6 py-4 text-right">
-                  <span className={`inline-flex items-center gap-1 ${summary.salesGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {summary.salesGrowth >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                    {Math.abs(summary.salesGrowth).toFixed(1)}%
-                  </span>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {loading && branchSales.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-12">
+                      <div className="flex items-center justify-center">
+                        <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
+                      </div>
+                    </td>
+                  </tr>
+                ) : branchSales.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-gray-400">Tidak ada data penjualan</td>
+                  </tr>
+                ) : (
+                  branchSales.map((b) => (
+                    <tr key={b.branchId} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Building2 className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">{b.branchName}</div>
+                            <div className="text-sm text-gray-500">{b.branchCode}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right font-medium text-gray-900">{formatCurrency(b.sales)}</td>
+                      <td className="px-6 py-4 text-right text-gray-600">{b.transactions.toLocaleString('id-ID')}</td>
+                      <td className="px-6 py-4 text-right text-gray-600">{formatCurrency(b.avgTicket)}</td>
+                      <td className="px-6 py-4 text-right text-green-600 font-medium">{formatCurrency(b.grossProfit)}</td>
+                      <td className="px-6 py-4 text-right text-gray-600">{b.grossMargin.toFixed(1)}%</td>
+                      <td className="px-6 py-4 text-right">
+                        <span className={`inline-flex items-center gap-1 ${b.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {b.growth >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                          {Math.abs(b.growth).toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center gap-2 justify-center">
+                          <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${b.achievement >= 100 ? 'bg-green-500' : b.achievement >= 80 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                              style={{ width: `${Math.min(b.achievement, 100)}%` }}
+                            />
+                          </div>
+                          <span className={`text-sm font-medium ${b.achievement >= 100 ? 'text-green-600' : 'text-gray-600'}`}>
+                            {b.achievement.toFixed(0)}%
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              {summary && branchSales.length > 0 && (
+                <tfoot className="bg-gray-50 font-medium">
+                  <tr>
+                    <td className="px-6 py-4 text-gray-900">Total</td>
+                    <td className="px-6 py-4 text-right text-gray-900">{formatCurrency(summary.totalSales)}</td>
+                    <td className="px-6 py-4 text-right text-gray-900">{summary.totalTransactions.toLocaleString('id-ID')}</td>
+                    <td className="px-6 py-4 text-right text-gray-900">{formatCurrency(summary.averageTicket)}</td>
+                    <td className="px-6 py-4 text-right text-green-600">{formatCurrency(summary.grossProfit)}</td>
+                    <td className="px-6 py-4 text-right text-gray-900">{summary.grossMargin.toFixed(1)}%</td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={`inline-flex items-center gap-1 ${summary.salesGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {summary.salesGrowth >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                        {Math.abs(summary.salesGrowth).toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="px-6 py-4" />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
+
+        {/* Top Products Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between flex-wrap gap-3">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Package className="w-5 h-5 text-gray-500" />
+              Top Produk Terlaris
+            </h3>
+            <input
+              type="text"
+              placeholder="Cari produk / SKU / kategori..."
+              value={searchProduct}
+              onChange={(e) => setSearchProduct(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm w-full sm:w-72"
+            />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produk</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg Price</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Growth</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredProducts.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-gray-400">Tidak ada produk</td>
+                  </tr>
+                ) : (
+                  filteredProducts.map((p) => (
+                    <tr key={p.productId} className="hover:bg-gray-50">
+                      <td className="px-6 py-3 font-medium text-gray-900">{p.productName}</td>
+                      <td className="px-6 py-3 text-sm text-gray-500 font-mono">{p.sku}</td>
+                      <td className="px-6 py-3">
+                        <span className="px-2 py-0.5 bg-gray-100 rounded-full text-xs font-medium text-gray-700">{p.category}</span>
+                      </td>
+                      <td className="px-6 py-3 text-right text-gray-700">{p.quantitySold.toLocaleString('id-ID')}</td>
+                      <td className="px-6 py-3 text-right font-medium text-gray-900">{formatCurrency(p.revenue)}</td>
+                      <td className="px-6 py-3 text-right text-gray-600">{formatCurrency(p.avgPrice)}</td>
+                      <td className="px-6 py-3 text-right">
+                        <span className={`inline-flex items-center gap-1 ${p.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {p.growth >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+                          {Math.abs(p.growth).toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Payment Methods Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-gray-500" />
+              Ringkasan Metode Pembayaran
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Metode</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Nominal</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Transaksi</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Avg / Tx</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Persentase</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {paymentMethods.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-6 text-center text-gray-400">Tidak ada data metode pembayaran</td>
+                  </tr>
+                ) : (
+                  paymentMethods.map((m) => (
+                    <tr key={m.method} className="hover:bg-gray-50">
+                      <td className="px-6 py-3 font-medium text-gray-900">{m.method}</td>
+                      <td className="px-6 py-3 text-right font-medium">{formatCurrency(m.amount)}</td>
+                      <td className="px-6 py-3 text-right text-gray-600">{m.transactions.toLocaleString('id-ID')}</td>
+                      <td className="px-6 py-3 text-right text-gray-600">{formatCurrency(m.transactions > 0 ? Math.round(m.amount / m.transactions) : 0)}</td>
+                      <td className="px-6 py-3 text-center">
+                        <div className="flex items-center gap-2 justify-center">
+                          <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-500 rounded-full" style={{ width: `${m.percentage}%` }} />
+                          </div>
+                          <span className="text-sm text-gray-600">{m.percentage.toFixed(1)}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </HQLayout>
+  );
+}
+
+function StatCard({ label, value, change, icon: Icon, bg, color }: { label: string; value: string; change?: number; icon: any; bg: string; color: string }) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-500">{label}</p>
+          <p className="text-xl font-bold text-gray-900">{value}</p>
+          {typeof change === 'number' && change !== 0 && (
+            <div className={`flex items-center gap-1 text-xs mt-1 ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+              {Math.abs(change).toFixed(1)}%
+            </div>
+          )}
+        </div>
+        <div className={`p-3 ${bg} rounded-xl`}>
+          <Icon className={`w-6 h-6 ${color}`} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChartCard({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 ${className}`}>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">{title}</h3>
+      <div className="h-80">{children}</div>
+    </div>
   );
 }

@@ -1,34 +1,176 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-
-const ok = (res: NextApiResponse, data: any) => res.status(200).json({ success: true, ...data });
-const fail = (res: NextApiResponse, msg: string, status = 500) => res.status(status).json({ success: false, error: msg });
+import { Op, fn, col } from 'sequelize';
+import { Branch, PosTransaction, Employee, Customer, Stock, Product } from '../../../../models';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
+import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
-    return fail(res, 'Method not allowed', 405);
+    res.setHeader('Allow', ['GET']);
+    return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+      errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+    );
   }
 
   try {
     const { section = 'overview' } = req.query as Record<string, string>;
 
     switch (section) {
-      case 'overview':
-        return ok(res, { data: getOverviewData() });
+      case 'overview': {
+        const overview = await buildOverviewData();
+        return res.status(HttpStatus.OK).json(successResponse(overview));
+      }
       case 'customers':
-        return ok(res, { data: getCustomerReport() });
+        return res.status(HttpStatus.OK).json(successResponse(getCustomerReport()));
       case 'hris':
-        return ok(res, { data: getHRISReport() });
+        return res.status(HttpStatus.OK).json(successResponse(getHRISReport()));
       case 'procurement':
-        return ok(res, { data: getProcurementReport() });
+        return res.status(HttpStatus.OK).json(successResponse(getProcurementReport()));
       case 'data-analysis':
-        return ok(res, { data: getDataAnalysis() });
+        return res.status(HttpStatus.OK).json(successResponse(getDataAnalysis()));
       default:
-        return fail(res, `Unknown section: ${section}`, 400);
+        return res.status(HttpStatus.BAD_REQUEST).json(
+          errorResponse(ErrorCodes.VALIDATION_ERROR, `Unknown section: ${section}`)
+        );
     }
   } catch (error: any) {
     console.error('Comprehensive Report API Error:', error);
-    return fail(res, error.message || 'Internal server error');
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, error.message || 'Internal server error')
+    );
   }
+}
+
+export default withHQAuth(handler, { module: 'reports' });
+
+async function buildOverviewData() {
+  const base = getOverviewData();
+  try {
+    const now = new Date();
+    const startMTD = new Date(now.getFullYear(), now.getMonth(), 1);
+    const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+    const [curRow, prevRow, totalBranches, activeBranches, totalEmployees, totalCustomers, newCustomers] = await Promise.all([
+      PosTransaction.findOne({
+        where: { createdAt: { [Op.gte]: startMTD }, status: 'completed' },
+        attributes: [
+          [fn('COALESCE', fn('SUM', col('total')), 0), 'revenue'],
+          [fn('COUNT', col('id')), 'transactions'],
+        ],
+        raw: true,
+      }).catch(() => null),
+      PosTransaction.findOne({
+        where: { createdAt: { [Op.between]: [prevStart, prevEnd] }, status: 'completed' },
+        attributes: [
+          [fn('COALESCE', fn('SUM', col('total')), 0), 'revenue'],
+          [fn('COUNT', col('id')), 'transactions'],
+        ],
+        raw: true,
+      }).catch(() => null),
+      Branch.count().catch(() => 0),
+      Branch.count({ where: { isActive: true as any } }).catch(() => 0),
+      Employee.count().catch(() => 0),
+      Customer.count().catch(() => 0),
+      Customer.count({ where: { createdAt: { [Op.gte]: startMTD } } }).catch(() => 0),
+    ]);
+
+    const totalRevenue = parseFloat((curRow as any)?.revenue) || 0;
+    const totalTransactions = parseInt((curRow as any)?.transactions, 10) || 0;
+    const prevRevenue = parseFloat((prevRow as any)?.revenue) || 0;
+    const prevTransactions = parseInt((prevRow as any)?.transactions, 10) || 0;
+
+    const revenueGrowth = prevRevenue > 0 ? +(((totalRevenue - prevRevenue) / prevRevenue) * 100).toFixed(1) : 0;
+    const transactionGrowth = prevTransactions > 0 ? +(((totalTransactions - prevTransactions) / prevTransactions) * 100).toFixed(1) : 0;
+    const customerGrowth = totalCustomers > 0 ? +((newCustomers / totalCustomers) * 100).toFixed(1) : 0;
+    const netProfit = totalRevenue * 0.2;
+    const profitGrowth = prevRevenue > 0 ? +(((netProfit - prevRevenue * 0.2) / (prevRevenue * 0.2)) * 100).toFixed(1) : 0;
+
+    if (totalRevenue > 0 || totalBranches > 0 || totalCustomers > 0) {
+      base.quickStats = {
+        ...base.quickStats,
+        totalRevenue,
+        revenueGrowth,
+        totalTransactions,
+        transactionGrowth,
+        totalCustomers,
+        customerGrowth,
+        activeBranches: activeBranches || base.quickStats.activeBranches,
+        totalBranches: totalBranches || base.quickStats.totalBranches,
+        netProfit,
+        profitGrowth,
+        employeeCount: totalEmployees || base.quickStats.employeeCount,
+      } as any;
+
+      // Update sales + finance + customers KPIs
+      const salesModule = base.modules.find((m: any) => m.id === 'sales');
+      if (salesModule) {
+        salesModule.kpis[0].value = totalRevenue;
+        salesModule.kpis[0].change = revenueGrowth;
+        salesModule.kpis[1].value = totalTransactions;
+        salesModule.kpis[1].change = transactionGrowth;
+        salesModule.kpis[2].value = totalTransactions > 0 ? Math.round(totalRevenue / totalTransactions) : 0;
+      }
+      const financeModule = base.modules.find((m: any) => m.id === 'finance');
+      if (financeModule) {
+        financeModule.kpis[0].value = totalRevenue;
+        financeModule.kpis[0].change = revenueGrowth;
+        financeModule.kpis[1].value = totalRevenue * 0.3;
+        financeModule.kpis[3].value = netProfit;
+        financeModule.kpis[3].change = profitGrowth;
+      }
+      const customersModule = base.modules.find((m: any) => m.id === 'customers');
+      if (customersModule) {
+        customersModule.kpis[0].value = totalCustomers;
+        customersModule.kpis[0].change = customerGrowth;
+        customersModule.kpis[1].value = newCustomers;
+      }
+      const hrisModule = base.modules.find((m: any) => m.id === 'hris');
+      if (hrisModule) {
+        hrisModule.kpis[0].value = totalEmployees;
+      }
+      const consolidatedModule = base.modules.find((m: any) => m.id === 'consolidated');
+      if (consolidatedModule) {
+        consolidatedModule.kpis[0].value = totalRevenue;
+        consolidatedModule.kpis[0].change = revenueGrowth;
+        consolidatedModule.kpis[1].value = activeBranches || consolidatedModule.kpis[1].value;
+        consolidatedModule.kpis[3].value = netProfit;
+        consolidatedModule.kpis[3].change = profitGrowth;
+      }
+    }
+
+    // Inventory KPI
+    try {
+      const [stocks, productCount] = await Promise.all([
+        Stock.findAll({
+          include: [{ model: Product, as: 'product', attributes: ['id', 'minimum_stock', 'buy_price'] }],
+          limit: 5000,
+        }),
+        Product.count(),
+      ]);
+      let stockValue = 0;
+      let lowStock = 0;
+      for (const s of stocks as any[]) {
+        const qty = parseFloat(s.quantity) || 0;
+        const cost = parseFloat(s.product?.buy_price) || 0;
+        stockValue += qty * cost;
+        if (qty <= (s.product?.minimum_stock || 0)) lowStock++;
+      }
+      const invModule = base.modules.find((m: any) => m.id === 'inventory');
+      if (invModule && stockValue > 0) {
+        invModule.kpis[0].value = stockValue;
+        invModule.kpis[3].value = lowStock;
+      }
+      if (productCount > 0 && invModule) {
+        // nothing else to override, leave turnover/fillrate as mock
+      }
+    } catch (e) {
+      // ignore
+    }
+  } catch (error) {
+    console.warn('Comprehensive overview DB enrichment failed:', (error as Error).message);
+  }
+  return base;
 }
 
 function getOverviewData() {
@@ -401,4 +543,3 @@ function getDataAnalysis() {
   };
 }
 
-export default handler;

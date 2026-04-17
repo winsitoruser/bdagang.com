@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import { useTranslation } from '@/lib/i18n';
+import { CanAccess, PageGuard } from '../../../components/permissions';
 import Link from 'next/link';
 import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import {
@@ -292,6 +293,10 @@ export default function InvoiceManagement() {
   };
 
   return (
+    <PageGuard
+      anyPermission={['finance.view', 'finance.*', 'finance_invoices.view']}
+      title="Manajemen Invoice"
+    >
     <HQLayout>
       <div className="space-y-6">
         {/* Header */}
@@ -306,13 +311,15 @@ export default function InvoiceManagement() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              {t('finance.invCreate')}
-            </button>
+            <CanAccess anyPermission={['finance_invoices.create', 'finance.*']}>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                {t('finance.invCreate')}
+              </button>
+            </CanAccess>
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
               {t('finance.export')}
@@ -767,5 +774,6 @@ export default function InvoiceManagement() {
         )}
       </div>
     </HQLayout>
+    </PageGuard>
   );
 }

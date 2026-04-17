@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import { useTranslation } from '@/lib/i18n';
+import { PageGuard } from '../../../components/permissions';
 import {
   History, Search, Filter, Download, Eye, User, Building2, Calendar,
   Clock, Shield, AlertTriangle, FileText, Package, DollarSign, Settings,
@@ -167,6 +168,11 @@ export default function AuditLogViewer() {
   const maxEntity = stats?.byEntity ? Math.max(...stats.byEntity.map(e => e.count), 1) : 1;
 
   return (
+    <PageGuard
+      anyPermission={['audit.view', 'audit.*']}
+      title="Audit Logs"
+      description="Riwayat aktivitas sistem & intervensi HQ (data sensitif)."
+    >
     <HQLayout title={t('auditLogs.title')} subtitle={t('auditLogs.subtitle')}>
       <div className="space-y-5">
         {/* Header */}
@@ -470,5 +476,6 @@ export default function AuditLogViewer() {
         </div>
       )}
     </HQLayout>
+    </PageGuard>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
 import { useTranslation } from '@/lib/i18n';
+import { CanAccess, PageGuard } from '@/components/permissions';
 import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import * as XLSX from 'xlsx';
 import {
@@ -568,6 +569,11 @@ export default function PayrollPage() {
   if (!mounted) return null;
 
   return (
+    <PageGuard
+      anyPermission={['payroll.view', 'payroll.*', 'employees.*']}
+      title="Penggajian Utama (Payroll)"
+      description="Jalankan, setujui, dan transfer gaji (modul sangat sensitif)."
+    >
     <HQLayout title={t('hris.payrollTitle')} subtitle={t('hris.payrollSubtitle')}>
       <div className="space-y-6">
         {/* Stats */}
@@ -783,12 +789,16 @@ export default function PayrollPage() {
                           <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${st.color}`}>{st.label}</span>
                           <div className="flex gap-1">
                             {run.status === 'draft' && (
-                              <button onClick={() => handleCalculateRun(run.id)}
-                                className="px-2.5 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Hitung</button>
+                              <CanAccess permission="payroll.run">
+                                <button onClick={() => handleCalculateRun(run.id)}
+                                  className="px-2.5 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Hitung</button>
+                              </CanAccess>
                             )}
                             {run.status === 'calculated' && (
-                              <button onClick={() => handleApproveRun(run.id)}
-                                className="px-2.5 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">Setujui</button>
+                              <CanAccess permission="payroll.approve">
+                                <button onClick={() => handleApproveRun(run.id)}
+                                  className="px-2.5 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">Setujui</button>
+                              </CanAccess>
                             )}
                             {['calculated', 'approved', 'paid'].includes(run.status) && (
                               <button onClick={() => viewPayslip(run)}
@@ -1334,9 +1344,11 @@ export default function PayrollPage() {
             </div>
             <div className="px-6 py-4 border-t flex justify-end gap-3">
               <button onClick={() => setShowRunModal(false)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Batal</button>
-              <button onClick={handleCreateRun} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center gap-2">
-                <Calculator className="w-4 h-4" /> Buat Draf
-              </button>
+              <CanAccess permission="payroll.run">
+                <button onClick={handleCreateRun} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center gap-2">
+                  <Calculator className="w-4 h-4" /> Buat Draf
+                </button>
+              </CanAccess>
             </div>
           </div>
         </div>
@@ -1653,5 +1665,6 @@ export default function PayrollPage() {
         </div>
       )}
     </HQLayout>
+    </PageGuard>
   );
 }

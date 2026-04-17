@@ -1,24 +1,33 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { Op } from 'sequelize';
 import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
-
-// Mock roles data - in production, this would come from a database
-const mockRoles = [
-  { id: '1', code: 'SUPER_ADMIN', name: 'Super Admin', description: 'Akses penuh ke semua fitur sistem', level: 1, permissions: [{ id: '1', module: 'all', action: 'all', description: 'Full Access' }], userCount: 2, isSystem: true, isActive: true, createdAt: '2024-01-01' },
-  { id: '2', code: 'HQ_ADMIN', name: 'HQ Admin', description: 'Admin level HQ untuk manajemen cabang', level: 2, permissions: [{ id: '2', module: 'branches', action: 'all', description: 'Manage Branches' }, { id: '3', module: 'products', action: 'all', description: 'Manage Products' }], userCount: 5, isSystem: true, isActive: true, createdAt: '2024-01-01' },
-  { id: '3', code: 'BRANCH_MANAGER', name: 'Manager Cabang', description: 'Manajer dengan akses penuh ke cabangnya', level: 3, permissions: [{ id: '6', module: 'branch', action: 'all', description: 'Manage Own Branch' }], userCount: 8, isSystem: true, isActive: true, createdAt: '2024-01-01' },
-  { id: '4', code: 'SUPERVISOR', name: 'Supervisor', description: 'Supervisor dengan akses terbatas', level: 4, permissions: [{ id: '10', module: 'pos', action: 'all', description: 'POS Operations' }], userCount: 12, isSystem: false, isActive: true, createdAt: '2024-02-15' },
-  { id: '5', code: 'CASHIER', name: 'Kasir', description: 'Staff kasir dengan akses POS saja', level: 5, permissions: [{ id: '13', module: 'pos', action: 'create', description: 'Create Transaction' }], userCount: 45, isSystem: true, isActive: true, createdAt: '2024-01-01' },
-  { id: '6', code: 'WAREHOUSE', name: 'Staff Gudang', description: 'Staff gudang untuk manajemen stok', level: 5, permissions: [{ id: '15', module: 'inventory', action: 'all', description: 'Manage Inventory' }], userCount: 8, isSystem: false, isActive: true, createdAt: '2024-03-01' }
-];
+import { rolesService, buildPermissionMap } from '../../../../lib/permissions/roles-service';
+import { countPermissions } from '../../../../lib/permissions/permissions-catalog';
+import { logRoleAudit } from '../../../../lib/permissions/audit';
+import {
+  invalidatePermissionCache,
+  hasPermission,
+  type ResolvedPermission
+} from '../../../../lib/permissions/permission-resolver';
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const permCtx: ResolvedPermission | undefined = (req as any).permissionContext;
+  const isSuper = permCtx?.isSuperAdmin;
+  const perms = permCtx?.permissions || {};
+
   try {
     switch (req.method) {
-      case 'GET':
+      case 'GET': {
+        if (!isSuper && !hasPermission(perms, 'roles.view')) {
+          return res.status(403).json({ error: 'Missing permission: roles.view' });
+        }
         return await getRoles(req, res);
-      case 'POST':
+      }
+      case 'POST': {
+        if (!isSuper && !hasPermission(perms, 'roles.create')) {
+          return res.status(403).json({ error: 'Missing permission: roles.create' });
+        }
         return await createRole(req, res);
+      }
       default:
         res.setHeader('Allow', ['GET', 'POST']);
         return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
@@ -32,42 +41,71 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 export default withHQAuth(handler);
 
 async function getRoles(req: NextApiRequest, res: NextApiResponse) {
-  const { search } = req.query;
+  const { search, level, type, active } = req.query;
 
-  let roles = [...mockRoles];
-  
+  let roles = await rolesService.list();
+
   if (search) {
-    const searchLower = (search as string).toLowerCase();
-    roles = roles.filter(r => 
-      r.name.toLowerCase().includes(searchLower) || 
-      r.code.toLowerCase().includes(searchLower)
-    );
+    const s = (search as string).toLowerCase();
+    roles = roles.filter(r => r.name.toLowerCase().includes(s) || r.code.toLowerCase().includes(s));
   }
+  if (level) {
+    const lvl = parseInt(level as string, 10);
+    if (!Number.isNaN(lvl)) roles = roles.filter(r => r.level === lvl);
+  }
+  if (type === 'system') roles = roles.filter(r => r.isSystem);
+  if (type === 'custom') roles = roles.filter(r => !r.isSystem);
+  if (active === 'true') roles = roles.filter(r => r.isActive);
 
-  return res.status(200).json({ roles });
+  const stats = await rolesService.stats();
+  return res.status(200).json({ roles, stats });
 }
 
 async function createRole(req: NextApiRequest, res: NextApiResponse) {
-  const { code, name, description, level, permissions } = req.body;
+  const { code, name, description, level, dataScope, permissions, isActive } = req.body || {};
 
   if (!code || !name) {
-    return res.status(400).json({ error: 'Code and name are required' });
+    return res.status(400).json({ error: 'Code dan nama wajib diisi' });
   }
 
-  const newRole = {
-    id: Date.now().toString(),
-    code: code.toUpperCase().replace(/\s+/g, '_'),
+  const normalizedCode = String(code).toUpperCase().replace(/\s+/g, '_');
+  const existing = await rolesService.findByCode(normalizedCode);
+  if (existing) {
+    return res.status(400).json({ error: 'Kode role sudah dipakai' });
+  }
+
+  const permMap = buildPermissionMap(permissions);
+
+  const role = await rolesService.create({
+    code: normalizedCode,
     name,
     description: description || '',
-    level: level || 5,
-    permissions: permissions || [],
-    userCount: 0,
-    isSystem: false,
-    isActive: true,
-    createdAt: new Date().toISOString()
-  };
+    level: typeof level === 'number' ? level : 5,
+    dataScope: dataScope || 'branch',
+    isActive: isActive !== false,
+    permissions: permMap
+  });
 
-  mockRoles.push(newRole);
+  await logRoleAudit({
+    req,
+    action: 'role.create',
+    targetType: 'role',
+    targetId: role.id,
+    targetLabel: role.name,
+    newValues: {
+      code: role.code,
+      name: role.name,
+      level: role.level,
+      dataScope: role.dataScope,
+      permissionCount: countPermissions(role.permissions)
+    }
+  });
 
-  return res.status(201).json({ role: newRole, message: 'Role created successfully' });
+  // Invalidate permission cache karena role baru bisa dipakai oleh user
+  invalidatePermissionCache();
+
+  return res.status(201).json({
+    role,
+    message: `Role "${role.name}" berhasil dibuat dengan ${countPermissions(role.permissions)} permission`
+  });
 }
