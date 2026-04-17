@@ -29,6 +29,13 @@ import {
   AreaChart,
   Area,
 } from 'recharts';
+import {
+  rowsOr,
+  MOCK_REPORTS_FINANCE_SUMMARY,
+  MOCK_REPORTS_FINANCE_BRANCH,
+  MOCK_REPORTS_FINANCE_TREND,
+  MOCK_REPORTS_FINANCE_PAYMENT,
+} from '@/lib/hq/mock-data';
 
 interface FinanceData {
   branchId: string;
@@ -83,6 +90,8 @@ interface Summary {
 const PAYMENT_COLORS: Record<string, string> = {
   Cash: '#10B981',
   Card: '#3B82F6',
+  Tunai: '#10B981',
+  Kartu: '#3B82F6',
   QRIS: '#8B5CF6',
   'E-Wallet': '#F59E0B',
   Transfer: '#EC4899',
@@ -100,10 +109,10 @@ export default function FinanceReport() {
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
 
-  const [financeData, setFinanceData] = useState<FinanceData[]>([]);
-  const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrend[]>([]);
-  const [paymentBreakdown, setPaymentBreakdown] = useState<PaymentBreakdown[]>([]);
-  const [summary, setSummary] = useState<Summary | null>(null);
+  const [financeData, setFinanceData] = useState<FinanceData[]>(MOCK_REPORTS_FINANCE_BRANCH);
+  const [monthlyTrend, setMonthlyTrend] = useState<MonthlyTrend[]>(MOCK_REPORTS_FINANCE_TREND);
+  const [paymentBreakdown, setPaymentBreakdown] = useState<PaymentBreakdown[]>(MOCK_REPORTS_FINANCE_PAYMENT);
+  const [summary, setSummary] = useState<Summary | null>(MOCK_REPORTS_FINANCE_SUMMARY);
 
   const fetchFinanceData = async () => {
     setLoading(true);
@@ -119,16 +128,27 @@ export default function FinanceReport() {
       if (res.ok) {
         const json = await res.json();
         const d = json.data || json;
-        setFinanceData(d.financeData || []);
-        setMonthlyTrend(d.monthlyTrend || []);
-        setPaymentBreakdown(d.paymentBreakdown || []);
-        setSummary(d.summary || null);
+        const s = d.summary;
+        setSummary(
+          s && (s.revenue > 0 || s.transactions > 0) ? s : MOCK_REPORTS_FINANCE_SUMMARY
+        );
+        setFinanceData(rowsOr(d.financeData, MOCK_REPORTS_FINANCE_BRANCH));
+        setMonthlyTrend(rowsOr(d.monthlyTrend, MOCK_REPORTS_FINANCE_TREND));
+        setPaymentBreakdown(rowsOr(d.paymentBreakdown, MOCK_REPORTS_FINANCE_PAYMENT));
       } else {
-        toast.error('Gagal memuat laporan keuangan');
+        setSummary(MOCK_REPORTS_FINANCE_SUMMARY);
+        setFinanceData(MOCK_REPORTS_FINANCE_BRANCH);
+        setMonthlyTrend(MOCK_REPORTS_FINANCE_TREND);
+        setPaymentBreakdown(MOCK_REPORTS_FINANCE_PAYMENT);
+        toast.error('Gagal memuat laporan keuangan — menampilkan data demo');
       }
     } catch (error) {
       console.error('Error fetching finance report:', error);
-      toast.error('Koneksi gagal saat memuat data keuangan');
+      setSummary(MOCK_REPORTS_FINANCE_SUMMARY);
+      setFinanceData(MOCK_REPORTS_FINANCE_BRANCH);
+      setMonthlyTrend(MOCK_REPORTS_FINANCE_TREND);
+      setPaymentBreakdown(MOCK_REPORTS_FINANCE_PAYMENT);
+      toast.error('Koneksi gagal — menampilkan data demo');
     } finally {
       setLoading(false);
     }

@@ -9,6 +9,7 @@ import {
   Activity, Target, Star, Timer, Shield, Zap, Award, Download as DownloadIcon
 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { rowsOr, MOCK_HQ_TMS } from '@/lib/hq/mock-data';
 
 const CHART_COLORS = ['#6366F1','#10B981','#F59E0B','#EF4444','#8B5CF6','#EC4899','#06B6D4','#F97316','#3B82F6','#14B8A6'];
 const CLS = { fontSize: 11, fill: '#6B7280' };
@@ -69,26 +70,26 @@ export default function TMSPage() {
   const [modal, setModal] = useState<string | null>(null);
   const [form, setForm] = useState<any>({});
 
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [shipments, setShipments] = useState<any[]>([]);
-  const [trips, setTrips] = useState<any[]>([]);
-  const [carriers, setCarriers] = useState<any[]>([]);
-  const [routes, setRoutes] = useState<any[]>([]);
-  const [freightBills, setFreightBills] = useState<any[]>([]);
-  const [zones, setZones] = useState<any[]>([]);
-  const [rateCards, setRateCards] = useState<any[]>([]);
-  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [dashboard, setDashboard] = useState<any>(MOCK_HQ_TMS.dashboard);
+  const [shipments, setShipments] = useState<any[]>(MOCK_HQ_TMS.shipments);
+  const [trips, setTrips] = useState<any[]>(MOCK_HQ_TMS.trips);
+  const [carriers, setCarriers] = useState<any[]>(MOCK_HQ_TMS.carriers);
+  const [routes, setRoutes] = useState<any[]>(MOCK_HQ_TMS.routes);
+  const [freightBills, setFreightBills] = useState<any[]>(MOCK_HQ_TMS.freightBills);
+  const [zones, setZones] = useState<any[]>(MOCK_HQ_TMS.zones);
+  const [rateCards, setRateCards] = useState<any[]>(MOCK_HQ_TMS.rateCards);
+  const [warehouses, setWarehouses] = useState<any[]>(MOCK_HQ_TMS.warehouses);
   // For dropdowns in forms
-  const [fmsVehicles, setFmsVehicles] = useState<any[]>([]);
-  const [fmsDrivers, setFmsDrivers] = useState<any[]>([]);
+  const [fmsVehicles, setFmsVehicles] = useState<any[]>(MOCK_HQ_TMS.fmsVehicles);
+  const [fmsDrivers, setFmsDrivers] = useState<any[]>(MOCK_HQ_TMS.fmsDrivers);
   // Enhanced states
-  const [tracking, setTracking] = useState<any[]>([]);
-  const [carrierScores, setCarrierScores] = useState<any[]>([]);
-  const [deliverySlas, setDeliverySlas] = useState<any[]>([]);
-  const [slaPerformance, setSlaPerformance] = useState<any>(null);
-  const [logisticsKpi, setLogisticsKpi] = useState<any>(null);
-  const [dispatchQueue, setDispatchQueue] = useState<any[]>([]);
-  const [chartData, setChartData] = useState<any>(null);
+  const [tracking, setTracking] = useState<any[]>(MOCK_HQ_TMS.tracking);
+  const [carrierScores, setCarrierScores] = useState<any[]>(MOCK_HQ_TMS.carrierScores);
+  const [deliverySlas, setDeliverySlas] = useState<any[]>(MOCK_HQ_TMS.deliverySlas);
+  const [slaPerformance, setSlaPerformance] = useState<any>(MOCK_HQ_TMS.slaPerformance);
+  const [logisticsKpi, setLogisticsKpi] = useState<any>(MOCK_HQ_TMS.logisticsKpi);
+  const [dispatchQueue, setDispatchQueue] = useState<any[]>(MOCK_HQ_TMS.dispatchQueue);
+  const [chartData, setChartData] = useState<any>(MOCK_HQ_TMS.chartData);
   const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => { setMounted(true); }, []);
@@ -115,8 +116,8 @@ export default function TMSPage() {
       switch (tab) {
         case 'dashboard': {
           const [r, c] = await Promise.all([api('dashboard'), api('dashboard-charts')]);
-          if (r.success) setDashboard(r.data);
-          if (c.success) setChartData(c.data);
+          if (r.success) setDashboard(r.data ?? MOCK_HQ_TMS.dashboard);
+          if (c.success) setChartData(c.data ?? MOCK_HQ_TMS.chartData);
           break;
         }
         case 'shipments': {
@@ -125,10 +126,10 @@ export default function TMSPage() {
             api('vehicles', 'GET', undefined, '/api/hq/fms'),
             api('drivers', 'GET', undefined, '/api/hq/fms')
           ]);
-          if (r.success) setShipments(r.data || []);
-          if (c.success) setCarriers(c.data || []);
-          if (v.success) setFmsVehicles(v.data || []);
-          if (d.success) setFmsDrivers(d.data || []);
+          if (r.success) setShipments(rowsOr(r.data, MOCK_HQ_TMS.shipments));
+          if (c.success) setCarriers(rowsOr(c.data, MOCK_HQ_TMS.carriers));
+          if (v.success) setFmsVehicles(rowsOr(v.data, MOCK_HQ_TMS.fmsVehicles));
+          if (d.success) setFmsDrivers(rowsOr(d.data, MOCK_HQ_TMS.fmsDrivers));
           break;
         }
         case 'trips': {
@@ -137,61 +138,61 @@ export default function TMSPage() {
             api('vehicles', 'GET', undefined, '/api/hq/fms'),
             api('drivers', 'GET', undefined, '/api/hq/fms')
           ]);
-          if (r.success) setTrips(r.data || []);
-          if (v.success) setFmsVehicles(v.data || []);
-          if (d.success) setFmsDrivers(d.data || []);
+          if (r.success) setTrips(rowsOr(r.data, MOCK_HQ_TMS.trips));
+          if (v.success) setFmsVehicles(rowsOr(v.data, MOCK_HQ_TMS.fmsVehicles));
+          if (d.success) setFmsDrivers(rowsOr(d.data, MOCK_HQ_TMS.fmsDrivers));
           break;
         }
         case 'carriers': {
           const r = await api('carriers');
-          if (r.success) setCarriers(r.data || []);
+          if (r.success) setCarriers(rowsOr(r.data, MOCK_HQ_TMS.carriers));
           break;
         }
         case 'routes': {
           const r = await api('routes');
-          if (r.success) setRoutes(r.data || []);
+          if (r.success) setRoutes(rowsOr(r.data, MOCK_HQ_TMS.routes));
           break;
         }
         case 'billing': {
           const r = await api('freight-bills');
-          if (r.success) setFreightBills(r.data || []);
+          if (r.success) setFreightBills(rowsOr(r.data, MOCK_HQ_TMS.freightBills));
           break;
         }
         case 'zones': {
           const r = await api('zones');
-          if (r.success) setZones(r.data || []);
+          if (r.success) setZones(rowsOr(r.data, MOCK_HQ_TMS.zones));
           break;
         }
         case 'rate-cards': {
           const [r, z] = await Promise.all([api('rate-cards'), api('zones')]);
-          if (r.success) setRateCards(r.data || []);
-          if (z.success) setZones(z.data || []);
+          if (r.success) setRateCards(rowsOr(r.data, MOCK_HQ_TMS.rateCards));
+          if (z.success) setZones(rowsOr(z.data, MOCK_HQ_TMS.zones));
           break;
         }
         case 'warehouses': {
           const r = await api('warehouses');
-          if (r.success) setWarehouses(r.data || []);
+          if (r.success) setWarehouses(rowsOr(r.data, MOCK_HQ_TMS.warehouses));
           break;
         }
         case 'tracking': {
           const r = await apiE('shipment-tracking');
-          if (r.success) setTracking(r.data || []);
+          if (r.success) setTracking(rowsOr(r.data, MOCK_HQ_TMS.tracking));
           break;
         }
         case 'carrier-scores': {
           const r = await apiE('carrier-scores');
-          if (r.success) setCarrierScores(r.data || []);
+          if (r.success) setCarrierScores(rowsOr(r.data, MOCK_HQ_TMS.carrierScores));
           break;
         }
         case 'delivery-sla': {
           const [r1, r2] = await Promise.all([apiE('delivery-slas'), apiE('sla-performance')]);
-          if (r1.success) setDeliverySlas(r1.data || []);
-          if (r2.success) setSlaPerformance(r2.data);
+          if (r1.success) setDeliverySlas(rowsOr(r1.data, MOCK_HQ_TMS.deliverySlas));
+          if (r2.success) setSlaPerformance(r2.data ?? MOCK_HQ_TMS.slaPerformance);
           break;
         }
         case 'logistics-analytics': {
           const r = await apiE('logistics-analytics');
-          if (r.success) setLogisticsKpi(r.data);
+          if (r.success) setLogisticsKpi(r.data ?? MOCK_HQ_TMS.logisticsKpi);
           break;
         }
         case 'dispatch': {
@@ -200,9 +201,9 @@ export default function TMSPage() {
             api('vehicles', 'GET', undefined, '/api/hq/fms'),
             api('drivers', 'GET', undefined, '/api/hq/fms')
           ]);
-          if (r1.success) setDispatchQueue(r1.data || []);
-          if (v.success) setFmsVehicles(v.data || []);
-          if (d.success) setFmsDrivers(d.data || []);
+          if (r1.success) setDispatchQueue(rowsOr(r1.data, MOCK_HQ_TMS.dispatchQueue));
+          if (v.success) setFmsVehicles(rowsOr(v.data, MOCK_HQ_TMS.fmsVehicles));
+          if (d.success) setFmsDrivers(rowsOr(d.data, MOCK_HQ_TMS.fmsDrivers));
           break;
         }
       }

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
 import { FinancePageSkeleton } from '../../../components/finance/FinanceSkeleton';
 import FinanceErrorModal from '../../../components/finance/FinanceErrorModal';
+import { rowsOr, MOCK_HQ_BRANCHES, MOCK_HQ_ACCOUNTS } from '@/lib/hq/mock-data';
 import {
   TrendingDown,
   ArrowUpRight,
@@ -158,8 +159,8 @@ export default function ExpenseManagement() {
   const [viewMode, setViewMode] = useState<'list' | 'category' | 'branch'>('list');
   const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [branches, setBranches] = useState([]);
-  const [accounts, setAccounts] = useState([]);
+  const [branches, setBranches] = useState<any[]>(MOCK_HQ_BRANCHES);
+  const [accounts, setAccounts] = useState<any[]>(MOCK_HQ_ACCOUNTS);
   
   // Fetch branches and accounts for modal
   useEffect(() => {
@@ -173,13 +174,13 @@ export default function ExpenseManagement() {
         if (branchRes.ok) {
           const branchJson = await branchRes.json();
           const branchPayload = branchJson.data || branchJson;
-          setBranches(branchPayload.branches || []);
+          setBranches(rowsOr(branchPayload.branches, MOCK_HQ_BRANCHES));
         }
         
         if (accountRes.ok) {
           const accountJson = await accountRes.json();
           const accountPayload = accountJson.data || accountJson;
-          setAccounts(accountPayload.accounts || accountPayload.receivables || []);
+          setAccounts(rowsOr(accountPayload.accounts || accountPayload.receivables, MOCK_HQ_ACCOUNTS));
         }
       } catch (error) {
         console.error('Error fetching branches/accounts:', error);

@@ -17,6 +17,24 @@ import {
   SectionHeader, InfoRow, EmptyState, eprFetch,
   fmtShort, fD, fDT, fmt, pct, SC
 } from '../../../components/procurement/shared';
+import {
+  rowsOr,
+  MOCK_EPR_DASHBOARD,
+  MOCK_EPR_VENDORS,
+  MOCK_EPR_RFQS,
+  MOCK_EPR_TENDERS,
+  MOCK_EPR_PROC_REQUESTS,
+  MOCK_EPR_CONTRACTS,
+  MOCK_EPR_EVALUATIONS,
+  MOCK_EPR_PURCHASE_ORDERS,
+  MOCK_EPR_GOODS_RECEIPTS,
+  MOCK_EPR_INVOICES,
+  MOCK_EPR_APPROVALS,
+  MOCK_EPR_BUDGETS,
+  MOCK_EPR_AUDIT,
+  MOCK_EPR_ANALYTICS,
+  MOCK_EPR_SETTINGS,
+} from '@/lib/hq/mock-data';
 
 export default function EProcurementPage() {
   const { t } = useTranslation();
@@ -25,32 +43,32 @@ export default function EProcurementPage() {
   const [loading, setLoading] = useState(true);
   const [pg, setPg] = useState(1);
 
-  const [dashboard, setDashboard] = useState<any>({});
-  const [vendors, setVendors] = useState<any[]>([]);
-  const [vendorTotal, setVendorTotal] = useState(0);
-  const [rfqs, setRfqs] = useState<any[]>([]);
-  const [rfqTotal, setRfqTotal] = useState(0);
-  const [tenders, setTenders] = useState<any[]>([]);
-  const [tenderTotal, setTenderTotal] = useState(0);
-  const [procRequests, setProcRequests] = useState<any[]>([]);
-  const [prTotal, setPrTotal] = useState(0);
-  const [contracts, setContracts] = useState<any[]>([]);
-  const [contractTotal, setContractTotal] = useState(0);
-  const [evaluations, setEvaluations] = useState<any[]>([]);
-  const [evalTotal, setEvalTotal] = useState(0);
-  const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
-  const [poTotal, setPoTotal] = useState(0);
-  const [goodsReceipts, setGoodsReceipts] = useState<any[]>([]);
-  const [grnTotal, setGrnTotal] = useState(0);
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [invoiceTotal, setInvoiceTotal] = useState(0);
-  const [approvals, setApprovals] = useState<any[]>([]);
-  const [approvalTotal, setApprovalTotal] = useState(0);
-  const [budgets, setBudgets] = useState<any[]>([]);
-  const [budgetTotal, setBudgetTotal] = useState(0);
-  const [auditItems, setAuditItems] = useState<any[]>([]);
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
-  const [settingsData, setSettingsData] = useState<any[]>([]);
+  const [dashboard, setDashboard] = useState<any>(MOCK_EPR_DASHBOARD);
+  const [vendors, setVendors] = useState<any[]>(MOCK_EPR_VENDORS);
+  const [vendorTotal, setVendorTotal] = useState(MOCK_EPR_VENDORS.length);
+  const [rfqs, setRfqs] = useState<any[]>(MOCK_EPR_RFQS);
+  const [rfqTotal, setRfqTotal] = useState(MOCK_EPR_RFQS.length);
+  const [tenders, setTenders] = useState<any[]>(MOCK_EPR_TENDERS);
+  const [tenderTotal, setTenderTotal] = useState(MOCK_EPR_TENDERS.length);
+  const [procRequests, setProcRequests] = useState<any[]>(MOCK_EPR_PROC_REQUESTS);
+  const [prTotal, setPrTotal] = useState(MOCK_EPR_PROC_REQUESTS.length);
+  const [contracts, setContracts] = useState<any[]>(MOCK_EPR_CONTRACTS);
+  const [contractTotal, setContractTotal] = useState(MOCK_EPR_CONTRACTS.length);
+  const [evaluations, setEvaluations] = useState<any[]>(MOCK_EPR_EVALUATIONS);
+  const [evalTotal, setEvalTotal] = useState(MOCK_EPR_EVALUATIONS.length);
+  const [purchaseOrders, setPurchaseOrders] = useState<any[]>(MOCK_EPR_PURCHASE_ORDERS);
+  const [poTotal, setPoTotal] = useState(MOCK_EPR_PURCHASE_ORDERS.length);
+  const [goodsReceipts, setGoodsReceipts] = useState<any[]>(MOCK_EPR_GOODS_RECEIPTS);
+  const [grnTotal, setGrnTotal] = useState(MOCK_EPR_GOODS_RECEIPTS.length);
+  const [invoices, setInvoices] = useState<any[]>(MOCK_EPR_INVOICES);
+  const [invoiceTotal, setInvoiceTotal] = useState(MOCK_EPR_INVOICES.length);
+  const [approvals, setApprovals] = useState<any[]>(MOCK_EPR_APPROVALS);
+  const [approvalTotal, setApprovalTotal] = useState(MOCK_EPR_APPROVALS.length);
+  const [budgets, setBudgets] = useState<any[]>(MOCK_EPR_BUDGETS);
+  const [budgetTotal, setBudgetTotal] = useState(MOCK_EPR_BUDGETS.length);
+  const [auditItems, setAuditItems] = useState<any[]>(MOCK_EPR_AUDIT);
+  const [analyticsData, setAnalyticsData] = useState<any>(MOCK_EPR_ANALYTICS);
+  const [settingsData, setSettingsData] = useState<any[]>(MOCK_EPR_SETTINGS);
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -70,21 +88,69 @@ export default function EProcurementPage() {
       const action = tab === 'dashboard' ? 'dashboard' : tab === 'budget' ? 'budget-allocations' : tab;
       const d = await eprFetch(action, 'GET', undefined, q);
       switch (tab) {
-        case 'dashboard': setDashboard(d); break;
-        case 'vendors': setVendors(d.rows || []); setVendorTotal(d.total || 0); break;
-        case 'rfqs': setRfqs(d.rows || []); setRfqTotal(d.total || 0); break;
-        case 'tenders': setTenders(d.rows || []); setTenderTotal(d.total || 0); break;
-        case 'procurement-requests': setProcRequests(d.rows || []); setPrTotal(d.total || 0); break;
-        case 'contracts': setContracts(d.rows || []); setContractTotal(d.total || 0); break;
-        case 'evaluations': setEvaluations(d.rows || []); setEvalTotal(d.total || 0); break;
-        case 'purchase-orders': setPurchaseOrders(d.rows || []); setPoTotal(d.total || 0); break;
-        case 'goods-receipts': setGoodsReceipts(d.rows || []); setGrnTotal(d.total || 0); break;
-        case 'invoices': setInvoices(d.rows || []); setInvoiceTotal(d.total || 0); break;
-        case 'approvals': setApprovals(d.rows || []); setApprovalTotal(d.total || 0); break;
-        case 'budget': setBudgets(d.rows || []); setBudgetTotal(d.total || 0); break;
-        case 'audit-trail': setAuditItems(d.rows || []); break;
-        case 'analytics': setAnalyticsData(d); break;
-        case 'settings': setSettingsData(Array.isArray(d) ? d : d?.rows || []); break;
+        case 'dashboard': setDashboard(d && Object.keys(d).length ? d : MOCK_EPR_DASHBOARD); break;
+        case 'vendors': {
+          const rows = rowsOr(d.rows, MOCK_EPR_VENDORS);
+          setVendors(rows); setVendorTotal(d.total && d.total > 0 ? d.total : rows.length);
+          break;
+        }
+        case 'rfqs': {
+          const rows = rowsOr(d.rows, MOCK_EPR_RFQS);
+          setRfqs(rows); setRfqTotal(d.total && d.total > 0 ? d.total : rows.length);
+          break;
+        }
+        case 'tenders': {
+          const rows = rowsOr(d.rows, MOCK_EPR_TENDERS);
+          setTenders(rows); setTenderTotal(d.total && d.total > 0 ? d.total : rows.length);
+          break;
+        }
+        case 'procurement-requests': {
+          const rows = rowsOr(d.rows, MOCK_EPR_PROC_REQUESTS);
+          setProcRequests(rows); setPrTotal(d.total && d.total > 0 ? d.total : rows.length);
+          break;
+        }
+        case 'contracts': {
+          const rows = rowsOr(d.rows, MOCK_EPR_CONTRACTS);
+          setContracts(rows); setContractTotal(d.total && d.total > 0 ? d.total : rows.length);
+          break;
+        }
+        case 'evaluations': {
+          const rows = rowsOr(d.rows, MOCK_EPR_EVALUATIONS);
+          setEvaluations(rows); setEvalTotal(d.total && d.total > 0 ? d.total : rows.length);
+          break;
+        }
+        case 'purchase-orders': {
+          const rows = rowsOr(d.rows, MOCK_EPR_PURCHASE_ORDERS);
+          setPurchaseOrders(rows); setPoTotal(d.total && d.total > 0 ? d.total : rows.length);
+          break;
+        }
+        case 'goods-receipts': {
+          const rows = rowsOr(d.rows, MOCK_EPR_GOODS_RECEIPTS);
+          setGoodsReceipts(rows); setGrnTotal(d.total && d.total > 0 ? d.total : rows.length);
+          break;
+        }
+        case 'invoices': {
+          const rows = rowsOr(d.rows, MOCK_EPR_INVOICES);
+          setInvoices(rows); setInvoiceTotal(d.total && d.total > 0 ? d.total : rows.length);
+          break;
+        }
+        case 'approvals': {
+          const rows = rowsOr(d.rows, MOCK_EPR_APPROVALS);
+          setApprovals(rows); setApprovalTotal(d.total && d.total > 0 ? d.total : rows.length);
+          break;
+        }
+        case 'budget': {
+          const rows = rowsOr(d.rows, MOCK_EPR_BUDGETS);
+          setBudgets(rows); setBudgetTotal(d.total && d.total > 0 ? d.total : rows.length);
+          break;
+        }
+        case 'audit-trail': setAuditItems(rowsOr(d.rows, MOCK_EPR_AUDIT)); break;
+        case 'analytics': setAnalyticsData(d && Object.keys(d).length ? d : MOCK_EPR_ANALYTICS); break;
+        case 'settings': {
+          const raw = Array.isArray(d) ? d : d?.rows || [];
+          setSettingsData(rowsOr(raw, MOCK_EPR_SETTINGS));
+          break;
+        }
       }
     } catch (e: any) { console.error(`[EPR] ${tab}:`, e.message); }
     finally { setLoading(false); }

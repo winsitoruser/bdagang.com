@@ -15,6 +15,17 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   ComposedChart, Line
 } from 'recharts';
+import {
+  rowsOr,
+  MOCK_EXIM_DOCUMENTS,
+  MOCK_EXIM_CUSTOMS,
+  MOCK_EXIM_LCS,
+  MOCK_EXIM_CONTAINERS,
+  MOCK_EXIM_PARTNERS,
+  MOCK_EXIM_COSTS,
+  MOCK_EXIM_HS_CODES,
+  MOCK_EXIM_ANALYTICS,
+} from '@/lib/hq/mock-data';
 
 type TabType = 'dashboard' | 'shipments' | 'documents' | 'customs' | 'lcs' | 'containers' | 'partners' | 'costs' | 'hs-codes' | 'analytics';
 
@@ -113,14 +124,14 @@ export default function ExportImportPage() {
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState<any>(MOCK_EI_DASHBOARD);
   const [shipments, setShipments] = useState<any[]>(MOCK_EI_SHIPMENTS);
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [customsList, setCustomsList] = useState<any[]>([]);
-  const [lcs, setLcs] = useState<any[]>([]);
-  const [containers, setContainers] = useState<any[]>([]);
-  const [partners, setPartners] = useState<any[]>([]);
-  const [costs, setCosts] = useState<any[]>([]);
-  const [hsCodes, setHsCodes] = useState<any[]>([]);
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [documents, setDocuments] = useState<any[]>(MOCK_EXIM_DOCUMENTS);
+  const [customsList, setCustomsList] = useState<any[]>(MOCK_EXIM_CUSTOMS);
+  const [lcs, setLcs] = useState<any[]>(MOCK_EXIM_LCS);
+  const [containers, setContainers] = useState<any[]>(MOCK_EXIM_CONTAINERS);
+  const [partners, setPartners] = useState<any[]>(MOCK_EXIM_PARTNERS);
+  const [costs, setCosts] = useState<any[]>(MOCK_EXIM_COSTS);
+  const [hsCodes, setHsCodes] = useState<any[]>(MOCK_EXIM_HS_CODES);
+  const [analyticsData, setAnalyticsData] = useState<any>(MOCK_EXIM_ANALYTICS);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [tradeTypeFilter, setTradeTypeFilter] = useState('all');
@@ -148,20 +159,28 @@ export default function ExportImportPage() {
       if (!d.success) return;
       switch (tab) {
         case 'dashboard': setDashboard(d.data); break;
-        case 'shipments': setShipments(d.data.rows); break;
-        case 'documents': setDocuments(d.data); break;
-        case 'customs': setCustomsList(d.data.rows); break;
-        case 'lcs': setLcs(d.data.rows); break;
-        case 'containers': setContainers(d.data); break;
-        case 'partners': setPartners(d.data.rows); break;
-        case 'costs': setCosts(d.data); break;
-        case 'hs-codes': setHsCodes(d.data.rows); break;
-        case 'analytics': setAnalyticsData(d.data); break;
+        case 'shipments': setShipments(rowsOr(d.data?.rows, MOCK_EI_SHIPMENTS)); break;
+        case 'documents': setDocuments(rowsOr(Array.isArray(d.data) ? d.data : [], MOCK_EXIM_DOCUMENTS)); break;
+        case 'customs': setCustomsList(rowsOr(d.data?.rows, MOCK_EXIM_CUSTOMS)); break;
+        case 'lcs': setLcs(rowsOr(d.data?.rows, MOCK_EXIM_LCS)); break;
+        case 'containers': setContainers(rowsOr(Array.isArray(d.data) ? d.data : [], MOCK_EXIM_CONTAINERS)); break;
+        case 'partners': setPartners(rowsOr(d.data?.rows, MOCK_EXIM_PARTNERS)); break;
+        case 'costs': setCosts(rowsOr(Array.isArray(d.data) ? d.data : [], MOCK_EXIM_COSTS)); break;
+        case 'hs-codes': setHsCodes(rowsOr(d.data?.rows, MOCK_EXIM_HS_CODES)); break;
+        case 'analytics': setAnalyticsData(d.data && Object.keys(d.data).length ? d.data : MOCK_EXIM_ANALYTICS); break;
       }
     } catch (e: any) {
       console.error(e);
       if (tab === 'dashboard') setDashboard(MOCK_EI_DASHBOARD);
       if (tab === 'shipments') setShipments(MOCK_EI_SHIPMENTS);
+      if (tab === 'documents') setDocuments(MOCK_EXIM_DOCUMENTS);
+      if (tab === 'customs') setCustomsList(MOCK_EXIM_CUSTOMS);
+      if (tab === 'lcs') setLcs(MOCK_EXIM_LCS);
+      if (tab === 'containers') setContainers(MOCK_EXIM_CONTAINERS);
+      if (tab === 'partners') setPartners(MOCK_EXIM_PARTNERS);
+      if (tab === 'costs') setCosts(MOCK_EXIM_COSTS);
+      if (tab === 'hs-codes') setHsCodes(MOCK_EXIM_HS_CODES);
+      if (tab === 'analytics') setAnalyticsData(MOCK_EXIM_ANALYTICS);
     } finally { setLoading(false); }
   }, [statusFilter, searchTerm, tradeTypeFilter]);
 

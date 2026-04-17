@@ -8,7 +8,7 @@ import {
   Navigation, Loader2, DollarSign, ArrowRight, RefreshCw, UserPlus,
   ShoppingCart, Eye, Swords, ClipboardList, CheckCircle, Shield, Settings,
   Award, Phone, Mail, Trash2, Globe, Activity, Calendar, AlertTriangle, Percent,
-  Heart, MessageCircle, Briefcase, FileText, Zap, Clock,
+  Heart, MessageCircle, Briefcase, FileText, Zap, Clock, Camera,
   Bot, LayoutList, CalendarDays, Headphones,
   Download, Upload, FileUp, Table2, ArrowDownToLine, Filter,
   History, ArrowRightLeft, Link2, Brain, Cpu, Sparkles, Building2
@@ -21,6 +21,63 @@ import {
   PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
+import {
+  rowsOr,
+  MOCK_SFA_DASHBOARD,
+  MOCK_SFA_LEADS,
+  MOCK_SFA_OPPORTUNITIES,
+  MOCK_SFA_TEAMS,
+  MOCK_SFA_TERRITORIES,
+  MOCK_SFA_VISITS,
+  MOCK_SFA_COVERAGE_PLANS,
+  MOCK_SFA_COMPLIANCE,
+  MOCK_SFA_FIELD_ORDERS,
+  MOCK_SFA_QUOTATIONS,
+  MOCK_SFA_TARGET_GROUPS,
+  MOCK_SFA_INCENTIVE_SCHEMES,
+  MOCK_SFA_COMMISSIONS,
+  MOCK_SFA_INV_PRODUCTS,
+  MOCK_SFA_COMM_GROUPS,
+  MOCK_SFA_OUTLET_TARGETS,
+  MOCK_SFA_SALES_STRATEGIES,
+  MOCK_SFA_DISPLAY_AUDITS,
+  MOCK_SFA_COMPETITORS,
+  MOCK_SFA_COMPETITOR_SUMMARY,
+  MOCK_SFA_SURVEY_TEMPLATES,
+  MOCK_SFA_SURVEY_RESPONSES,
+  MOCK_SFA_APPROVAL_WORKFLOWS,
+  MOCK_SFA_APPROVAL_REQUESTS,
+  MOCK_SFA_GEOFENCES,
+  MOCK_SFA_PARAMETERS,
+  MOCK_SFA_PLAFON,
+  MOCK_SFA_CURRENCIES,
+  MOCK_SFA_EXCHANGE_RATES,
+  MOCK_SFA_TAX_SETTINGS,
+  MOCK_SFA_NUMBERING,
+  MOCK_SFA_PAYMENT_TERMS,
+  MOCK_SFA_BIZ_SETTINGS,
+  MOCK_SFA_CRM_CUSTOMERS,
+  MOCK_SFA_CRM_COMMS,
+  MOCK_SFA_CRM_FOLLOWUPS,
+  MOCK_SFA_CRM_TASKS,
+  MOCK_SFA_CRM_CALENDAR,
+  MOCK_SFA_CRM_FORECASTS,
+  MOCK_SFA_CRM_FORECAST_ANALYTICS,
+  MOCK_SFA_CRM_TICKETS,
+  MOCK_SFA_CRM_AUTOMATION_RULES,
+  MOCK_SFA_CRM_AUTOMATION_LOGS,
+  MOCK_SFA_INT_LEADS,
+  MOCK_SFA_INT_VISITS,
+  MOCK_SFA_INT_PIPELINE,
+  MOCK_SFA_AUDIT_TIMELINE,
+  MOCK_SFA_HRIS_DEPTS,
+  MOCK_SFA_HRIS_USERS,
+  MOCK_SFA_AI_MODELS,
+  MOCK_SFA_AI_CATALOG,
+  MOCK_SFA_AI_WORKFLOWS,
+  MOCK_SFA_AI_WF_TEMPLATES,
+  MOCK_SFA_AI_EXECUTIONS,
+} from '@/lib/hq/mock-data';
 
 // ══════════════════════════════════════════════════════
 // Types & Constants
@@ -219,48 +276,6 @@ const apiIE = async (action: string, method = 'GET', body?: any, query = '') => 
 };
 
 // ══════════════════════════════════════════════════════
-// Mock Fallback Data
-// ══════════════════════════════════════════════════════
-const MOCK_SFA_DASHBOARD = {
-  totalLeads: 245, totalOpportunities: 68, totalVisits: 1230, totalOrders: 342,
-  conversionRate: 28, avgDealSize: 45000000, totalRevenue: 3060000000, winRate: 42,
-  leadsByStatus: [
-    { status: 'new', count: 52 }, { status: 'contacted', count: 68 }, { status: 'qualified', count: 45 },
-    { status: 'proposal', count: 32 }, { status: 'negotiation', count: 28 }, { status: 'converted', count: 12 }, { status: 'lost', count: 8 },
-  ],
-  pipelineStages: [
-    { stage: 'qualification', count: 18, value: 810000000 }, { stage: 'needs_analysis', count: 15, value: 675000000 },
-    { stage: 'proposal', count: 12, value: 540000000 }, { stage: 'negotiation', count: 10, value: 450000000 },
-    { stage: 'closed_won', count: 8, value: 360000000 }, { stage: 'closed_lost', count: 5, value: 225000000 },
-  ],
-  visitStats: [
-    { month: 'Jan', planned: 180, completed: 165 }, { month: 'Feb', planned: 200, completed: 188 },
-    { month: 'Mar', planned: 210, completed: 195 },
-  ],
-  topLeads: [
-    { id: 'l1', name: 'PT Maju Bersama', company: 'PT Maju Bersama', value: 150000000, status: 'negotiation', owner: 'Fajar Setiawan' },
-    { id: 'l2', name: 'CV Sejahtera Abadi', company: 'CV Sejahtera Abadi', value: 120000000, status: 'proposal', owner: 'Siti Rahayu' },
-    { id: 'l3', name: 'Hotel Grand Nusa', company: 'Hotel Grand Nusa', value: 95000000, status: 'qualified', owner: 'Made Wirawan' },
-  ],
-  pipelineBreakdown: { totalValue: 3060000000, avgDealSize: 45000000, avgCycleTime: 21, forecastedRevenue: 1800000000 },
-};
-
-const MOCK_SFA_LEADS = [
-  { id: 'l1', name: 'PT Maju Bersama', contact_name: 'Agus Pratama', email: 'agus@majubersama.com', phone: '081234567101', company: 'PT Maju Bersama', status: 'negotiation', source: 'referral', value: 150000000, owner: 'Fajar Setiawan', created_at: '2026-02-15' },
-  { id: 'l2', name: 'CV Sejahtera Abadi', contact_name: 'Ratna Sari', email: 'ratna@sejahtera.com', phone: '081234567102', company: 'CV Sejahtera Abadi', status: 'proposal', source: 'website', value: 120000000, owner: 'Siti Rahayu', created_at: '2026-02-20' },
-  { id: 'l3', name: 'Hotel Grand Nusa', contact_name: 'Wayan Sudirta', email: 'wayan@grandnusa.com', phone: '081234567103', company: 'Hotel Grand Nusa', status: 'qualified', source: 'event', value: 95000000, owner: 'Made Wirawan', created_at: '2026-03-01' },
-  { id: 'l4', name: 'Restoran Padang Sederhana', contact_name: 'Hasan', email: 'hasan@padangsederhana.com', phone: '081234567104', company: 'Restoran Padang Sederhana', status: 'new', source: 'cold_call', value: 35000000, owner: 'Budi Santoso', created_at: '2026-03-10' },
-  { id: 'l5', name: 'Koperasi Makmur Jaya', contact_name: 'Slamet', email: 'slamet@koperasimj.co.id', phone: '081234567105', company: 'Koperasi Makmur Jaya', status: 'contacted', source: 'referral', value: 55000000, owner: 'Dewi Lestari', created_at: '2026-03-05' },
-];
-
-const MOCK_SFA_OPPORTUNITIES = [
-  { id: 'o1', name: 'Supply F&B Maju Bersama', leadName: 'PT Maju Bersama', stage: 'negotiation', value: 150000000, probability: 70, expectedCloseDate: '2026-04-15', owner: 'Fajar Setiawan' },
-  { id: 'o2', name: 'Paket Kopi Sejahtera', leadName: 'CV Sejahtera Abadi', stage: 'proposal', value: 120000000, probability: 40, expectedCloseDate: '2026-04-30', owner: 'Siti Rahayu' },
-  { id: 'o3', name: 'Hotel Grand Nusa Amenities', leadName: 'Hotel Grand Nusa', stage: 'needs_analysis', value: 95000000, probability: 25, expectedCloseDate: '2026-05-15', owner: 'Made Wirawan' },
-  { id: 'o4', name: 'Outlet Setup Koperasi MJ', leadName: 'Koperasi Makmur Jaya', stage: 'qualification', value: 55000000, probability: 10, expectedCloseDate: '2026-06-01', owner: 'Dewi Lestari' },
-];
-
-// ══════════════════════════════════════════════════════
 // Main Component
 // ══════════════════════════════════════════════════════
 export default function SFAUnifiedPage() {
@@ -268,6 +283,10 @@ export default function SFAUnifiedPage() {
   const { t, language, currency } = useTranslation();
   const fmtCur = useMemo(() => makeFmtCur(currency), [currency]);
   const fmtDate = useMemo(() => makeFmtDate(language), [language]);
+  const fmtDateTime = useMemo(
+    () => (d: string | null | undefined) => (d != null && String(d).trim() !== '' ? formatDateValue(d, language, 'datetime') : '—'),
+    [language]
+  );
   const fmt = useMemo(() => makeFmt(language), [language]);
   const localeDateLong = useMemo(() => {
     try { return new Date().toLocaleDateString(localeMap[language], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); } catch { return ''; }
@@ -353,11 +372,11 @@ export default function SFAUnifiedPage() {
   const [opportunities, setOpportunities] = useState<any[]>(MOCK_SFA_OPPORTUNITIES);
   const [pipelineData, setPipelineData] = useState<any>(null);
   // Field Force
-  const [teams, setTeams] = useState<any[]>([]);
-  const [territories, setTerritories] = useState<any[]>([]);
-  const [visits, setVisits] = useState<any[]>([]);
-  const [coveragePlans, setCoveragePlans] = useState<any[]>([]);
-  const [compliance, setCompliance] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>(MOCK_SFA_TEAMS);
+  const [territories, setTerritories] = useState<any[]>(MOCK_SFA_TERRITORIES);
+  const [visits, setVisits] = useState<any[]>(MOCK_SFA_VISITS);
+  const [coveragePlans, setCoveragePlans] = useState<any[]>(MOCK_SFA_COVERAGE_PLANS);
+  const [compliance, setCompliance] = useState<any[]>(MOCK_SFA_COMPLIANCE);
   /** Ringkasan integrasi kunjungan ↔ task (bulan berjalan) */
   const [visitBridgeStat, setVisitBridgeStat] = useState<{
     visits_in_period?: number;
@@ -365,53 +384,53 @@ export default function SFAUnifiedPage() {
     visit_tasks_in_period?: number;
     visit_tasks_completed?: number;
   } | null>(null);
-  const [fieldOrders, setFieldOrders] = useState<any[]>([]);
-  const [quotations, setQuotations] = useState<any[]>([]);
+  const [fieldOrders, setFieldOrders] = useState<any[]>(MOCK_SFA_FIELD_ORDERS);
+  const [quotations, setQuotations] = useState<any[]>(MOCK_SFA_QUOTATIONS);
   // Targets & Performance
-  const [targetGroups, setTargetGroups] = useState<any[]>([]);
-  const [incentiveSchemes, setIncentiveSchemes] = useState<any[]>([]);
-  const [commissions, setCommissions] = useState<any[]>([]);
-  const [inventoryProducts, setInventoryProducts] = useState<any[]>([]);
-  const [commissionGroups, setCommissionGroups] = useState<any[]>([]);
-  const [outletTargets, setOutletTargets] = useState<any[]>([]);
-  const [salesStrategies, setSalesStrategies] = useState<any[]>([]);
+  const [targetGroups, setTargetGroups] = useState<any[]>(MOCK_SFA_TARGET_GROUPS);
+  const [incentiveSchemes, setIncentiveSchemes] = useState<any[]>(MOCK_SFA_INCENTIVE_SCHEMES);
+  const [commissions, setCommissions] = useState<any[]>(MOCK_SFA_COMMISSIONS);
+  const [inventoryProducts, setInventoryProducts] = useState<any[]>(MOCK_SFA_INV_PRODUCTS);
+  const [commissionGroups, setCommissionGroups] = useState<any[]>(MOCK_SFA_COMM_GROUPS);
+  const [outletTargets, setOutletTargets] = useState<any[]>(MOCK_SFA_OUTLET_TARGETS);
+  const [salesStrategies, setSalesStrategies] = useState<any[]>(MOCK_SFA_SALES_STRATEGIES);
   const [commSummary, setCommSummary] = useState<any>(null);
   const [incSubTab, setIncSubTab] = useState<'overview'|'product'|'group'|'outlet'|'strategy'>('overview');
   // Intelligence
-  const [displayAudits, setDisplayAudits] = useState<any[]>([]);
-  const [competitors, setCompetitors] = useState<any[]>([]);
-  const [competitorSummary, setCompetitorSummary] = useState<any[]>([]);
-  const [surveyTemplates, setSurveyTemplates] = useState<any[]>([]);
-  const [surveyResponses, setSurveyResponses] = useState<any[]>([]);
+  const [displayAudits, setDisplayAudits] = useState<any[]>(MOCK_SFA_DISPLAY_AUDITS);
+  const [competitors, setCompetitors] = useState<any[]>(MOCK_SFA_COMPETITORS);
+  const [competitorSummary, setCompetitorSummary] = useState<any[]>(MOCK_SFA_COMPETITOR_SUMMARY);
+  const [surveyTemplates, setSurveyTemplates] = useState<any[]>(MOCK_SFA_SURVEY_TEMPLATES);
+  const [surveyResponses, setSurveyResponses] = useState<any[]>(MOCK_SFA_SURVEY_RESPONSES);
   // Admin
-  const [approvalWorkflows, setApprovalWorkflows] = useState<any[]>([]);
-  const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
-  const [geofences, setGeofences] = useState<any[]>([]);
-  const [parameters, setParameters] = useState<any[]>([]);
-  const [plafon, setPlafon] = useState<any[]>([]);
-  const [currencies, setCurrencies] = useState<any[]>([]);
-  const [exchangeRates, setExchangeRates] = useState<any[]>([]);
-  const [taxSettings, setTaxSettings] = useState<any[]>([]);
-  const [numberingFormats, setNumberingFormats] = useState<any[]>([]);
-  const [paymentTerms, setPaymentTerms] = useState<any[]>([]);
-  const [bizSettings, setBizSettings] = useState<any[]>([]);
+  const [approvalWorkflows, setApprovalWorkflows] = useState<any[]>(MOCK_SFA_APPROVAL_WORKFLOWS);
+  const [approvalRequests, setApprovalRequests] = useState<any[]>(MOCK_SFA_APPROVAL_REQUESTS);
+  const [geofences, setGeofences] = useState<any[]>(MOCK_SFA_GEOFENCES);
+  const [parameters, setParameters] = useState<any[]>(MOCK_SFA_PARAMETERS);
+  const [plafon, setPlafon] = useState<any[]>(MOCK_SFA_PLAFON);
+  const [currencies, setCurrencies] = useState<any[]>(MOCK_SFA_CURRENCIES);
+  const [exchangeRates, setExchangeRates] = useState<any[]>(MOCK_SFA_EXCHANGE_RATES);
+  const [taxSettings, setTaxSettings] = useState<any[]>(MOCK_SFA_TAX_SETTINGS);
+  const [numberingFormats, setNumberingFormats] = useState<any[]>(MOCK_SFA_NUMBERING);
+  const [paymentTerms, setPaymentTerms] = useState<any[]>(MOCK_SFA_PAYMENT_TERMS);
+  const [bizSettings, setBizSettings] = useState<any[]>(MOCK_SFA_BIZ_SETTINGS);
   const [settingsOverview, setSettingsOverview] = useState<any>(null);
   const [settSubTab, setSettSubTab] = useState<'master'|'currency'|'tax'|'numbering'|'payment'|'business'>('master');
   // CRM
-  const [crmCustomers, setCrmCustomers] = useState<any[]>([]);
+  const [crmCustomers, setCrmCustomers] = useState<any[]>(MOCK_SFA_CRM_CUSTOMERS);
   const [crmAnalytics, setCrmAnalytics] = useState<any>(null);
-  const [crmComms, setCrmComms] = useState<any[]>([]);
-  const [crmFollowUps, setCrmFollowUps] = useState<any[]>([]);
-  const [crmTasks, setCrmTasks] = useState<any[]>([]);
+  const [crmComms, setCrmComms] = useState<any[]>(MOCK_SFA_CRM_COMMS);
+  const [crmFollowUps, setCrmFollowUps] = useState<any[]>(MOCK_SFA_CRM_FOLLOWUPS);
+  const [crmTasks, setCrmTasks] = useState<any[]>(MOCK_SFA_CRM_TASKS);
   const [crmTaskSummary, setCrmTaskSummary] = useState<any>(null);
-  const [crmCalendar, setCrmCalendar] = useState<any[]>([]);
-  const [crmForecasts, setCrmForecasts] = useState<any[]>([]);
-  const [crmForecastAnalytics, setCrmForecastAnalytics] = useState<any>(null);
-  const [crmTickets, setCrmTickets] = useState<any[]>([]);
+  const [crmCalendar, setCrmCalendar] = useState<any[]>(MOCK_SFA_CRM_CALENDAR);
+  const [crmForecasts, setCrmForecasts] = useState<any[]>(MOCK_SFA_CRM_FORECASTS);
+  const [crmForecastAnalytics, setCrmForecastAnalytics] = useState<any>(MOCK_SFA_CRM_FORECAST_ANALYTICS);
+  const [crmTickets, setCrmTickets] = useState<any[]>(MOCK_SFA_CRM_TICKETS);
   const [crmServiceAnalytics, setCrmServiceAnalytics] = useState<any>(null);
   const [crmSatisfaction, setCrmSatisfaction] = useState<any>(null);
-  const [crmAutomationRules, setCrmAutomationRules] = useState<any[]>([]);
-  const [crmAutomationLogs, setCrmAutomationLogs] = useState<any[]>([]);
+  const [crmAutomationRules, setCrmAutomationRules] = useState<any[]>(MOCK_SFA_CRM_AUTOMATION_RULES);
+  const [crmAutomationLogs, setCrmAutomationLogs] = useState<any[]>(MOCK_SFA_CRM_AUTOMATION_LOGS);
   // Import/Export
   const [ieEntities, setIeEntities] = useState<any>(null);
   const [ieSelectedEntity, setIeSelectedEntity] = useState<string>('');
@@ -425,22 +444,22 @@ export default function SFAUnifiedPage() {
   const [ieFileInfo, setIeFileInfo] = useState<{ name: string; size: number; rows: number } | null>(null);
   // Integration
   const [intHealth, setIntHealth] = useState<any>(null);
-  const [intConvertibleLeads, setIntConvertibleLeads] = useState<any[]>([]);
-  const [intUnlinkedVisits, setIntUnlinkedVisits] = useState<any[]>([]);
-  const [intSyncablePipeline, setIntSyncablePipeline] = useState<any[]>([]);
+  const [intConvertibleLeads, setIntConvertibleLeads] = useState<any[]>(MOCK_SFA_INT_LEADS);
+  const [intUnlinkedVisits, setIntUnlinkedVisits] = useState<any[]>(MOCK_SFA_INT_VISITS);
+  const [intSyncablePipeline, setIntSyncablePipeline] = useState<any[]>(MOCK_SFA_INT_PIPELINE);
   const [intLoading, setIntLoading] = useState(false);
   // Audit Trail
-  const [auditTimeline, setAuditTimeline] = useState<any[]>([]);
+  const [auditTimeline, setAuditTimeline] = useState<any[]>(MOCK_SFA_AUDIT_TIMELINE);
   const [auditSummary, setAuditSummary] = useState<any>(null);
   const [auditFilters, setAuditFilters] = useState<any>(null);
   const [auditFilterEntity, setAuditFilterEntity] = useState('');
   const [auditFilterAction, setAuditFilterAction] = useState('');
   const [auditFilterPeriod, setAuditFilterPeriod] = useState('7d');
   // HRIS Sync (for Teams tab)
-  const [hrisDepartments, setHrisDepartments] = useState<any[]>([]);
+  const [hrisDepartments, setHrisDepartments] = useState<any[]>(MOCK_SFA_HRIS_DEPTS);
   const [hrisSyncStatus, setHrisSyncStatus] = useState<any>(null);
   const [hrisSyncing, setHrisSyncing] = useState(false);
-  const [hrisAvailableUsers, setHrisAvailableUsers] = useState<any[]>([]);
+  const [hrisAvailableUsers, setHrisAvailableUsers] = useState<any[]>(MOCK_SFA_HRIS_USERS);
   // AI Workflow
   // Lookup Options (Settings)
   const [lookupCategories, setLookupCategories] = useState<Record<string, { label: string; description: string; options: any[] }>>({});
@@ -448,11 +467,11 @@ export default function SFAUnifiedPage() {
   const [lookupEditing, setLookupEditing] = useState<any>(null);
   const [lookupSaving, setLookupSaving] = useState(false);
   const [lookupSearch, setLookupSearch] = useState('');
-  const [aiModels, setAiModels] = useState<any[]>([]);
-  const [aiModelCatalog, setAiModelCatalog] = useState<any[]>([]);
-  const [aiWorkflows, setAiWorkflows] = useState<any[]>([]);
-  const [aiWorkflowTemplates, setAiWorkflowTemplates] = useState<any[]>([]);
-  const [aiExecutions, setAiExecutions] = useState<any[]>([]);
+  const [aiModels, setAiModels] = useState<any[]>(MOCK_SFA_AI_MODELS);
+  const [aiModelCatalog, setAiModelCatalog] = useState<any[]>(MOCK_SFA_AI_CATALOG);
+  const [aiWorkflows, setAiWorkflows] = useState<any[]>(MOCK_SFA_AI_WORKFLOWS);
+  const [aiWorkflowTemplates, setAiWorkflowTemplates] = useState<any[]>(MOCK_SFA_AI_WF_TEMPLATES);
+  const [aiExecutions, setAiExecutions] = useState<any[]>(MOCK_SFA_AI_EXECUTIONS);
   const [aiUsageStats, setAiUsageStats] = useState<any>(null);
   const [aiSelectedWorkflow, setAiSelectedWorkflow] = useState<any>(null);
   const [aiExecResult, setAiExecResult] = useState<any>(null);
@@ -471,23 +490,24 @@ export default function SFAUnifiedPage() {
             apiCore('pipeline'),
           ]);
           if (r.success) setDashboard({
+            ...MOCK_SFA_DASHBOARD,
             ...r.data,
-            leadsByStatus: r2.success ? (r2.data?.leadsByStatus || []) : [],
-            pipelineStages: r2.success ? (r2.data?.pipeline || []) : [],
-            visitStats: r2.success ? (r2.data?.visitStats || []) : [],
-            topLeads: r2.success ? (r2.data?.topLeads || []) : [],
-            pipelineBreakdown: r3.success ? r3.data : null,
+            leadsByStatus: rowsOr(r2.success ? (r2.data?.leadsByStatus || []) : [], MOCK_SFA_DASHBOARD.leadsByStatus),
+            pipelineStages: rowsOr(r2.success ? (r2.data?.pipeline || []) : [], MOCK_SFA_DASHBOARD.pipelineStages),
+            visitStats: rowsOr(r2.success ? (r2.data?.visitStats || []) : [], MOCK_SFA_DASHBOARD.visitStats),
+            topLeads: rowsOr(r2.success ? (r2.data?.topLeads || []) : [], MOCK_SFA_DASHBOARD.topLeads),
+            pipelineBreakdown: (r3.success && r3.data) ? r3.data : MOCK_SFA_DASHBOARD.pipelineBreakdown,
           });
           break;
         }
         case 'leads': {
           const r = await apiCore('leads');
-          if (r.success) setLeads(r.data || []);
+          if (r.success) setLeads(rowsOr(r.data, MOCK_SFA_LEADS));
           break;
         }
         case 'pipeline': {
           const [r1, r2] = await Promise.all([apiCore('opportunities'), apiCore('pipeline')]);
-          if (r1.success) setOpportunities(r1.data || []);
+          if (r1.success) setOpportunities(rowsOr(r1.data, MOCK_SFA_OPPORTUNITIES));
           if (r2.success) setPipelineData(r2.data);
           break;
         }
@@ -497,11 +517,11 @@ export default function SFAUnifiedPage() {
             apiEnh('teams'), apiCore('territories'),
             apiHris('sync-status'), apiHris('departments'), apiHris('available-users'),
           ]);
-          if (r1.success) setTeams(r1.data || []);
-          if (r2.success) setTerritories(r2.data || []);
+          if (r1.success) setTeams(rowsOr(r1.data, MOCK_SFA_TEAMS));
+          if (r2.success) setTerritories(rowsOr(r2.data, MOCK_SFA_TERRITORIES));
           if (r3.success) setHrisSyncStatus(r3.data);
-          if (r4.success) setHrisDepartments(r4.data || []);
-          if (r5.success) setHrisAvailableUsers(r5.data || []);
+          if (r4.success) setHrisDepartments(rowsOr(r4.data, MOCK_SFA_HRIS_DEPTS));
+          if (r5.success) setHrisAvailableUsers(rowsOr(r5.data, MOCK_SFA_HRIS_USERS));
           break;
         }
         case 'visits': {
@@ -512,55 +532,55 @@ export default function SFAUnifiedPage() {
             apiAdv('coverage-compliance'),
             fetch(`/api/hq/sfa/task-calendar?action=visit-bridge&period=${period}`).then(r => r.json()),
           ]);
-          if (r1.success) setVisits(r1.data || []);
-          if (r2.success) setCoveragePlans(r2.data || []);
-          if (r3.success) setCompliance(r3.data || []);
+          if (r1.success) setVisits(rowsOr(r1.data, MOCK_SFA_VISITS));
+          if (r2.success) setCoveragePlans(rowsOr(r2.data, MOCK_SFA_COVERAGE_PLANS));
+          if (r3.success) setCompliance(rowsOr(r3.data, MOCK_SFA_COMPLIANCE));
           if (r4.success) setVisitBridgeStat(r4.data || null);
           break;
         }
         case 'orders': {
           const [r1, r2] = await Promise.all([apiAdv('field-orders'), apiCore('quotations')]);
-          if (r1.success) setFieldOrders(r1.data || []);
-          if (r2.success) setQuotations(r2.data || []);
+          if (r1.success) setFieldOrders(rowsOr(r1.data, MOCK_SFA_FIELD_ORDERS));
+          if (r2.success) setQuotations(rowsOr(r2.data, MOCK_SFA_QUOTATIONS));
           break;
         }
         case 'targets': {
           const r = await apiEnh('target-groups');
-          if (r.success) setTargetGroups(r.data || []);
+          if (r.success) setTargetGroups(rowsOr(r.data, MOCK_SFA_TARGET_GROUPS));
           break;
         }
         case 'incentives': {
           const [r1, r2, r3, r4, r5, r6, r7] = await Promise.all([apiEnh('incentive-schemes'), apiAdv('product-commissions'), apiAdv('inventory-products'), apiAdv('commission-groups'), apiAdv('outlet-targets'), apiAdv('sales-strategies'), apiAdv('commission-summary')]);
-          if (r1.success) setIncentiveSchemes(r1.data || []);
-          if (r2.success) setCommissions(r2.data || []);
-          if (r3.success) setInventoryProducts(r3.data || []);
-          if (r4.success) setCommissionGroups(r4.data || []);
-          if (r5.success) setOutletTargets(r5.data || []);
-          if (r6.success) setSalesStrategies(r6.data || []);
+          if (r1.success) setIncentiveSchemes(rowsOr(r1.data, MOCK_SFA_INCENTIVE_SCHEMES));
+          if (r2.success) setCommissions(rowsOr(r2.data, MOCK_SFA_COMMISSIONS));
+          if (r3.success) setInventoryProducts(rowsOr(r3.data, MOCK_SFA_INV_PRODUCTS));
+          if (r4.success) setCommissionGroups(rowsOr(r4.data, MOCK_SFA_COMM_GROUPS));
+          if (r5.success) setOutletTargets(rowsOr(r5.data, MOCK_SFA_OUTLET_TARGETS));
+          if (r6.success) setSalesStrategies(rowsOr(r6.data, MOCK_SFA_SALES_STRATEGIES));
           if (r7.success) setCommSummary(r7.data || null);
           break;
         }
         case 'merchandising': {
           const r = await apiAdv('display-audits');
-          if (r.success) setDisplayAudits(r.data || []);
+          if (r.success) setDisplayAudits(rowsOr(r.data, MOCK_SFA_DISPLAY_AUDITS));
           break;
         }
         case 'competitor': {
           const [r1, r2] = await Promise.all([apiAdv('competitor-activities'), apiAdv('competitor-summary')]);
-          if (r1.success) setCompetitors(r1.data || []);
-          if (r2.success) setCompetitorSummary(r2.data || []);
+          if (r1.success) setCompetitors(rowsOr(r1.data, MOCK_SFA_COMPETITORS));
+          if (r2.success) setCompetitorSummary(rowsOr(r2.data, MOCK_SFA_COMPETITOR_SUMMARY));
           break;
         }
         case 'survey': {
           const [r1, r2] = await Promise.all([apiAdv('survey-templates'), apiAdv('survey-responses')]);
-          if (r1.success) setSurveyTemplates(r1.data || []);
-          if (r2.success) setSurveyResponses(r2.data || []);
+          if (r1.success) setSurveyTemplates(rowsOr(r1.data, MOCK_SFA_SURVEY_TEMPLATES));
+          if (r2.success) setSurveyResponses(rowsOr(r2.data, MOCK_SFA_SURVEY_RESPONSES));
           break;
         }
         case 'approval': {
           const [r1, r2] = await Promise.all([apiAdv('approval-workflows'), apiAdv('approval-requests')]);
-          if (r1.success) setApprovalWorkflows(r1.data || []);
-          if (r2.success) setApprovalRequests(r2.data || []);
+          if (r1.success) setApprovalWorkflows(rowsOr(r1.data, MOCK_SFA_APPROVAL_WORKFLOWS));
+          if (r2.success) setApprovalRequests(rowsOr(r2.data, MOCK_SFA_APPROVAL_REQUESTS));
           break;
         }
         case 'settings': {
@@ -571,36 +591,36 @@ export default function SFAUnifiedPage() {
             apiEnh('numbering-formats'), apiEnh('payment-terms'), apiEnh('business-settings'),
             apiEnh('settings-overview'),
           ]);
-          if (r1.success) setParameters(r1.data || []);
-          if (r2.success) setGeofences(r2.data || []);
-          if (r3.success) setPlafon(r3.data || []);
+          if (r1.success) setParameters(rowsOr(r1.data, MOCK_SFA_PARAMETERS));
+          if (r2.success) setGeofences(rowsOr(r2.data, MOCK_SFA_GEOFENCES));
+          if (r3.success) setPlafon(rowsOr(r3.data, MOCK_SFA_PLAFON));
           if (r4.success) setLookupCategories(r4.data || {});
-          if (r5.success) setCurrencies(r5.data || []);
-          if (r6.success) setExchangeRates(r6.data || []);
-          if (r7.success) setTaxSettings(r7.data || []);
-          if (r8.success) setNumberingFormats(r8.data || []);
-          if (r9.success) setPaymentTerms(r9.data || []);
-          if (r10.success) setBizSettings(r10.data || []);
+          if (r5.success) setCurrencies(rowsOr(r5.data, MOCK_SFA_CURRENCIES));
+          if (r6.success) setExchangeRates(rowsOr(r6.data, MOCK_SFA_EXCHANGE_RATES));
+          if (r7.success) setTaxSettings(rowsOr(r7.data, MOCK_SFA_TAX_SETTINGS));
+          if (r8.success) setNumberingFormats(rowsOr(r8.data, MOCK_SFA_NUMBERING));
+          if (r9.success) setPaymentTerms(rowsOr(r9.data, MOCK_SFA_PAYMENT_TERMS));
+          if (r10.success) setBizSettings(rowsOr(r10.data, MOCK_SFA_BIZ_SETTINGS));
           if (r11.success) setSettingsOverview(r11.data || null);
           break;
         }
         case 'customers': {
           const [r1, r2] = await Promise.all([apiCrm('customers'), apiCrm('customer-analytics')]);
-          if (r1.success) setCrmCustomers(r1.data || []);
+          if (r1.success) setCrmCustomers(rowsOr(r1.data, MOCK_SFA_CRM_CUSTOMERS));
           if (r2.success) setCrmAnalytics(r2.data);
           break;
         }
         case 'communications': {
           const [r1, r2] = await Promise.all([apiCrm('communications'), apiCrm('follow-ups')]);
-          if (r1.success) setCrmComms(r1.data || []);
-          if (r2.success) setCrmFollowUps(r2.data || []);
+          if (r1.success) setCrmComms(rowsOr(r1.data, MOCK_SFA_CRM_COMMS));
+          if (r2.success) setCrmFollowUps(rowsOr(r2.data, MOCK_SFA_CRM_FOLLOWUPS));
           break;
         }
         case 'tasks': {
           const [r1, r2, r3] = await Promise.all([apiCrm('tasks'), apiCrm('task-summary'), apiCrm('calendar-events')]);
-          if (r1.success) setCrmTasks(r1.data || []);
+          if (r1.success) setCrmTasks(rowsOr(r1.data, MOCK_SFA_CRM_TASKS));
           if (r2.success) setCrmTaskSummary(r2.data);
-          if (r3.success) setCrmCalendar(r3.data || []);
+          if (r3.success) setCrmCalendar(rowsOr(r3.data, MOCK_SFA_CRM_CALENDAR));
           break;
         }
         case 'field-tasks': {
@@ -608,21 +628,32 @@ export default function SFAUnifiedPage() {
         }
         case 'forecasting': {
           const [r1, r2] = await Promise.all([apiCrm('forecasts'), apiCrm('forecast-analytics')]);
-          if (r1.success) setCrmForecasts(r1.data || []);
-          if (r2.success) setCrmForecastAnalytics(r2.data);
+          if (r1.success) setCrmForecasts(rowsOr(r1.data, MOCK_SFA_CRM_FORECASTS));
+          if (r2.success && r2.data) {
+            const d = r2.data;
+            setCrmForecastAnalytics({
+              ...MOCK_SFA_CRM_FORECAST_ANALYTICS,
+              ...d,
+              forecasts: rowsOr(d.forecasts, MOCK_SFA_CRM_FORECAST_ANALYTICS.forecasts),
+              accuracy: rowsOr(d.accuracy, MOCK_SFA_CRM_FORECAST_ANALYTICS.accuracy || []),
+              dealScoreDist: rowsOr(d.dealScoreDist, MOCK_SFA_CRM_FORECAST_ANALYTICS.dealScoreDist),
+            });
+          } else {
+            setCrmForecastAnalytics(MOCK_SFA_CRM_FORECAST_ANALYTICS);
+          }
           break;
         }
         case 'tickets': {
           const [r1, r2, r3] = await Promise.all([apiCrm('tickets'), apiCrm('service-analytics'), apiCrm('satisfaction')]);
-          if (r1.success) setCrmTickets(r1.data || []);
+          if (r1.success) setCrmTickets(rowsOr(r1.data, MOCK_SFA_CRM_TICKETS));
           if (r2.success) setCrmServiceAnalytics(r2.data);
           if (r3.success) setCrmSatisfaction(r3.data);
           break;
         }
         case 'automation': {
           const [r1, r2] = await Promise.all([apiCrm('automation-rules'), apiCrm('automation-logs')]);
-          if (r1.success) setCrmAutomationRules(r1.data || []);
-          if (r2.success) setCrmAutomationLogs(r2.data || []);
+          if (r1.success) setCrmAutomationRules(rowsOr(r1.data, MOCK_SFA_CRM_AUTOMATION_RULES));
+          if (r2.success) setCrmAutomationLogs(rowsOr(r2.data, MOCK_SFA_CRM_AUTOMATION_LOGS));
           break;
         }
         case 'import-export': {
@@ -636,9 +667,9 @@ export default function SFAUnifiedPage() {
             apiInt('health'), apiInt('convertible-leads'), apiInt('unlinkable-visits'), apiInt('syncable-pipeline')
           ]);
           if (h.success) setIntHealth(h.data);
-          if (cl.success) setIntConvertibleLeads(cl.data || []);
-          if (uv.success) setIntUnlinkedVisits(uv.data || []);
-          if (sp.success) setIntSyncablePipeline(sp.data || []);
+          if (cl.success) setIntConvertibleLeads(rowsOr(cl.data, MOCK_SFA_INT_LEADS));
+          if (uv.success) setIntUnlinkedVisits(rowsOr(uv.data, MOCK_SFA_INT_VISITS));
+          if (sp.success) setIntSyncablePipeline(rowsOr(sp.data, MOCK_SFA_INT_PIPELINE));
           break;
         }
         case 'audit-trail': {
@@ -650,7 +681,7 @@ export default function SFAUnifiedPage() {
             apiAudit('summary', `&period=${auditFilterPeriod}`),
             apiAudit('filters'),
           ]);
-          if (tl.success) setAuditTimeline(tl.data || []);
+          if (tl.success) setAuditTimeline(rowsOr(tl.data, MOCK_SFA_AUDIT_TIMELINE));
           if (sm.success) setAuditSummary(sm.data);
           if (fl.success) setAuditFilters(fl.data);
           break;
@@ -660,9 +691,9 @@ export default function SFAUnifiedPage() {
           const [m, w, e2, u] = await Promise.all([
             apiAi('models'), apiAi('workflows'), apiAi('executions'), apiAi('usage-stats'),
           ]);
-          if (m.success) { setAiModels(m.data || []); setAiModelCatalog(m.catalog || []); }
-          if (w.success) { setAiWorkflows(w.data || []); if (w.templates) setAiWorkflowTemplates(w.templates); }
-          if (e2.success) setAiExecutions(e2.data || []);
+          if (m.success) { setAiModels(rowsOr(m.data, MOCK_SFA_AI_MODELS)); setAiModelCatalog(rowsOr(m.catalog, MOCK_SFA_AI_CATALOG)); }
+          if (w.success) { setAiWorkflows(rowsOr(w.data, MOCK_SFA_AI_WORKFLOWS)); setAiWorkflowTemplates(rowsOr(w.templates, MOCK_SFA_AI_WF_TEMPLATES)); }
+          if (e2.success) setAiExecutions(rowsOr(e2.data, MOCK_SFA_AI_EXECUTIONS));
           if (u.success) setAiUsageStats(u.data);
           break;
         }
@@ -1665,22 +1696,22 @@ export default function SFAUnifiedPage() {
             {/* Teams Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {teams.length === 0 ? <div className="col-span-3"><EmptyState icon={Users} title={t('sfa.noTeams')} /></div> :
-                teams.map((t: any) => (
-                  <Card key={t.id} className="p-5" hover>
+                teams.map((team: any) => (
+                  <Card key={team.id} className="p-5" hover>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm shrink-0">{(t.name || '?')[0]}</div>
-                        <div><h3 className="font-semibold text-gray-900 text-sm">{t.name}</h3><p className="text-[11px] text-gray-400 mt-0.5">{t.code} | {t.team_type}</p></div>
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm shrink-0">{(team.name || '?')[0]}</div>
+                        <div><h3 className="font-semibold text-gray-900 text-sm">{team.name}</h3><p className="text-[11px] text-gray-400 mt-0.5">{team.code} | {team.team_type}</p></div>
                       </div>
-                      <Badge color={t.is_active ? 'green' : 'gray'}>{t.is_active ? 'Active' : 'Off'}</Badge>
+                      <Badge color={team.is_active ? 'green' : 'gray'}>{team.is_active ? 'Active' : 'Off'}</Badge>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-500 pt-3 border-t border-gray-50">
-                      <div className="flex items-center gap-1"><Users className="w-3 h-3" /> {t.member_count || 0} anggota</div>
-                      {t.leader_name && <div className="text-gray-400">| Leader: <span className="text-gray-600 font-medium">{t.leader_name}</span></div>}
+                      <div className="flex items-center gap-1"><Users className="w-3 h-3" /> {team.member_count || 0} anggota</div>
+                      {team.leader_name && <div className="text-gray-400">| Leader: <span className="text-gray-600 font-medium">{team.leader_name}</span></div>}
                     </div>
                     {/* Add Member Button */}
                     {isManager && (
-                      <button onClick={() => { setModal('add-member'); setForm({ team_id: t.id, team_name: t.name, role: 'member' }); }}
+                      <button onClick={() => { setModal('add-member'); setForm({ team_id: team.id, team_name: team.name, role: 'member' }); }}
                         className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 border border-dashed border-gray-200 rounded-lg text-xs text-gray-500 hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50 transition-all">
                         <Plus className="w-3 h-3" /> {t('sfa.addMember')}
                       </button>
@@ -1791,7 +1822,7 @@ export default function SFAUnifiedPage() {
             {/* Visit Analytics */}
             {visits.length > 0 && (() => {
               const vStatusCounts = visits.reduce((a: any, v: any) => { a[v.status] = (a[v.status] || 0) + 1; return a; }, {});
-              const vColors: Record<string, string> = { completed: '#10b981', in_progress: '#3b82f6', planned: '#f59e0b', cancelled: '#ef4444', missed: '#6b7280' };
+              const vColors: Record<string, string> = { completed: '#10b981', in_progress: '#3b82f6', checked_in: '#3b82f6', planned: '#f59e0b', cancelled: '#ef4444', missed: '#6b7280' };
               const pieData = Object.entries(vStatusCounts).map(([s, c]) => ({ name: s, value: c as number, fill: vColors[s] || '#94a3b8' }));
               return (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1878,23 +1909,72 @@ export default function SFAUnifiedPage() {
                   <Card key={v.id} className="p-4 sm:px-5" hover>
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${v.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : v.status === 'in_progress' ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-400'}`}><Navigation className="w-5 h-5" /></div>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${v.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : v.status === 'in_progress' || v.status === 'checked_in' ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-400'}`}><Navigation className="w-5 h-5" /></div>
                         <div className="min-w-0">
                           <div className="font-semibold text-gray-900 truncate">{v.customer_name || 'Customer'}</div>
-                          <div className="text-xs text-gray-400 mt-0.5 truncate">{v.purpose || v.visit_type} | {fmtDate(v.visit_date)}</div>
+                          <div className="text-xs text-gray-400 mt-0.5 truncate">
+                            {v.salesperson_name ? <span className="text-gray-500">{v.salesperson_name} · </span> : null}
+                            {v.purpose || v.visit_type} | {fmtDate(v.visit_date)}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {v.order_taken && <Badge color="green">Order: {fmtCur(parseFloat(v.order_value))}</Badge>}
                         <button onClick={() => {
-                          const next: Record<string,string> = { planned: 'in_progress', in_progress: 'completed', completed: 'planned', cancelled: 'planned', missed: 'planned' };
+                          const next: Record<string,string> = { planned: 'in_progress', in_progress: 'completed', completed: 'planned', cancelled: 'planned', missed: 'planned', checked_in: 'completed' };
                           const ns = next[v.status] || 'in_progress';
                           apiCore('update-visit', 'PUT', { id: v.id, status: ns }).then(r => { if (r.success) { showToast(`Visit → ${ns.replace('_',' ')}`); fetchData(); } else showToast(r.error || t('sfa.failedLabel')); });
                         }} title={t('sfa.changeStatus')}>
-                          <Badge color={v.status === 'completed' ? 'green' : v.status === 'in_progress' ? 'blue' : 'gray'}>{v.status}</Badge>
+                          <Badge color={v.status === 'completed' ? 'green' : v.status === 'in_progress' || v.status === 'checked_in' ? 'blue' : 'gray'}>{v.status}</Badge>
                         </button>
                       </div>
                     </div>
+                    {(v.check_in_time || v.check_out_time || v.duration_minutes != null) && (
+                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-600 border-t border-gray-50 pt-3">
+                        <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />{t('sfa.visitCheckIn')}: <span className="font-medium text-gray-800">{fmtDateTime(v.check_in_time)}</span></span>
+                        <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />{t('sfa.visitCheckOut')}: <span className="font-medium text-gray-800">{fmtDateTime(v.check_out_time)}</span></span>
+                        {v.duration_minutes != null && Number(v.duration_minutes) > 0 && (
+                          <span>{t('sfa.visitDuration')}: <span className="font-medium text-gray-800">{v.duration_minutes} min</span></span>
+                        )}
+                      </div>
+                    )}
+                    {(v.check_in_photo_url || v.check_out_photo_url) && (
+                      <div className="mt-3 flex flex-wrap gap-3 border-t border-gray-50 pt-3">
+                        {v.check_in_photo_url && (
+                          <a href={v.check_in_photo_url} target="_blank" rel="noopener noreferrer" className="group flex flex-col gap-1">
+                            <div className="relative h-20 w-20 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 ring-1 ring-gray-100">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={v.check_in_photo_url} alt="" className="h-full w-full object-cover" />
+                              <span className="absolute bottom-0 inset-x-0 bg-black/50 text-[9px] text-white text-center py-0.5">{t('sfa.visitOpenPhoto')}</span>
+                            </div>
+                            <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Camera className="w-3 h-3" />{t('sfa.visitPhotoIn')}</span>
+                          </a>
+                        )}
+                        {v.check_out_photo_url && (
+                          <a href={v.check_out_photo_url} target="_blank" rel="noopener noreferrer" className="group flex flex-col gap-1">
+                            <div className="relative h-20 w-20 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 ring-1 ring-gray-100">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={v.check_out_photo_url} alt="" className="h-full w-full object-cover" />
+                              <span className="absolute bottom-0 inset-x-0 bg-black/50 text-[9px] text-white text-center py-0.5">{t('sfa.visitOpenPhoto')}</span>
+                            </div>
+                            <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Camera className="w-3 h-3" />{t('sfa.visitPhotoOut')}</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {(v.outcome || v.outcome_notes || v.feedback) && (
+                      <div className="mt-3 space-y-2 text-xs border-t border-gray-50 pt-3">
+                        {v.outcome && (
+                          <p className="text-gray-700"><span className="text-gray-500 font-medium">{t('sfa.visitOutcome')}: </span>{v.outcome}</p>
+                        )}
+                        {v.outcome_notes && (
+                          <p className="text-gray-700 whitespace-pre-wrap"><span className="text-gray-500 font-medium">{t('sfa.visitNotes')}: </span>{v.outcome_notes}</p>
+                        )}
+                        {v.feedback && (
+                          <p className="text-gray-700 whitespace-pre-wrap"><span className="text-gray-500 font-medium">{t('sfa.visitFeedback')}: </span>{v.feedback}</p>
+                        )}
+                      </div>
+                    )}
                   </Card>
                 ))
               }

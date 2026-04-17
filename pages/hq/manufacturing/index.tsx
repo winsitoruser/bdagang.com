@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import Modal from '../../../components/hq/ui/Modal';
 import { toast } from 'react-hot-toast';
 import {
@@ -84,6 +85,7 @@ const MOCK_WORK_ORDERS = [
 ];
 
 export default function ManufacturingPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [loading, setLoading] = useState(true);
@@ -234,7 +236,7 @@ export default function ManufacturingPage() {
   const handleWOAction = async (action: string, id: string, extra?: any) => {
     try {
       await api(action, 'POST', { id, ...extra });
-      toast.success(`Work Order ${action.replace('wo-', '')} berhasil`);
+      toast.success(t('mfgUi.toast.woActionOk').replace('{{a}}', action.replace('wo-', '')));
       fetchWorkOrders();
     } catch (e: any) { toast.error(e.message); }
   };
@@ -243,11 +245,11 @@ export default function ManufacturingPage() {
   const [woForm, setWoForm] = useState({ product_id: '', bom_id: '', planned_quantity: '', priority: 'normal', planned_start: '', planned_end: '', work_center_id: '', notes: '' });
 
   const handleCreateWO = async () => {
-    if (!woForm.product_id || !woForm.planned_quantity) { toast.error('Produk dan jumlah harus diisi'); return; }
+    if (!woForm.product_id || !woForm.planned_quantity) { toast.error(t('mfgUi.toast.fillRequired')); return; }
     setSaving(true);
     try {
       await api('work-order', 'POST', { ...woForm, planned_quantity: parseFloat(woForm.planned_quantity) });
-      toast.success('Work Order berhasil dibuat');
+      toast.success(t('mfgUi.toast.createOk'));
       setShowCreateModal(false);
       fetchWorkOrders();
     } catch (e: any) { toast.error(e.message); }
@@ -257,7 +259,7 @@ export default function ManufacturingPage() {
   // Export CSV
   const handleExport = () => {
     const data = activeTab === 'work-orders' ? workOrders : activeTab === 'bom' ? boms : activeTab === 'machines' ? machines : [];
-    if (data.length === 0) { toast.error('Tidak ada data untuk di-export'); return; }
+    if (data.length === 0) { toast.error(t('mfgUi.toast.noExport')); return; }
     const headers = Object.keys(data[0]).filter(k => !k.includes('id') || k === 'id').join(',');
     const rows = data.map(r => Object.values(r).join(',')).join('\n');
     const csv = `${headers}\n${rows}`;
@@ -265,32 +267,32 @@ export default function ManufacturingPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `manufacturing-${activeTab}-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
     URL.revokeObjectURL(url);
-    toast.success('Export berhasil');
+    toast.success(t('mfgUi.toast.exportOk'));
   };
 
   if (!mounted) return null;
 
   const tabs: { key: TabType; label: string; icon: any }[] = [
-    { key: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { key: 'work-orders', label: 'Work Orders', icon: ClipboardList },
-    { key: 'bom', label: 'Bill of Materials', icon: Layers },
-    { key: 'routings', label: 'Routing', icon: Activity },
-    { key: 'work-centers', label: 'Work Centers', icon: Building2 },
-    { key: 'machines', label: 'Mesin', icon: Settings },
-    { key: 'quality', label: 'Quality Control', icon: Shield },
-    { key: 'planning', label: 'Production Plan', icon: Calendar },
-    { key: 'oee', label: 'OEE', icon: Gauge },
-    { key: 'costs', label: 'Costing', icon: DollarSign },
-    { key: 'maintenance', label: 'Maintenance', icon: Wrench },
-    { key: 'plm', label: 'PLM', icon: Layers },
-    { key: 'cogm', label: 'COGM', icon: DollarSign },
-    { key: 'subcontracting', label: 'Subkontrak', icon: Truck },
-    { key: 'waste', label: 'Waste', icon: AlertTriangle },
-    { key: 'settings', label: 'Settings', icon: Settings },
+    { key: 'dashboard', label: t('mfgUi.tabs.dashboard'), icon: BarChart3 },
+    { key: 'work-orders', label: t('mfgUi.tabs.workOrders'), icon: ClipboardList },
+    { key: 'bom', label: t('mfgUi.tabs.bom'), icon: Layers },
+    { key: 'routings', label: t('mfgUi.tabs.routings'), icon: Activity },
+    { key: 'work-centers', label: t('mfgUi.tabs.workCenters'), icon: Building2 },
+    { key: 'machines', label: t('mfgUi.tabs.machines'), icon: Settings },
+    { key: 'quality', label: t('mfgUi.tabs.quality'), icon: Shield },
+    { key: 'planning', label: t('mfgUi.tabs.planning'), icon: Calendar },
+    { key: 'oee', label: t('mfgUi.tabs.oee'), icon: Gauge },
+    { key: 'costs', label: t('mfgUi.tabs.costs'), icon: DollarSign },
+    { key: 'maintenance', label: t('mfgUi.tabs.maintenance'), icon: Wrench },
+    { key: 'plm', label: t('mfgUi.tabs.plm'), icon: Layers },
+    { key: 'cogm', label: t('mfgUi.tabs.cogm'), icon: DollarSign },
+    { key: 'subcontracting', label: t('mfgUi.tabs.subcontracting'), icon: Truck },
+    { key: 'waste', label: t('mfgUi.tabs.waste'), icon: AlertTriangle },
+    { key: 'settings', label: t('mfgUi.tabs.settings'), icon: Settings },
   ];
 
   return (
-    <HQLayout title="Manufacturing Management" subtitle="Kelola produksi, BOM, quality control, dan analitik manufaktur">
+    <HQLayout title={t('mfgUi.layout.title')} subtitle={t('mfgUi.layout.subtitle')}>
       <div className="space-y-6">
         {/* Tab Navigation */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1">
@@ -309,31 +311,31 @@ export default function ManufacturingPage() {
           <div className="flex items-center gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input type="text" placeholder="Cari..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              <input type="text" placeholder={t('mfgUi.toolbar.search')} value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm w-64" />
             </div>
             {['work-orders', 'bom', 'machines', 'quality'].includes(activeTab) && (
               <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                <option value="all">Semua Status</option>
+                <option value="all">{t('mfgUi.toolbar.allStatus')}</option>
                 {activeTab === 'work-orders' && <>
-                  <option value="draft">Draft</option><option value="planned">Planned</option><option value="released">Released</option>
-                  <option value="in_progress">In Progress</option><option value="completed">Completed</option><option value="on_hold">On Hold</option>
+                  <option value="draft">{t('mfgUi.woStatus.draft')}</option><option value="planned">{t('mfgUi.woStatus.planned')}</option><option value="released">{t('mfgUi.woStatus.released')}</option>
+                  <option value="in_progress">{t('mfgUi.woStatus.in_progress')}</option><option value="completed">{t('mfgUi.woStatus.completed')}</option><option value="on_hold">{t('mfgUi.woStatus.on_hold')}</option>
                 </>}
-                {activeTab === 'bom' && <><option value="draft">Draft</option><option value="active">Active</option><option value="expired">Expired</option></>}
-                {activeTab === 'machines' && <><option value="operational">Operational</option><option value="maintenance">Maintenance</option><option value="breakdown">Breakdown</option></>}
+                {activeTab === 'bom' && <><option value="draft">{t('mfgUi.bomStatus.draft')}</option><option value="active">{t('mfgUi.bomStatus.active')}</option><option value="expired">{t('mfgUi.bomStatus.expired')}</option></>}
+                {activeTab === 'machines' && <><option value="operational">{t('mfgUi.machineStatus.operational')}</option><option value="maintenance">{t('mfgUi.machineStatus.maintenance')}</option><option value="breakdown">{t('mfgUi.machineStatus.breakdown')}</option></>}
               </select>
             )}
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => fetchTabData(activeTab)} className="flex items-center gap-2 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('mfgUi.toolbar.refresh')}
             </button>
             <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50">
-              <Download className="w-4 h-4" /> Export
+              <Download className="w-4 h-4" /> {t('mfgUi.toolbar.export')}
             </button>
             {['work-orders', 'bom', 'routings', 'work-centers', 'machines', 'quality', 'planning'].includes(activeTab) && (
               <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
-                <Plus className="w-4 h-4" /> Buat Baru
+                <Plus className="w-4 h-4" /> {t('mfgUi.toolbar.create')}
               </button>
             )}
           </div>
@@ -366,57 +368,57 @@ export default function ManufacturingPage() {
         )}
 
         {/* Create Work Order Modal */}
-        <Modal isOpen={showCreateModal && activeTab === 'work-orders'} onClose={() => setShowCreateModal(false)} title="Buat Work Order Baru" size="lg">
+        <Modal isOpen={showCreateModal && activeTab === 'work-orders'} onClose={() => setShowCreateModal(false)} title={t('mfgUi.modal.createWo')} size="lg">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Produk *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.product')} *</label>
                 <select value={woForm.product_id} onChange={e => setWoForm({ ...woForm, product_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
-                  <option value="">Pilih Produk</option>
+                  <option value="">{t('mfgUi.modal.selectProduct')}</option>
                   {products.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Jumlah Produksi *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.qty')} *</label>
                 <input type="number" value={woForm.planned_quantity} onChange={e => setWoForm({ ...woForm, planned_quantity: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="0" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Prioritas</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.priority')}</label>
                 <select value={woForm.priority} onChange={e => setWoForm({ ...woForm, priority: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
-                  <option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option><option value="critical">Critical</option>
+                  <option value="low">{t('mfgUi.priority.low')}</option><option value="normal">{t('mfgUi.priority.normal')}</option><option value="high">{t('mfgUi.priority.high')}</option><option value="urgent">{t('mfgUi.priority.urgent')}</option><option value="critical">{t('mfgUi.priority.critical')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Work Center</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.workCenter')}</label>
                 <select value={woForm.work_center_id} onChange={e => setWoForm({ ...woForm, work_center_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
-                  <option value="">Pilih Work Center</option>
+                  <option value="">{t('mfgUi.modal.selectWc')}</option>
                   {workCenters.map((wc: any) => <option key={wc.id} value={wc.id}>{wc.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Planned Start</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.plannedStart')}</label>
                 <input type="datetime-local" value={woForm.planned_start} onChange={e => setWoForm({ ...woForm, planned_start: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Planned End</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.plannedEnd')}</label>
                 <input type="datetime-local" value={woForm.planned_end} onChange={e => setWoForm({ ...woForm, planned_end: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.notes')}</label>
               <textarea value={woForm.notes} onChange={e => setWoForm({ ...woForm, notes: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" rows={2} />
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg text-sm">Batal</button>
+              <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg text-sm">{t('mfgUi.modal.cancel')}</button>
               <button onClick={handleCreateWO} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Simpan
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t('mfgUi.modal.save')}
               </button>
             </div>
           </div>
         </Modal>
 
         {/* Detail Modal */}
-        <Modal isOpen={showDetailModal} onClose={() => { setShowDetailModal(false); setSelectedItem(null); }} title={`Detail: ${selectedItem?.wo_number || selectedItem?.bom_code || ''}`} size="xl">
+        <Modal isOpen={showDetailModal} onClose={() => { setShowDetailModal(false); setSelectedItem(null); }} title={`${t('mfgUi.detail')}: ${selectedItem?.wo_number || selectedItem?.bom_code || ''}`} size="xl">
           {selectedItem && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
@@ -439,19 +441,20 @@ export default function ManufacturingPage() {
 // DASHBOARD TAB
 // ==========================================
 function DashboardTab({ dashboard, analytics }: { dashboard: any; analytics: any }) {
-  if (!dashboard) return <div className="text-center text-gray-500 py-8">Loading dashboard data...</div>;
+  const { t } = useTranslation();
+  if (!dashboard) return <div className="text-center text-gray-500 py-8">{t('mfgUi.dashboard.loading')}</div>;
 
   const wo = dashboard.workOrders || {};
   const mch = dashboard.machines || {};
   const qc = dashboard.quality || {};
 
   const stats = [
-    { label: 'Total Work Orders (30d)', value: wo.total || 0, icon: ClipboardList, bg: 'bg-purple-50 border-purple-200', iconCls: 'text-purple-600', valCls: 'text-purple-700', sub: `${wo.in_progress || 0} aktif` },
-    { label: 'Total Produksi', value: formatNumber(parseFloat(wo.total_produced || 0)), icon: Package, bg: 'bg-blue-50 border-blue-200', iconCls: 'text-blue-600', valCls: 'text-blue-700', sub: `Reject: ${formatNumber(parseFloat(wo.total_rejected || 0))}` },
-    { label: 'Mesin Operational', value: `${mch.operational || 0}/${mch.total || 0}`, icon: Settings, bg: 'bg-green-50 border-green-200', iconCls: 'text-green-600', valCls: 'text-green-700', sub: `${mch.in_maintenance || 0} maintenance` },
-    { label: 'QC Pass Rate', value: `${qc.total_inspections > 0 ? ((parseFloat(qc.passed || 0) / parseFloat(qc.total_inspections || 1)) * 100).toFixed(1) : 0}%`, icon: Shield, bg: 'bg-emerald-50 border-emerald-200', iconCls: 'text-emerald-600', valCls: 'text-emerald-700', sub: `${qc.failed || 0} gagal` },
-    { label: 'Maintenance Alerts', value: dashboard.maintenanceAlerts || 0, icon: AlertTriangle, bg: 'bg-red-50 border-red-200', iconCls: 'text-red-600', valCls: 'text-red-700', sub: 'Perlu tindakan' },
-    { label: 'Total Cost (30d)', value: formatCurrency(parseFloat(wo.total_cost || 0)), icon: DollarSign, bg: 'bg-amber-50 border-amber-200', iconCls: 'text-amber-600', valCls: 'text-amber-700', sub: '' },
+    { label: t('mfgUi.dashboard.wo30'), value: wo.total || 0, icon: ClipboardList, bg: 'bg-purple-50 border-purple-200', iconCls: 'text-purple-600', valCls: 'text-purple-700', sub: `${wo.in_progress || 0} ${t('mfgUi.dashboard.active')}` },
+    { label: t('mfgUi.dashboard.totalProd'), value: formatNumber(parseFloat(wo.total_produced || 0)), icon: Package, bg: 'bg-blue-50 border-blue-200', iconCls: 'text-blue-600', valCls: 'text-blue-700', sub: `${t('mfgUi.dashboard.reject')}: ${formatNumber(parseFloat(wo.total_rejected || 0))}` },
+    { label: t('mfgUi.dashboard.machines'), value: `${mch.operational || 0}/${mch.total || 0}`, icon: Settings, bg: 'bg-green-50 border-green-200', iconCls: 'text-green-600', valCls: 'text-green-700', sub: `${mch.in_maintenance || 0} ${t('mfgUi.dashboard.maint')}` },
+    { label: t('mfgUi.dashboard.qcPass'), value: `${qc.total_inspections > 0 ? ((parseFloat(qc.passed || 0) / parseFloat(qc.total_inspections || 1)) * 100).toFixed(1) : 0}%`, icon: Shield, bg: 'bg-emerald-50 border-emerald-200', iconCls: 'text-emerald-600', valCls: 'text-emerald-700', sub: `${qc.failed || 0} ${t('mfgUi.dashboard.failed')}` },
+    { label: t('mfgUi.dashboard.maintAlert'), value: dashboard.maintenanceAlerts || 0, icon: AlertTriangle, bg: 'bg-red-50 border-red-200', iconCls: 'text-red-600', valCls: 'text-red-700', sub: t('mfgUi.dashboard.needAction') },
+    { label: t('mfgUi.dashboard.totalCost'), value: formatCurrency(parseFloat(wo.total_cost || 0)), icon: DollarSign, bg: 'bg-amber-50 border-amber-200', iconCls: 'text-amber-600', valCls: 'text-amber-700', sub: '' },
   ];
 
   return (
@@ -475,7 +478,7 @@ function DashboardTab({ dashboard, analytics }: { dashboard: any; analytics: any
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Production Trend */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Trend Produksi (30 Hari)</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.dashboard.trendTitle')}</h3>
             {analytics.trend && analytics.trend.length > 0 ? (
               <Chart type="area" height={280} options={{
                 chart: { toolbar: { show: false } },
@@ -486,15 +489,15 @@ function DashboardTab({ dashboard, analytics }: { dashboard: any; analytics: any
                 colors: ['#7C3AED', '#10B981'],
                 legend: { position: 'top' }
               }} series={[
-                { name: 'Quantity', data: analytics.trend.map((t: any) => parseFloat(t.quantity_produced || 0)) },
-                { name: 'Orders', data: analytics.trend.map((t: any) => parseInt(t.orders_completed || 0)) }
+                { name: t('mfgUi.dashboard.qty'), data: analytics.trend.map((tr: any) => parseFloat(tr.quantity_produced || 0)) },
+                { name: t('mfgUi.dashboard.orders'), data: analytics.trend.map((tr: any) => parseInt(tr.orders_completed || 0)) }
               ]} />
-            ) : <p className="text-gray-400 text-center py-12">Belum ada data produksi</p>}
+            ) : <p className="text-gray-400 text-center py-12">{t('mfgUi.dashboard.noProd')}</p>}
           </div>
 
           {/* Top Products */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Top Produk Terproduksi</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.dashboard.topProducts')}</h3>
             <div className="space-y-3">
               {(analytics.topProducts || []).slice(0, 6).map((p: any, i: number) => (
                 <div key={i} className="flex items-center justify-between">
@@ -507,11 +510,11 @@ function DashboardTab({ dashboard, analytics }: { dashboard: any; analytics: any
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold">{formatNumber(parseFloat(p.total_produced || 0))}</p>
-                    <p className="text-xs text-gray-500">Yield: {parseFloat(p.avg_yield || 0).toFixed(1)}%</p>
+                    <p className="text-xs text-gray-500">{t('mfgUi.dashboard.yield')}: {parseFloat(p.avg_yield || 0).toFixed(1)}%</p>
                   </div>
                 </div>
               ))}
-              {(!analytics.topProducts || analytics.topProducts.length === 0) && <p className="text-gray-400 text-center py-8">Belum ada data</p>}
+              {(!analytics.topProducts || analytics.topProducts.length === 0) && <p className="text-gray-400 text-center py-8">{t('mfgUi.costs.noData')}</p>}
             </div>
           </div>
         </div>
@@ -520,16 +523,16 @@ function DashboardTab({ dashboard, analytics }: { dashboard: any; analytics: any
       {/* Work Center Load */}
       {analytics?.workCenterLoad && analytics.workCenterLoad.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Beban Work Center</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.dashboard.wcLoad')}</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {analytics.workCenterLoad.map((wc: any, i: number) => (
               <div key={i} className="bg-gray-50 rounded-lg p-4">
                 <p className="font-medium text-sm">{wc.name}</p>
                 <p className="text-xs text-gray-500">{wc.code}</p>
                 <div className="mt-2 flex items-center gap-4">
-                  <div><p className="text-lg font-bold text-purple-600">{wc.active_orders}</p><p className="text-xs text-gray-500">Aktif</p></div>
-                  <div><p className="text-lg font-bold text-blue-600">{wc.queued_orders}</p><p className="text-xs text-gray-500">Antrian</p></div>
-                  <div><p className="text-lg font-bold text-green-600">{formatNumber(parseFloat(wc.total_output || 0))}</p><p className="text-xs text-gray-500">Output</p></div>
+                  <div><p className="text-lg font-bold text-purple-600">{wc.active_orders}</p><p className="text-xs text-gray-500">{t('mfgUi.dashboard.active')}</p></div>
+                  <div><p className="text-lg font-bold text-blue-600">{wc.queued_orders}</p><p className="text-xs text-gray-500">{t('mfgUi.dashboard.queue')}</p></div>
+                  <div><p className="text-lg font-bold text-green-600">{formatNumber(parseFloat(wc.total_output || 0))}</p><p className="text-xs text-gray-500">{t('mfgUi.dashboard.output')}</p></div>
                 </div>
               </div>
             ))}
@@ -539,13 +542,13 @@ function DashboardTab({ dashboard, analytics }: { dashboard: any; analytics: any
 
       {/* Recent Work Orders */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h3 className="font-semibold text-gray-900 mb-4">Work Order Terbaru</h3>
+        <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.dashboard.recentWo')}</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b">
-              <th className="text-left py-2 px-3">WO Number</th><th className="text-left py-2 px-3">Produk</th>
-              <th className="text-left py-2 px-3">Status</th><th className="text-right py-2 px-3">Qty</th>
-              <th className="text-left py-2 px-3">Work Center</th><th className="text-left py-2 px-3">Dibuat</th>
+              <th className="text-left py-2 px-3">{t('mfgUi.dashboard.colWo')}</th><th className="text-left py-2 px-3">{t('mfgUi.dashboard.colProduct')}</th>
+              <th className="text-left py-2 px-3">{t('mfgUi.dashboard.colStatus')}</th><th className="text-right py-2 px-3">{t('mfgUi.dashboard.colQty')}</th>
+              <th className="text-left py-2 px-3">{t('mfgUi.dashboard.colWc')}</th><th className="text-left py-2 px-3">{t('mfgUi.dashboard.colCreated')}</th>
             </tr></thead>
             <tbody>
               {(dashboard.recentWorkOrders || []).map((wo: any) => (
@@ -559,7 +562,7 @@ function DashboardTab({ dashboard, analytics }: { dashboard: any; analytics: any
                 </tr>
               ))}
               {(!dashboard.recentWorkOrders || dashboard.recentWorkOrders.length === 0) && (
-                <tr><td colSpan={6} className="py-8 text-center text-gray-400">Belum ada work order</td></tr>
+                <tr><td colSpan={6} className="py-8 text-center text-gray-400">{t('mfgUi.dashboard.emptyWo')}</td></tr>
               )}
             </tbody>
           </table>
@@ -573,16 +576,17 @@ function DashboardTab({ dashboard, analytics }: { dashboard: any; analytics: any
 // WORK ORDERS TAB
 // ==========================================
 function WorkOrdersTab({ workOrders, total, page, setPage, onAction, onView }: any) {
+  const { t } = useTranslation();
   return (
     <div className="bg-white rounded-xl border border-gray-200">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="bg-gray-50 border-b">
-            <th className="text-left py-3 px-4">WO Number</th><th className="text-left py-3 px-4">Produk</th>
-            <th className="text-left py-3 px-4">Status</th><th className="text-left py-3 px-4">Prioritas</th>
-            <th className="text-right py-3 px-4">Planned</th><th className="text-right py-3 px-4">Actual</th>
-            <th className="text-left py-3 px-4">Work Center</th><th className="text-left py-3 px-4">Start</th>
-            <th className="text-center py-3 px-4">Aksi</th>
+            <th className="text-left py-3 px-4">{t('mfgUi.wo.colWo')}</th><th className="text-left py-3 px-4">{t('mfgUi.wo.colProduct')}</th>
+            <th className="text-left py-3 px-4">{t('mfgUi.wo.colStatus')}</th><th className="text-left py-3 px-4">{t('mfgUi.wo.colPri')}</th>
+            <th className="text-right py-3 px-4">{t('mfgUi.wo.colPlanned')}</th><th className="text-right py-3 px-4">{t('mfgUi.wo.colActual')}</th>
+            <th className="text-left py-3 px-4">{t('mfgUi.wo.colWc')}</th><th className="text-left py-3 px-4">{t('mfgUi.wo.colStart')}</th>
+            <th className="text-center py-3 px-4">{t('mfgUi.wo.colAction')}</th>
           </tr></thead>
           <tbody>
             {workOrders.map((wo: any) => (
@@ -597,35 +601,35 @@ function WorkOrdersTab({ workOrders, total, page, setPage, onAction, onView }: a
                 <td className="py-3 px-4 text-gray-500 text-xs">{formatDate(wo.planned_start)}</td>
                 <td className="py-3 px-4">
                   <div className="flex items-center justify-center gap-1">
-                    <button onClick={() => onView(wo)} className="p-1 hover:bg-gray-100 rounded" title="Detail"><Eye className="w-4 h-4" /></button>
+                    <button onClick={() => onView(wo)} className="p-1 hover:bg-gray-100 rounded" title={t('mfgUi.wo.titleDetail')}><Eye className="w-4 h-4" /></button>
                     {(wo.status === 'planned' || wo.status === 'released') && (
-                      <button onClick={() => onAction('wo-start', wo.id)} className="p-1 hover:bg-green-100 rounded text-green-600" title="Start"><Play className="w-4 h-4" /></button>
+                      <button onClick={() => onAction('wo-start', wo.id)} className="p-1 hover:bg-green-100 rounded text-green-600" title={t('mfgUi.wo.titleStart')}><Play className="w-4 h-4" /></button>
                     )}
                     {wo.status === 'in_progress' && (
                       <>
-                        <button onClick={() => onAction('wo-pause', wo.id)} className="p-1 hover:bg-yellow-100 rounded text-yellow-600" title="Pause"><Pause className="w-4 h-4" /></button>
-                        <button onClick={() => onAction('wo-auto-issue', null, { work_order_id: wo.id })} className="p-1 hover:bg-purple-100 rounded text-purple-600" title="Auto Issue Material"><Package className="w-4 h-4" /></button>
-                        <button onClick={() => onAction('wo-complete', wo.id, { actual_quantity: wo.planned_quantity })} className="p-1 hover:bg-blue-100 rounded text-blue-600" title="Complete"><CheckCircle className="w-4 h-4" /></button>
+                        <button onClick={() => onAction('wo-pause', wo.id)} className="p-1 hover:bg-yellow-100 rounded text-yellow-600" title={t('mfgUi.wo.titlePause')}><Pause className="w-4 h-4" /></button>
+                        <button onClick={() => onAction('wo-auto-issue', null, { work_order_id: wo.id })} className="p-1 hover:bg-purple-100 rounded text-purple-600" title={t('mfgUi.wo.titleAuto')}><Package className="w-4 h-4" /></button>
+                        <button onClick={() => onAction('wo-complete', wo.id, { actual_quantity: wo.planned_quantity })} className="p-1 hover:bg-blue-100 rounded text-blue-600" title={t('mfgUi.wo.titleComplete')}><CheckCircle className="w-4 h-4" /></button>
                       </>
                     )}
                     {wo.status === 'on_hold' && (
-                      <button onClick={() => onAction('wo-resume', wo.id)} className="p-1 hover:bg-green-100 rounded text-green-600" title="Resume"><Play className="w-4 h-4" /></button>
+                      <button onClick={() => onAction('wo-resume', wo.id)} className="p-1 hover:bg-green-100 rounded text-green-600" title={t('mfgUi.wo.titleResume')}><Play className="w-4 h-4" /></button>
                     )}
                   </div>
                 </td>
               </tr>
             ))}
-            {workOrders.length === 0 && <tr><td colSpan={9} className="py-12 text-center text-gray-400">Belum ada Work Order</td></tr>}
+            {workOrders.length === 0 && <tr><td colSpan={9} className="py-12 text-center text-gray-400">{t('mfgUi.wo.empty')}</td></tr>}
           </tbody>
         </table>
       </div>
       {total > 20 && (
         <div className="flex items-center justify-between p-4 border-t">
-          <span className="text-sm text-gray-500">Total: {total} work orders</span>
+          <span className="text-sm text-gray-500">{t('mfgUi.wo.total').replace('{{n}}', String(total))}</span>
           <div className="flex gap-2">
-            <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="px-3 py-1 border rounded text-sm disabled:opacity-50">Prev</button>
-            <span className="px-3 py-1 text-sm">Page {page}</span>
-            <button onClick={() => setPage(page + 1)} disabled={page * 20 >= total} className="px-3 py-1 border rounded text-sm disabled:opacity-50">Next</button>
+            <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1} className="px-3 py-1 border rounded text-sm disabled:opacity-50">{t('mfgUi.wo.prev')}</button>
+            <span className="px-3 py-1 text-sm">{t('mfgUi.wo.page')} {page}</span>
+            <button onClick={() => setPage(page + 1)} disabled={page * 20 >= total} className="px-3 py-1 border rounded text-sm disabled:opacity-50">{t('mfgUi.wo.next')}</button>
           </div>
         </div>
       )}
@@ -637,15 +641,16 @@ function WorkOrdersTab({ workOrders, total, page, setPage, onAction, onView }: a
 // BOM TAB
 // ==========================================
 function BOMTab({ boms }: { boms: any[] }) {
+  const { t } = useTranslation();
   return (
     <div className="bg-white rounded-xl border border-gray-200">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="bg-gray-50 border-b">
-            <th className="text-left py-3 px-4">BOM Code</th><th className="text-left py-3 px-4">Nama</th>
-            <th className="text-left py-3 px-4">Produk</th><th className="text-left py-3 px-4">Status</th>
-            <th className="text-left py-3 px-4">Tipe</th><th className="text-right py-3 px-4">Items</th>
-            <th className="text-right py-3 px-4">Material Cost</th><th className="text-left py-3 px-4">Version</th>
+            <th className="text-left py-3 px-4">{t('mfgUi.bom.code')}</th><th className="text-left py-3 px-4">{t('mfgUi.bom.name')}</th>
+            <th className="text-left py-3 px-4">{t('mfgUi.bom.product')}</th><th className="text-left py-3 px-4">{t('mfgUi.bom.status')}</th>
+            <th className="text-left py-3 px-4">{t('mfgUi.bom.type')}</th><th className="text-right py-3 px-4">{t('mfgUi.bom.items')}</th>
+            <th className="text-right py-3 px-4">{t('mfgUi.bom.matCost')}</th><th className="text-left py-3 px-4">{t('mfgUi.bom.version')}</th>
           </tr></thead>
           <tbody>
             {boms.map((b: any) => (
@@ -660,7 +665,7 @@ function BOMTab({ boms }: { boms: any[] }) {
                 <td className="py-3 px-4">v{b.version}</td>
               </tr>
             ))}
-            {boms.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">Belum ada BOM</td></tr>}
+            {boms.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">{t('mfgUi.bom.empty')}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -672,15 +677,16 @@ function BOMTab({ boms }: { boms: any[] }) {
 // ROUTINGS TAB
 // ==========================================
 function RoutingsTab({ routings }: { routings: any[] }) {
+  const { t } = useTranslation();
   return (
     <div className="bg-white rounded-xl border border-gray-200">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="bg-gray-50 border-b">
-            <th className="text-left py-3 px-4">Code</th><th className="text-left py-3 px-4">Nama</th>
-            <th className="text-left py-3 px-4">Produk</th><th className="text-left py-3 px-4">Status</th>
-            <th className="text-right py-3 px-4">Operations</th><th className="text-right py-3 px-4">Total Time</th>
-            <th className="text-right py-3 px-4">Total Cost</th>
+            <th className="text-left py-3 px-4">{t('mfgUi.routing.code')}</th><th className="text-left py-3 px-4">{t('mfgUi.routing.name')}</th>
+            <th className="text-left py-3 px-4">{t('mfgUi.routing.product')}</th><th className="text-left py-3 px-4">{t('mfgUi.routing.status')}</th>
+            <th className="text-right py-3 px-4">{t('mfgUi.routing.ops')}</th><th className="text-right py-3 px-4">{t('mfgUi.routing.time')}</th>
+            <th className="text-right py-3 px-4">{t('mfgUi.routing.cost')}</th>
           </tr></thead>
           <tbody>
             {routings.map((r: any) => (
@@ -694,7 +700,7 @@ function RoutingsTab({ routings }: { routings: any[] }) {
                 <td className="py-3 px-4 text-right">{formatCurrency(parseFloat(r.total_cost || 0))}</td>
               </tr>
             ))}
-            {routings.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-gray-400">Belum ada Routing</td></tr>}
+            {routings.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-gray-400">{t('mfgUi.routing.empty')}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -706,6 +712,7 @@ function RoutingsTab({ routings }: { routings: any[] }) {
 // WORK CENTERS TAB
 // ==========================================
 function WorkCentersTab({ workCenters }: { workCenters: any[] }) {
+  const { t } = useTranslation();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {workCenters.map((wc: any) => (
@@ -718,15 +725,15 @@ function WorkCentersTab({ workCenters }: { workCenters: any[] }) {
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[wc.status]}`}>{wc.status}</span>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><p className="text-gray-500 text-xs">Kapasitas/jam</p><p className="font-medium">{wc.capacity_per_hour}</p></div>
-            <div><p className="text-gray-500 text-xs">Biaya/jam</p><p className="font-medium">{formatCurrency(parseFloat(wc.operating_cost_per_hour || 0))}</p></div>
-            <div><p className="text-gray-500 text-xs">Mesin</p><p className="font-medium">{wc.machine_count || 0}</p></div>
-            <div><p className="text-gray-500 text-xs">WO Aktif</p><p className="font-medium">{wc.active_orders || 0}</p></div>
+            <div><p className="text-gray-500 text-xs">{t('mfgUi.wc.capPerH')}</p><p className="font-medium">{wc.capacity_per_hour}</p></div>
+            <div><p className="text-gray-500 text-xs">{t('mfgUi.wc.costPerH')}</p><p className="font-medium">{formatCurrency(parseFloat(wc.operating_cost_per_hour || 0))}</p></div>
+            <div><p className="text-gray-500 text-xs">{t('mfgUi.wc.machines')}</p><p className="font-medium">{wc.machine_count || 0}</p></div>
+            <div><p className="text-gray-500 text-xs">{t('mfgUi.wc.woActive')}</p><p className="font-medium">{wc.active_orders || 0}</p></div>
           </div>
           {wc.location && <p className="text-xs text-gray-500 mt-3">📍 {wc.location}</p>}
         </div>
       ))}
-      {workCenters.length === 0 && <div className="col-span-3 text-center text-gray-400 py-12">Belum ada Work Center</div>}
+      {workCenters.length === 0 && <div className="col-span-3 text-center text-gray-400 py-12">{t('mfgUi.wc.empty')}</div>}
     </div>
   );
 }
@@ -735,6 +742,7 @@ function WorkCentersTab({ workCenters }: { workCenters: any[] }) {
 // MACHINES TAB
 // ==========================================
 function MachinesTab({ machines }: { machines: any[] }) {
+  const { t } = useTranslation();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {machines.map((m: any) => (
@@ -742,27 +750,27 @@ function MachinesTab({ machines }: { machines: any[] }) {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h3 className="font-semibold text-gray-900">{m.machine_name}</h3>
-              <p className="text-xs text-gray-500">{m.machine_code} · {m.type || 'General'}</p>
+              <p className="text-xs text-gray-500">{m.machine_code} · {m.type || t('mfgUi.machines.general')}</p>
             </div>
             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[m.status]}`}>{m.status}</span>
           </div>
           <div className="grid grid-cols-3 gap-3 text-sm mb-3">
-            <div><p className="text-gray-500 text-xs">Manufacturer</p><p className="font-medium">{m.manufacturer || '-'}</p></div>
-            <div><p className="text-gray-500 text-xs">Model</p><p className="font-medium">{m.model || '-'}</p></div>
-            <div><p className="text-gray-500 text-xs">Work Center</p><p className="font-medium">{m.work_center_name || '-'}</p></div>
+            <div><p className="text-gray-500 text-xs">{t('mfgUi.machines.manufacturer')}</p><p className="font-medium">{m.manufacturer || '-'}</p></div>
+            <div><p className="text-gray-500 text-xs">{t('mfgUi.machines.model')}</p><p className="font-medium">{m.model || '-'}</p></div>
+            <div><p className="text-gray-500 text-xs">{t('mfgUi.machines.workCenter')}</p><p className="font-medium">{m.work_center_name || '-'}</p></div>
           </div>
           <div className="grid grid-cols-3 gap-3 text-sm">
-            <div><p className="text-gray-500 text-xs">Operating Hours</p><p className="font-medium">{formatNumber(parseFloat(m.operating_hours || 0))} h</p></div>
-            <div><p className="text-gray-500 text-xs">Cost/Hour</p><p className="font-medium">{formatCurrency(parseFloat(m.cost_per_hour || 0))}</p></div>
-            <div><p className="text-gray-500 text-xs">Maintenance</p>
+            <div><p className="text-gray-500 text-xs">{t('mfgUi.machines.opHours')}</p><p className="font-medium">{formatNumber(parseFloat(m.operating_hours || 0))} h</p></div>
+            <div><p className="text-gray-500 text-xs">{t('mfgUi.machines.costHour')}</p><p className="font-medium">{formatCurrency(parseFloat(m.cost_per_hour || 0))}</p></div>
+            <div><p className="text-gray-500 text-xs">{t('mfgUi.machines.maint')}</p>
               <p className={`font-medium ${(m.pending_maintenance || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {(m.pending_maintenance || 0) > 0 ? `${m.pending_maintenance} pending` : 'OK'}
+                {(m.pending_maintenance || 0) > 0 ? `${m.pending_maintenance} ${t('mfgUi.machines.pending')}` : t('mfgUi.machines.ok')}
               </p>
             </div>
           </div>
         </div>
       ))}
-      {machines.length === 0 && <div className="col-span-2 text-center text-gray-400 py-12">Belum ada mesin terdaftar</div>}
+      {machines.length === 0 && <div className="col-span-2 text-center text-gray-400 py-12">{t('mfgUi.machines.empty')}</div>}
     </div>
   );
 }
@@ -771,22 +779,23 @@ function MachinesTab({ machines }: { machines: any[] }) {
 // QUALITY TAB
 // ==========================================
 function QualityTab({ inspections, templates }: { inspections: any[]; templates: any[] }) {
+  const { t } = useTranslation();
   const [qcView, setQcView] = useState<'inspections' | 'templates'>('inspections');
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-        <button onClick={() => setQcView('inspections')} className={`px-4 py-2 rounded-lg text-sm font-medium ${qcView === 'inspections' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>Inspeksi ({inspections.length})</button>
-        <button onClick={() => setQcView('templates')} className={`px-4 py-2 rounded-lg text-sm font-medium ${qcView === 'templates' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>Template ({templates.length})</button>
+        <button onClick={() => setQcView('inspections')} className={`px-4 py-2 rounded-lg text-sm font-medium ${qcView === 'inspections' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{t('mfgUi.qc.inspections')} ({inspections.length})</button>
+        <button onClick={() => setQcView('templates')} className={`px-4 py-2 rounded-lg text-sm font-medium ${qcView === 'templates' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{t('mfgUi.qc.templates')} ({templates.length})</button>
       </div>
 
       {qcView === 'inspections' ? (
         <div className="bg-white rounded-xl border border-gray-200">
           <table className="w-full text-sm">
             <thead><tr className="bg-gray-50 border-b">
-              <th className="text-left py-3 px-4">No. Inspeksi</th><th className="text-left py-3 px-4">WO</th>
-              <th className="text-left py-3 px-4">Produk</th><th className="text-left py-3 px-4">Tipe</th>
-              <th className="text-left py-3 px-4">Status</th><th className="text-left py-3 px-4">Hasil</th>
-              <th className="text-right py-3 px-4">Defects</th><th className="text-left py-3 px-4">Inspector</th>
+              <th className="text-left py-3 px-4">{t('mfgUi.qc.colInsp')}</th><th className="text-left py-3 px-4">{t('mfgUi.qc.colWo')}</th>
+              <th className="text-left py-3 px-4">{t('mfgUi.qc.colProduct')}</th><th className="text-left py-3 px-4">{t('mfgUi.qc.colType')}</th>
+              <th className="text-left py-3 px-4">{t('mfgUi.qc.colStatus')}</th><th className="text-left py-3 px-4">{t('mfgUi.qc.colResult')}</th>
+              <th className="text-right py-3 px-4">{t('mfgUi.qc.colDefects')}</th><th className="text-left py-3 px-4">{t('mfgUi.qc.colInspector')}</th>
             </tr></thead>
             <tbody>
               {inspections.map((qi: any) => (
@@ -801,27 +810,27 @@ function QualityTab({ inspections, templates }: { inspections: any[]; templates:
                   <td className="py-3 px-4">{qi.inspector_name || '-'}</td>
                 </tr>
               ))}
-              {inspections.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">Belum ada inspeksi</td></tr>}
+              {inspections.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">{t('mfgUi.qc.emptyInsp')}</td></tr>}
             </tbody>
           </table>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.map((t: any) => (
-            <div key={t.id} className="bg-white rounded-xl border border-gray-200 p-5">
+          {templates.map((tm: any) => (
+            <div key={tm.id} className="bg-white rounded-xl border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-gray-900">{t.template_name}</h3>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[t.status]}`}>{t.status}</span>
+                <h3 className="font-semibold text-gray-900">{tm.template_name}</h3>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[tm.status]}`}>{tm.status}</span>
               </div>
-              <p className="text-xs text-gray-500 mb-2">{t.template_code} · {t.inspection_type?.replace('_', ' ')}</p>
-              <p className="text-sm text-gray-600">{t.description || 'No description'}</p>
+              <p className="text-xs text-gray-500 mb-2">{tm.template_code} · {tm.inspection_type?.replace('_', ' ')}</p>
+              <p className="text-sm text-gray-600">{tm.description || t('mfgUi.qc.noDesc')}</p>
               <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-                <span>{(typeof t.parameters === 'string' ? JSON.parse(t.parameters) : t.parameters || []).length} parameter</span>
-                <span>{t.usage_count || 0}x dipakai</span>
+                <span>{(typeof tm.parameters === 'string' ? JSON.parse(tm.parameters) : tm.parameters || []).length} {t('mfgUi.qc.params')}</span>
+                <span>{tm.usage_count || 0}x {t('mfgUi.qc.used')}</span>
               </div>
             </div>
           ))}
-          {templates.length === 0 && <div className="col-span-3 text-center text-gray-400 py-12">Belum ada template QC</div>}
+          {templates.length === 0 && <div className="col-span-3 text-center text-gray-400 py-12">{t('mfgUi.qc.emptyTpl')}</div>}
         </div>
       )}
     </div>
@@ -832,14 +841,15 @@ function QualityTab({ inspections, templates }: { inspections: any[]; templates:
 // PLANNING TAB
 // ==========================================
 function PlanningTab({ plans }: { plans: any[] }) {
+  const { t } = useTranslation();
   return (
     <div className="bg-white rounded-xl border border-gray-200">
       <table className="w-full text-sm">
         <thead><tr className="bg-gray-50 border-b">
-          <th className="text-left py-3 px-4">Plan Code</th><th className="text-left py-3 px-4">Nama</th>
-          <th className="text-left py-3 px-4">Tipe</th><th className="text-left py-3 px-4">Periode</th>
-          <th className="text-left py-3 px-4">Status</th><th className="text-right py-3 px-4">Items</th>
-          <th className="text-right py-3 px-4">WO Generated</th>
+          <th className="text-left py-3 px-4">{t('mfgUi.planning.code')}</th><th className="text-left py-3 px-4">{t('mfgUi.planning.name')}</th>
+          <th className="text-left py-3 px-4">{t('mfgUi.planning.type')}</th><th className="text-left py-3 px-4">{t('mfgUi.planning.period')}</th>
+          <th className="text-left py-3 px-4">{t('mfgUi.planning.status')}</th><th className="text-right py-3 px-4">{t('mfgUi.planning.items')}</th>
+          <th className="text-right py-3 px-4">{t('mfgUi.planning.woGen')}</th>
         </tr></thead>
         <tbody>
           {plans.map((p: any) => (
@@ -853,7 +863,7 @@ function PlanningTab({ plans }: { plans: any[] }) {
               <td className="py-3 px-4 text-right">{p.generated_wo_count || 0}</td>
             </tr>
           ))}
-          {plans.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-gray-400">Belum ada Production Plan</td></tr>}
+          {plans.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-gray-400">{t('mfgUi.planning.empty')}</td></tr>}
         </tbody>
       </table>
     </div>
@@ -864,7 +874,8 @@ function PlanningTab({ plans }: { plans: any[] }) {
 // OEE TAB
 // ==========================================
 function OEETab({ data }: { data: any }) {
-  if (!data) return <div className="text-center text-gray-400 py-12">Loading OEE data...</div>;
+  const { t } = useTranslation();
+  if (!data) return <div className="text-center text-gray-400 py-12">{t('mfgUi.oee.loading')}</div>;
 
   const overall = data.overall || { availability: 0, performance: 0, quality: 0, overall: 0 };
 
@@ -873,15 +884,15 @@ function OEETab({ data }: { data: any }) {
       {/* Overall OEE */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: 'OEE Overall', value: parseFloat(overall.overall || 0).toFixed(1), valCls: 'text-purple-600', barCls: 'bg-purple-500', target: 85 },
-          { label: 'Availability', value: parseFloat(overall.availability || 0).toFixed(1), valCls: 'text-blue-600', barCls: 'bg-blue-500', target: 90 },
-          { label: 'Performance', value: parseFloat(overall.performance || 0).toFixed(1), valCls: 'text-green-600', barCls: 'bg-green-500', target: 95 },
-          { label: 'Quality', value: parseFloat(overall.quality || 0).toFixed(1), valCls: 'text-emerald-600', barCls: 'bg-emerald-500', target: 99 },
+          { label: t('mfgUi.oee.overall'), value: parseFloat(overall.overall || 0).toFixed(1), valCls: 'text-purple-600', barCls: 'bg-purple-500', target: 85 },
+          { label: t('mfgUi.oee.availability'), value: parseFloat(overall.availability || 0).toFixed(1), valCls: 'text-blue-600', barCls: 'bg-blue-500', target: 90 },
+          { label: t('mfgUi.oee.performance'), value: parseFloat(overall.performance || 0).toFixed(1), valCls: 'text-green-600', barCls: 'bg-green-500', target: 95 },
+          { label: t('mfgUi.oee.quality'), value: parseFloat(overall.quality || 0).toFixed(1), valCls: 'text-emerald-600', barCls: 'bg-emerald-500', target: 99 },
         ].map((m, i) => (
           <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 text-center">
             <p className="text-sm text-gray-500 mb-2">{m.label}</p>
             <p className={`text-4xl font-bold ${m.valCls}`}>{m.value}%</p>
-            <p className="text-xs text-gray-400 mt-1">Target: {m.target}%</p>
+            <p className="text-xs text-gray-400 mt-1">{t('mfgUi.oee.target')}: {m.target}%</p>
             <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
               <div className={`${m.barCls} h-2 rounded-full`} style={{ width: `${Math.min(parseFloat(m.value), 100)}%` }} />
             </div>
@@ -892,13 +903,13 @@ function OEETab({ data }: { data: any }) {
       {/* By Work Center */}
       {data.byWorkCenter && data.byWorkCenter.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">OEE per Work Center</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.oee.perWc')}</h3>
           <table className="w-full text-sm">
             <thead><tr className="border-b">
-              <th className="text-left py-2 px-3">Work Center</th><th className="text-right py-2 px-3">Availability</th>
-              <th className="text-right py-2 px-3">Performance</th><th className="text-right py-2 px-3">Quality</th>
-              <th className="text-right py-2 px-3">OEE</th><th className="text-right py-2 px-3">Output</th>
-              <th className="text-right py-2 px-3">Downtime</th>
+              <th className="text-left py-2 px-3">{t('mfgUi.oee.wc')}</th><th className="text-right py-2 px-3">{t('mfgUi.oee.availability')}</th>
+              <th className="text-right py-2 px-3">{t('mfgUi.oee.performance')}</th><th className="text-right py-2 px-3">{t('mfgUi.oee.quality')}</th>
+              <th className="text-right py-2 px-3">OEE</th><th className="text-right py-2 px-3">{t('mfgUi.dashboard.output')}</th>
+              <th className="text-right py-2 px-3">{t('mfgUi.oee.downtime')}</th>
             </tr></thead>
             <tbody>
               {data.byWorkCenter.map((wc: any, i: number) => (
@@ -924,35 +935,36 @@ function OEETab({ data }: { data: any }) {
 // COSTS TAB
 // ==========================================
 function CostsTab({ data }: { data: any }) {
-  if (!data) return <div className="text-center text-gray-400 py-12">Loading cost data...</div>;
+  const { t } = useTranslation();
+  if (!data) return <div className="text-center text-gray-400 py-12">{t('mfgUi.costs.loading')}</div>;
 
   return (
     <div className="space-y-6">
       {/* Cost by Type */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Biaya per Tipe</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.costs.byType')}</h3>
           <div className="space-y-3">
             {(data.costByType || []).map((c: any, i: number) => (
               <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
                   <p className="font-medium capitalize">{c.cost_type}</p>
-                  <p className="text-xs text-gray-500">Planned: {formatCurrency(parseFloat(c.total_planned || 0))}</p>
+                  <p className="text-xs text-gray-500">{t('mfgUi.costs.planned')}: {formatCurrency(parseFloat(c.total_planned || 0))}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold">{formatCurrency(parseFloat(c.total_actual || 0))}</p>
                   <p className={`text-xs ${parseFloat(c.total_variance || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    Var: {formatCurrency(parseFloat(c.total_variance || 0))}
+                    {t('mfgUi.costs.var')}: {formatCurrency(parseFloat(c.total_variance || 0))}
                   </p>
                 </div>
               </div>
             ))}
-            {(!data.costByType || data.costByType.length === 0) && <p className="text-center text-gray-400 py-4">Belum ada data biaya</p>}
+            {(!data.costByType || data.costByType.length === 0) && <p className="text-center text-gray-400 py-4">{t('mfgUi.costs.noCost')}</p>}
           </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Biaya per Produk (Top 10)</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.costs.byProduct')}</h3>
           <div className="space-y-3">
             {(data.costByProduct || []).map((p: any, i: number) => (
               <div key={i} className="flex items-center justify-between">
@@ -966,7 +978,7 @@ function CostsTab({ data }: { data: any }) {
                 </div>
               </div>
             ))}
-            {(!data.costByProduct || data.costByProduct.length === 0) && <p className="text-center text-gray-400 py-4">Belum ada data</p>}
+            {(!data.costByProduct || data.costByProduct.length === 0) && <p className="text-center text-gray-400 py-4">{t('mfgUi.costs.noData')}</p>}
           </div>
         </div>
       </div>
@@ -974,12 +986,12 @@ function CostsTab({ data }: { data: any }) {
       {/* Variance Analysis */}
       {data.varianceAnalysis && data.varianceAnalysis.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Variance Analysis</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.costs.variance')}</h3>
           <table className="w-full text-sm">
             <thead><tr className="border-b">
-              <th className="text-left py-2 px-3">WO Number</th><th className="text-left py-2 px-3">Produk</th>
-              <th className="text-right py-2 px-3">Planned</th><th className="text-right py-2 px-3">Actual</th>
-              <th className="text-right py-2 px-3">Variance</th><th className="text-right py-2 px-3">%</th>
+              <th className="text-left py-2 px-3">{t('mfgUi.wo.colWo')}</th><th className="text-left py-2 px-3">{t('mfgUi.dashboard.colProduct')}</th>
+              <th className="text-right py-2 px-3">{t('mfgUi.costs.planned')}</th><th className="text-right py-2 px-3">{t('mfgUi.costs.actual')}</th>
+              <th className="text-right py-2 px-3">{t('mfgUi.costs.var')}</th><th className="text-right py-2 px-3">{t('mfgUi.costs.pct')}</th>
             </tr></thead>
             <tbody>
               {data.varianceAnalysis.map((v: any, i: number) => (
@@ -1004,14 +1016,15 @@ function CostsTab({ data }: { data: any }) {
 // WASTE TAB
 // ==========================================
 function WasteTab({ records }: { records: any[] }) {
+  const { t } = useTranslation();
   return (
     <div className="bg-white rounded-xl border border-gray-200">
       <table className="w-full text-sm">
         <thead><tr className="bg-gray-50 border-b">
-          <th className="text-left py-3 px-4">WO</th><th className="text-left py-3 px-4">Produk</th>
-          <th className="text-left py-3 px-4">Tipe Waste</th><th className="text-right py-3 px-4">Qty</th>
-          <th className="text-right py-3 px-4">Cost Impact</th><th className="text-left py-3 px-4">Reason</th>
-          <th className="text-left py-3 px-4">Work Center</th><th className="text-left py-3 px-4">Tanggal</th>
+          <th className="text-left py-3 px-4">{t('mfgUi.waste.colWo')}</th><th className="text-left py-3 px-4">{t('mfgUi.waste.colProduct')}</th>
+          <th className="text-left py-3 px-4">{t('mfgUi.waste.colType')}</th><th className="text-right py-3 px-4">{t('mfgUi.waste.colQty')}</th>
+          <th className="text-right py-3 px-4">{t('mfgUi.waste.colCost')}</th><th className="text-left py-3 px-4">{t('mfgUi.waste.colReason')}</th>
+          <th className="text-left py-3 px-4">{t('mfgUi.waste.colWc')}</th><th className="text-left py-3 px-4">{t('mfgUi.waste.colDate')}</th>
         </tr></thead>
         <tbody>
           {records.map((r: any) => (
@@ -1026,7 +1039,7 @@ function WasteTab({ records }: { records: any[] }) {
               <td className="py-3 px-4 text-gray-500 text-xs">{formatDateTime(r.recorded_at)}</td>
             </tr>
           ))}
-          {records.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">Belum ada waste record</td></tr>}
+          {records.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">{t('mfgUi.waste.empty')}</td></tr>}
         </tbody>
       </table>
     </div>
@@ -1037,6 +1050,7 @@ function WasteTab({ records }: { records: any[] }) {
 // SETTINGS TAB
 // ==========================================
 function SettingsTab({ settings }: { settings: any[] }) {
+  const { t } = useTranslation();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {settings.map((s: any) => {
@@ -1051,7 +1065,7 @@ function SettingsTab({ settings }: { settings: any[] }) {
           </div>
         );
       })}
-      {settings.length === 0 && <div className="col-span-2 text-center text-gray-400 py-12">Belum ada pengaturan</div>}
+      {settings.length === 0 && <div className="col-span-2 text-center text-gray-400 py-12">{t('mfgUi.settings.empty')}</div>}
     </div>
   );
 }
@@ -1060,6 +1074,7 @@ function SettingsTab({ settings }: { settings: any[] }) {
 // MAINTENANCE TAB
 // ==========================================
 function MaintenanceTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () => void }) {
+  const { t } = useTranslation();
   const [view, setView] = useState<'dashboard' | 'schedules' | 'calibrations' | 'health'>('dashboard');
   const [schedules, setSchedules] = useState<any[]>([]);
   const [calibrations, setCalibrations] = useState<any[]>([]);
@@ -1076,32 +1091,35 @@ function MaintenanceTab({ data, api, onRefresh }: { data: any; api: any; onRefre
   const handleGenerate = async () => {
     try {
       await api('generate-maintenance', 'POST', {}, 'advanced');
-      alert('Maintenance records generated from schedules');
+      alert(t('mfgUi.maint.genOk'));
       onRefresh();
     } catch (e: any) { alert(e.message); }
   };
 
-  if (!data) return <div className="text-center text-gray-400 py-12">Loading maintenance data...</div>;
+  if (!data) return <div className="text-center text-gray-400 py-12">{t('mfgUi.maint.loading')}</div>;
+
+  const maintViewLabel = (vk: string) =>
+    vk === 'dashboard' ? t('mfgUi.maint.dashboard') : vk === 'schedules' ? t('mfgUi.maint.schedules') : vk === 'calibrations' ? t('mfgUi.maint.calibrations') : t('mfgUi.maint.health');
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
           {(['dashboard', 'schedules', 'calibrations', 'health'] as const).map(v => (
-            <button key={v} onClick={() => { setView(v); loadView(v); }} className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${view === v ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{v === 'health' ? 'Machine Health' : v}</button>
+            <button key={v} onClick={() => { setView(v); loadView(v); }} className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${view === v ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{maintViewLabel(v)}</button>
           ))}
         </div>
-        <button onClick={handleGenerate} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center gap-2"><Zap className="w-4 h-4" /> Auto-Generate</button>
+        <button onClick={handleGenerate} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 flex items-center gap-2"><Zap className="w-4 h-4" /> {t('mfgUi.maint.autoGen')}</button>
       </div>
 
       {view === 'dashboard' && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Overdue', value: data.overdue || 0, color: 'text-red-600', bg: 'bg-red-50' },
-              { label: 'Upcoming (7d)', value: data.upcoming || 0, color: 'text-yellow-600', bg: 'bg-yellow-50' },
-              { label: 'Kalibrasi Due', value: data.calibrationsDue || 0, color: 'text-blue-600', bg: 'bg-blue-50' },
-              { label: 'Total Biaya (30d)', value: formatCurrency(parseFloat(data.costSummary?.total_cost || 0)), color: 'text-purple-600', bg: 'bg-purple-50' },
+              { label: t('mfgUi.maint.overdue'), value: data.overdue || 0, color: 'text-red-600', bg: 'bg-red-50' },
+              { label: t('mfgUi.maint.upcoming7'), value: data.upcoming || 0, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+              { label: t('mfgUi.maint.calDue'), value: data.calibrationsDue || 0, color: 'text-blue-600', bg: 'bg-blue-50' },
+              { label: t('mfgUi.maint.totalCost30'), value: formatCurrency(parseFloat(data.costSummary?.total_cost || 0)), color: 'text-purple-600', bg: 'bg-purple-50' },
             ].map((s, i) => (
               <div key={i} className={`${s.bg} rounded-xl p-5`}>
                 <p className="text-sm text-gray-600">{s.label}</p>
@@ -1112,7 +1130,7 @@ function MaintenanceTab({ data, api, onRefresh }: { data: any; api: any; onRefre
 
           {data.machineBreakdown && data.machineBreakdown.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Status Mesin</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.maint.machineStatus')}</h3>
               <div className="flex gap-4">
                 {data.machineBreakdown.map((m: any, i: number) => (
                   <div key={i} className="flex items-center gap-2">
@@ -1126,9 +1144,9 @@ function MaintenanceTab({ data, api, onRefresh }: { data: any; api: any; onRefre
 
           {data.recentRecords && data.recentRecords.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Riwayat Maintenance Terbaru</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.maint.recent')}</h3>
               <table className="w-full text-sm">
-                <thead><tr className="border-b"><th className="text-left py-2 px-3">No.</th><th className="text-left py-2 px-3">Mesin</th><th className="text-left py-2 px-3">Tipe</th><th className="text-left py-2 px-3">Status</th><th className="text-right py-2 px-3">Downtime</th></tr></thead>
+                <thead><tr className="border-b"><th className="text-left py-2 px-3">{t('mfgUi.maint.colNo')}</th><th className="text-left py-2 px-3">{t('mfgUi.maint.colMachine')}</th><th className="text-left py-2 px-3">{t('mfgUi.maint.colType')}</th><th className="text-left py-2 px-3">{t('mfgUi.maint.colStatus')}</th><th className="text-right py-2 px-3">{t('mfgUi.oee.downtime')}</th></tr></thead>
                 <tbody>
                   {data.recentRecords.map((r: any) => (
                     <tr key={r.id} className="border-b"><td className="py-2 px-3 font-medium">{r.maintenance_number || '-'}</td><td className="py-2 px-3">{r.machine_name}</td><td className="py-2 px-3 capitalize">{r.maintenance_type}</td><td className="py-2 px-3"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[r.status]}`}>{r.status}</span></td><td className="py-2 px-3 text-right">{r.downtime_hours || 0}h</td></tr>
@@ -1143,7 +1161,7 @@ function MaintenanceTab({ data, api, onRefresh }: { data: any; api: any; onRefre
       {view === 'schedules' && (
         <div className="bg-white rounded-xl border border-gray-200">
           <table className="w-full text-sm">
-            <thead><tr className="bg-gray-50 border-b"><th className="text-left py-3 px-4">Jadwal</th><th className="text-left py-3 px-4">Mesin</th><th className="text-left py-3 px-4">Tipe</th><th className="text-left py-3 px-4">Frekuensi</th><th className="text-left py-3 px-4">Next Due</th><th className="text-left py-3 px-4">Status</th><th className="text-left py-3 px-4">PIC</th></tr></thead>
+            <thead><tr className="bg-gray-50 border-b"><th className="text-left py-3 px-4">{t('mfgUi.maint.colSched')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colMachine')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colType')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colFreq')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colNext')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colStatus')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colPic')}</th></tr></thead>
             <tbody>
               {schedules.map((s: any) => (
                 <tr key={s.id} className="border-b hover:bg-gray-50">
@@ -1156,7 +1174,7 @@ function MaintenanceTab({ data, api, onRefresh }: { data: any; api: any; onRefre
                   <td className="py-3 px-4">{s.assigned_to_name || '-'}</td>
                 </tr>
               ))}
-              {schedules.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-gray-400">Belum ada jadwal maintenance</td></tr>}
+              {schedules.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-gray-400">{t('mfgUi.maint.emptySched')}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -1165,7 +1183,7 @@ function MaintenanceTab({ data, api, onRefresh }: { data: any; api: any; onRefre
       {view === 'calibrations' && (
         <div className="bg-white rounded-xl border border-gray-200">
           <table className="w-full text-sm">
-            <thead><tr className="bg-gray-50 border-b"><th className="text-left py-3 px-4">No. Kalibrasi</th><th className="text-left py-3 px-4">Mesin</th><th className="text-left py-3 px-4">Instrumen</th><th className="text-left py-3 px-4">Tipe</th><th className="text-left py-3 px-4">Jadwal</th><th className="text-left py-3 px-4">Next Due</th><th className="text-left py-3 px-4">Hasil</th><th className="text-left py-3 px-4">Status</th></tr></thead>
+            <thead><tr className="bg-gray-50 border-b"><th className="text-left py-3 px-4">{t('mfgUi.maint.colCalNo')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colMachine')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colInstrument')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colType')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colSchedule')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colNext')}</th><th className="text-left py-3 px-4">{t('mfgUi.qc.colResult')}</th><th className="text-left py-3 px-4">{t('mfgUi.maint.colStatus')}</th></tr></thead>
             <tbody>
               {calibrations.map((c: any) => (
                 <tr key={c.id} className="border-b hover:bg-gray-50">
@@ -1179,7 +1197,7 @@ function MaintenanceTab({ data, api, onRefresh }: { data: any; api: any; onRefre
                   <td className="py-3 px-4"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[c.status]}`}>{c.status}</span></td>
                 </tr>
               ))}
-              {calibrations.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">Belum ada data kalibrasi</td></tr>}
+              {calibrations.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">{t('mfgUi.maint.emptyCal')}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -1194,21 +1212,21 @@ function MaintenanceTab({ data, api, onRefresh }: { data: any; api: any; onRefre
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[m.status]}`}>{m.status}</span>
               </div>
               <div className="mb-3">
-                <div className="flex items-center justify-between mb-1"><span className="text-xs text-gray-500">Health Score</span><span className={`text-sm font-bold ${parseFloat(m.health_score) >= 80 ? 'text-green-600' : parseFloat(m.health_score) >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>{parseFloat(m.health_score || 100).toFixed(0)}%</span></div>
+                <div className="flex items-center justify-between mb-1"><span className="text-xs text-gray-500">{t('mfgUi.maint.healthScore')}</span><span className={`text-sm font-bold ${parseFloat(m.health_score) >= 80 ? 'text-green-600' : parseFloat(m.health_score) >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>{parseFloat(m.health_score || 100).toFixed(0)}%</span></div>
                 <div className="w-full bg-gray-200 rounded-full h-2"><div className={`h-2 rounded-full ${parseFloat(m.health_score) >= 80 ? 'bg-green-500' : parseFloat(m.health_score) >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${Math.min(parseFloat(m.health_score || 100), 100)}%` }} /></div>
               </div>
               <div className="grid grid-cols-3 gap-2 text-xs">
-                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">MTBF</p><p className="font-medium">{parseFloat(m.mtbf_hours || 0).toFixed(0)}h</p></div>
-                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">MTTR</p><p className="font-medium">{parseFloat(m.mttr_hours || 0).toFixed(0)}h</p></div>
-                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">Failures</p><p className="font-medium">{m.failure_count || 0}</p></div>
-                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">Op Hours</p><p className="font-medium">{formatNumber(parseFloat(m.operating_hours || 0))}</p></div>
-                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">Preventive</p><p className="font-medium text-green-600">{m.preventive_count || 0}</p></div>
-                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">Corrective</p><p className="font-medium text-red-600">{m.corrective_count || 0}</p></div>
+                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">{t('mfgUi.maint.mtbf')}</p><p className="font-medium">{parseFloat(m.mtbf_hours || 0).toFixed(0)}h</p></div>
+                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">{t('mfgUi.maint.mttr')}</p><p className="font-medium">{parseFloat(m.mttr_hours || 0).toFixed(0)}h</p></div>
+                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">{t('mfgUi.maint.failures')}</p><p className="font-medium">{m.failure_count || 0}</p></div>
+                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">{t('mfgUi.maint.opHours')}</p><p className="font-medium">{formatNumber(parseFloat(m.operating_hours || 0))}</p></div>
+                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">{t('mfgUi.maint.preventive')}</p><p className="font-medium text-green-600">{m.preventive_count || 0}</p></div>
+                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">{t('mfgUi.maint.corrective')}</p><p className="font-medium text-red-600">{m.corrective_count || 0}</p></div>
               </div>
-              {(m.pending_calibrations || 0) > 0 && <p className="text-xs text-red-600 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {m.pending_calibrations} kalibrasi pending</p>}
+              {(m.pending_calibrations || 0) > 0 && <p className="text-xs text-red-600 mt-2 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {m.pending_calibrations} {t('mfgUi.maint.calPending')}</p>}
             </div>
           ))}
-          {machineHealth.length === 0 && <div className="col-span-2 text-center text-gray-400 py-12">Belum ada data mesin</div>}
+          {machineHealth.length === 0 && <div className="col-span-2 text-center text-gray-400 py-12">{t('mfgUi.maint.emptyMachine')}</div>}
         </div>
       )}
     </div>
@@ -1219,6 +1237,7 @@ function MaintenanceTab({ data, api, onRefresh }: { data: any; api: any; onRefre
 // PLM TAB - Product Lifecycle Management
 // ==========================================
 function PLMTab({ products, designChanges, api, onRefresh }: { products: any[]; designChanges: any[]; api: any; onRefresh: () => void }) {
+  const { t } = useTranslation();
   const [view, setView] = useState<'products' | 'changes' | 'documents'>('products');
   const [docs, setDocs] = useState<any[]>([]);
   const [selectedPLM, setSelectedPLM] = useState<any>(null);
@@ -1227,6 +1246,13 @@ function PLMTab({ products, designChanges, api, onRefresh }: { products: any[]; 
 
   const loadDocs = async () => {
     try { if (docs.length === 0) setDocs(await api('plm-documents', 'GET', null, 'advanced')); } catch (e) { console.error(e); }
+  };
+
+  const plmStageLabel = (stage: string | undefined) => {
+    if (!stage) return '';
+    const k = `mfgUi.plm.stage.${stage}` as const;
+    const tr = t(k);
+    return tr === k ? stage.replace(/_/g, ' ') : tr;
   };
 
   const handleApproveECO = async (id: string, action: string) => {
@@ -1241,7 +1267,7 @@ function PLMTab({ products, designChanges, api, onRefresh }: { products: any[]; 
       <div className="flex gap-2">
         {(['products', 'changes', 'documents'] as const).map(v => (
           <button key={v} onClick={() => { setView(v); if (v === 'documents') loadDocs(); }} className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${view === v ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
-            {v === 'changes' ? `ECO (${designChanges.length})` : v === 'products' ? `Produk (${products.length})` : `Dokumen (${docs.length})`}
+            {v === 'changes' ? `${t('mfgUi.plm.eco')} (${designChanges.length})` : v === 'products' ? `${t('mfgUi.plm.products')} (${products.length})` : `${t('mfgUi.plm.documents')} (${docs.length})`}
           </button>
         ))}
       </div>
@@ -1252,26 +1278,26 @@ function PLMTab({ products, designChanges, api, onRefresh }: { products: any[]; 
             <div key={p.id} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
                 <div><h3 className="font-semibold text-gray-900">{p.product_name || p.plm_code}</h3><p className="text-xs text-gray-500">{p.plm_code} · v{p.version}</p></div>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STAGES[p.lifecycle_stage] || 'bg-gray-100'}`}>{p.lifecycle_stage?.replace('_', ' ')}</span>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STAGES[p.lifecycle_stage] || 'bg-gray-100'}`}>{plmStageLabel(p.lifecycle_stage)}</span>
               </div>
               {p.description && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{p.description}</p>}
               <div className="grid grid-cols-3 gap-2 text-xs text-center">
-                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">Revisi</p><p className="font-bold">{p.revision}</p></div>
-                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">Changes</p><p className="font-bold">{p.change_count || 0}</p></div>
-                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">Docs</p><p className="font-bold">{p.document_count || 0}</p></div>
+                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">{t('mfgUi.plm.revision')}</p><p className="font-bold">{p.revision}</p></div>
+                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">{t('mfgUi.plm.changes')}</p><p className="font-bold">{p.change_count || 0}</p></div>
+                <div className="bg-gray-50 rounded p-2"><p className="text-gray-500">{t('mfgUi.plm.docs')}</p><p className="font-bold">{p.document_count || 0}</p></div>
               </div>
-              {p.design_owner_name && <p className="text-xs text-gray-400 mt-3">Owner: {p.design_owner_name}</p>}
-              {p.target_launch_date && <p className="text-xs text-gray-400">Target Launch: {formatDate(p.target_launch_date)}</p>}
+              {p.design_owner_name && <p className="text-xs text-gray-400 mt-3">{t('mfgUi.plm.owner')}: {p.design_owner_name}</p>}
+              {p.target_launch_date && <p className="text-xs text-gray-400">{t('mfgUi.plm.targetLaunch')}: {formatDate(p.target_launch_date)}</p>}
             </div>
           ))}
-          {products.length === 0 && <div className="col-span-3 text-center text-gray-400 py-12">Belum ada PLM product</div>}
+          {products.length === 0 && <div className="col-span-3 text-center text-gray-400 py-12">{t('mfgUi.plm.emptyProd')}</div>}
         </div>
       )}
 
       {view === 'changes' && (
         <div className="bg-white rounded-xl border border-gray-200">
           <table className="w-full text-sm">
-            <thead><tr className="bg-gray-50 border-b"><th className="text-left py-3 px-4">ECO No.</th><th className="text-left py-3 px-4">Judul</th><th className="text-left py-3 px-4">Produk</th><th className="text-left py-3 px-4">Tipe</th><th className="text-left py-3 px-4">Prioritas</th><th className="text-left py-3 px-4">Status</th><th className="text-right py-3 px-4">Cost Impact</th><th className="text-center py-3 px-4">Aksi</th></tr></thead>
+            <thead><tr className="bg-gray-50 border-b"><th className="text-left py-3 px-4">{t('mfgUi.plm.colEco')}</th><th className="text-left py-3 px-4">{t('mfgUi.plm.colTitle')}</th><th className="text-left py-3 px-4">{t('mfgUi.plm.colProduct')}</th><th className="text-left py-3 px-4">{t('mfgUi.plm.colType')}</th><th className="text-left py-3 px-4">{t('mfgUi.plm.colPri')}</th><th className="text-left py-3 px-4">{t('mfgUi.plm.colStatus')}</th><th className="text-right py-3 px-4">{t('mfgUi.plm.colCost')}</th><th className="text-center py-3 px-4">{t('mfgUi.plm.colAction')}</th></tr></thead>
             <tbody>
               {designChanges.map((dc: any) => (
                 <tr key={dc.id} className="border-b hover:bg-gray-50">
@@ -1286,16 +1312,16 @@ function PLMTab({ products, designChanges, api, onRefresh }: { products: any[]; 
                     <div className="flex items-center justify-center gap-1">
                       {(dc.status === 'submitted' || dc.status === 'under_review') && (
                         <>
-                          <button onClick={() => handleApproveECO(dc.id, 'approve')} className="p-1 hover:bg-green-100 rounded text-green-600" title="Approve"><CheckCircle className="w-4 h-4" /></button>
-                          <button onClick={() => handleApproveECO(dc.id, 'reject')} className="p-1 hover:bg-red-100 rounded text-red-600" title="Reject"><XCircle className="w-4 h-4" /></button>
+                          <button onClick={() => handleApproveECO(dc.id, 'approve')} className="p-1 hover:bg-green-100 rounded text-green-600" title={t('mfgUi.plm.approve')}><CheckCircle className="w-4 h-4" /></button>
+                          <button onClick={() => handleApproveECO(dc.id, 'reject')} className="p-1 hover:bg-red-100 rounded text-red-600" title={t('mfgUi.plm.reject')}><XCircle className="w-4 h-4" /></button>
                         </>
                       )}
-                      {dc.status === 'approved' && <button onClick={() => handleApproveECO(dc.id, 'implement')} className="p-1 hover:bg-blue-100 rounded text-blue-600" title="Implement"><Play className="w-4 h-4" /></button>}
+                      {dc.status === 'approved' && <button onClick={() => handleApproveECO(dc.id, 'implement')} className="p-1 hover:bg-blue-100 rounded text-blue-600" title={t('mfgUi.plm.implement')}><Play className="w-4 h-4" /></button>}
                     </div>
                   </td>
                 </tr>
               ))}
-              {designChanges.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">Belum ada Engineering Change Order</td></tr>}
+              {designChanges.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">{t('mfgUi.plm.emptyEco')}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -1320,7 +1346,7 @@ function PLMTab({ products, designChanges, api, onRefresh }: { products: any[]; 
               </div>
             );
           })}
-          {docs.length === 0 && <div className="col-span-3 text-center text-gray-400 py-12">Belum ada dokumen teknis</div>}
+          {docs.length === 0 && <div className="col-span-3 text-center text-gray-400 py-12">{t('mfgUi.plm.emptyDoc')}</div>}
         </div>
       )}
     </div>
@@ -1331,6 +1357,7 @@ function PLMTab({ products, designChanges, api, onRefresh }: { products: any[]; 
 // COGM TAB - Cost of Goods Manufactured
 // ==========================================
 function COGMTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () => void }) {
+  const { t } = useTranslation();
   const [view, setView] = useState<'dashboard' | 'periods' | 'rates'>('dashboard');
   const [periods, setPeriods] = useState<any[]>([]);
   const [overheadRates, setOverheadRates] = useState<any[]>([]);
@@ -1354,23 +1381,26 @@ function COGMTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () 
     setCalculating(true);
     try {
       await api('cogm-calculate', 'POST', { period_start: start, period_end: end, period_name: `COGM ${now.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}` }, 'advanced');
-      alert('COGM berhasil dihitung!');
+      alert(t('mfgUi.cogm.calcOk'));
       onRefresh();
     } catch (e: any) { alert(e.message); }
     setCalculating(false);
   };
 
-  if (!data) return <div className="text-center text-gray-400 py-12">Loading COGM data...</div>;
+  if (!data) return <div className="text-center text-gray-400 py-12">{t('mfgUi.cogm.loading')}</div>;
+
+  const cogmViewLabel = (vk: string) =>
+    vk === 'dashboard' ? t('mfgUi.cogm.dashboard') : vk === 'periods' ? t('mfgUi.cogm.periods') : t('mfgUi.cogm.rates');
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
           {(['dashboard', 'periods', 'rates'] as const).map(v => (
-            <button key={v} onClick={() => { setView(v); loadView(v); }} className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${view === v ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{v === 'rates' ? 'Cost Rates' : v}</button>
+            <button key={v} onClick={() => { setView(v); loadView(v); }} className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${view === v ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>{cogmViewLabel(v)}</button>
           ))}
         </div>
-        <button onClick={handleCalculate} disabled={calculating} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"><DollarSign className="w-4 h-4" /> {calculating ? 'Calculating...' : 'Hitung COGM Bulan Ini'}</button>
+        <button onClick={handleCalculate} disabled={calculating} className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2"><DollarSign className="w-4 h-4" /> {calculating ? t('mfgUi.cogm.calculating') : t('mfgUi.cogm.calcMonth')}</button>
       </div>
 
       {view === 'dashboard' && (
@@ -1378,15 +1408,15 @@ function COGMTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () 
           {data.latestPeriod && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">COGM Terbaru: {data.latestPeriod.period_name || data.latestPeriod.period_code}</h3>
+                <h3 className="font-semibold text-gray-900">{t('mfgUi.cogm.latest')}: {data.latestPeriod.period_name || data.latestPeriod.period_code}</h3>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[data.latestPeriod.status]}`}>{data.latestPeriod.status}</span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: 'Bahan Baku', value: formatCurrency(parseFloat(data.latestPeriod.total_material_cost || 0)), color: 'text-blue-600', icon: Package },
-                  { label: 'Tenaga Kerja', value: formatCurrency(parseFloat(data.latestPeriod.total_labor_cost || 0)), color: 'text-green-600', icon: Users },
-                  { label: 'Overhead', value: formatCurrency(parseFloat(data.latestPeriod.total_overhead_cost || 0)), color: 'text-orange-600', icon: Settings },
-                  { label: 'Total COGM', value: formatCurrency(parseFloat(data.latestPeriod.total_cogm || 0)), color: 'text-purple-600', icon: DollarSign },
+                  { label: t('mfgUi.cogm.material'), value: formatCurrency(parseFloat(data.latestPeriod.total_material_cost || 0)), color: 'text-blue-600', icon: Package },
+                  { label: t('mfgUi.cogm.labor'), value: formatCurrency(parseFloat(data.latestPeriod.total_labor_cost || 0)), color: 'text-green-600', icon: Users },
+                  { label: t('mfgUi.cogm.overhead'), value: formatCurrency(parseFloat(data.latestPeriod.total_overhead_cost || 0)), color: 'text-orange-600', icon: Settings },
+                  { label: t('mfgUi.cogm.total'), value: formatCurrency(parseFloat(data.latestPeriod.total_cogm || 0)), color: 'text-purple-600', icon: DollarSign },
                 ].map((s, i) => (
                   <div key={i} className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-center gap-2 mb-1"><s.icon className="w-4 h-4 text-gray-400" /><span className="text-xs text-gray-500">{s.label}</span></div>
@@ -1395,17 +1425,17 @@ function COGMTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () 
                 ))}
               </div>
               <div className="mt-4 flex items-center gap-6 text-sm text-gray-600">
-                <span>Total Unit: <strong>{formatNumber(parseFloat(data.latestPeriod.total_units_produced || 0))}</strong></span>
-                <span>Rata-rata/unit: <strong>{formatCurrency(parseFloat(data.latestPeriod.avg_unit_cost || 0))}</strong></span>
+                <span>{t('mfgUi.cogm.totalUnits')}: <strong>{formatNumber(parseFloat(data.latestPeriod.total_units_produced || 0))}</strong></span>
+                <span>{t('mfgUi.cogm.avgUnit')}: <strong>{formatCurrency(parseFloat(data.latestPeriod.avg_unit_cost || 0))}</strong></span>
               </div>
             </div>
           )}
 
           {data.items && data.items.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Profitabilitas per Produk</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.cogm.profitability')}</h3>
               <table className="w-full text-sm">
-                <thead><tr className="border-b"><th className="text-left py-2 px-3">Produk</th><th className="text-right py-2 px-3">Unit</th><th className="text-right py-2 px-3">Material</th><th className="text-right py-2 px-3">Labor</th><th className="text-right py-2 px-3">Overhead</th><th className="text-right py-2 px-3">COGM/unit</th><th className="text-right py-2 px-3">Harga Jual</th><th className="text-right py-2 px-3">Margin</th></tr></thead>
+                <thead><tr className="border-b"><th className="text-left py-2 px-3">{t('mfgUi.plm.colProduct')}</th><th className="text-right py-2 px-3">{t('mfgUi.cogm.unit')}</th><th className="text-right py-2 px-3">{t('mfgUi.cogm.colMat')}</th><th className="text-right py-2 px-3">{t('mfgUi.cogm.colLab')}</th><th className="text-right py-2 px-3">{t('mfgUi.cogm.colOh')}</th><th className="text-right py-2 px-3">{t('mfgUi.cogm.cogmUnit')}</th><th className="text-right py-2 px-3">{t('mfgUi.cogm.sellPrice')}</th><th className="text-right py-2 px-3">{t('mfgUi.cogm.margin')}</th></tr></thead>
                 <tbody>
                   {data.items.map((item: any, i: number) => (
                     <tr key={i} className="border-b hover:bg-gray-50">
@@ -1426,16 +1456,16 @@ function COGMTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () 
 
           {data.costTrend && data.costTrend.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Tren Biaya COGM (12 Bulan Terakhir)</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.cogm.trendTitle')}</h3>
               <div className="space-y-2">
                 {data.costTrend.map((ct: any, i: number) => (
                   <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <span className="text-sm font-medium">{ct.period_code}</span>
                     <div className="flex items-center gap-4 text-xs">
-                      <span className="text-blue-600">Material: {formatCurrency(parseFloat(ct.total_material_cost || 0))}</span>
-                      <span className="text-green-600">Labor: {formatCurrency(parseFloat(ct.total_labor_cost || 0))}</span>
-                      <span className="text-orange-600">Overhead: {formatCurrency(parseFloat(ct.total_overhead_cost || 0))}</span>
-                      <span className="text-purple-600 font-bold">Total: {formatCurrency(parseFloat(ct.total_cogm || 0))}</span>
+                      <span className="text-blue-600">{t('mfgUi.cogm.material')}: {formatCurrency(parseFloat(ct.total_material_cost || 0))}</span>
+                      <span className="text-green-600">{t('mfgUi.cogm.labor')}: {formatCurrency(parseFloat(ct.total_labor_cost || 0))}</span>
+                      <span className="text-orange-600">{t('mfgUi.cogm.overhead')}: {formatCurrency(parseFloat(ct.total_overhead_cost || 0))}</span>
+                      <span className="text-purple-600 font-bold">{t('mfgUi.cogm.total')}: {formatCurrency(parseFloat(ct.total_cogm || 0))}</span>
                     </div>
                   </div>
                 ))}
@@ -1448,7 +1478,7 @@ function COGMTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () 
       {view === 'periods' && (
         <div className="bg-white rounded-xl border border-gray-200">
           <table className="w-full text-sm">
-            <thead><tr className="bg-gray-50 border-b"><th className="text-left py-3 px-4">Periode</th><th className="text-left py-3 px-4">Nama</th><th className="text-right py-3 px-4">Material</th><th className="text-right py-3 px-4">Labor</th><th className="text-right py-3 px-4">Overhead</th><th className="text-right py-3 px-4">Total COGM</th><th className="text-right py-3 px-4">Unit</th><th className="text-left py-3 px-4">Status</th></tr></thead>
+            <thead><tr className="bg-gray-50 border-b"><th className="text-left py-3 px-4">{t('mfgUi.cogm.colPeriod')}</th><th className="text-left py-3 px-4">{t('mfgUi.cogm.colName')}</th><th className="text-right py-3 px-4">{t('mfgUi.cogm.colMat')}</th><th className="text-right py-3 px-4">{t('mfgUi.cogm.colLab')}</th><th className="text-right py-3 px-4">{t('mfgUi.cogm.colOh')}</th><th className="text-right py-3 px-4">{t('mfgUi.cogm.colTotal')}</th><th className="text-right py-3 px-4">{t('mfgUi.cogm.colUnit')}</th><th className="text-left py-3 px-4">{t('mfgUi.cogm.colStat')}</th></tr></thead>
             <tbody>
               {periods.map((p: any) => (
                 <tr key={p.id} className="border-b hover:bg-gray-50">
@@ -1462,7 +1492,7 @@ function COGMTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () 
                   <td className="py-3 px-4"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status]}`}>{p.status}</span></td>
                 </tr>
               ))}
-              {periods.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">Belum ada perhitungan COGM</td></tr>}
+              {periods.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">{t('mfgUi.cogm.emptyPeriod')}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -1471,7 +1501,7 @@ function COGMTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () 
       {view === 'rates' && (
         <div className="space-y-6">
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Tarif Overhead</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.cogm.overheadRates')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {(data.overheadRates || overheadRates).map((r: any) => (
                 <div key={r.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -1479,12 +1509,12 @@ function COGMTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () 
                   <p className="font-bold text-purple-600">{formatCurrency(parseFloat(r.rate_value || 0))}</p>
                 </div>
               ))}
-              {(data.overheadRates || overheadRates).length === 0 && <p className="text-center text-gray-400 py-4 col-span-2">Belum ada tarif overhead</p>}
+              {(data.overheadRates || overheadRates).length === 0 && <p className="text-center text-gray-400 py-4 col-span-2">{t('mfgUi.cogm.emptyOh')}</p>}
             </div>
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Tarif Tenaga Kerja</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('mfgUi.cogm.laborRates')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {(data.laborRates || laborRates).map((r: any) => (
                 <div key={r.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -1492,7 +1522,7 @@ function COGMTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () 
                   <p className="font-bold text-green-600">{formatCurrency(parseFloat(r.rate_value || 0))}/{r.rate_type?.replace('per_', '')}</p>
                 </div>
               ))}
-              {(data.laborRates || laborRates).length === 0 && <p className="text-center text-gray-400 py-4 col-span-2">Belum ada tarif tenaga kerja</p>}
+              {(data.laborRates || laborRates).length === 0 && <p className="text-center text-gray-400 py-4 col-span-2">{t('mfgUi.cogm.emptyLabor')}</p>}
             </div>
           </div>
         </div>
@@ -1505,6 +1535,7 @@ function COGMTab({ data, api, onRefresh }: { data: any; api: any; onRefresh: () 
 // SUBCONTRACTING TAB
 // ==========================================
 function SubcontractingTab({ subcontracts, api, onRefresh }: { subcontracts: any[]; api: any; onRefresh: () => void }) {
+  const { t } = useTranslation();
   const handleSend = async (id: string) => {
     try {
       await api('subcontract-send', 'POST', { id }, 'advanced');
@@ -1513,9 +1544,9 @@ function SubcontractingTab({ subcontracts, api, onRefresh }: { subcontracts: any
   };
 
   const handleReceive = async (id: string) => {
-    const qty = prompt('Jumlah diterima:');
+    const qty = prompt(t('mfgUi.subcontract.promptQty'));
     if (!qty) return;
-    const rejected = prompt('Jumlah ditolak (0 jika tidak ada):', '0');
+    const rejected = prompt(t('mfgUi.subcontract.promptRej'), '0');
     try {
       await api('subcontract-receive', 'POST', { id, received_quantity: parseFloat(qty), rejected_quantity: parseFloat(rejected || '0') }, 'advanced');
       onRefresh();
@@ -1528,11 +1559,11 @@ function SubcontractingTab({ subcontracts, api, onRefresh }: { subcontracts: any
     <div className="bg-white rounded-xl border border-gray-200">
       <table className="w-full text-sm">
         <thead><tr className="bg-gray-50 border-b">
-          <th className="text-left py-3 px-4">No. Subkontrak</th><th className="text-left py-3 px-4">Vendor</th>
-          <th className="text-left py-3 px-4">Operasi</th><th className="text-left py-3 px-4">Produk</th>
-          <th className="text-right py-3 px-4">Qty</th><th className="text-right py-3 px-4">Diterima</th>
-          <th className="text-right py-3 px-4">Biaya</th><th className="text-left py-3 px-4">Status</th>
-          <th className="text-left py-3 px-4">Return</th><th className="text-center py-3 px-4">Aksi</th>
+          <th className="text-left py-3 px-4">{t('mfgUi.subcontract.colNo')}</th><th className="text-left py-3 px-4">{t('mfgUi.subcontract.colVendor')}</th>
+          <th className="text-left py-3 px-4">{t('mfgUi.subcontract.colOp')}</th><th className="text-left py-3 px-4">{t('mfgUi.subcontract.colProduct')}</th>
+          <th className="text-right py-3 px-4">{t('mfgUi.subcontract.colQty')}</th><th className="text-right py-3 px-4">{t('mfgUi.subcontract.colRecv')}</th>
+          <th className="text-right py-3 px-4">{t('mfgUi.subcontract.colCost')}</th><th className="text-left py-3 px-4">{t('mfgUi.subcontract.colStatus')}</th>
+          <th className="text-left py-3 px-4">{t('mfgUi.subcontract.colReturn')}</th><th className="text-center py-3 px-4">{t('mfgUi.subcontract.colAction')}</th>
         </tr></thead>
         <tbody>
           {subcontracts.map((sc: any) => (
@@ -1548,13 +1579,13 @@ function SubcontractingTab({ subcontracts, api, onRefresh }: { subcontracts: any
               <td className="py-3 px-4 text-xs text-gray-500">{sc.expected_return_date ? formatDate(sc.expected_return_date) : '-'}</td>
               <td className="py-3 px-4">
                 <div className="flex items-center justify-center gap-1">
-                  {sc.status === 'draft' && <button onClick={() => handleSend(sc.id)} className="p-1 hover:bg-blue-100 rounded text-blue-600" title="Kirim"><Truck className="w-4 h-4" /></button>}
-                  {(sc.status === 'sent' || sc.status === 'in_process' || sc.status === 'partial_received') && <button onClick={() => handleReceive(sc.id)} className="p-1 hover:bg-green-100 rounded text-green-600" title="Terima"><CheckCircle className="w-4 h-4" /></button>}
+                  {sc.status === 'draft' && <button onClick={() => handleSend(sc.id)} className="p-1 hover:bg-blue-100 rounded text-blue-600" title={t('mfgUi.subcontract.send')}><Truck className="w-4 h-4" /></button>}
+                  {(sc.status === 'sent' || sc.status === 'in_process' || sc.status === 'partial_received') && <button onClick={() => handleReceive(sc.id)} className="p-1 hover:bg-green-100 rounded text-green-600" title={t('mfgUi.subcontract.receive')}><CheckCircle className="w-4 h-4" /></button>}
                 </div>
               </td>
             </tr>
           ))}
-          {subcontracts.length === 0 && <tr><td colSpan={10} className="py-12 text-center text-gray-400">Belum ada subcontract / makloon</td></tr>}
+          {subcontracts.length === 0 && <tr><td colSpan={10} className="py-12 text-center text-gray-400">{t('mfgUi.subcontract.empty')}</td></tr>}
         </tbody>
       </table>
     </div>

@@ -22,6 +22,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import { withModuleGuard } from '../../../../lib/middleware/withModuleGuard';
 import { logAudit } from '../../../../lib/audit/auditLogger';
+import * as SfaRich from '../../../../lib/hq/sfa-rich-mock';
 
 let sequelize: any = null;
 try { sequelize = require('../../../../lib/sequelize'); } catch (e) {}
@@ -45,6 +46,14 @@ async function qExec(sql: string, replacements?: any): Promise<boolean> {
   if (!sequelize) return false;
   try { await sequelize.query(sql, replacements ? { replacements } : undefined); return true; }
   catch (e: any) { console.error('[sales-mgmt] Exec error:', e.message); return false; }
+}
+
+/** Tanpa baris penjualan di DB → pakai payload demo agar chart Manajemen Penjualan terisi. */
+async function tenantHasNoSalesData(tid: string | null): Promise<boolean> {
+  if (!tid) return true;
+  if (!sequelize) return true;
+  const row = await qOne(`SELECT COUNT(*)::int AS c FROM sfa_sales_entries WHERE tenant_id = :tid`, { tid });
+  return parseInt(String(row?.c ?? 0), 10) === 0;
 }
 
 function toNumber(v: any, def = 0): number {
@@ -327,6 +336,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 // ════════════════════════════════════════════════════════════════
 async function getSalesDashboard(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, { data: SfaRich.salesDashboardDemo(period) });
+  }
   const { start, end } = parsePeriod(period);
 
   const params = { tid, period, start, end } as any;
@@ -581,6 +593,10 @@ async function getMtdYtdRun(req: NextApiRequest, res: NextApiResponse, tid: stri
 // ██  SALES ENTRIES CRUD
 // ════════════════════════════════════════════════════════════════
 async function listSalesEntries(req: NextApiRequest, res: NextApiResponse, tid: string) {
+  if (await tenantHasNoSalesData(tid)) {
+    const rows = SfaRich.salesEntriesListDemo();
+    return ok(res, { data: rows, total: rows.length, limit: rows.length, offset: 0 });
+  }
   const params: any = { tid };
   const where = buildSalesFilters({ ...req.query, include_all: req.query.include_all === '1' }, params);
   const limit = Math.min(parseInt(String(req.query.limit || '200'), 10) || 200, 1000);
@@ -1073,6 +1089,9 @@ async function importFromFieldOrders(req: NextApiRequest, res: NextApiResponse, 
 // ════════════════════════════════════════════════════════════════
 async function vsTargetGlobal(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, { data: SfaRich.vsTargetGlobalDemo(period) });
+  }
   const params = { tid, period };
 
   const actual = await qOne(
@@ -1122,6 +1141,9 @@ async function vsTargetGlobal(req: NextApiRequest, res: NextApiResponse, tid: st
 
 async function vsTargetProduct(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, { data: SfaRich.vsTargetProductDemo(period), period });
+  }
 
   const rows = await q(
     `WITH actual AS (
@@ -1162,6 +1184,9 @@ async function vsTargetProduct(req: NextApiRequest, res: NextApiResponse, tid: s
 
 async function vsTargetProductGroup(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, { data: SfaRich.vsTargetGroupDemo(period), period });
+  }
 
   const rows = await q(
     `WITH actual AS (
@@ -1200,6 +1225,13 @@ async function vsTargetProductGroup(req: NextApiRequest, res: NextApiResponse, t
 
 async function vsTargetOutlet(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, {
+      data: SfaRich.vsTargetOutletDemo(period),
+      period,
+      prev_period: SfaRich.prevPeriodStr(period),
+    });
+  }
   const prevPeriod = (() => {
     const [y, m] = period.split('-').map(Number);
     const d = new Date(y, m - 2, 1);
@@ -1251,6 +1283,9 @@ async function vsTargetOutlet(req: NextApiRequest, res: NextApiResponse, tid: st
 
 async function vsTargetSalesperson(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, { data: SfaRich.vsTargetSalesDemo(period), period });
+  }
 
   const rows = await q(
     `WITH actual AS (
@@ -1286,6 +1321,9 @@ async function vsTargetSalesperson(req: NextApiRequest, res: NextApiResponse, ti
 
 async function getSalesTrend(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const months = Math.max(1, Math.min(24, parseInt(String(req.query.months || '12'), 10)));
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, { data: SfaRich.salesTrendDemo(months) });
+  }
   const rows = await q(
     `WITH periods AS (
         SELECT TO_CHAR(date_trunc('month', NOW()) - (n || ' months')::interval, 'YYYY-MM') AS p
@@ -1310,6 +1348,9 @@ async function getSalesTrend(req: NextApiRequest, res: NextApiResponse, tid: str
 // ██  ITEM TARGETS
 // ════════════════════════════════════════════════════════════════
 async function listItemTargets(req: NextApiRequest, res: NextApiResponse, tid: string) {
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.itemTargetsDemo(String(req.query.period || currentPeriod())));
+  }
   const { period, target_level, product_group, scope_type } = req.query;
   let where = 'WHERE tenant_id = :tid';
   const params: any = { tid };
@@ -1526,6 +1567,9 @@ async function deleteItemTarget(req: NextApiRequest, res: NextApiResponse, tid: 
 // ════════════════════════════════════════════════════════════════
 async function getOutletCoverage(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.outletCoverageDemo(period));
+  }
   const prevPeriod = (() => {
     const [y, m] = period.split('-').map(Number);
     const d = new Date(y, m - 2, 1);
@@ -1640,6 +1684,9 @@ async function getOutletCoverage(req: NextApiRequest, res: NextApiResponse, tid:
 
 async function getOutletTransactions(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.outletTransactionsDemo(period));
+  }
   const productiveThreshold = toNumber(req.query.productive_threshold, 0);
 
   const rows = await q(
@@ -1663,6 +1710,9 @@ async function getOutletTransactions(req: NextApiRequest, res: NextApiResponse, 
 }
 
 async function listOutletGrowthTargets(req: NextApiRequest, res: NextApiResponse, tid: string) {
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.outletGrowthTargetsDemo(String(req.query.period || currentPeriod())));
+  }
   const { period, scope_type } = req.query;
   let where = 'WHERE tenant_id = :tid';
   const params: any = { tid };
@@ -1765,6 +1815,9 @@ async function deleteOutletGrowthTarget(req: NextApiRequest, res: NextApiRespons
 // ██  LOOKUP
 // ════════════════════════════════════════════════════════════════
 async function getLookupFilters(res: NextApiResponse, tid: string) {
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.lookupFiltersDemo());
+  }
   const [productGroups, brands, channels, salespeople, territories, teams, outlets] = await Promise.all([
     q(`SELECT DISTINCT product_group FROM sfa_sales_entries WHERE tenant_id = :tid AND product_group IS NOT NULL ORDER BY product_group`, { tid }),
     q(`SELECT DISTINCT product_brand FROM sfa_sales_entries WHERE tenant_id = :tid AND product_brand IS NOT NULL ORDER BY product_brand`, { tid }),
@@ -1793,6 +1846,9 @@ async function getLookupFilters(res: NextApiResponse, tid: string) {
 // Konsep: outlet yang "bagus" (omzet besar) mengambil produk kita → WD tinggi.
 async function getDistribution(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.distributionDemo(period));
+  }
 
   // Ambil universe dari sfa_outlet_growth_targets (scope global)
   const universe = await qOne(
@@ -1844,6 +1900,9 @@ async function getDistribution(req: NextApiRequest, res: NextApiResponse, tid: s
 
 async function getDistributionPerProduct(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.distributionPerProductDemo(period));
+  }
   const limit = Math.min(parseInt(String(req.query.limit || '50'), 10) || 50, 200);
 
   const universe = await qOne(
@@ -2172,6 +2231,11 @@ async function paretoRowsFromBase(
 }
 
 async function getParetoOutlets(req: NextApiRequest, res: NextApiResponse, tid: string) {
+  const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    const result = SfaRich.paretoOutletsDemo(period);
+    return ok(res, { ...result, dimension: 'outlet', metric: 'net_amount' });
+  }
   const metric = (req.query.metric === 'quantity' ? 'quantity' : 'net_amount') as 'net_amount' | 'quantity';
   const result = await paretoRowsFromBase(
     tid,
@@ -2184,6 +2248,11 @@ async function getParetoOutlets(req: NextApiRequest, res: NextApiResponse, tid: 
 }
 
 async function getParetoProducts(req: NextApiRequest, res: NextApiResponse, tid: string) {
+  const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    const result = SfaRich.paretoProductsDemo(period);
+    return ok(res, { ...result, dimension: 'product', metric: 'net_amount' });
+  }
   const metric = (req.query.metric === 'quantity' ? 'quantity' : 'net_amount') as 'net_amount' | 'quantity';
   const result = await paretoRowsFromBase(
     tid,
@@ -2196,6 +2265,11 @@ async function getParetoProducts(req: NextApiRequest, res: NextApiResponse, tid:
 }
 
 async function getParetoSalespersons(req: NextApiRequest, res: NextApiResponse, tid: string) {
+  const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    const result = SfaRich.paretoSalespersonsDemo(period);
+    return ok(res, { ...result, dimension: 'salesperson', metric: 'net_amount' });
+  }
   const metric = (req.query.metric === 'quantity' ? 'quantity' : 'net_amount') as 'net_amount' | 'quantity';
   const result = await paretoRowsFromBase(
     tid,
@@ -2472,6 +2546,9 @@ async function getPerformanceByDim(
   dim: 'branch' | 'territory' | 'team',
 ) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.performanceDemo(period, dim));
+  }
   const dimCol = dim === 'branch' ? 'branch_id' : dim === 'territory' ? 'territory_id' : 'team_id';
   const nameJoin = dim === 'branch'
     ? `LEFT JOIN branches b ON b.id::text = sse.${dimCol}::text`
@@ -2575,6 +2652,9 @@ async function getPerformanceByDim(
 // ════════════════════════════════════════════════════════════════
 async function getSalespersonScorecard(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.scorecardDemo(period));
+  }
   const salespersonId = req.query.salesperson_id;
 
   const params: any = { tid, period };
@@ -2668,6 +2748,9 @@ async function getSalespersonScorecard(req: NextApiRequest, res: NextApiResponse
 // ════════════════════════════════════════════════════════════════
 async function getLeaderboard(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.leaderboardDemo(period));
+  }
   const limit = Math.min(parseInt(String(req.query.limit || '20'), 10) || 20, 100);
 
   const categories = [
@@ -2708,6 +2791,9 @@ async function getLeaderboard(req: NextApiRequest, res: NextApiResponse, tid: st
 // ════════════════════════════════════════════════════════════════
 async function getSalesFunnel(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.salesFunnelDemo(period));
+  }
   const salespersonId = req.query.salesperson_id;
 
   const start = `${period}-01`;
@@ -2781,6 +2867,9 @@ async function getSalesFunnel(req: NextApiRequest, res: NextApiResponse, tid: st
 // ════════════════════════════════════════════════════════════════
 async function getAdvancedKpis(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, SfaRich.advancedKpisDemo(period));
+  }
   const params: any = { tid, period };
 
   const main = await qOne(
@@ -2895,6 +2984,9 @@ async function getAdvancedKpis(req: NextApiRequest, res: NextApiResponse, tid: s
 async function getGrowthAnalysis(req: NextApiRequest, res: NextApiResponse, tid: string) {
   const period = String(req.query.period || currentPeriod());
   const monthsBack = Math.min(parseInt(String(req.query.months || '12'), 10) || 12, 36);
+  if (await tenantHasNoSalesData(tid)) {
+    return ok(res, { data: SfaRich.growthAnalysisDemo(period, monthsBack), period, months: monthsBack });
+  }
 
   const trend = await q(
     `SELECT period,

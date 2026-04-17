@@ -15,6 +15,9 @@ import { modulePageTranslations } from '@/lib/translations/hq-module-pages';
 import { moduleDetailTranslations } from '@/lib/translations/hq-module-detail';
 import { moduleArticleTranslations } from '@/lib/translations/hq-module-articles';
 import { extendedTranslations } from '@/lib/translations/hq-extended';
+import { pjmTranslations } from '@/lib/translations/hq-pjm';
+import { fleetHubTranslations } from '@/lib/translations/hq-fleet-hub';
+import { mfgUiTranslations } from '@/lib/translations/hq-mfg-ui';
 import { Language } from '@/lib/i18n';
 
 function deepMerge(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
@@ -41,6 +44,9 @@ const ALL_SOURCES: Array<Record<Language, Record<string, any>> | Record<string, 
   moduleDetailTranslations,
   moduleArticleTranslations,
   extendedTranslations,
+  pjmTranslations,
+  fleetHubTranslations,
+  mfgUiTranslations,
 ];
 
 function mergeAll(lang: Language): Record<string, any> {

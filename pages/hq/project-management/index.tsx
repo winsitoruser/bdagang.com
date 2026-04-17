@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/router';
+import { useTranslation } from '@/lib/i18n';
 import HQLayout from '../../../components/hq/HQLayout';
 import { toast } from 'react-hot-toast';
 import {
@@ -41,7 +42,6 @@ const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'
 const DOUGHNUT_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#6B7280'];
 const fmt = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
 const fmtShort = (n: number) => { if (n >= 1e9) return `Rp ${(n / 1e9).toFixed(1)}M`; if (n >= 1e6) return `Rp ${(n / 1e6).toFixed(1)}Jt`; return fmt(n); };
-const fD = (d: string | null) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 const pctChange = (cur: number, prev: number) => prev === 0 ? 0 : ((cur - prev) / prev * 100);
 
 // Mock data for charts when API data isn't available
@@ -155,7 +155,7 @@ const ChartCard = ({ title, subtitle, children, action }: { title: string; subti
   </div>
 );
 
-const KPIGauge = ({ label, value, target, unit = '%' }: { label: string; value: number; target: number; unit?: string }) => {
+const KPIGauge = ({ label, value, target, unit = '%', targetWord = 'Target' }: { label: string; value: number; target: number; unit?: string; targetWord?: string }) => {
   const pct = Math.min((value / target) * 100, 100);
   const color = pct >= 80 ? 'text-green-600' : pct >= 50 ? 'text-yellow-600' : 'text-red-600';
   const bgColor = pct >= 80 ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-500';
@@ -171,7 +171,7 @@ const KPIGauge = ({ label, value, target, unit = '%' }: { label: string; value: 
         </div>
       </div>
       <p className="text-xs text-gray-600 font-medium">{label}</p>
-      <p className="text-[10px] text-gray-400">Target: {target}{unit}</p>
+      <p className="text-[10px] text-gray-400">{targetWord}: {target}{unit}</p>
     </div>
   );
 };
@@ -207,6 +207,52 @@ export default function ProjectManagementPage() {
   const [sprints, setSprints] = useState<any[]>([]);
   const [evmData, setEvmData] = useState<any>(null);
   const [criticalPath, setCriticalPath] = useState<any>(null);
+
+  const { t, formatDate } = useTranslation();
+  const fD = (d: string | null) => (d ? formatDate(d, 'short') : '-');
+  const trEnum = (raw: string) => {
+    const out = t(`pjm.enums.${raw}`);
+    return out.startsWith('pjm.enums.') ? raw : out;
+  };
+
+  const tabs = useMemo(() => [
+    { id: 'dashboard', name: t('pjm.tabs.dashboard'), icon: BarChart3 },
+    { id: 'projects', name: t('pjm.tabs.projects'), icon: Briefcase },
+    { id: 'tasks', name: t('pjm.tabs.tasks'), icon: ListTodo },
+    { id: 'gantt', name: t('pjm.tabs.gantt'), icon: GitBranch },
+    { id: 'calendar', name: t('pjm.tabs.calendar'), icon: Calendar },
+    { id: 'sprints', name: t('pjm.tabs.sprints'), icon: Rocket },
+    { id: 'milestones', name: t('pjm.tabs.milestones'), icon: Flag },
+    { id: 'timesheets', name: t('pjm.tabs.timesheets'), icon: Timer },
+    { id: 'workload', name: t('pjm.tabs.workload'), icon: Users },
+    { id: 'resources', name: t('pjm.tabs.resources'), icon: Layers },
+    { id: 'risks', name: t('pjm.tabs.risks'), icon: AlertTriangle },
+    { id: 'budgets', name: t('pjm.tabs.budgets'), icon: DollarSign },
+    { id: 'evm', name: t('pjm.tabs.evm'), icon: Activity },
+    { id: 'documents', name: t('pjm.tabs.documents'), icon: FileText },
+  ], [t]);
+
+  const mockTaskDistribution = useMemo(() => [
+    { name: t('pjm.enums.taskStatus_todo'), value: 12, color: '#6B7280' },
+    { name: t('pjm.enums.taskStatus_in_progress'), value: 18, color: '#F59E0B' },
+    { name: t('pjm.enums.taskStatus_review'), value: 6, color: '#8B5CF6' },
+    { name: t('pjm.enums.taskStatus_done'), value: 24, color: '#10B981' },
+    { name: t('pjm.enums.taskStatus_blocked'), value: 3, color: '#EF4444' },
+  ], [t]);
+
+  const mockProjectHealth = useMemo(() => [
+    { subject: t('pjm.common.health.schedule'), A: 75, fullMark: 100 },
+    { subject: t('pjm.common.health.budget'), A: 82, fullMark: 100 },
+    { subject: t('pjm.common.health.quality'), A: 90, fullMark: 100 },
+    { subject: t('pjm.common.health.risk'), A: 65, fullMark: 100 },
+    { subject: t('pjm.common.health.resource'), A: 70, fullMark: 100 },
+    { subject: t('pjm.common.health.stakeholder'), A: 88, fullMark: 100 },
+  ], [t]);
+
+  const impactLabel = (i: string) =>
+    i === 'Low' ? t('pjm.enums.matrixLow') : i === 'Medium' ? t('pjm.enums.matrixMedium') : i === 'High' ? t('pjm.enums.matrixHigh') : t('pjm.enums.matrixVeryHigh');
+  const probLabel = (p: string) =>
+    p === 'Very High' ? t('pjm.enums.matrixVeryHigh') : p === 'High' ? t('pjm.enums.matrixHigh') : p === 'Medium' ? t('pjm.enums.matrixMedium') : t('pjm.enums.matrixLow');
 
   useEffect(() => {
     setMounted(true);
@@ -274,16 +320,16 @@ export default function ProjectManagementPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form)
       });
       const d = await r.json();
-      if (d.success) { toast.success('Berhasil dibuat!'); setShowCreateModal(false); setForm({}); fetchData(activeTab); }
-      else toast.error(d.error?.message || 'Gagal');
+      if (d.success) { toast.success(t('pjm.toast.created')); setShowCreateModal(false); setForm({}); fetchData(activeTab); }
+      else toast.error(d.error?.message || t('pjm.toast.failed'));
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
 
   const handleDelete = async (table: string, id: string) => {
-    if (!confirm('Yakin ingin menghapus?')) return;
+    if (!confirm(t('pjm.common.confirmDelete'))) return;
     try {
       await fetch(`/api/hq/project-management?action=${table}&id=${id}`, { method: 'DELETE' });
-      toast.success('Dihapus'); fetchData(activeTab);
+      toast.success(t('pjm.toast.deleted')); fetchData(activeTab);
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -295,8 +341,8 @@ export default function ProjectManagementPage() {
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form)
       });
       const d = await r.json();
-      if (d.success) { toast.success('Berhasil diupdate!'); setShowEditModal(false); setEditingItem(null); setForm({}); fetchData(activeTab); }
-      else toast.error(d.error?.message || 'Gagal update');
+      if (d.success) { toast.success(t('pjm.toast.updated')); setShowEditModal(false); setEditingItem(null); setForm({}); fetchData(activeTab); }
+      else toast.error(d.error?.message || t('pjm.toast.failedUpdate'));
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
 
@@ -322,7 +368,7 @@ export default function ProjectManagementPage() {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus, ...(newStatus === 'done' ? { completedDate: new Date().toISOString().split('T')[0], progressPercent: 100 } : {}) })
       });
-      toast.success('Status diubah'); fetchData(activeTab);
+      toast.success(t('pjm.toast.statusChanged')); fetchData(activeTab);
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -335,25 +381,6 @@ export default function ProjectManagementPage() {
     return grouped;
   }, [tasks]);
 
-  if (!mounted) return null;
-
-  const tabs = [
-    { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
-    { id: 'projects', name: 'Proyek', icon: Briefcase },
-    { id: 'tasks', name: 'Tugas', icon: ListTodo },
-    { id: 'gantt', name: 'Gantt', icon: GitBranch },
-    { id: 'calendar', name: 'Kalender', icon: Calendar },
-    { id: 'sprints', name: 'Sprint', icon: Rocket },
-    { id: 'milestones', name: 'Milestone', icon: Flag },
-    { id: 'timesheets', name: 'Timesheet', icon: Timer },
-    { id: 'workload', name: 'Workload', icon: Users },
-    { id: 'resources', name: 'Sumber Daya', icon: Layers },
-    { id: 'risks', name: 'Risiko', icon: AlertTriangle },
-    { id: 'budgets', name: 'Anggaran', icon: DollarSign },
-    { id: 'evm', name: 'EVM', icon: Activity },
-    { id: 'documents', name: 'Dokumen', icon: FileText },
-  ];
-
   const Toolbar = ({ placeholder, statuses, createLabel }: { placeholder: string; statuses: { v: string; l: string }[]; createLabel: string }) => (
     <div className="flex flex-wrap items-center gap-3">
       <div className="relative flex-1 min-w-[200px]">
@@ -363,13 +390,13 @@ export default function ProjectManagementPage() {
       </div>
       {statuses.length > 0 && (
         <select className="border rounded-lg px-3 py-2 text-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          <option value="all">Semua Status</option>
+          <option value="all">{t('pjm.common.allStatus')}</option>
           {statuses.map(s => <option key={s.v} value={s.v}>{s.l}</option>)}
         </select>
       )}
       {projects.length > 0 && activeTab !== 'projects' && (
         <select className="border rounded-lg px-3 py-2 text-sm" value={selectedProjectId} onChange={e => setSelectedProjectId(e.target.value)}>
-          <option value="">Semua Proyek</option>
+          <option value="">{t('pjm.common.allProjects')}</option>
           {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}
         </select>
       )}
@@ -384,7 +411,7 @@ export default function ProjectManagementPage() {
     <div className="bg-white rounded-xl shadow-sm border overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-gray-50">
-          <tr>{columns.map(c => <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600">{c.label}</th>)}{(onDelete || onEdit) && <th className="px-4 py-3 text-center font-medium text-gray-600">Aksi</th>}</tr>
+          <tr>{columns.map(c => <th key={c.key} className="px-4 py-3 text-left font-medium text-gray-600">{c.label}</th>)}{(onDelete || onEdit) && <th className="px-4 py-3 text-center font-medium text-gray-600">{t('pjm.common.actions')}</th>}</tr>
         </thead>
         <tbody className="divide-y">
           {data.map((row, i) => (
@@ -392,21 +419,25 @@ export default function ProjectManagementPage() {
               {columns.map(c => <td key={c.key} className="px-4 py-3">{c.render ? c.render(row[c.key], row) : (row[c.key] ?? '-')}</td>)}
               {(onDelete || onEdit) && <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-center gap-1">
-                  {onEdit && <button onClick={() => openEdit(row)} className="p-1.5 hover:bg-blue-50 rounded" title="Edit"><Eye className="w-4 h-4 text-blue-500" /></button>}
-                  {onDelete && <button onClick={() => handleDelete(onDelete, row.id)} className="p-1.5 hover:bg-red-50 rounded" title="Hapus"><Trash2 className="w-4 h-4 text-red-400" /></button>}
+                  {onEdit && <button onClick={() => openEdit(row)} className="p-1.5 hover:bg-blue-50 rounded" title={t('pjm.common.edit')}><Eye className="w-4 h-4 text-blue-500" /></button>}
+                  {onDelete && <button onClick={() => handleDelete(onDelete, row.id)} className="p-1.5 hover:bg-red-50 rounded" title={t('pjm.common.delete')}><Trash2 className="w-4 h-4 text-red-400" /></button>}
                 </div>
               </td>}
             </tr>
           ))}
-          {data.length === 0 && <tr><td colSpan={columns.length + ((onDelete || onEdit) ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">Tidak ada data</td></tr>}
+          {data.length === 0 && <tr><td colSpan={columns.length + ((onDelete || onEdit) ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">{t('pjm.common.noData')}</td></tr>}
         </tbody>
       </table>
     </div>
   );
 
-  const Badge = ({ value, colors }: { value: string; colors: Record<string, string> }) => (
-    <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[value] || 'bg-gray-100 text-gray-700'}`}>{value}</span>
-  );
+  const Badge = ({ value, colors }: { value: string; colors: Record<string, string> }) => {
+    const out = t(`pjm.enums.${value}`);
+    const label = out.startsWith('pjm.enums.') ? value : out;
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[value] || 'bg-gray-100 text-gray-700'}`}>{label}</span>
+    );
+  };
 
   const Progress = ({ value }: { value: number }) => (
     <div className="flex items-center gap-2">
@@ -415,8 +446,10 @@ export default function ProjectManagementPage() {
     </div>
   );
 
+  if (!mounted) return null;
+
   return (
-    <HQLayout title="Manajemen Proyek" subtitle="Kelola proyek, tugas, dan sumber daya">
+    <HQLayout title={t('pjm.title')} subtitle={t('pjm.subtitle')}>
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="flex overflow-x-auto px-4">
           {tabs.map(tab => (
@@ -430,27 +463,27 @@ export default function ProjectManagementPage() {
 
       <div className="p-6 space-y-6">
         {loading ? (
-          <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /><span className="ml-3 text-gray-500">Memuat data...</span></div>
+          <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /><span className="ml-3 text-gray-500">{t('pjm.loading')}</span></div>
         ) : (<>
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
               {/* KPI Stat Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="Total Proyek" value={dashboard?.projectStats?.total || 8} sub={`${dashboard?.projectStats?.active || 5} aktif`} icon={Briefcase} color="bg-blue-500" trend="up" trendValue="+12%" />
-                <StatCard title="Tugas Aktif" value={dashboard?.taskStats?.in_progress || 18} sub={`${dashboard?.taskStats?.overdue || 3} terlambat`} icon={ListTodo} color="bg-yellow-500" trend="down" trendValue="2 overdue" />
-                <StatCard title="Total Anggaran" value={fmtShort(Number(dashboard?.projectStats?.total_budget || 2500000000))} sub={`Aktual: ${fmtShort(Number(dashboard?.projectStats?.total_actual_cost || 1800000000))}`} icon={DollarSign} color="bg-green-500" trend="up" trendValue="72% terpakai" />
-                <StatCard title="Risiko Tinggi" value={dashboard?.riskStats?.high_risks || 4} sub={`${dashboard?.riskStats?.total || 16} total risiko`} icon={AlertTriangle} color="bg-red-500" trend="down" trendValue="-2 bulan ini" />
+                <StatCard title={t('pjm.common.statTotalProjects')} value={dashboard?.projectStats?.total || 8} sub={`${dashboard?.projectStats?.active || 5} ${t('pjm.common.subActive')}`} icon={Briefcase} color="bg-blue-500" trend="up" trendValue="+12%" />
+                <StatCard title={t('pjm.common.statActiveTasks')} value={dashboard?.taskStats?.in_progress || 18} sub={`${dashboard?.taskStats?.overdue || 3} ${t('pjm.common.subLate')}`} icon={ListTodo} color="bg-yellow-500" trend="down" trendValue="2 overdue" />
+                <StatCard title={t('pjm.common.statTotalBudget')} value={fmtShort(Number(dashboard?.projectStats?.total_budget || 2500000000))} sub={`${t('pjm.common.subActual')}: ${fmtShort(Number(dashboard?.projectStats?.total_actual_cost || 1800000000))}`} icon={DollarSign} color="bg-green-500" trend="up" trendValue={`72% ${t('pjm.common.subBudgetUsed')}`} />
+                <StatCard title={t('pjm.common.statHighRisk')} value={dashboard?.riskStats?.high_risks || 4} sub={`${dashboard?.riskStats?.total || 16} ${t('pjm.common.subTotalRisks')}`} icon={AlertTriangle} color="bg-red-500" trend="down" trendValue={`-2 ${t('pjm.common.subTrendMonth')}`} />
               </div>
 
               {/* Task Status Pipeline */}
               <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 {[
-                  ['To Do', dashboard?.taskStats?.todo || 12, 'bg-gray-100 text-gray-700', '📋'],
-                  ['In Progress', dashboard?.taskStats?.in_progress || 18, 'bg-yellow-100 text-yellow-700', '🔄'],
-                  ['Review', dashboard?.taskStats?.review || 6, 'bg-purple-100 text-purple-700', '👀'],
-                  ['Done', dashboard?.taskStats?.done || 24, 'bg-green-100 text-green-700', '✅'],
-                  ['Blocked', dashboard?.taskStats?.blocked || 3, 'bg-red-100 text-red-700', '🚫'],
-                  ['Overdue', dashboard?.taskStats?.overdue || 2, 'bg-red-200 text-red-800', '⏰']
+                  [t('pjm.enums.taskStatus_todo'), dashboard?.taskStats?.todo || 12, 'bg-gray-100 text-gray-700', '📋'],
+                  [t('pjm.enums.taskStatus_in_progress'), dashboard?.taskStats?.in_progress || 18, 'bg-yellow-100 text-yellow-700', '🔄'],
+                  [t('pjm.enums.taskStatus_review'), dashboard?.taskStats?.review || 6, 'bg-purple-100 text-purple-700', '👀'],
+                  [t('pjm.enums.taskStatus_done'), dashboard?.taskStats?.done || 24, 'bg-green-100 text-green-700', '✅'],
+                  [t('pjm.enums.taskStatus_blocked'), dashboard?.taskStats?.blocked || 3, 'bg-red-100 text-red-700', '🚫'],
+                  [t('pjm.enums.taskStatus_overdue'), dashboard?.taskStats?.overdue || 2, 'bg-red-200 text-red-800', '⏰']
                 ].map(([l, v, c, icon]) => (
                   <div key={l as string} className={`${c} rounded-xl p-4 text-center border transition-transform hover:scale-105`}>
                     <p className="text-2xl font-bold">{v}</p>
@@ -460,22 +493,22 @@ export default function ProjectManagementPage() {
               </div>
 
               {/* KPI Gauges */}
-              <ChartCard title="KPI Proyek" subtitle="Performa terhadap target">
+              <ChartCard title={t('pjm.common.kpiProject')} subtitle={t('pjm.common.kpiProjectSub')}>
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-                  <KPIGauge label="On-Time Delivery" value={78} target={90} />
-                  <KPIGauge label="Budget Compliance" value={85} target={95} />
-                  <KPIGauge label="Kualitas" value={92} target={90} />
-                  <KPIGauge label="Resource Util." value={76} target={85} />
-                  <KPIGauge label="Task Completion" value={68} target={80} />
-                  <KPIGauge label="Client Satisfaction" value={88} target={85} />
+                  <KPIGauge label={t('pjm.common.onTimeDelivery')} value={78} target={90} targetWord={t('pjm.common.target')} />
+                  <KPIGauge label={t('pjm.common.budgetCompliance')} value={85} target={95} targetWord={t('pjm.common.target')} />
+                  <KPIGauge label={t('pjm.common.quality')} value={92} target={90} targetWord={t('pjm.common.target')} />
+                  <KPIGauge label={t('pjm.common.resourceUtil')} value={76} target={85} targetWord={t('pjm.common.target')} />
+                  <KPIGauge label={t('pjm.common.taskCompletion')} value={68} target={80} targetWord={t('pjm.common.target')} />
+                  <KPIGauge label={t('pjm.common.clientSatisfaction')} value={88} target={85} targetWord={t('pjm.common.target')} />
                 </div>
               </ChartCard>
 
               {/* Charts Row 1: Area Chart + Doughnut */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <ChartCard title="Tren Anggaran (Juta Rp)" subtitle="Rencana vs Aktual vs Committed - 6 Bulan Terakhir" action={
+                <ChartCard title={t('pjm.common.budgetTrendTitle')} subtitle={t('pjm.common.budgetTrendSub')} action={
                   <select className="text-xs border rounded-lg px-2 py-1 text-gray-500">
-                    <option>6 Bulan</option><option>12 Bulan</option><option>Tahun Ini</option>
+                    <option>{t('pjm.common.months.m6')}</option><option>{t('pjm.common.months.m12')}</option><option>{t('pjm.common.months.ytd')}</option>
                   </select>
                 }>
                   <div className="lg:col-span-2">
@@ -500,19 +533,19 @@ export default function ProjectManagementPage() {
                         <YAxis tick={{ fontSize: 12 }} stroke="#9CA3AF" />
                         <RTooltip content={<CustomTooltip />} />
                         <Legend wrapperStyle={{ fontSize: '12px' }} />
-                        <Area type="monotone" dataKey="planned" name="Rencana" stroke="#3B82F6" fill="url(#gradPlanned)" strokeWidth={2} />
-                        <Area type="monotone" dataKey="actual" name="Aktual" stroke="#10B981" fill="url(#gradActual)" strokeWidth={2} />
-                        <Area type="monotone" dataKey="committed" name="Committed" stroke="#F59E0B" fill="url(#gradCommitted)" strokeWidth={2} strokeDasharray="5 5" />
+                        <Area type="monotone" dataKey="planned" name={t('pjm.common.chartPlanned')} stroke="#3B82F6" fill="url(#gradPlanned)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="actual" name={t('pjm.common.chartActual')} stroke="#10B981" fill="url(#gradActual)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="committed" name={t('pjm.common.chartCommitted')} stroke="#F59E0B" fill="url(#gradCommitted)" strokeWidth={2} strokeDasharray="5 5" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 </ChartCard>
 
-                <ChartCard title="Distribusi Tugas" subtitle="Berdasarkan Status">
+                <ChartCard title={t('pjm.common.taskDistTitle')} subtitle={t('pjm.common.taskDistSub')}>
                   <ResponsiveContainer width="100%" height={280}>
                     <RPieChart>
-                      <Pie data={dashboard?.taskDistribution || MOCK_TASK_DISTRIBUTION} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={4} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                        {(dashboard?.taskDistribution || MOCK_TASK_DISTRIBUTION).map((entry: any, i: number) => (
+                      <Pie data={dashboard?.taskDistribution || mockTaskDistribution} cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={4} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                        {(dashboard?.taskDistribution || mockTaskDistribution).map((entry: any, i: number) => (
                           <Cell key={i} fill={entry.color || DOUGHNUT_COLORS[i % DOUGHNUT_COLORS.length]} />
                         ))}
                       </Pie>
@@ -520,7 +553,7 @@ export default function ProjectManagementPage() {
                     </RPieChart>
                   </ResponsiveContainer>
                   <div className="flex flex-wrap gap-2 justify-center mt-2">
-                    {(dashboard?.taskDistribution || MOCK_TASK_DISTRIBUTION).map((d: any, i: number) => (
+                    {(dashboard?.taskDistribution || mockTaskDistribution).map((d: any, i: number) => (
                       <span key={i} className="flex items-center gap-1 text-xs text-gray-600">
                         <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: d.color || DOUGHNUT_COLORS[i] }} />
                         {d.name}: {d.value}
@@ -532,67 +565,67 @@ export default function ProjectManagementPage() {
 
               {/* Charts Row 2: Weekly Hours + Resource Allocation + Project Health Radar */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <ChartCard title="Jam Kerja Mingguan" subtitle="Aktual vs Target">
+                <ChartCard title={t('pjm.common.weeklyHoursTitle')} subtitle={t('pjm.common.weeklyHoursSub')}>
                   <ResponsiveContainer width="100%" height={260}>
                     <ComposedChart data={dashboard?.weeklyHours || MOCK_WEEKLY_HOURS}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
                       <XAxis dataKey="week" tick={{ fontSize: 12 }} stroke="#9CA3AF" />
                       <YAxis tick={{ fontSize: 12 }} stroke="#9CA3AF" />
                       <RTooltip content={<CustomTooltip />} />
-                      <Bar dataKey="hours" name="Jam Aktual" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={30} />
-                      <Line type="monotone" dataKey="target" name="Target" stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" dot={false} />
+                      <Bar dataKey="hours" name={t('pjm.common.chartHoursActual')} fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={30} />
+                      <Line type="monotone" dataKey="target" name={t('pjm.common.chartTarget')} stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </ChartCard>
 
-                <ChartCard title="Alokasi Sumber Daya" subtitle="Terpakai vs Kapasitas">
+                <ChartCard title={t('pjm.common.resourceAllocTitle')} subtitle={t('pjm.common.resourceAllocSub')}>
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={dashboard?.resourceAllocation || MOCK_RESOURCE_ALLOCATION} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
                       <XAxis type="number" tick={{ fontSize: 11 }} stroke="#9CA3AF" />
                       <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={80} stroke="#9CA3AF" />
                       <RTooltip content={<CustomTooltip />} />
-                      <Bar dataKey="allocated" name="Terpakai" fill="#3B82F6" radius={[0, 4, 4, 0]} barSize={14} />
-                      <Bar dataKey="capacity" name="Kapasitas" fill="#E5E7EB" radius={[0, 4, 4, 0]} barSize={14} />
+                      <Bar dataKey="allocated" name={t('pjm.common.chartUsed')} fill="#3B82F6" radius={[0, 4, 4, 0]} barSize={14} />
+                      <Bar dataKey="capacity" name={t('pjm.common.chartCapacity')} fill="#E5E7EB" radius={[0, 4, 4, 0]} barSize={14} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>
 
-                <ChartCard title="Kesehatan Proyek" subtitle="Radar Multi-Dimensi">
+                <ChartCard title={t('pjm.common.healthTitle')} subtitle={t('pjm.common.healthSub')}>
                   <ResponsiveContainer width="100%" height={260}>
-                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={dashboard?.projectHealth || MOCK_PROJECT_HEALTH}>
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={dashboard?.projectHealth || mockProjectHealth}>
                       <PolarGrid stroke="#E5E7EB" />
                       <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
                       <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10 }} />
-                      <Radar name="Skor" dataKey="A" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.25} strokeWidth={2} />
+                      <Radar name={t('pjm.common.chartScore')} dataKey="A" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.25} strokeWidth={2} />
                     </RadarChart>
                   </ResponsiveContainer>
                 </ChartCard>
               </div>
 
               {/* Risk Matrix */}
-              <ChartCard title="Matriks Risiko" subtitle="Probabilitas vs Dampak - Heatmap">
+              <ChartCard title={t('pjm.common.riskMatrixTitle')} subtitle={t('pjm.common.riskMatrixSub')}>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr>
-                        <th className="p-2 text-xs font-medium text-gray-500 border w-24">Prob \ Dampak</th>
+                        <th className="p-2 text-xs font-medium text-gray-500 border w-24">{t('pjm.common.probImpact')}</th>
                         {['Low', 'Medium', 'High', 'Very High'].map(h => (
-                          <th key={h} className="p-2 text-xs font-medium text-gray-600 border text-center">{h}</th>
+                          <th key={h} className="p-2 text-xs font-medium text-gray-600 border text-center">{impactLabel(h)}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {['Very High', 'High', 'Medium', 'Low'].map(prob => (
                         <tr key={prob}>
-                          <td className="p-2 text-xs font-medium text-gray-600 border bg-gray-50">{prob}</td>
+                          <td className="p-2 text-xs font-medium text-gray-600 border bg-gray-50">{probLabel(prob)}</td>
                           {['Low', 'Medium', 'High', 'Very High'].map(impact => {
                             const cell = (dashboard?.riskMatrix || MOCK_RISK_MATRIX).find((r: any) => r.prob === prob && r.impact === impact);
                             const level = cell?.level || 'low';
                             return (
                               <td key={impact} className={`p-3 border text-center ${MATRIX_LEVEL_COLORS[level]}`}>
                                 <span className="text-lg font-bold">{cell?.count || 0}</span>
-                                <p className="text-[10px] capitalize mt-0.5">{level}</p>
+                                <p className="text-[10px] capitalize mt-0.5">{t(`pjm.common.riskLevel.${level}`)}</p>
                               </td>
                             );
                           })}
@@ -602,21 +635,21 @@ export default function ProjectManagementPage() {
                   </table>
                   <div className="flex gap-4 mt-3 justify-center">
                     {Object.entries(MATRIX_LEVEL_COLORS).map(([level, cls]) => (
-                      <span key={level} className={`text-xs px-2 py-1 rounded border ${cls} capitalize`}>{level}</span>
+                      <span key={level} className={`text-xs px-2 py-1 rounded border ${cls} capitalize`}>{t(`pjm.common.riskLevel.${level}`)}</span>
                     ))}
                   </div>
                 </div>
               </ChartCard>
 
               {/* Recent Projects Table */}
-              <ChartCard title="Proyek Terbaru" subtitle="Ringkasan status dan progress proyek aktif">
+              <ChartCard title={t('pjm.common.recentProjectsTitle')} subtitle={t('pjm.common.recentProjectsSub')}>
                 <DataTable columns={[
-                  { key: 'project_code', label: 'Kode', render: v => <span className="font-mono text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{v}</span> },
-                  { key: 'name', label: 'Nama Proyek', render: (v, r) => <><p className="font-medium">{v}</p><p className="text-xs text-gray-500">{r.manager_name || '-'}</p></> },
-                  { key: 'status', label: 'Status', render: v => <Badge value={v} colors={SC} /> },
-                  { key: 'progress_percent', label: 'Progress', render: v => <Progress value={Number(v || 0)} /> },
-                  { key: 'budget_amount', label: 'Anggaran', render: v => fmtShort(Number(v || 0)) },
-                  { key: 'end_date', label: 'Deadline', render: v => fD(v) },
+                  { key: 'project_code', label: t('pjm.common.columns.code'), render: v => <span className="font-mono text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{v}</span> },
+                  { key: 'name', label: t('pjm.common.columns.projectName'), render: (v, r) => <><p className="font-medium">{v}</p><p className="text-xs text-gray-500">{r.manager_name || '-'}</p></> },
+                  { key: 'status', label: t('pjm.common.columns.status'), render: v => <Badge value={v} colors={SC} /> },
+                  { key: 'progress_percent', label: t('pjm.common.progress'), render: v => <Progress value={Number(v || 0)} /> },
+                  { key: 'budget_amount', label: t('pjm.common.columns.budgetCol'), render: v => fmtShort(Number(v || 0)) },
+                  { key: 'end_date', label: t('pjm.common.deadline'), render: v => fD(v) },
                 ]} data={dashboard?.recentProjects || []} />
               </ChartCard>
             </div>
@@ -626,11 +659,11 @@ export default function ProjectManagementPage() {
             {/* Project Summary Cards */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
-                { label: 'Total', count: projectTotal || projects.length, color: 'bg-blue-50 text-blue-700 border-blue-200' },
-                { label: 'Aktif', count: projects.filter(p => p.status === 'active').length, color: 'bg-green-50 text-green-700 border-green-200' },
-                { label: 'Planning', count: projects.filter(p => p.status === 'planning').length, color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
-                { label: 'On Hold', count: projects.filter(p => p.status === 'on_hold').length, color: 'bg-orange-50 text-orange-700 border-orange-200' },
-                { label: 'Selesai', count: projects.filter(p => p.status === 'completed').length, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+                { label: t('pjm.common.prjSummary.total'), count: projectTotal || projects.length, color: 'bg-blue-50 text-blue-700 border-blue-200' },
+                { label: trEnum('active'), count: projects.filter(p => p.status === 'active').length, color: 'bg-green-50 text-green-700 border-green-200' },
+                { label: trEnum('planning'), count: projects.filter(p => p.status === 'planning').length, color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+                { label: trEnum('on_hold'), count: projects.filter(p => p.status === 'on_hold').length, color: 'bg-orange-50 text-orange-700 border-orange-200' },
+                { label: t('pjm.common.prjSummary.done'), count: projects.filter(p => p.status === 'completed').length, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
               ].map(s => (
                 <div key={s.label} className={`${s.color} border rounded-xl p-3 text-center`}>
                   <p className="text-xl font-bold">{s.count}</p>
@@ -638,7 +671,7 @@ export default function ProjectManagementPage() {
                 </div>
               ))}
             </div>
-            <Toolbar placeholder="Cari proyek..." statuses={[{v:'planning',l:'Planning'},{v:'active',l:'Active'},{v:'on_hold',l:'On Hold'},{v:'completed',l:'Completed'},{v:'cancelled',l:'Cancelled'}]} createLabel="Buat Proyek" />
+            <Toolbar placeholder={t('pjm.common.searchProjects')} statuses={[{v:'planning',l:trEnum('planning')},{v:'active',l:trEnum('active')},{v:'on_hold',l:trEnum('on_hold')},{v:'completed',l:trEnum('completed')},{v:'cancelled',l:trEnum('cancelled')}]} createLabel={t('pjm.common.createProject')} />
             {/* Project Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {projects.map(p => {
@@ -659,14 +692,14 @@ export default function ProjectManagementPage() {
                     </div>
                     {/* Progress */}
                     <div className="mb-3">
-                      <div className="flex justify-between text-xs mb-1"><span className="text-gray-500">Progress</span><span className="font-medium">{Number(p.progress_percent || 0).toFixed(0)}%</span></div>
+                      <div className="flex justify-between text-xs mb-1"><span className="text-gray-500">{t('pjm.common.progress')}</span><span className="font-medium">{Number(p.progress_percent || 0).toFixed(0)}%</span></div>
                       <div className="w-full bg-gray-100 rounded-full h-2">
                         <div className={`h-full rounded-full transition-all ${Number(p.progress_percent || 0) >= 80 ? 'bg-green-500' : Number(p.progress_percent || 0) >= 40 ? 'bg-blue-500' : 'bg-yellow-500'}`} style={{ width: `${Math.min(Number(p.progress_percent || 0), 100)}%` }} />
                       </div>
                     </div>
                     {/* Budget */}
                     <div className="mb-3">
-                      <div className="flex justify-between text-xs mb-1"><span className="text-gray-500">Budget</span><span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-gray-700'}`}>{budgetPct}%</span></div>
+                      <div className="flex justify-between text-xs mb-1"><span className="text-gray-500">{t('pjm.common.budget')}</span><span className={`font-medium ${isOverBudget ? 'text-red-600' : 'text-gray-700'}`}>{budgetPct}%</span></div>
                       <div className="w-full bg-gray-100 rounded-full h-1.5">
                         <div className={`h-full rounded-full ${isOverBudget ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${Math.min(budgetPct, 100)}%` }} />
                       </div>
@@ -686,7 +719,7 @@ export default function ProjectManagementPage() {
                   </div>
                 );
               })}
-              {projects.length === 0 && <div className="col-span-full text-center py-12 text-gray-400">Belum ada proyek</div>}
+              {projects.length === 0 && <div className="col-span-full text-center py-12 text-gray-400">{t('pjm.common.noProjects')}</div>}
             </div>
           </div>)}
 
@@ -694,20 +727,20 @@ export default function ProjectManagementPage() {
             {/* Task Status Summary */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {[
-                { label: 'To Do', count: tasks.filter(t => t.status === 'todo').length, color: 'bg-gray-50 text-gray-700 border-gray-200' },
-                { label: 'In Progress', count: tasks.filter(t => t.status === 'in_progress').length, color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
-                { label: 'Review', count: tasks.filter(t => t.status === 'review').length, color: 'bg-purple-50 text-purple-700 border-purple-200' },
-                { label: 'Done', count: tasks.filter(t => t.status === 'done').length, color: 'bg-green-50 text-green-700 border-green-200' },
-                { label: 'Blocked', count: tasks.filter(t => t.status === 'blocked').length, color: 'bg-red-50 text-red-700 border-red-200' },
+                { key: 'todo', label: t('pjm.enums.todo'), count: tasks.filter(t => t.status === 'todo').length, color: 'bg-gray-50 text-gray-700 border-gray-200' },
+                { key: 'in_progress', label: t('pjm.enums.in_progress'), count: tasks.filter(t => t.status === 'in_progress').length, color: 'bg-yellow-50 text-yellow-700 border-yellow-200' },
+                { key: 'review', label: t('pjm.enums.review'), count: tasks.filter(t => t.status === 'review').length, color: 'bg-purple-50 text-purple-700 border-purple-200' },
+                { key: 'done', label: t('pjm.enums.done'), count: tasks.filter(t => t.status === 'done').length, color: 'bg-green-50 text-green-700 border-green-200' },
+                { key: 'blocked', label: t('pjm.enums.blocked'), count: tasks.filter(t => t.status === 'blocked').length, color: 'bg-red-50 text-red-700 border-red-200' },
               ].map(s => (
-                <div key={s.label} className={`${s.color} border rounded-xl p-3 text-center cursor-pointer hover:shadow-sm transition-shadow`} onClick={() => setStatusFilter(s.label.toLowerCase().replace(' ', '_'))}>
+                <div key={s.key} className={`${s.color} border rounded-xl p-3 text-center cursor-pointer hover:shadow-sm transition-shadow`} onClick={() => setStatusFilter(s.key)}>
                   <p className="text-xl font-bold">{s.count}</p>
                   <p className="text-xs font-medium">{s.label}</p>
                 </div>
               ))}
             </div>
             <div className="flex items-center justify-between">
-              <Toolbar placeholder="Cari tugas..." statuses={[{v:'todo',l:'To Do'},{v:'in_progress',l:'In Progress'},{v:'review',l:'Review'},{v:'done',l:'Done'},{v:'blocked',l:'Blocked'}]} createLabel="Buat Tugas" />
+              <Toolbar placeholder={t('pjm.common.searchTasks')} statuses={[{v:'todo',l:trEnum('todo')},{v:'in_progress',l:trEnum('in_progress')},{v:'review',l:trEnum('review')},{v:'done',l:trEnum('done')},{v:'blocked',l:trEnum('blocked')}]} createLabel={t('pjm.common.createTask')} />
               <div className="flex items-center gap-1 ml-3 bg-gray-100 rounded-lg p-1">
                 <button onClick={() => setTaskViewMode('table')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${taskViewMode === 'table' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}><ListTodo className="w-4 h-4" /></button>
                 <button onClick={() => setTaskViewMode('kanban')} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${taskViewMode === 'kanban' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}><Layers className="w-4 h-4" /></button>
@@ -716,24 +749,24 @@ export default function ProjectManagementPage() {
 
             {taskViewMode === 'table' ? (
               <DataTable columns={[
-                { key: 'task_code', label: 'Kode', render: v => <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{v}</span> },
-                { key: 'name', label: 'Tugas', render: (v, r) => <><p className="font-medium">{v}</p><p className="text-xs text-gray-500">{r.project_name}</p></> },
-                { key: 'status', label: 'Status', render: v => <Badge value={v} colors={SC} /> },
-                { key: 'priority', label: 'Prioritas', render: v => <Badge value={v} colors={PC} /> },
-                { key: 'assignee_name', label: 'Assignee', render: v => v ? <span className="inline-flex items-center gap-1"><span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs flex items-center justify-center font-medium">{v.charAt(0).toUpperCase()}</span><span className="text-sm">{v}</span></span> : <span className="text-gray-400">-</span> },
-                { key: 'due_date', label: 'Deadline', render: (v) => { const d = v ? new Date(v) : null; const isOverdue = d && d < new Date(); return <span className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : ''}`}>{fD(v)}{isOverdue ? ' !' : ''}</span>; } },
-                { key: 'progress_percent', label: 'Progress', render: v => <Progress value={Number(v || 0)} /> },
-                { key: 'estimated_hours', label: 'Jam', render: (v, r) => <span className="text-xs"><span className="font-medium">{Number(r.actual_hours || 0).toFixed(1)}</span>/{Number(v || 0).toFixed(1)}h</span> },
+                { key: 'task_code', label: t('pjm.common.columns.code'), render: v => <span className="font-mono text-xs bg-gray-100 px-2 py-0.5 rounded">{v}</span> },
+                { key: 'name', label: t('pjm.common.columns.task'), render: (v, r) => <><p className="font-medium">{v}</p><p className="text-xs text-gray-500">{r.project_name}</p></> },
+                { key: 'status', label: t('pjm.common.columns.status'), render: v => <Badge value={v} colors={SC} /> },
+                { key: 'priority', label: t('pjm.common.columns.priority'), render: v => <Badge value={v} colors={PC} /> },
+                { key: 'assignee_name', label: t('pjm.common.columns.assignee'), render: v => v ? <span className="inline-flex items-center gap-1"><span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs flex items-center justify-center font-medium">{v.charAt(0).toUpperCase()}</span><span className="text-sm">{v}</span></span> : <span className="text-gray-400">-</span> },
+                { key: 'due_date', label: t('pjm.common.deadline'), render: (v) => { const d = v ? new Date(v) : null; const isOverdue = d && d < new Date(); return <span className={`text-xs ${isOverdue ? 'text-red-600 font-medium' : ''}`}>{fD(v)}{isOverdue ? ' !' : ''}</span>; } },
+                { key: 'progress_percent', label: t('pjm.common.progress'), render: v => <Progress value={Number(v || 0)} /> },
+                { key: 'estimated_hours', label: t('pjm.common.columns.hours'), render: (v, r) => <span className="text-xs"><span className="font-medium">{Number(r.actual_hours || 0).toFixed(1)}</span>/{Number(v || 0).toFixed(1)}h</span> },
               ]} data={tasks} onDelete="tasks" onEdit={true} />
             ) : (
               /* KANBAN BOARD */
               <div className="flex gap-4 overflow-x-auto pb-4" style={{ minHeight: '55vh' }}>
                 {[
-                  { id: 'todo', label: 'To Do', borderColor: 'border-t-gray-400', bg: 'bg-gray-50' },
-                  { id: 'in_progress', label: 'In Progress', borderColor: 'border-t-yellow-400', bg: 'bg-yellow-50' },
-                  { id: 'review', label: 'Review', borderColor: 'border-t-purple-400', bg: 'bg-purple-50' },
-                  { id: 'done', label: 'Done', borderColor: 'border-t-green-400', bg: 'bg-green-50' },
-                  { id: 'blocked', label: 'Blocked', borderColor: 'border-t-red-400', bg: 'bg-red-50' },
+                  { id: 'todo', label: t('pjm.enums.todo'), borderColor: 'border-t-gray-400', bg: 'bg-gray-50' },
+                  { id: 'in_progress', label: t('pjm.enums.in_progress'), borderColor: 'border-t-yellow-400', bg: 'bg-yellow-50' },
+                  { id: 'review', label: t('pjm.enums.review'), borderColor: 'border-t-purple-400', bg: 'bg-purple-50' },
+                  { id: 'done', label: t('pjm.enums.done'), borderColor: 'border-t-green-400', bg: 'bg-green-50' },
+                  { id: 'blocked', label: t('pjm.enums.blocked'), borderColor: 'border-t-red-400', bg: 'bg-red-50' },
                 ].map(col => (
                   <div key={col.id} className={`flex-shrink-0 w-72 ${col.bg} rounded-xl border-t-4 ${col.borderColor} border flex flex-col`}>
                     <div className="px-4 py-3 flex items-center justify-between border-b">
@@ -748,7 +781,7 @@ export default function ProjectManagementPage() {
                             <select className="text-[10px] bg-transparent border rounded px-1 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                               value={task.status} onChange={e => { e.stopPropagation(); handleTaskStatusChange(task.id, e.target.value); }}
                               onClick={e => e.stopPropagation()}>
-                              <option value="todo">To Do</option><option value="in_progress">In Progress</option><option value="review">Review</option><option value="done">Done</option><option value="blocked">Blocked</option>
+                              <option value="todo">{trEnum('todo')}</option><option value="in_progress">{trEnum('in_progress')}</option><option value="review">{trEnum('review')}</option><option value="done">{trEnum('done')}</option><option value="blocked">{trEnum('blocked')}</option>
                             </select>
                           </div>
                           <p className="text-sm font-medium text-gray-800 mb-1.5 line-clamp-2">{task.name}</p>
@@ -766,7 +799,7 @@ export default function ProjectManagementPage() {
                           {Number(task.progress_percent) > 0 && <div className="mt-1.5"><Progress value={Number(task.progress_percent)} /></div>}
                         </div>
                       ))}
-                      {(kanbanTasks[col.id] || []).length === 0 && <div className="text-center py-8 text-gray-300 text-xs">Tidak ada tugas</div>}
+                      {(kanbanTasks[col.id] || []).length === 0 && <div className="text-center py-8 text-gray-300 text-xs">{t('pjm.common.noTasks')}</div>}
                     </div>
                   </div>
                 ))}
@@ -780,25 +813,25 @@ export default function ProjectManagementPage() {
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
                 <Clock className="w-5 h-5 mx-auto text-yellow-600 mb-1" />
                 <p className="text-xl font-bold text-yellow-700">{milestones.filter(m => m.status === 'pending').length}</p>
-                <p className="text-xs text-yellow-600">Pending</p>
+                <p className="text-xs text-yellow-600">{t('pjm.common.msSummary.pending')}</p>
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
                 <Activity className="w-5 h-5 mx-auto text-blue-600 mb-1" />
                 <p className="text-xl font-bold text-blue-700">{milestones.filter(m => m.status === 'in_progress').length}</p>
-                <p className="text-xs text-blue-600">In Progress</p>
+                <p className="text-xs text-blue-600">{t('pjm.common.msSummary.inProgress')}</p>
               </div>
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                 <CheckCircle2 className="w-5 h-5 mx-auto text-green-600 mb-1" />
                 <p className="text-xl font-bold text-green-700">{milestones.filter(m => m.status === 'completed').length}</p>
-                <p className="text-xs text-green-600">Completed</p>
+                <p className="text-xs text-green-600">{t('pjm.common.msSummary.completed')}</p>
               </div>
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
                 <AlertTriangle className="w-5 h-5 mx-auto text-red-600 mb-1" />
                 <p className="text-xl font-bold text-red-700">{milestones.filter(m => m.due_date && new Date(m.due_date) < new Date() && m.status !== 'completed').length}</p>
-                <p className="text-xs text-red-600">Overdue</p>
+                <p className="text-xs text-red-600">{t('pjm.common.msSummary.overdue')}</p>
               </div>
             </div>
-            <Toolbar placeholder="Cari milestone..." statuses={[{v:'pending',l:'Pending'},{v:'in_progress',l:'In Progress'},{v:'completed',l:'Completed'}]} createLabel="Buat Milestone" />
+            <Toolbar placeholder={t('pjm.common.searchMilestones')} statuses={[{v:'pending',l:trEnum('pending')},{v:'in_progress',l:trEnum('in_progress')},{v:'completed',l:trEnum('completed')}]} createLabel={t('pjm.common.createMilestone')} />
             {/* Milestone Cards */}
             <div className="space-y-3">
               {milestones.map((m, idx) => {
@@ -813,14 +846,14 @@ export default function ProjectManagementPage() {
                       <div className="flex items-center gap-2 mb-0.5">
                         <p className="font-semibold text-gray-900 truncate">{m.name}</p>
                         <Badge value={m.status} colors={SC} />
-                        {isOverdue && <span className="text-xs text-red-600 font-medium">Overdue</span>}
+                        {isOverdue && <span className="text-xs text-red-600 font-medium">{t('pjm.common.overdue')}</span>}
                       </div>
-                      <p className="text-xs text-gray-500">{m.project_name} &bull; Deadline: {fD(m.due_date)}</p>
+                      <p className="text-xs text-gray-500">{m.project_name} &bull; {t('pjm.common.deadline')}: {fD(m.due_date)}</p>
                     </div>
                     <div className="flex items-center gap-4 flex-shrink-0">
                       <div className="text-center">
                         <p className="text-sm font-medium">{m.done_count || 0}/{m.task_count || 0}</p>
-                        <p className="text-[10px] text-gray-400">Tugas</p>
+                        <p className="text-[10px] text-gray-400">{t('pjm.common.columns.task')}</p>
                       </div>
                       <div className="w-20">
                         <div className="w-full bg-gray-100 rounded-full h-2">
@@ -833,27 +866,27 @@ export default function ProjectManagementPage() {
                   </div>
                 );
               })}
-              {milestones.length === 0 && <div className="text-center py-12 text-gray-400">Belum ada milestone</div>}
+              {milestones.length === 0 && <div className="text-center py-12 text-gray-400">{t('pjm.common.noMilestones')}</div>}
             </div>
           </div>)}
 
           {activeTab === 'timesheets' && (<div className="space-y-5">
             {/* Timesheet Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard title="Total Jam" value={`${totalHours.toFixed(1)}h`} sub={`${timesheets.length} entri`} icon={Clock} color="bg-blue-500" />
-              <StatCard title="Jam Hari Ini" value={`${timesheets.filter(t => t.work_date === new Date().toISOString().split('T')[0]).reduce((s, t) => s + Number(t.hours_worked || 0), 0).toFixed(1)}h`} icon={Timer} color="bg-green-500" />
-              <StatCard title="Approved" value={timesheets.filter(t => t.status === 'approved').length} sub={`${timesheets.filter(t => t.status === 'submitted').length} menunggu`} icon={CheckCircle2} color="bg-emerald-500" />
-              <StatCard title="Total Biaya" value={fmtShort(timesheets.reduce((s, t) => s + Number(t.total_cost || 0), 0))} icon={DollarSign} color="bg-purple-500" />
+              <StatCard title={t('pjm.common.totalHours')} value={`${totalHours.toFixed(1)}h`} sub={`${timesheets.length} ${t('pjm.common.entries')}`} icon={Clock} color="bg-blue-500" />
+              <StatCard title={t('pjm.common.hoursToday')} value={`${timesheets.filter(t => t.work_date === new Date().toISOString().split('T')[0]).reduce((s, t) => s + Number(t.hours_worked || 0), 0).toFixed(1)}h`} icon={Timer} color="bg-green-500" />
+              <StatCard title={t('pjm.common.approved')} value={timesheets.filter(t => t.status === 'approved').length} sub={`${timesheets.filter(t => t.status === 'submitted').length} ${t('pjm.common.waiting')}`} icon={CheckCircle2} color="bg-emerald-500" />
+              <StatCard title={t('pjm.common.totalCost')} value={fmtShort(timesheets.reduce((s, t) => s + Number(t.total_cost || 0), 0))} icon={DollarSign} color="bg-purple-500" />
             </div>
-            <Toolbar placeholder="Cari timesheet..." statuses={[{v:'draft',l:'Draft'},{v:'submitted',l:'Submitted'},{v:'approved',l:'Approved'},{v:'rejected',l:'Rejected'}]} createLabel="Input Timesheet" />
+            <Toolbar placeholder={t('pjm.common.searchTimesheets')} statuses={[{v:'draft',l:trEnum('draft')},{v:'submitted',l:trEnum('submitted')},{v:'approved',l:trEnum('approved')},{v:'rejected',l:trEnum('rejected')}]} createLabel={t('pjm.common.inputTimesheet')} />
             <DataTable columns={[
-              { key: 'employee_name', label: 'Karyawan', render: v => v ? <span className="inline-flex items-center gap-1.5"><span className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs flex items-center justify-center font-medium">{v.charAt(0).toUpperCase()}</span><span className="font-medium text-sm">{v}</span></span> : '-' },
-              { key: 'project_name', label: 'Proyek', render: v => <span className="text-sm">{v}</span> },
-              { key: 'task_name', label: 'Tugas', render: v => v || <span className="text-gray-400">-</span> },
-              { key: 'work_date', label: 'Tanggal', render: v => fD(v) },
-              { key: 'hours_worked', label: 'Jam', render: v => <span className="font-medium text-blue-600">{Number(v).toFixed(1)}h</span> },
-              { key: 'status', label: 'Status', render: v => <Badge value={v} colors={SC} /> },
-              { key: 'total_cost', label: 'Biaya', render: v => <span className="font-medium">{fmt(Number(v || 0))}</span> },
+              { key: 'employee_name', label: t('pjm.common.columns.employee'), render: v => v ? <span className="inline-flex items-center gap-1.5"><span className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs flex items-center justify-center font-medium">{v.charAt(0).toUpperCase()}</span><span className="font-medium text-sm">{v}</span></span> : '-' },
+              { key: 'project_name', label: t('pjm.common.columns.project'), render: v => <span className="text-sm">{v}</span> },
+              { key: 'task_name', label: t('pjm.common.columns.task'), render: v => v || <span className="text-gray-400">-</span> },
+              { key: 'work_date', label: t('pjm.common.columns.date'), render: v => fD(v) },
+              { key: 'hours_worked', label: t('pjm.common.columns.hours'), render: v => <span className="font-medium text-blue-600">{Number(v).toFixed(1)}h</span> },
+              { key: 'status', label: t('pjm.common.columns.status'), render: v => <Badge value={v} colors={SC} /> },
+              { key: 'total_cost', label: t('pjm.common.columns.cost'), render: v => <span className="font-medium">{fmt(Number(v || 0))}</span> },
             ]} data={timesheets} onDelete="timesheets" onEdit={true} />
           </div>)}
 
@@ -863,36 +896,36 @@ export default function ProjectManagementPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
                 <Users className="w-5 h-5 mx-auto text-blue-600 mb-1" />
                 <p className="text-xl font-bold text-blue-700">{resources.filter(r => r.resource_type === 'human').length}</p>
-                <p className="text-xs text-blue-600">Human</p>
+                <p className="text-xs text-blue-600">{t('pjm.common.resSummary.human')}</p>
               </div>
               <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
                 <Layers className="w-5 h-5 mx-auto text-orange-600 mb-1" />
                 <p className="text-xl font-bold text-orange-700">{resources.filter(r => r.resource_type === 'equipment').length}</p>
-                <p className="text-xs text-orange-600">Equipment</p>
+                <p className="text-xs text-orange-600">{t('pjm.common.resSummary.equipment')}</p>
               </div>
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                 <Hash className="w-5 h-5 mx-auto text-green-600 mb-1" />
                 <p className="text-xl font-bold text-green-700">{resources.filter(r => r.resource_type === 'material').length}</p>
-                <p className="text-xs text-green-600">Material</p>
+                <p className="text-xs text-green-600">{t('pjm.common.resSummary.material')}</p>
               </div>
               <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
                 <Percent className="w-5 h-5 mx-auto text-purple-600 mb-1" />
                 <p className="text-xl font-bold text-purple-700">{resources.length > 0 ? Math.round(resources.reduce((s, r) => s + Number(r.allocation_percent || 0), 0) / resources.length) : 0}%</p>
-                <p className="text-xs text-purple-600">Rata-rata Alokasi</p>
+                <p className="text-xs text-purple-600">{t('pjm.common.avgAllocation')}</p>
               </div>
             </div>
-            <Toolbar placeholder="Cari resource..." statuses={[]} createLabel="Tambah Resource" />
+            <Toolbar placeholder={t('pjm.common.searchResources')} statuses={[]} createLabel={t('pjm.common.addResource')} />
             <DataTable columns={[
-              { key: 'resource_name', label: 'Nama', render: v => <span className="font-medium">{v}</span> },
-              { key: 'resource_type', label: 'Tipe', render: v => <Badge value={v} colors={{ human: 'bg-blue-100 text-blue-700', equipment: 'bg-orange-100 text-orange-700', material: 'bg-green-100 text-green-700' }} /> },
-              { key: 'role', label: 'Role', render: v => v || <span className="text-gray-400">-</span> },
-              { key: 'project_name', label: 'Proyek' },
-              { key: 'allocation_percent', label: 'Alokasi', render: v => {
+              { key: 'resource_name', label: t('pjm.common.columns.name'), render: v => <span className="font-medium">{v}</span> },
+              { key: 'resource_type', label: t('pjm.common.type'), render: v => <Badge value={v} colors={{ human: 'bg-blue-100 text-blue-700', equipment: 'bg-orange-100 text-orange-700', material: 'bg-green-100 text-green-700' }} /> },
+              { key: 'role', label: t('pjm.common.columns.role'), render: v => v || <span className="text-gray-400">-</span> },
+              { key: 'project_name', label: t('pjm.common.columns.project') },
+              { key: 'allocation_percent', label: t('pjm.common.columns.allocation'), render: v => {
                 const pct = Number(v || 0);
                 return <div className="flex items-center gap-2"><div className="w-16 h-2 bg-gray-200 rounded-full"><div className={`h-full rounded-full ${pct > 90 ? 'bg-red-500' : pct > 70 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${pct}%` }} /></div><span className="text-xs font-medium">{pct}%</span></div>;
               }},
-              { key: 'cost_per_hour', label: 'Biaya/Jam', render: v => fmt(Number(v || 0)) },
-              { key: 'start_date', label: 'Periode', render: (v, r) => <span className="text-xs">{fD(v)} - {fD(r.end_date)}</span> },
+              { key: 'cost_per_hour', label: t('pjm.common.columns.costPerHour'), render: v => fmt(Number(v || 0)) },
+              { key: 'start_date', label: t('pjm.common.period'), render: (v, r) => <span className="text-xs">{fD(v)} - {fD(r.end_date)}</span> },
             ]} data={resources} onDelete="resources" onEdit={true} />
           </div>)}
 
@@ -901,25 +934,25 @@ export default function ProjectManagementPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-1"><Shield className="w-4 h-4 text-red-600" /><span className="text-xs font-medium text-red-600">Critical/High</span></div>
+                  <div className="flex items-center gap-2 mb-1"><Shield className="w-4 h-4 text-red-600" /><span className="text-xs font-medium text-red-600">{t('pjm.common.riskSummary.criticalHigh')}</span></div>
                   <p className="text-2xl font-bold text-red-700">{risks.filter(r => Number(r.risk_score) >= 6).length}</p>
                 </div>
                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-1"><AlertTriangle className="w-4 h-4 text-yellow-600" /><span className="text-xs font-medium text-yellow-600">Medium</span></div>
+                  <div className="flex items-center gap-2 mb-1"><AlertTriangle className="w-4 h-4 text-yellow-600" /><span className="text-xs font-medium text-yellow-600">{t('pjm.common.riskSummary.medium')}</span></div>
                   <p className="text-2xl font-bold text-yellow-700">{risks.filter(r => Number(r.risk_score) >= 3 && Number(r.risk_score) < 6).length}</p>
                 </div>
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-1"><CheckCircle2 className="w-4 h-4 text-green-600" /><span className="text-xs font-medium text-green-600">Low</span></div>
+                  <div className="flex items-center gap-2 mb-1"><CheckCircle2 className="w-4 h-4 text-green-600" /><span className="text-xs font-medium text-green-600">{t('pjm.common.riskSummary.low')}</span></div>
                   <p className="text-2xl font-bold text-green-700">{risks.filter(r => Number(r.risk_score) < 3).length}</p>
                 </div>
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-1"><Target className="w-4 h-4 text-blue-600" /><span className="text-xs font-medium text-blue-600">Resolved</span></div>
+                  <div className="flex items-center gap-2 mb-1"><Target className="w-4 h-4 text-blue-600" /><span className="text-xs font-medium text-blue-600">{t('pjm.common.riskSummary.resolved')}</span></div>
                   <p className="text-2xl font-bold text-blue-700">{risks.filter(r => r.status === 'resolved').length}</p>
                 </div>
               </div>
               {/* Inline Risk Matrix */}
               <div className="bg-white rounded-xl border p-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Matriks Risiko</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('pjm.common.riskMatrixTitle')}</h4>
                 <table className="w-full border-collapse text-xs">
                   <thead><tr><th className="p-1.5 border text-gray-400 font-medium">P\I</th>{['L','M','H','VH'].map(h => <th key={h} className="p-1.5 border text-center font-medium text-gray-500">{h}</th>)}</tr></thead>
                   <tbody>
@@ -936,51 +969,51 @@ export default function ProjectManagementPage() {
                 </table>
               </div>
             </div>
-            <Toolbar placeholder="Cari risiko..." statuses={[{v:'identified',l:'Identified'},{v:'mitigating',l:'Mitigating'},{v:'resolved',l:'Resolved'},{v:'accepted',l:'Accepted'}]} createLabel="Tambah Risiko" />
+            <Toolbar placeholder={t('pjm.common.searchRisks')} statuses={[{v:'identified',l:trEnum('identified')},{v:'mitigating',l:trEnum('mitigating')},{v:'resolved',l:trEnum('resolved')},{v:'accepted',l:trEnum('accepted')}]} createLabel={t('pjm.common.addRisk')} />
             <DataTable columns={[
-              { key: 'risk_code', label: 'Kode', render: v => <span className="font-mono text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded">{v}</span> },
-              { key: 'title', label: 'Risiko', render: (v, r) => <><p className="font-medium">{v}</p><p className="text-xs text-gray-500">{r.project_name}</p></> },
-              { key: 'category', label: 'Kategori', render: v => v || '-' },
-              { key: 'probability', label: 'Probabilitas', render: v => <Badge value={v} colors={PC} /> },
-              { key: 'impact', label: 'Dampak', render: v => <Badge value={v} colors={PC} /> },
-              { key: 'risk_score', label: 'Skor', render: v => { const s = Number(v); return <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${s >= 9 ? 'bg-red-100 text-red-700' : s >= 6 ? 'bg-orange-100 text-orange-700' : s >= 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{v}</span>; } },
-              { key: 'status', label: 'Status', render: v => <Badge value={v} colors={SC} /> },
-              { key: 'owner_name', label: 'Owner', render: v => v || '-' },
+              { key: 'risk_code', label: t('pjm.common.columns.code'), render: v => <span className="font-mono text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded">{v}</span> },
+              { key: 'title', label: t('pjm.common.columns.risk'), render: (v, r) => <><p className="font-medium">{v}</p><p className="text-xs text-gray-500">{r.project_name}</p></> },
+              { key: 'category', label: t('pjm.common.columns.category'), render: v => v || '-' },
+              { key: 'probability', label: t('pjm.modal.probability'), render: v => <Badge value={v} colors={PC} /> },
+              { key: 'impact', label: t('pjm.modal.impact'), render: v => <Badge value={v} colors={PC} /> },
+              { key: 'risk_score', label: t('pjm.common.score'), render: v => { const s = Number(v); return <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${s >= 9 ? 'bg-red-100 text-red-700' : s >= 6 ? 'bg-orange-100 text-orange-700' : s >= 3 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{v}</span>; } },
+              { key: 'status', label: t('pjm.common.columns.status'), render: v => <Badge value={v} colors={SC} /> },
+              { key: 'owner_name', label: t('pjm.common.owner'), render: v => v || '-' },
             ]} data={risks} onDelete="risks" onEdit={true} />
           </div>)}
 
           {activeTab === 'budgets' && (<div className="space-y-5">
             {/* Budget Overview */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <StatCard title="Anggaran Rencana" value={fmtShort(Number(budgets?.summary?.total_planned || 0))} icon={DollarSign} color="bg-blue-500" trend="up" trendValue="Total" />
-              <StatCard title="Terpakai" value={fmtShort(Number(budgets?.summary?.total_actual || 0))} icon={TrendingUp} color="bg-green-500" trend="up" trendValue={`${budgets?.summary?.total_planned ? Math.round(Number(budgets.summary.total_actual || 0) / Number(budgets.summary.total_planned) * 100) : 0}%`} />
-              <StatCard title="Committed" value={fmtShort(Number(budgets?.summary?.total_committed || 0))} icon={ClipboardList} color="bg-orange-500" />
-              <StatCard title="Sisa Anggaran" value={fmtShort(Math.max(0, Number(budgets?.summary?.total_planned || 0) - Number(budgets?.summary?.total_actual || 0)))} icon={Award} color="bg-purple-500" trend={Number(budgets?.summary?.total_planned || 0) > Number(budgets?.summary?.total_actual || 0) ? 'up' : 'down'} trendValue={Number(budgets?.summary?.total_planned || 0) > Number(budgets?.summary?.total_actual || 0) ? 'Under budget' : 'Over budget'} />
+              <StatCard title={t('pjm.common.plannedBudget')} value={fmtShort(Number(budgets?.summary?.total_planned || 0))} icon={DollarSign} color="bg-blue-500" trend="up" trendValue={t('pjm.common.total')} />
+              <StatCard title={t('pjm.common.spent')} value={fmtShort(Number(budgets?.summary?.total_actual || 0))} icon={TrendingUp} color="bg-green-500" trend="up" trendValue={`${budgets?.summary?.total_planned ? Math.round(Number(budgets.summary.total_actual || 0) / Number(budgets.summary.total_planned) * 100) : 0}%`} />
+              <StatCard title={t('pjm.common.chartCommitted')} value={fmtShort(Number(budgets?.summary?.total_committed || 0))} icon={ClipboardList} color="bg-orange-500" />
+              <StatCard title={t('pjm.common.remainingBudget')} value={fmtShort(Math.max(0, Number(budgets?.summary?.total_planned || 0) - Number(budgets?.summary?.total_actual || 0)))} icon={Award} color="bg-purple-500" trend={Number(budgets?.summary?.total_planned || 0) > Number(budgets?.summary?.total_actual || 0) ? 'up' : 'down'} trendValue={Number(budgets?.summary?.total_planned || 0) > Number(budgets?.summary?.total_actual || 0) ? t('pjm.common.underBudget') : t('pjm.common.overBudget')} />
             </div>
             {/* Budget Utilization Bar */}
             {budgets?.summary && (
               <div className="bg-white rounded-xl border p-5">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Utilisasi Anggaran</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">{t('pjm.common.utilization')}</h4>
                 <div className="w-full bg-gray-100 rounded-full h-4 relative overflow-hidden">
                   <div className="h-full bg-green-500 rounded-l-full absolute left-0" style={{ width: `${Math.min(Number(budgets.summary.total_actual || 0) / Number(budgets.summary.total_planned || 1) * 100, 100)}%` }} />
                   <div className="h-full bg-yellow-400/60 rounded-l-full absolute left-0" style={{ width: `${Math.min(Number(budgets.summary.total_committed || 0) / Number(budgets.summary.total_planned || 1) * 100, 100)}%`, opacity: 0.5 }} />
                 </div>
                 <div className="flex justify-between mt-2 text-xs text-gray-500">
-                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> Aktual</span>
-                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400" /> Committed</span>
-                  <span>{Math.round(Number(budgets.summary.total_actual || 0) / Number(budgets.summary.total_planned || 1) * 100)}% terpakai</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> {t('pjm.common.actual')}</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-yellow-400" /> {t('pjm.common.committed')}</span>
+                  <span>{Math.round(Number(budgets.summary.total_actual || 0) / Number(budgets.summary.total_planned || 1) * 100)}% {t('pjm.common.pctUsed')}</span>
                 </div>
               </div>
             )}
-            <Toolbar placeholder="Cari anggaran..." statuses={[]} createLabel="Tambah Anggaran" />
+            <Toolbar placeholder={t('pjm.common.searchBudgets')} statuses={[]} createLabel={t('pjm.common.addBudget')} />
             <DataTable columns={[
-              { key: 'category', label: 'Kategori', render: v => <span className="font-medium capitalize inline-flex items-center gap-1"><span className={`w-2 h-2 rounded-full ${v === 'labor' ? 'bg-blue-500' : v === 'material' ? 'bg-green-500' : v === 'equipment' ? 'bg-orange-500' : 'bg-gray-400'}`} />{v}</span> },
-              { key: 'description', label: 'Deskripsi', render: v => v || '-' },
-              { key: 'project_name', label: 'Proyek' },
-              { key: 'planned_amount', label: 'Rencana', render: v => <span className="font-medium">{fmt(Number(v || 0))}</span> },
-              { key: 'actual_amount', label: 'Aktual', render: v => fmt(Number(v || 0)) },
-              { key: 'committed_amount', label: 'Committed', render: v => fmt(Number(v || 0)) },
-              { key: 'variance', label: 'Varians', render: (_, r) => { const v = Number(r.planned_amount || 0) - Number(r.actual_amount || 0); return <span className={`font-medium ${v >= 0 ? 'text-green-600' : 'text-red-600'}`}>{v >= 0 ? '+' : ''}{fmt(v)}</span>; } },
+              { key: 'category', label: t('pjm.common.columns.category'), render: v => <span className="font-medium capitalize inline-flex items-center gap-1"><span className={`w-2 h-2 rounded-full ${v === 'labor' ? 'bg-blue-500' : v === 'material' ? 'bg-green-500' : v === 'equipment' ? 'bg-orange-500' : 'bg-gray-400'}`} />{typeof v === 'string' ? trEnum(v) : v}</span> },
+              { key: 'description', label: t('pjm.common.columns.description'), render: v => v || '-' },
+              { key: 'project_name', label: t('pjm.common.columns.project') },
+              { key: 'planned_amount', label: t('pjm.common.chartPlanned'), render: v => <span className="font-medium">{fmt(Number(v || 0))}</span> },
+              { key: 'actual_amount', label: t('pjm.common.chartActual'), render: v => fmt(Number(v || 0)) },
+              { key: 'committed_amount', label: t('pjm.common.chartCommitted'), render: v => fmt(Number(v || 0)) },
+              { key: 'variance', label: t('pjm.common.variance'), render: (_, r) => { const v = Number(r.planned_amount || 0) - Number(r.actual_amount || 0); return <span className={`font-medium ${v >= 0 ? 'text-green-600' : 'text-red-600'}`}>{v >= 0 ? '+' : ''}{fmt(v)}</span>; } },
             ]} data={budgets?.rows || []} onDelete="budgets" onEdit={true} />
           </div>)}
 
@@ -990,32 +1023,32 @@ export default function ProjectManagementPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
                 <FileText className="w-5 h-5 mx-auto text-blue-600 mb-1" />
                 <p className="text-xl font-bold text-blue-700">{documents.length}</p>
-                <p className="text-xs text-blue-600">Total Dokumen</p>
+                <p className="text-xs text-blue-600">{t('pjm.common.totalDocuments')}</p>
               </div>
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
                 <Download className="w-5 h-5 mx-auto text-green-600 mb-1" />
                 <p className="text-xl font-bold text-green-700">{documents.filter(d => d.document_type === 'report').length}</p>
-                <p className="text-xs text-green-600">Laporan</p>
+                <p className="text-xs text-green-600">{t('pjm.common.reports')}</p>
               </div>
               <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
                 <ClipboardList className="w-5 h-5 mx-auto text-orange-600 mb-1" />
                 <p className="text-xl font-bold text-orange-700">{documents.filter(d => d.document_type === 'contract').length}</p>
-                <p className="text-xs text-orange-600">Kontrak</p>
+                <p className="text-xs text-orange-600">{t('pjm.common.contracts')}</p>
               </div>
               <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
                 <Calendar className="w-5 h-5 mx-auto text-purple-600 mb-1" />
                 <p className="text-xl font-bold text-purple-700">{documents.filter(d => { const dt = new Date(d.created_at); const now = new Date(); return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear(); }).length}</p>
-                <p className="text-xs text-purple-600">Bulan Ini</p>
+                <p className="text-xs text-purple-600">{t('pjm.common.thisMonth')}</p>
               </div>
             </div>
-            <Toolbar placeholder="Cari dokumen..." statuses={[]} createLabel="Upload Dokumen" />
+            <Toolbar placeholder={t('pjm.common.searchDocuments')} statuses={[]} createLabel={t('pjm.common.uploadDocument')} />
             <DataTable columns={[
-              { key: 'title', label: 'Dokumen', render: (v, r) => <div className="flex items-center gap-2"><div className={`w-8 h-8 rounded-lg flex items-center justify-center ${r.document_type === 'report' ? 'bg-blue-100' : r.document_type === 'contract' ? 'bg-orange-100' : 'bg-gray-100'}`}><FileText className={`w-4 h-4 ${r.document_type === 'report' ? 'text-blue-600' : r.document_type === 'contract' ? 'text-orange-600' : 'text-gray-500'}`} /></div><span className="font-medium">{v}</span></div> },
-              { key: 'document_type', label: 'Tipe', render: v => <span className="capitalize text-xs bg-gray-100 px-2 py-1 rounded">{v || '-'}</span> },
-              { key: 'project_name', label: 'Proyek' },
-              { key: 'version', label: 'Versi', render: v => v ? <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{v}</span> : '-' },
-              { key: 'uploaded_by_name', label: 'Uploader', render: v => v || '-' },
-              { key: 'created_at', label: 'Tanggal', render: v => fD(v) },
+              { key: 'title', label: t('pjm.common.columns.document'), render: (v, r) => <div className="flex items-center gap-2"><div className={`w-8 h-8 rounded-lg flex items-center justify-center ${r.document_type === 'report' ? 'bg-blue-100' : r.document_type === 'contract' ? 'bg-orange-100' : 'bg-gray-100'}`}><FileText className={`w-4 h-4 ${r.document_type === 'report' ? 'text-blue-600' : r.document_type === 'contract' ? 'text-orange-600' : 'text-gray-500'}`} /></div><span className="font-medium">{v}</span></div> },
+              { key: 'document_type', label: t('pjm.common.type'), render: v => <span className="capitalize text-xs bg-gray-100 px-2 py-1 rounded">{v ? trEnum(String(v)) : '-'}</span> },
+              { key: 'project_name', label: t('pjm.common.columns.project') },
+              { key: 'version', label: t('pjm.common.version'), render: v => v ? <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{v}</span> : '-' },
+              { key: 'uploaded_by_name', label: t('pjm.common.uploader'), render: v => v || '-' },
+              { key: 'created_at', label: t('pjm.common.columns.date'), render: v => fD(v) },
             ]} data={documents} onDelete="documents" onEdit={true} />
           </div>)}
 
@@ -1023,18 +1056,18 @@ export default function ProjectManagementPage() {
           {activeTab === 'gantt' && (<div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><GitBranch className="w-5 h-5 text-blue-600" />Gantt Chart & Timeline</h2>
-                <p className="text-xs text-gray-500">Visualisasi proyek, tugas, dan milestone beserta critical path</p>
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><GitBranch className="w-5 h-5 text-blue-600" />{t('pjm.common.ganttTitle')}</h2>
+                <p className="text-xs text-gray-500">{t('pjm.common.ganttSubtitle')}</p>
               </div>
               <div className="flex items-center gap-2">
                 <select className="border rounded-lg px-3 py-2 text-sm" value={selectedProjectId} onChange={e => setSelectedProjectId(e.target.value)}>
-                  <option value="">Semua Proyek</option>
+                  <option value="">{t('pjm.common.allProjects')}</option>
                   {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}
                 </select>
-                <button onClick={() => fetchData('gantt')} className="px-3 py-2 border rounded-lg text-sm flex items-center gap-1 hover:bg-gray-50"><RefreshCw className="w-3.5 h-3.5" />Refresh</button>
+                <button onClick={() => fetchData('gantt')} className="px-3 py-2 border rounded-lg text-sm flex items-center gap-1 hover:bg-gray-50"><RefreshCw className="w-3.5 h-3.5" />{t('pjm.common.refresh')}</button>
                 <button onClick={() => router.push('/hq/project-management/gantt')}
                   className="px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow">
-                  <Zap className="w-3.5 h-3.5" /> Gantt Pro
+                  <Zap className="w-3.5 h-3.5" /> {t('pjm.common.ganttPro')}
                 </button>
               </div>
             </div>
@@ -1047,7 +1080,7 @@ export default function ProjectManagementPage() {
               }))}
               onItemClick={(it) => {
                 if (it.type === 'project') router.push(`/hq/project-management/${it.id}`);
-                else toast(`Tugas: ${it.name}`);
+                else toast(`${t('pjm.common.taskToast')}: ${it.name}`);
               }}
             />
           </div>)}
@@ -1056,11 +1089,11 @@ export default function ProjectManagementPage() {
           {activeTab === 'calendar' && (<div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-5 h-5 text-emerald-600" />Kalender Proyek</h2>
-                <p className="text-xs text-gray-500">Deadline, milestone, dan jadwal penting dalam tampilan kalender</p>
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-5 h-5 text-emerald-600" />{t('pjm.common.calendarTitle')}</h2>
+                <p className="text-xs text-gray-500">{t('pjm.common.calendarSubtitle')}</p>
               </div>
               <select className="border rounded-lg px-3 py-2 text-sm" value={selectedProjectId} onChange={e => setSelectedProjectId(e.target.value)}>
-                <option value="">Semua Proyek</option>
+                <option value="">{t('pjm.common.allProjects')}</option>
                 {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}
               </select>
             </div>
@@ -1079,11 +1112,11 @@ export default function ProjectManagementPage() {
           {activeTab === 'workload' && (<div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Users className="w-5 h-5 text-purple-600" />Team Workload & Kapasitas</h2>
-                <p className="text-xs text-gray-500">Analisis beban kerja tim, deteksi overload dan resource yang idle</p>
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Users className="w-5 h-5 text-purple-600" />{t('pjm.common.workloadTitle')}</h2>
+                <p className="text-xs text-gray-500">{t('pjm.common.workloadSubtitle')}</p>
               </div>
               <select className="border rounded-lg px-3 py-2 text-sm" value={selectedProjectId} onChange={e => setSelectedProjectId(e.target.value)}>
-                <option value="">Semua Proyek</option>
+                <option value="">{t('pjm.common.allProjects')}</option>
                 {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}
               </select>
             </div>
@@ -1103,12 +1136,12 @@ export default function ProjectManagementPage() {
 
           {/* SPRINTS TAB */}
           {activeTab === 'sprints' && (<div className="space-y-4">
-            <Toolbar placeholder="Cari sprint..." statuses={[{v:'planning',l:'Planning'},{v:'active',l:'Active'},{v:'completed',l:'Completed'}]} createLabel="Buat Sprint" />
+            <Toolbar placeholder={t('pjm.common.searchSprints')} statuses={[{v:'planning',l:trEnum('planning')},{v:'active',l:trEnum('active')},{v:'completed',l:trEnum('completed')}]} createLabel={t('pjm.common.createSprint')} />
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {sprints.length === 0 && (
                 <div className="col-span-full bg-white border-2 border-dashed rounded-xl p-12 text-center">
                   <Rocket className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-sm text-gray-500">Belum ada sprint. Klik "Buat Sprint" untuk mulai.</p>
+                  <p className="text-sm text-gray-500">{t('pjm.common.sprintEmpty')}</p>
                 </div>
               )}
               {sprints.map((sp: any) => {
@@ -1132,11 +1165,11 @@ export default function ProjectManagementPage() {
                     {sp.goal && <p className="text-xs text-gray-600 mb-3 line-clamp-2">{sp.goal}</p>}
                     <div className="space-y-2 text-xs">
                       <div className="flex justify-between text-gray-500">
-                        <span>Periode:</span>
+                        <span>{t('pjm.sprint.period')}:</span>
                         <span>{fD(sp.start_date)} — {fD(sp.end_date)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-500">Progress:</span>
+                        <span className="text-gray-500">{t('pjm.sprint.progress')}:</span>
                         <span className="font-semibold">{sp.completed_tasks || 0}/{sp.total_tasks || 0} ({completion.toFixed(0)}%)</span>
                       </div>
                       <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
@@ -1144,7 +1177,7 @@ export default function ProjectManagementPage() {
                       </div>
                       {sp.status === 'active' && (
                         <p className={`mt-2 text-xs font-medium ${daysRemaining < 3 ? 'text-red-600' : 'text-blue-600'}`}>
-                          {daysRemaining > 0 ? `${daysRemaining} hari tersisa` : daysRemaining === 0 ? 'Hari terakhir' : 'Sprint berakhir'}
+                          {daysRemaining > 0 ? t('pjm.sprint.daysLeft', { n: daysRemaining }) : daysRemaining === 0 ? t('pjm.sprint.lastDay') : t('pjm.sprint.ended')}
                         </p>
                       )}
                     </div>
@@ -1158,18 +1191,18 @@ export default function ProjectManagementPage() {
           {activeTab === 'evm' && (<div className="space-y-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Activity className="w-5 h-5 text-indigo-600" />Earned Value Management</h2>
-                <p className="text-xs text-gray-500">Analisis kinerja biaya dan jadwal proyek (PV, EV, AC, SPI, CPI, EAC)</p>
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Activity className="w-5 h-5 text-indigo-600" />{t('pjm.common.evmTitle')}</h2>
+                <p className="text-xs text-gray-500">{t('pjm.common.evmSubtitle')}</p>
               </div>
               <select className="border rounded-lg px-3 py-2 text-sm" value={selectedProjectId} onChange={e => setSelectedProjectId(e.target.value)}>
-                <option value="">Pilih Proyek untuk analisis</option>
+                <option value="">{t('pjm.common.selectProjectAnalysis')}</option>
                 {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}
               </select>
             </div>
             {!selectedProjectId && (
               <div className="bg-white border-2 border-dashed rounded-xl p-12 text-center">
                 <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-sm text-gray-500">Pilih proyek di atas untuk menampilkan analisis EVM.</p>
+                <p className="text-sm text-gray-500">{t('pjm.common.selectProjectEvm')}</p>
               </div>
             )}
             {selectedProjectId && evmData && (
@@ -1182,7 +1215,7 @@ export default function ProjectManagementPage() {
               }} />
             )}
             {selectedProjectId && !evmData && !loading && (
-              <div className="bg-white border rounded-xl p-8 text-center text-sm text-gray-500">Data EVM belum tersedia untuk proyek ini.</div>
+              <div className="bg-white border rounded-xl p-8 text-center text-sm text-gray-500">{t('pjm.common.evmNotAvailable')}</div>
             )}
           </div>)}
         </>)}
@@ -1205,8 +1238,8 @@ export default function ProjectManagementPage() {
                    <FileText className="w-5 h-5 text-blue-600" />}
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Buat {tabs.find(t => t.id === activeTab)?.name || ''} Baru</h3>
-                  <p className="text-xs text-gray-500">Isi form di bawah untuk menambahkan data baru</p>
+                  <h3 className="text-lg font-semibold text-gray-900">{t('pjm.modal.createNew', { name: tabs.find(tab => tab.id === activeTab)?.name || '' })}</h3>
+                  <p className="text-xs text-gray-500">{t('pjm.modal.createHint')}</p>
                 </div>
               </div>
             </div>
@@ -1243,7 +1276,7 @@ export default function ProjectManagementPage() {
                 </div>
               </>)}
               {(activeTab === 'tasks') && (<>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">{t('pjm.modal.selectProject')}</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Tugas <span className="text-red-500">*</span></label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Masukkan nama tugas" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Assignee (HRIS)</label>
@@ -1262,13 +1295,13 @@ export default function ProjectManagementPage() {
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Estimasi Jam</label><input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="0" value={form.estimatedHours || ''} onChange={e => setForm({ ...form, estimatedHours: e.target.value })} /></div>
               </>)}
               {(activeTab === 'milestones') && (<>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">{t('pjm.modal.selectProject')}</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Milestone <span className="text-red-500">*</span></label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Masukkan nama milestone" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Deadline</label><input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.dueDate || ''} onChange={e => setForm({ ...form, dueDate: e.target.value })} /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Deskripsi</label><textarea className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" rows={3} placeholder="Deskripsi milestone" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
               </>)}
               {(activeTab === 'timesheets') && (<>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">{t('pjm.modal.selectProject')}</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Karyawan (HRIS) <span className="text-red-500">*</span></label>
                   <EmployeePicker value={form.hrisEmployeeId} nameValue={form.employeeName}
@@ -1286,7 +1319,7 @@ export default function ProjectManagementPage() {
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Deskripsi Aktivitas</label><textarea className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" rows={2} placeholder="Apa yang dikerjakan?" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
               </>)}
               {(activeTab === 'risks') && (<>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">{t('pjm.modal.selectProject')}</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Judul Risiko <span className="text-red-500">*</span></label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Judul risiko" value={form.title || ''} onChange={e => setForm({ ...form, title: e.target.value })} /></div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Probabilitas</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.probability || 'medium'} onChange={e => setForm({ ...form, probability: e.target.value })}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="very_high">Very High</option></select></div>
@@ -1301,7 +1334,7 @@ export default function ProjectManagementPage() {
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Rencana Mitigasi</label><textarea className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" rows={3} placeholder="Langkah mitigasi risiko" value={form.mitigationPlan || ''} onChange={e => setForm({ ...form, mitigationPlan: e.target.value })} /></div>
               </>)}
               {(activeTab === 'resources') && (<>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">{t('pjm.modal.selectProject')}</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tipe Resource <span className="text-red-500">*</span></label>
                   <select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.resourceType || 'human'} onChange={e => setForm({ ...form, resourceType: e.target.value, hrisEmployeeId: null, fleetVehicleId: null, inventoryItemId: null, resourceName: '' })}>
                     <option value="human">Karyawan (HRIS)</option>
@@ -1345,7 +1378,7 @@ export default function ProjectManagementPage() {
                 </div>
               </>)}
               {(activeTab === 'budgets') && (<>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">{t('pjm.modal.selectProject')}</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Kategori <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.category || ''} onChange={e => setForm({ ...form, category: e.target.value })}><option value="">Pilih Kategori</option><option value="labor">Labor</option><option value="material">Material</option><option value="equipment">Equipment</option><option value="travel">Travel</option><option value="overhead">Overhead</option><option value="contingency">Contingency</option></select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Jumlah Rencana (Rp)</label><input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="0" value={form.plannedAmount || ''} onChange={e => setForm({ ...form, plannedAmount: e.target.value })} /></div>
                 <div>
@@ -1357,7 +1390,7 @@ export default function ProjectManagementPage() {
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Deskripsi</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Deskripsi anggaran" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
               </>)}
               {(activeTab === 'sprints') && (<>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">{t('pjm.modal.selectProject')}</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Sprint <span className="text-red-500">*</span></label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. Sprint 1 - Auth Module" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Goal Sprint</label><textarea className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" rows={2} placeholder="Apa target utama sprint ini?" value={form.goal || ''} onChange={e => setForm({ ...form, goal: e.target.value })} /></div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1367,7 +1400,7 @@ export default function ProjectManagementPage() {
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Kapasitas (Story Points)</label><input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. 40" value={form.capacity || ''} onChange={e => setForm({ ...form, capacity: e.target.value })} /></div>
               </>)}
               {(activeTab === 'documents') && (<>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">{t('pjm.modal.selectProject')}</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Judul Dokumen <span className="text-red-500">*</span></label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Judul dokumen" value={form.title || ''} onChange={e => setForm({ ...form, title: e.target.value })} /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tipe Dokumen</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.documentType || ''} onChange={e => setForm({ ...form, documentType: e.target.value })}><option value="">Pilih Tipe</option><option value="report">Report</option><option value="contract">Contract</option><option value="proposal">Proposal</option><option value="minutes">Minutes</option><option value="specification">Specification</option><option value="other">Other</option></select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">URL File</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="https://..." value={form.fileUrl || ''} onChange={e => setForm({ ...form, fileUrl: e.target.value })} /></div>
@@ -1375,9 +1408,9 @@ export default function ProjectManagementPage() {
               </>)}
             </div>
             <div className="p-6 border-t flex justify-end gap-3 bg-gray-50 rounded-b-2xl">
-              <button onClick={() => setShowCreateModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">Batal</button>
+              <button onClick={() => setShowCreateModal(false)} className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">{t('pjm.common.cancel')}</button>
               <button onClick={handleCreate} disabled={saving} className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 shadow-sm transition">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Simpan
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} {t('pjm.common.save')}
               </button>
             </div>
           </div>
@@ -1394,8 +1427,8 @@ export default function ProjectManagementPage() {
                   <Edit3 className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Edit {tabs.find(t => t.id === activeTab)?.name || ''}</h3>
-                  <p className="text-xs text-gray-500">Ubah data yang ingin diperbarui</p>
+                  <h3 className="text-lg font-semibold text-gray-900">{t('pjm.modal.edit', { name: tabs.find(tab => tab.id === activeTab)?.name || '' })}</h3>
+                  <p className="text-xs text-gray-500">{t('pjm.modal.editHint')}</p>
                 </div>
               </div>
             </div>
@@ -1489,9 +1522,9 @@ export default function ProjectManagementPage() {
               </>)}
             </div>
             <div className="p-6 border-t flex justify-end gap-3 bg-gray-50 rounded-b-2xl">
-              <button onClick={() => { setShowEditModal(false); setEditingItem(null); }} className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">Batal</button>
+              <button onClick={() => { setShowEditModal(false); setEditingItem(null); }} className="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">{t('pjm.common.cancel')}</button>
               <button onClick={handleUpdate} disabled={saving} className="px-5 py-2.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2 shadow-sm transition">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Update
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} {t('pjm.common.update')}
               </button>
             </div>
           </div>

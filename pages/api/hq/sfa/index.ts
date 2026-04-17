@@ -466,10 +466,12 @@ async function getVisits(req: NextApiRequest, res: NextApiResponse, tenantId: st
 
   const visits = await q(`
     SELECT v.*,
+      u.name AS salesperson_name,
       (SELECT ct.id::text FROM crm_tasks ct
         WHERE ct.tenant_id = v.tenant_id AND ct.sfa_visit_id = v.id
         ORDER BY ct.created_at DESC NULLS LAST LIMIT 1) AS linked_crm_task_id
     FROM sfa_visits v
+    LEFT JOIN users u ON u.id = v.salesperson_id
     ${where}
     ORDER BY v.visit_date DESC, v.check_in_time DESC NULLS LAST
     LIMIT 200`, params);

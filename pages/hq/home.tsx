@@ -12,6 +12,7 @@ import {
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useTranslation } from '@/lib/i18n';
+import { rowsOr, MOCK_HQ_MODULE_STATUSES } from '@/lib/hq/mock-data';
 
 // ─── Module Registry ───
 interface ModuleInfo {
@@ -101,7 +102,7 @@ function UnifiedDashboardContent() {
   const { t, language: currentLang, formatCurrency } = useTranslation();
   const dateLocale = currentLang === 'ja' ? 'ja-JP' : currentLang === 'en' ? 'en-US' : 'id-ID';
   const [mounted, setMounted] = useState(false);
-  const [moduleStatuses, setModuleStatuses] = useState<ModuleStatus[]>([]);
+  const [moduleStatuses, setModuleStatuses] = useState<ModuleStatus[]>(MOCK_HQ_MODULE_STATUSES);
   const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -133,10 +134,11 @@ function UnifiedDashboardContent() {
       if (modRes.ok) {
         const modJson = await modRes.json();
         const modules = modJson.data?.modules || modJson.modules || [];
-        setModuleStatuses(modules.map((m: any) => ({ code: m.code, isEnabled: m.isEnabled, isCore: m.isCore })));
+        const mapped = modules.map((m: any) => ({ code: m.code, isEnabled: m.isEnabled, isCore: m.isCore }));
+        setModuleStatuses(rowsOr(mapped, MOCK_HQ_MODULE_STATUSES));
       }
     } catch {
-      setModuleStatuses(MODULE_REGISTRY.map(m => ({ code: m.code, isEnabled: true, isCore: false })));
+      setModuleStatuses(MOCK_HQ_MODULE_STATUSES);
     }
     try {
       const dashRes = await fetch('/api/hq/dashboard?period=today');

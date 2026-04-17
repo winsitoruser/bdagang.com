@@ -8,6 +8,7 @@ import {
   Building2, DollarSign, Package, Star, Calendar, FileText, CheckCircle, AlertTriangle,
   Clock, Download
 } from 'lucide-react';
+import { rowsOr, MOCK_HQ_SUPPLIERS } from '@/lib/hq/mock-data';
 
 interface Supplier {
   id: string;
@@ -33,7 +34,7 @@ interface Supplier {
 
 export default function Suppliers() {
   const [mounted, setMounted] = useState(false);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>(MOCK_HQ_SUPPLIERS as Supplier[]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -70,7 +71,7 @@ export default function Suppliers() {
       const response = await fetch('/api/hq/suppliers');
       if (response.ok) {
         const data = await response.json();
-        setSuppliers(data.suppliers || []);
+        setSuppliers(rowsOr(data.suppliers, MOCK_HQ_SUPPLIERS as Supplier[]));
       }
     } catch (error) {
       console.error('Error fetching suppliers:', error);

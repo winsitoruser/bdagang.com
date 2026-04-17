@@ -24,7 +24,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   LineChart, Line, PieChart, Pie, Cell, ComposedChart,
 } from 'recharts';
-import { Activity, Award, Trophy, Crown, Globe, MapPin, UsersRound, Info, Zap, Link2, ShieldCheck, Settings as SettingsIcon } from 'lucide-react';
+import { Activity, Award, Trophy, Crown, Globe, MapPin, Info, Zap, Link2, ShieldCheck, Settings as SettingsIcon } from 'lucide-react';
 import SalespersonPicker, { SalespersonOption } from './SalespersonPicker';
 
 type Props = {
@@ -1904,7 +1904,7 @@ export default function SalesManagementModule({ fmtCur, fmtDate, fmtNum, t, canM
                   </Card>
                 ))}
                 {scorecards.length === 0 && (
-                  <Card><EmptyState icon={UsersRound} title="Belum ada data sales" subtitle="Pilih filter atau tambahkan sales entries." /></Card>
+                  <Card><EmptyState icon={Users} title="Belum ada data sales" subtitle="Pilih filter atau tambahkan sales entries." /></Card>
                 )}
               </div>
             </>
@@ -1955,7 +1955,7 @@ export default function SalesManagementModule({ fmtCur, fmtDate, fmtNum, t, canM
 
                     <Card className="p-5">
                       <div className="flex items-center gap-2 mb-3">
-                        <UsersRound className="w-5 h-5 text-emerald-600" />
+                        <Users className="w-5 h-5 text-emerald-600" />
                         <h3 className="text-sm font-bold text-gray-900">Outlet Baru vs Repeat</h3>
                       </div>
                       <ResponsiveContainer width="100%" height={200}>

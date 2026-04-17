@@ -25,6 +25,7 @@ import {
   Building2,
   Copy
 } from 'lucide-react';
+import { rowsOr, MOCK_HQ_PRODUCTS } from '@/lib/hq/mock-data';
 
 interface Product {
   id: number;
@@ -54,24 +55,13 @@ interface Product {
   createdAt: string;
 }
 
-const MOCK_PRODUCTS: Product[] = [
-  { id: 1, sku: 'SKU-KAG-001', name: 'Kopi Arabica Gayo 1kg', description: 'Biji kopi arabica premium dari Gayo', categoryId: 1, categoryName: 'Bahan Baku', basePrice: 185000, costPrice: 150000, isActive: true, imageUrl: null, unit: 'kg', stock: 850, minStock: 100, pricing: { isStandard: true, lockedBy: null, lockedAt: null, branchPrices: [] }, createdAt: '2025-01-15' },
-  { id: 2, sku: 'SKU-GP-001', name: 'Gula Pasir Premium 1kg', description: 'Gula pasir halus berkualitas', categoryId: 1, categoryName: 'Bahan Baku', basePrice: 18000, costPrice: 15000, isActive: true, imageUrl: null, unit: 'kg', stock: 1200, minStock: 200, pricing: { isStandard: true, lockedBy: null, lockedAt: null, branchPrices: [] }, createdAt: '2025-01-15' },
-  { id: 3, sku: 'SKU-CP16-001', name: 'Cup Plastik 16oz (1000pcs)', description: 'Cup plastik untuk minuman dingin', categoryId: 2, categoryName: 'Packaging', basePrice: 175000, costPrice: 150000, isActive: true, imageUrl: null, unit: 'box', stock: 45, minStock: 20, pricing: { isStandard: true, lockedBy: null, lockedAt: null, branchPrices: [] }, createdAt: '2025-02-01' },
-  { id: 4, sku: 'SKU-SFC-001', name: 'Susu Full Cream 1L', description: 'Susu segar full cream', categoryId: 1, categoryName: 'Bahan Baku', basePrice: 22000, costPrice: 20000, isActive: true, imageUrl: null, unit: 'liter', stock: 680, minStock: 100, pricing: { isStandard: false, lockedBy: 'Ahmad Wijaya', lockedAt: '2026-01-10', branchPrices: [{ branchId: 'b2', branchName: 'Cabang Bandung', price: 21000, priceTier: null }] }, createdAt: '2025-02-10' },
-  { id: 5, sku: 'SKU-SV-001', name: 'Sirup Vanila 750ml', description: 'Sirup vanila untuk campuran kopi', categoryId: 1, categoryName: 'Bahan Baku', basePrice: 125000, costPrice: 100000, isActive: true, imageUrl: null, unit: 'botol', stock: 320, minStock: 50, pricing: { isStandard: true, lockedBy: null, lockedAt: null, branchPrices: [] }, createdAt: '2025-03-01' },
-  { id: 6, sku: 'SKU-TB-001', name: 'Teh Celup Premium (25pcs)', description: 'Teh celup premium', categoryId: 3, categoryName: 'Minuman', basePrice: 35000, costPrice: 25000, isActive: true, imageUrl: null, unit: 'box', stock: 450, minStock: 80, pricing: { isStandard: true, lockedBy: null, lockedAt: null, branchPrices: [] }, createdAt: '2025-03-15' },
-  { id: 7, sku: 'SKU-CK-001', name: 'Cookies Coklat (12pcs)', description: 'Cookies coklat homemade', categoryId: 4, categoryName: 'Makanan', basePrice: 45000, costPrice: 30000, isActive: true, imageUrl: null, unit: 'pack', stock: 180, minStock: 30, pricing: { isStandard: true, lockedBy: null, lockedAt: null, branchPrices: [] }, createdAt: '2025-04-01' },
-  { id: 8, sku: 'SKU-SD-001', name: 'Sedotan Kertas (500pcs)', description: 'Sedotan ramah lingkungan', categoryId: 2, categoryName: 'Packaging', basePrice: 85000, costPrice: 70000, isActive: false, imageUrl: null, unit: 'box', stock: 0, minStock: 10, pricing: { isStandard: true, lockedBy: null, lockedAt: null, branchPrices: [] }, createdAt: '2025-04-15' },
-];
-
 export default function ProductManagement() {
   const [mounted, setMounted] = useState(false);
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>(MOCK_HQ_PRODUCTS as Product[]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState((MOCK_HQ_PRODUCTS as Product[]).length);
   
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -101,12 +91,17 @@ export default function ProductManagement() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        if (payload.products) setProducts(payload.products);
-        if (payload.total) setTotal(payload.total);
+        if (payload.products) {
+          setProducts(rowsOr(payload.products, MOCK_HQ_PRODUCTS as Product[]));
+          setTotal(payload.total && payload.total > 0 ? payload.total : (MOCK_HQ_PRODUCTS as Product[]).length);
+        } else {
+          setProducts(MOCK_HQ_PRODUCTS as Product[]);
+          setTotal((MOCK_HQ_PRODUCTS as Product[]).length);
+        }
       }
     } catch (error) {
       console.error('Error fetching products:', error);
-      setProducts(MOCK_PRODUCTS); setTotal(MOCK_PRODUCTS.length);
+      setProducts(MOCK_HQ_PRODUCTS as Product[]); setTotal((MOCK_HQ_PRODUCTS as Product[]).length);
     } finally {
       setLoading(false);
     }

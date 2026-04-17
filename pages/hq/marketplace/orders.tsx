@@ -8,6 +8,7 @@ import {
   Ban, CheckCircle2, ArrowUpDown, ExternalLink, MapPin, User, CreditCard
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { rowsOr, MOCK_MP_ORDERS, MOCK_MP_CHANNELS } from '@/lib/hq/mock-data';
 
 const api = async (action: string, method = 'GET', body?: any, params?: Record<string, string>) => {
   const url = new URL('/api/hq/marketplace', window.location.origin);
@@ -47,13 +48,13 @@ const PLATFORMS: Record<string, { name: string; icon: string; color: string }> =
 function OrdersContent() {
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'orders' | 'shipping' | 'cancellation'>('orders');
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>(MOCK_MP_ORDERS);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [platformFilter, setPlatformFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [pulling, setPulling] = useState(false);
-  const [channels, setChannels] = useState<any[]>([]);
+  const [channels, setChannels] = useState<any[]>(MOCK_MP_CHANNELS);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [orderDetail, setOrderDetail] = useState<any>(null);
   const [financeBreakdown, setFinanceBreakdown] = useState<any>(null);
@@ -65,14 +66,15 @@ function OrdersContent() {
       const params: Record<string, string> = {};
       if (statusFilter) params.status = statusFilter;
       const json = await api('orders', 'GET', null, params);
-      setOrders(json.orders || []);
+      setOrders(rowsOr(json.orders, MOCK_MP_ORDERS));
     } catch { } finally { setLoading(false); }
   }, [statusFilter]);
 
   const fetchChannels = useCallback(async () => {
     try {
       const json = await api('dashboard');
-      setChannels((json.data?.channels || []).filter((c: any) => c.status === 'connected'));
+      const ch = (json.data?.channels || []).filter((c: any) => c.status === 'connected');
+      setChannels(rowsOr(ch, MOCK_MP_CHANNELS));
     } catch { }
   }, []);
 

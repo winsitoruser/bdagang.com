@@ -9,6 +9,7 @@ import {
   CheckCircle2, XCircle, Wifi, WifiOff, Zap, Shield, FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { rowsOr, MOCK_HQ_MARKETPLACE_HOME, MOCK_HQ_MARKETPLACE_CONFLICTS } from '@/lib/hq/mock-data';
 
 // ═══════════════════════════════════════════════
 // TYPES & HELPERS
@@ -42,29 +43,40 @@ function formatRp(n: number): string { return `Rp ${(n || 0).toLocaleString('id-
 function MarketplaceDashboardContent() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [channels, setChannels] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>({ totalChannels: 6, connectedChannels: 0, totalProductsSynced: 0, totalOrdersToday: 0, totalRevenue: 0, pendingOrders: 0 });
-  const [setupSteps, setSetupSteps] = useState<any[]>([]);
-  const [syncHistory, setSyncHistory] = useState<any[]>([]);
-  const [activeJobs, setActiveJobs] = useState<any[]>([]);
-  const [conflicts, setConflicts] = useState<any>({ summary: { price: 0, stock: 0, sync: 0 } });
+  const [channels, setChannels] = useState<any[]>(MOCK_HQ_MARKETPLACE_HOME.channels);
+  const [stats, setStats] = useState<any>(MOCK_HQ_MARKETPLACE_HOME.stats);
+  const [setupSteps, setSetupSteps] = useState<any[]>(MOCK_HQ_MARKETPLACE_HOME.setupSteps);
+  const [syncHistory, setSyncHistory] = useState<any[]>(MOCK_HQ_MARKETPLACE_HOME.syncHistory);
+  const [activeJobs, setActiveJobs] = useState<any[]>(MOCK_HQ_MARKETPLACE_HOME.activeJobs);
+  const [conflicts, setConflicts] = useState<any>(MOCK_HQ_MARKETPLACE_CONFLICTS);
 
   const fetchDashboard = useCallback(async () => {
+    const M = MOCK_HQ_MARKETPLACE_HOME;
     try {
       setLoading(true);
       const [dashJson, conflictJson] = await Promise.all([
         api('dashboard'),
         api('conflicts'),
       ]);
-      const d = dashJson.data;
-      setChannels(d.channels || []);
-      setStats(d.stats || {});
-      setSetupSteps(d.setupSteps || []);
-      setSyncHistory(d.syncHistory || []);
-      setActiveJobs(d.activeJobs || []);
-      setConflicts(conflictJson);
+      const d = dashJson.data || {};
+      setChannels(rowsOr(d.channels, M.channels));
+      setStats({ ...M.stats, ...(d.stats && typeof d.stats === 'object' ? d.stats : {}) });
+      setSetupSteps(rowsOr(d.setupSteps, M.setupSteps));
+      setSyncHistory(rowsOr(d.syncHistory, M.syncHistory));
+      setActiveJobs(rowsOr(d.activeJobs, M.activeJobs));
+      setConflicts(
+        conflictJson && typeof conflictJson === 'object' && conflictJson.summary
+          ? conflictJson
+          : MOCK_HQ_MARKETPLACE_CONFLICTS
+      );
     } catch (e: any) {
       console.error('Dashboard fetch error:', e.message);
+      setChannels(M.channels);
+      setStats(M.stats);
+      setSetupSteps(M.setupSteps);
+      setSyncHistory(M.syncHistory);
+      setActiveJobs(M.activeJobs);
+      setConflicts(MOCK_HQ_MARKETPLACE_CONFLICTS);
     } finally { setLoading(false); }
   }, []);
 

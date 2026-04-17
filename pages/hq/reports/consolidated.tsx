@@ -31,6 +31,7 @@ import {
   PolarRadiusAxis,
   Radar
 } from 'recharts';
+import { rowsOr, MOCK_REPORTS_CONSOLIDATED } from '@/lib/hq/mock-data';
 
 interface ConsolidatedData {
   period: string;
@@ -95,9 +96,9 @@ export default function ConsolidatedReport() {
   const [crossModuleKPIs, setCrossModuleKPIs] = useState<any>(null);
   const [trendData, setTrendData] = useState<any>(null);
   const [executiveSummary, setExecutiveSummary] = useState<any>(null);
-  const [moduleHealth, setModuleHealth] = useState<any[]>([]);
-  const [chartTrendData, setChartTrendData] = useState<any[]>([]);
-  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [moduleHealth, setModuleHealth] = useState<any[]>(MOCK_REPORTS_CONSOLIDATED.moduleHealth);
+  const [chartTrendData, setChartTrendData] = useState<any[]>(MOCK_REPORTS_CONSOLIDATED.chartTrendData);
+  const [categoryData, setCategoryData] = useState<any[]>(MOCK_REPORTS_CONSOLIDATED.categoryData);
 
   const fetchData = async () => {
     setLoading(true);
@@ -126,9 +127,9 @@ export default function ConsolidatedReport() {
           stockValue: m.stockValue || 0,
           lowStockAlerts: m.lowStockAlerts || 0,
         });
-        setBranchPerformance(payload.branchPerformance || []);
-        setChartTrendData(payload.chartTrendData || []);
-        setCategoryData(payload.categoryData || []);
+        setBranchPerformance(rowsOr(payload.branchPerformance, MOCK_BRANCH_PERF));
+        setChartTrendData(rowsOr(payload.chartTrendData, MOCK_REPORTS_CONSOLIDATED.chartTrendData));
+        setCategoryData(rowsOr(payload.categoryData, MOCK_REPORTS_CONSOLIDATED.categoryData));
       } else {
         setData(MOCK_CONSOLIDATED);
         setBranchPerformance(MOCK_BRANCH_PERF);
@@ -163,7 +164,7 @@ export default function ConsolidatedReport() {
   const fetchHealth = async () => {
     try {
       const res = await fetch('/api/hq/reports/enhanced?action=module-health');
-      if (res.ok) { const d = await res.json(); setModuleHealth(d.data || []); }
+      if (res.ok) { const d = await res.json(); setModuleHealth(rowsOr(d.data, MOCK_REPORTS_CONSOLIDATED.moduleHealth)); }
     } catch (e) { console.error('Health fetch error:', e); }
   };
 

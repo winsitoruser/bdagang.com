@@ -35,6 +35,15 @@ import {
   Legend,
   ComposedChart,
 } from 'recharts';
+import {
+  rowsOr,
+  MOCK_REPORTS_SALES_SUMMARY,
+  MOCK_REPORTS_SALES_BRANCH,
+  MOCK_REPORTS_SALES_TOP_PRODUCTS,
+  MOCK_REPORTS_SALES_DAILY,
+  MOCK_REPORTS_SALES_HOURLY,
+  MOCK_REPORTS_SALES_PAYMENT,
+} from '@/lib/hq/mock-data';
 
 interface BranchSales {
   branchId: string;
@@ -112,12 +121,12 @@ export default function SalesReport() {
   const [branchFilter, setBranchFilter] = useState<string>('all');
   const [searchProduct, setSearchProduct] = useState('');
 
-  const [summary, setSummary] = useState<SalesSummary | null>(null);
-  const [branchSales, setBranchSales] = useState<BranchSales[]>([]);
-  const [topProducts, setTopProducts] = useState<ProductSales[]>([]);
-  const [dailySales, setDailySales] = useState<DailySales[]>([]);
-  const [hourlySales, setHourlySales] = useState<HourlySales[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSales[]>([]);
+  const [summary, setSummary] = useState<SalesSummary | null>(MOCK_REPORTS_SALES_SUMMARY);
+  const [branchSales, setBranchSales] = useState<BranchSales[]>(MOCK_REPORTS_SALES_BRANCH);
+  const [topProducts, setTopProducts] = useState<ProductSales[]>(MOCK_REPORTS_SALES_TOP_PRODUCTS);
+  const [dailySales, setDailySales] = useState<DailySales[]>(MOCK_REPORTS_SALES_DAILY);
+  const [hourlySales, setHourlySales] = useState<HourlySales[]>(MOCK_REPORTS_SALES_HOURLY);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodSales[]>(MOCK_REPORTS_SALES_PAYMENT);
 
   const fetchSalesData = async () => {
     setLoading(true);
@@ -133,18 +142,31 @@ export default function SalesReport() {
       if (res.ok) {
         const json = await res.json();
         const d = json.data || json;
-        setSummary(d.summary || null);
-        setBranchSales(d.branchSales || []);
-        setTopProducts(d.topProducts || []);
-        setDailySales(d.dailySales || []);
-        setHourlySales(d.hourlySales || []);
-        setPaymentMethods(d.paymentMethods || []);
+        const s = d.summary;
+        setSummary(s && (s.totalSales > 0 || s.totalTransactions > 0) ? s : MOCK_REPORTS_SALES_SUMMARY);
+        setBranchSales(rowsOr(d.branchSales, MOCK_REPORTS_SALES_BRANCH));
+        setTopProducts(rowsOr(d.topProducts, MOCK_REPORTS_SALES_TOP_PRODUCTS));
+        setDailySales(rowsOr(d.dailySales, MOCK_REPORTS_SALES_DAILY));
+        setHourlySales(rowsOr(d.hourlySales, MOCK_REPORTS_SALES_HOURLY));
+        setPaymentMethods(rowsOr(d.paymentMethods, MOCK_REPORTS_SALES_PAYMENT));
       } else {
-        toast.error('Gagal memuat data penjualan');
+        setSummary(MOCK_REPORTS_SALES_SUMMARY);
+        setBranchSales(MOCK_REPORTS_SALES_BRANCH);
+        setTopProducts(MOCK_REPORTS_SALES_TOP_PRODUCTS);
+        setDailySales(MOCK_REPORTS_SALES_DAILY);
+        setHourlySales(MOCK_REPORTS_SALES_HOURLY);
+        setPaymentMethods(MOCK_REPORTS_SALES_PAYMENT);
+        toast.error('Gagal memuat data penjualan — menampilkan data demo');
       }
     } catch (error) {
       console.error('Error fetching sales data:', error);
-      toast.error('Koneksi gagal saat memuat data');
+      setSummary(MOCK_REPORTS_SALES_SUMMARY);
+      setBranchSales(MOCK_REPORTS_SALES_BRANCH);
+      setTopProducts(MOCK_REPORTS_SALES_TOP_PRODUCTS);
+      setDailySales(MOCK_REPORTS_SALES_DAILY);
+      setHourlySales(MOCK_REPORTS_SALES_HOURLY);
+      setPaymentMethods(MOCK_REPORTS_SALES_PAYMENT);
+      toast.error('Koneksi gagal — menampilkan data demo');
     } finally {
       setLoading(false);
     }

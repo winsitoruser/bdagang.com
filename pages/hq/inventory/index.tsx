@@ -11,6 +11,7 @@ import {
   Settings, ChevronRight, Target, Activity, Layers, Zap, Thermometer, RotateCcw
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { rowsOr, MOCK_HQ_BRANCHES } from '@/lib/hq/mock-data';
 
 const INDUSTRY_OPTIONS = [
   { value: 'general', label: 'Umum' }, { value: 'fnb', label: 'F&B' },
@@ -107,7 +108,7 @@ export default function HQInventoryDashboard() {
   const [activities, setActivities] = useState<RecentActivity[]>(MOCK_INV_ACTIVITIES);
   const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('week');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [branches, setBranches] = useState([]);
+  const [branches, setBranches] = useState<any[]>(MOCK_HQ_BRANCHES);
   const [industry, setIndustry] = useState('general');
   const [subTab, setSubTab] = useState<'overview' | 'kpis' | 'forecast' | 'abc'>('overview');
   const [industryKpis, setIndustryKpis] = useState<any[]>([]);
@@ -175,7 +176,7 @@ export default function HQInventoryDashboard() {
       if (branchesRes.ok) {
         const branchJson = await branchesRes.json();
         const branchPayload = branchJson.data || branchJson;
-        setBranches(branchPayload.branches || []);
+        setBranches(rowsOr(branchPayload.branches, MOCK_HQ_BRANCHES));
       }
 
       if (enhancedRes.ok) {

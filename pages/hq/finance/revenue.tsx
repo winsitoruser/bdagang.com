@@ -28,6 +28,7 @@ import {
   Target
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { rowsOr, MOCK_HQ_BRANCHES, MOCK_HQ_ACCOUNTS, MOCK_HQ_HOURLY_REVENUE } from '@/lib/hq/mock-data';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
@@ -120,11 +121,11 @@ export default function RevenueAnalysis() {
   const [revenueData, setRevenueData] = useState<RevenueData>(MOCK_REV_DATA);
   const [branchRevenue, setBranchRevenue] = useState<BranchRevenue[]>(MOCK_BRANCH_REV);
   const [productRevenue, setProductRevenue] = useState<ProductRevenue[]>(MOCK_PRODUCT_REV);
-  const [hourlyRevenue, setHourlyRevenue] = useState<HourlyRevenue[]>([]);
+  const [hourlyRevenue, setHourlyRevenue] = useState<HourlyRevenue[]>(MOCK_HQ_HOURLY_REVENUE);
   const [viewMode, setViewMode] = useState<'branch' | 'product' | 'time'>('branch');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [branches, setBranches] = useState([]);
-  const [accounts, setAccounts] = useState([]);
+  const [branches, setBranches] = useState<any[]>(MOCK_HQ_BRANCHES);
+  const [accounts, setAccounts] = useState<any[]>(MOCK_HQ_ACCOUNTS);
   
   useEffect(() => {
     const fetchBranchesAndAccounts = async () => {
@@ -137,13 +138,13 @@ export default function RevenueAnalysis() {
         if (branchRes.ok) {
           const branchJson = await branchRes.json();
           const branchPayload = branchJson.data || branchJson;
-          setBranches(branchPayload.branches || []);
+          setBranches(rowsOr(branchPayload.branches, MOCK_HQ_BRANCHES));
         }
         
         if (accountRes.ok) {
           const accountJson = await accountRes.json();
           const accountPayload = accountJson.data || accountJson;
-          setAccounts(accountPayload.accounts || accountPayload.receivables || []);
+          setAccounts(rowsOr(accountPayload.accounts || accountPayload.receivables, MOCK_HQ_ACCOUNTS));
         }
       } catch (error) {
         console.error('Error fetching branches/accounts:', error);
@@ -183,7 +184,7 @@ export default function RevenueAnalysis() {
           })));
         }
         if (revPayload.products) setProductRevenue(revPayload.products);
-        if (revPayload.hourly) setHourlyRevenue(revPayload.hourly);
+        setHourlyRevenue(rowsOr(revPayload.hourly, MOCK_HQ_HOURLY_REVENUE));
         setLoading(false);
         return;
       }

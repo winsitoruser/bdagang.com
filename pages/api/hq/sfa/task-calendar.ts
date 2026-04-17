@@ -6,6 +6,12 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import sequelize from '../../../../lib/sequelize';
+import {
+  taskCalendarBoardDemo,
+  taskCalendarGanttDemo,
+  taskCalendarCalendarDemo,
+  taskCalendarStatsDemo,
+} from '../../../../lib/hq/sfa-rich-mock';
 
 async function q(sql: string, replacements: Record<string, any> = {}): Promise<any[]> {
   try {
@@ -148,6 +154,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             });
           }
 
+          if (tasks.length === 0) {
+            const demo = taskCalendarBoardDemo();
+            return res.json({ success: true, data: { columns: demo.columns, totalTasks: demo.totalTasks } });
+          }
+
           return res.json({ success: true, data: { columns: Object.values(columns), totalTasks: tasks.length } });
         }
 
@@ -200,6 +211,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             };
           });
 
+          if (ganttTasks.length === 0) {
+            return res.json({ success: true, data: taskCalendarGanttDemo() });
+          }
           return res.json({ success: true, data: ganttTasks });
         }
 
@@ -267,14 +281,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             isOverdue: new Date(t.due_date) < new Date() && !['completed', 'cancelled'].includes(t.status),
           }));
 
+          const mappedEvents = events.map(e => ({
+            ...e,
+            attendees: typeof e.attendees === 'string' ? JSON.parse(e.attendees) : (e.attendees || []),
+            reminders: typeof e.reminders === 'string' ? JSON.parse(e.reminders) : (e.reminders || []),
+          }));
+
+          if (mappedEvents.length === 0 && taskAsEvents.length === 0 && year && month) {
+            const demo = taskCalendarCalendarDemo(Number(year), Number(month));
+            return res.json({ success: true, data: demo });
+          }
+
           return res.json({
             success: true,
             data: {
-              events: events.map(e => ({
-                ...e,
-                attendees: typeof e.attendees === 'string' ? JSON.parse(e.attendees) : (e.attendees || []),
-                reminders: typeof e.reminders === 'string' ? JSON.parse(e.reminders) : (e.reminders || []),
-              })),
+              events: mappedEvents,
               taskEvents: taskAsEvents,
             }
           });
@@ -301,6 +322,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           const byStatus = await q('SELECT status, COUNT(*)::int as count FROM crm_tasks WHERE tenant_id = :tid GROUP BY status', { tid });
           const total = summary?.total || 0;
           const completed = summary?.completed || 0;
+
+          if (total === 0) {
+            return res.json({ success: true, data: taskCalendarStatsDemo() });
+          }
 
           return res.json({
             success: true,

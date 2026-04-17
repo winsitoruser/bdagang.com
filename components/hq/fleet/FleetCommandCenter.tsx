@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useTranslation } from '@/lib/i18n';
 import {
   Activity, AlertCircle, AlertTriangle, ArrowRight, ArrowRightLeft, Award,
   BarChart3, Bell, Boxes, Building2, Calendar, Car, CheckCircle, ChevronRight,
@@ -70,14 +71,14 @@ const COLOR_BG: Record<string, string> = {
   green: 'bg-green-50 text-green-600',
 };
 
-const MOD_BADGE: Record<string, { label: string; color: string; icon: any }> = {
-  driver_app: { label: 'Driver App', color: 'from-indigo-500 to-purple-500', icon: Smartphone },
-  hris: { label: 'HRIS', color: 'from-emerald-500 to-teal-500', icon: HeartPulse },
-  finance: { label: 'Finance', color: 'from-amber-500 to-orange-500', icon: Wallet },
-  inventory: { label: 'Inventory', color: 'from-sky-500 to-cyan-500', icon: Warehouse },
-  manufacturing: { label: 'Manufaktur', color: 'from-fuchsia-500 to-pink-500', icon: Factory },
-  pos: { label: 'POS', color: 'from-rose-500 to-pink-500', icon: Receipt },
-  procurement: { label: 'Procurement', color: 'from-slate-500 to-gray-500', icon: Briefcase },
+const MOD_BADGE_STYLE: Record<string, { color: string; icon: any }> = {
+  driver_app: { color: 'from-indigo-500 to-purple-500', icon: Smartphone },
+  hris: { color: 'from-emerald-500 to-teal-500', icon: HeartPulse },
+  finance: { color: 'from-amber-500 to-orange-500', icon: Wallet },
+  inventory: { color: 'from-sky-500 to-cyan-500', icon: Warehouse },
+  manufacturing: { color: 'from-fuchsia-500 to-pink-500', icon: Factory },
+  pos: { color: 'from-rose-500 to-pink-500', icon: Receipt },
+  procurement: { color: 'from-slate-500 to-gray-500', icon: Briefcase },
 };
 
 const VALID_TABS: TabKey[] = [
@@ -87,6 +88,7 @@ const VALID_TABS: TabKey[] = [
 
 // ========================= Component =========================
 export default function FleetCommandCenter() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>('overview');
   const [loading, setLoading] = useState(false);
@@ -305,9 +307,9 @@ export default function FleetCommandCenter() {
       body: JSON.stringify({ productionId, priority: 'normal' })
     });
     const j = await res.json();
-    if (j?.success) { alert(`Shipment ${j.data.shipmentNumber} dibuat`); loadManufacturing(); }
-    else alert(j?.error || 'Gagal membuat shipment');
-  }, [loadManufacturing]);
+    if (j?.success) { alert(t('fleetHub.alerts.shipmentCreated').replace('{{n}}', String(j.data.shipmentNumber))); loadManufacturing(); }
+    else alert(j?.error || t('fleetHub.alerts.shipmentFail'));
+  }, [loadManufacturing, t]);
 
   const dispatchTransfer = useCallback(async (transferId: number) => {
     const res = await fetch('/api/hq/fleet/integrations/inventory?action=create-transfer-shipment', {
@@ -315,9 +317,9 @@ export default function FleetCommandCenter() {
       body: JSON.stringify({ transferId, priority: 'normal' })
     });
     const j = await res.json();
-    if (j?.success) { alert(`Shipment ${j.data.shipmentNumber} dibuat`); loadInventory(); }
-    else alert(j?.error || 'Gagal membuat shipment');
-  }, [loadInventory]);
+    if (j?.success) { alert(t('fleetHub.alerts.shipmentCreated').replace('{{n}}', String(j.data.shipmentNumber))); loadInventory(); }
+    else alert(j?.error || t('fleetHub.alerts.shipmentFail'));
+  }, [loadInventory, t]);
 
   const pickupReceipt = useCallback(async (poId: number, supplierAddress?: string) => {
     const res = await fetch('/api/hq/fleet/integrations/inventory?action=create-receipt-pickup', {
@@ -325,12 +327,12 @@ export default function FleetCommandCenter() {
       body: JSON.stringify({ poId, supplierAddress })
     });
     const j = await res.json();
-    if (j?.success) { alert(`Trip pickup ${j.data.shipmentNumber} dibuat`); loadInventory(); }
-    else alert(j?.error || 'Gagal membuat pickup');
-  }, [loadInventory]);
+    if (j?.success) { alert(t('fleetHub.alerts.pickupCreated').replace('{{n}}', String(j.data.shipmentNumber))); loadInventory(); }
+    else alert(j?.error || t('fleetHub.alerts.pickupFail'));
+  }, [loadInventory, t]);
 
   const generateReorderPO = useCallback(async () => {
-    if (!invReorder.length) return alert('Tidak ada rekomendasi reorder');
+    if (!invReorder.length) return alert(t('fleetHub.alerts.noReorder'));
     const items = invReorder.map((r: any) => ({
       productId: r.product_id,
       quantity: Number(r.recommended_qty || 1),
@@ -341,9 +343,9 @@ export default function FleetCommandCenter() {
       body: JSON.stringify({ items })
     });
     const j = await res.json();
-    if (j?.success) { alert(`PO ${j.data.poNumber} dibuat (${j.data.itemCount} item)`); loadInventory(); }
-    else alert(j?.error || 'Gagal membuat PO');
-  }, [invReorder, loadInventory]);
+    if (j?.success) { alert(t('fleetHub.alerts.poCreated').replace('{{n}}', String(j.data.poNumber)).replace('{{c}}', String(j.data.itemCount))); loadInventory(); }
+    else alert(j?.error || t('fleetHub.alerts.poFail'));
+  }, [invReorder, loadInventory, t]);
 
   useEffect(() => {
     if (tab === 'overview' || tab === 'operations' || tab === 'tracking' || tab === 'transport' || tab === 'analytics' || tab === 'financial' || tab === 'module-hub') {
@@ -367,19 +369,19 @@ export default function FleetCommandCenter() {
   };
 
   const tabs: { id: TabKey; label: string; icon: any; group?: string }[] = [
-    { id: 'overview', label: 'Ringkasan', icon: LayoutDashboard },
-    { id: 'operations', label: 'Operasional', icon: Wrench },
-    { id: 'tracking', label: 'Pelacakan', icon: Navigation },
-    { id: 'transport', label: 'Transportasi', icon: Send },
-    { id: 'analytics', label: 'Analitik', icon: BarChart3 },
-    { id: 'financial', label: 'Keuangan', icon: DollarSign },
-    { id: 'supply-chain', label: 'Supply Chain', icon: Workflow },
-    { id: 'driver-app', label: 'Aplikasi Driver', icon: Smartphone },
-    { id: 'hris', label: 'HRIS', icon: HeartPulse },
-    { id: 'finance', label: 'Finance', icon: Wallet },
-    { id: 'inventory', label: 'Inventory', icon: Warehouse },
-    { id: 'manufacturing', label: 'Manufaktur', icon: Factory },
-    { id: 'module-hub', label: 'Semua Menu', icon: Plug },
+    { id: 'overview', label: t('fleetHub.tabs.overview'), icon: LayoutDashboard },
+    { id: 'operations', label: t('fleetHub.tabs.operations'), icon: Wrench },
+    { id: 'tracking', label: t('fleetHub.tabs.tracking'), icon: Navigation },
+    { id: 'transport', label: t('fleetHub.tabs.transport'), icon: Send },
+    { id: 'analytics', label: t('fleetHub.tabs.analytics'), icon: BarChart3 },
+    { id: 'financial', label: t('fleetHub.tabs.financial'), icon: DollarSign },
+    { id: 'supply-chain', label: t('fleetHub.tabs.supplyChain'), icon: Workflow },
+    { id: 'driver-app', label: t('fleetHub.tabs.driverApp'), icon: Smartphone },
+    { id: 'hris', label: t('fleetHub.tabs.hris'), icon: HeartPulse },
+    { id: 'finance', label: t('fleetHub.tabs.finance'), icon: Wallet },
+    { id: 'inventory', label: t('fleetHub.tabs.inventory'), icon: Warehouse },
+    { id: 'manufacturing', label: t('fleetHub.tabs.manufacturing'), icon: Factory },
+    { id: 'module-hub', label: t('fleetHub.tabs.moduleHub'), icon: Plug },
   ];
 
   return (
@@ -390,12 +392,11 @@ export default function FleetCommandCenter() {
         <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur rounded-full text-xs font-semibold mb-3">
-              <Sparkles className="w-3 h-3" /> UNIFIED SUPER MODULE
+              <Sparkles className="w-3 h-3" /> {t('fleetHub.hero.badge')}
             </div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight">Pusat Kendali Armada &amp; Transportasi</h1>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight">{t('fleetHub.hero.title')}</h1>
             <p className="text-white/80 mt-2 max-w-2xl">
-              Gabungan Fleet Management, FMS, dan TMS dengan integrasi real-time ke Aplikasi Driver,
-              HRIS, Finance, dan Inventory. Satu dashboard untuk mengelola seluruh operasi armada.
+              {t('fleetHub.hero.subtitle')}
             </p>
           </div>
           <div className="flex gap-2">
@@ -405,41 +406,41 @@ export default function FleetCommandCenter() {
               className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg font-medium transition disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
+              {t('fleetHub.hero.refresh')}
             </button>
             <Link href="/hq/fms" className="inline-flex items-center gap-2 px-4 py-2 bg-white text-indigo-700 rounded-lg font-semibold hover:bg-white/90 transition">
-              <Truck className="w-4 h-4" /> Detail FMS
+              <Truck className="w-4 h-4" /> {t('fleetHub.hero.detailFms')}
             </Link>
             <Link href="/hq/tms" className="inline-flex items-center gap-2 px-4 py-2 bg-white text-purple-700 rounded-lg font-semibold hover:bg-white/90 transition">
-              <Send className="w-4 h-4" /> Detail TMS
+              <Send className="w-4 h-4" /> {t('fleetHub.hero.detailTms')}
             </Link>
           </div>
         </div>
       </div>
 
       {/* KPI Row */}
-      <KPIRow kpi={kpi} loading={!kpi && loading} />
+      <KPIRow kpi={kpi} loading={!kpi && loading} t={t} />
 
       {/* Integration Strip */}
-      <IntegrationStrip integrations={integrations} />
+      <IntegrationStrip integrations={integrations} t={t} />
 
       {/* Tabs */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="flex overflow-x-auto border-b border-gray-100 bg-gray-50/50">
-          {tabs.map((t) => {
-            const Icon = t.icon;
-            const active = tab === t.id;
+          {tabs.map((tabItem) => {
+            const Icon = tabItem.icon;
+            const active = tab === tabItem.id;
             return (
               <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
+                key={tabItem.id}
+                onClick={() => setTab(tabItem.id)}
                 className={`flex items-center gap-2 px-5 py-4 text-sm font-medium whitespace-nowrap transition border-b-2 ${
                   active
                     ? 'border-indigo-600 text-indigo-600 bg-white'
                     : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-white'
                 }`}
               >
-                <Icon className="w-4 h-4" /> {t.label}
+                <Icon className="w-4 h-4" /> {tabItem.label}
               </button>
             );
           })}
@@ -451,14 +452,15 @@ export default function FleetCommandCenter() {
               kpi={kpi} alerts={alerts} costBreakdown={costBreakdown}
               deliveryTrend={deliveryTrend} topDrivers={topDrivers} topVehicles={topVehicles}
               loading={loading}
+              t={t}
             />
           )}
-          {tab === 'operations' && <QuickLinksGrid title="Operasional Armada" items={moduleLinks?.operations || []} color="blue" />}
-          {tab === 'tracking' && <QuickLinksGrid title="Pelacakan & GPS" items={moduleLinks?.tracking || []} color="purple" />}
-          {tab === 'transport' && <QuickLinksGrid title="Transportasi & Pengiriman" items={moduleLinks?.transport || []} color="green" />}
-          {tab === 'analytics' && <QuickLinksGrid title="Analitik & KPI" items={moduleLinks?.analytics || []} color="amber" />}
-          {tab === 'financial' && <QuickLinksGrid title="Keuangan Armada" items={moduleLinks?.financial || []} color="rose" />}
-          {tab === 'module-hub' && <ModuleHub links={moduleLinks} />}
+          {tab === 'operations' && <QuickLinksGrid title={t('fleetHub.quickGrid.operations')} items={moduleLinks?.operations || []} color="blue" t={t} />}
+          {tab === 'tracking' && <QuickLinksGrid title={t('fleetHub.quickGrid.tracking')} items={moduleLinks?.tracking || []} color="purple" t={t} />}
+          {tab === 'transport' && <QuickLinksGrid title={t('fleetHub.quickGrid.transport')} items={moduleLinks?.transport || []} color="green" t={t} />}
+          {tab === 'analytics' && <QuickLinksGrid title={t('fleetHub.quickGrid.analytics')} items={moduleLinks?.analytics || []} color="amber" t={t} />}
+          {tab === 'financial' && <QuickLinksGrid title={t('fleetHub.quickGrid.financial')} items={moduleLinks?.financial || []} color="rose" t={t} />}
+          {tab === 'module-hub' && <ModuleHub links={moduleLinks} t={t} />}
 
           {tab === 'driver-app' && (
             <DriverAppTab
@@ -540,7 +542,7 @@ export default function FleetCommandCenter() {
 }
 
 // ========================= KPI ROW =========================
-function KPIRow({ kpi, loading }: { kpi: any; loading: boolean }) {
+function KPIRow({ kpi, loading, t }: { kpi: any; loading: boolean; t: (k: string) => string }) {
   if (loading && !kpi) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
@@ -553,14 +555,14 @@ function KPIRow({ kpi, loading }: { kpi: any; loading: boolean }) {
   if (!kpi) return null;
 
   const cards = [
-    { label: 'Total Kendaraan', value: fmt(kpi.totalVehicles), sub: `${kpi.activeVehicles} aktif`, icon: Truck, color: 'blue' },
-    { label: 'Utilisasi Armada', value: `${kpi.fleetUtilization}%`, sub: `${kpi.inMaintenance} maintenance`, icon: Gauge, color: 'indigo' },
-    { label: 'Total Pengemudi', value: fmt(kpi.totalDrivers), sub: `${kpi.onDutyDrivers} on-duty`, icon: Users, color: 'purple' },
-    { label: 'Skor Driver Rata²', value: `${Number(kpi.avgDriverScore).toFixed(1)}`, sub: 'dari 100', icon: Award, color: 'pink' },
-    { label: 'Pengiriman Aktif', value: fmt(kpi.inTransitShipments), sub: `${kpi.deliveredToday} selesai hari ini`, icon: Package, color: 'emerald' },
-    { label: 'On-Time Rate', value: `${Number(kpi.onTimeDeliveryRate).toFixed(1)}%`, sub: '30 hari terakhir', icon: Timer, color: 'teal' },
-    { label: 'Biaya Operasional', value: fmtRpShort(kpi.totalOperationalCostMTD), sub: 'Bulan berjalan', icon: DollarSign, color: 'amber' },
-    { label: 'Alert Aktif', value: fmt(kpi.expiringDocs + kpi.overdueInspections + kpi.openIncidents + kpi.overdueMaintenance), sub: 'perlu perhatian', icon: AlertTriangle, color: 'rose' },
+    { label: t('fleetHub.kpi.totalVehicles'), value: fmt(kpi.totalVehicles), sub: `${kpi.activeVehicles} ${t('fleetHub.kpi.activeSuffix')}`, icon: Truck, color: 'blue' },
+    { label: t('fleetHub.kpi.fleetUtil'), value: `${kpi.fleetUtilization}%`, sub: `${kpi.inMaintenance} ${t('fleetHub.kpi.maintSuffix')}`, icon: Gauge, color: 'indigo' },
+    { label: t('fleetHub.kpi.totalDrivers'), value: fmt(kpi.totalDrivers), sub: `${kpi.onDutyDrivers} ${t('fleetHub.kpi.onDutySuffix')}`, icon: Users, color: 'purple' },
+    { label: t('fleetHub.kpi.avgDriverScore'), value: `${Number(kpi.avgDriverScore).toFixed(1)}`, sub: t('fleetHub.kpi.outOf100'), icon: Award, color: 'pink' },
+    { label: t('fleetHub.kpi.activeShipments'), value: fmt(kpi.inTransitShipments), sub: `${kpi.deliveredToday} ${t('fleetHub.kpi.doneTodaySuffix')}`, icon: Package, color: 'emerald' },
+    { label: t('fleetHub.kpi.onTimeRate'), value: `${Number(kpi.onTimeDeliveryRate).toFixed(1)}%`, sub: t('fleetHub.kpi.last30d'), icon: Timer, color: 'teal' },
+    { label: t('fleetHub.kpi.opexMtd'), value: fmtRpShort(kpi.totalOperationalCostMTD), sub: t('fleetHub.kpi.monthToDate'), icon: DollarSign, color: 'amber' },
+    { label: t('fleetHub.kpi.activeAlerts'), value: fmt(kpi.expiringDocs + kpi.overdueInspections + kpi.openIncidents + kpi.overdueMaintenance), sub: t('fleetHub.kpi.needsAttention'), icon: AlertTriangle, color: 'rose' },
   ];
 
   return (
@@ -583,26 +585,27 @@ function KPIRow({ kpi, loading }: { kpi: any; loading: boolean }) {
 }
 
 // ========================= Integration Strip =========================
-function IntegrationStrip({ integrations }: { integrations: any[] }) {
+function IntegrationStrip({ integrations, t }: { integrations: any[]; t: (k: string) => string }) {
   if (!integrations?.length) return null;
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Link2 className="w-4 h-4 text-indigo-600" />
-          <h2 className="text-sm font-bold text-gray-900">Status Integrasi Cross-Module</h2>
+          <h2 className="text-sm font-bold text-gray-900">{t('fleetHub.integration.title')}</h2>
         </div>
-        <span className="text-xs text-gray-400">Diperbarui otomatis</span>
+        <span className="text-xs text-gray-400">{t('fleetHub.integration.autoUpdate')}</span>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {integrations.map((i: any) => {
-          const badge = MOD_BADGE[i.module] || MOD_BADGE.procurement;
-          const Icon = badge.icon;
+          const style = MOD_BADGE_STYLE[i.module] || MOD_BADGE_STYLE.procurement;
+          const Icon = style.icon;
+          const badgeLabel = t(`fleetHub.modBadge.${i.module}` as any) || t('fleetHub.modBadge.procurement');
           return (
             <div key={i.module} className="relative border border-gray-100 rounded-lg p-3 hover:shadow-md transition">
-              <div className={`absolute top-0 left-0 h-1 w-full rounded-t-lg bg-gradient-to-r ${badge.color}`} />
+              <div className={`absolute top-0 left-0 h-1 w-full rounded-t-lg bg-gradient-to-r ${style.color}`} />
               <div className="flex items-center justify-between mb-2">
-                <div className={`p-1.5 rounded bg-gradient-to-br ${badge.color} text-white`}>
+                <div className={`p-1.5 rounded bg-gradient-to-br ${style.color} text-white`}>
                   <Icon className="w-3.5 h-3.5" />
                 </div>
                 {i.connected ? (
@@ -611,15 +614,15 @@ function IntegrationStrip({ integrations }: { integrations: any[] }) {
                   <AlertCircle className="w-4 h-4 text-gray-300" />
                 )}
               </div>
-              <div className="text-xs font-bold text-gray-900 truncate">{badge.label}</div>
-              <div className="text-[10px] text-gray-500">{i.linkedCount} terhubung</div>
+              <div className="text-xs font-bold text-gray-900 truncate">{badgeLabel}</div>
+              <div className="text-[10px] text-gray-500">{i.linkedCount} {t('fleetHub.integration.connectedSuffix')}</div>
               <div className="mt-2 w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
                 <div
-                  className={`h-full bg-gradient-to-r ${badge.color}`}
+                  className={`h-full bg-gradient-to-r ${style.color}`}
                   style={{ width: `${i.healthScore}%` }}
                 />
               </div>
-              <div className="text-[10px] text-gray-400 mt-1">Health: {i.healthScore}%</div>
+              <div className="text-[10px] text-gray-400 mt-1">{t('fleetHub.integration.health')}: {i.healthScore}%</div>
             </div>
           );
         })}
@@ -629,7 +632,7 @@ function IntegrationStrip({ integrations }: { integrations: any[] }) {
 }
 
 // ========================= Overview Tab =========================
-function OverviewTab({ kpi, alerts, costBreakdown, deliveryTrend, topDrivers, topVehicles, loading }: any) {
+function OverviewTab({ kpi, alerts, costBreakdown, deliveryTrend, topDrivers, topVehicles, loading, t }: any) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -637,7 +640,7 @@ function OverviewTab({ kpi, alerts, costBreakdown, deliveryTrend, topDrivers, to
         <div className="lg:col-span-2 bg-gradient-to-br from-white to-gray-50 rounded-xl border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-bold text-gray-900 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-indigo-600" /> Tren Pengiriman 14 Hari
+              <TrendingUp className="w-4 h-4 text-indigo-600" /> {t('fleetHub.overview.deliveryTrend14')}
             </h3>
           </div>
           {deliveryTrend.length > 0 ? (
@@ -658,8 +661,8 @@ function OverviewTab({ kpi, alerts, costBreakdown, deliveryTrend, topDrivers, to
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip />
                 <Legend />
-                <Area type="monotone" dataKey="delivered" stroke="#10B981" fill="url(#gDelivered)" name="Terkirim" />
-                <Area type="monotone" dataKey="pending" stroke="#F59E0B" fill="url(#gPending)" name="Tertunda" />
+                <Area type="monotone" dataKey="delivered" stroke="#10B981" fill="url(#gDelivered)" name={t('fleetHub.overview.chartDelivered')} />
+                <Area type="monotone" dataKey="pending" stroke="#F59E0B" fill="url(#gPending)" name={t('fleetHub.overview.chartPending')} />
               </AreaChart>
             </ResponsiveContainer>
           ) : <EmptyMini />}
@@ -668,7 +671,7 @@ function OverviewTab({ kpi, alerts, costBreakdown, deliveryTrend, topDrivers, to
         {/* Cost breakdown pie */}
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
-            <PieChartIcon className="w-4 h-4 text-rose-600" /> Breakdown Biaya (MTD)
+            <PieChartIcon className="w-4 h-4 text-rose-600" /> {t('fleetHub.overview.costBreakdownMtd')}
           </h3>
           {costBreakdown.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
@@ -690,12 +693,12 @@ function OverviewTab({ kpi, alerts, costBreakdown, deliveryTrend, topDrivers, to
         {/* Alerts */}
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
-            <Bell className="w-4 h-4 text-amber-600" /> Peringatan Aktif ({alerts.length})
+            <Bell className="w-4 h-4 text-amber-600" /> {t('fleetHub.overview.activeAlerts')} ({alerts.length})
           </h3>
           {alerts.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
               <CheckCircle className="w-10 h-10 mx-auto mb-2 text-green-400" />
-              <p className="text-sm">Tidak ada peringatan aktif</p>
+              <p className="text-sm">{t('fleetHub.overview.noActiveAlerts')}</p>
             </div>
           ) : (
             <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -722,7 +725,7 @@ function OverviewTab({ kpi, alerts, costBreakdown, deliveryTrend, topDrivers, to
         {/* Top drivers */}
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
-            <Award className="w-4 h-4 text-emerald-600" /> Top Pengemudi
+            <Award className="w-4 h-4 text-emerald-600" /> {t('fleetHub.overview.topDrivers')}
           </h3>
           <div className="space-y-2 max-h-80 overflow-y-auto">
             {topDrivers.slice(0, 8).map((d, i) => (
@@ -734,11 +737,11 @@ function OverviewTab({ kpi, alerts, costBreakdown, deliveryTrend, topDrivers, to
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-gray-900 text-sm truncate">{d.name}</div>
-                  <div className="text-xs text-gray-500">{fmt(d.trips)} perjalanan · On-time {d.onTimeRate}%</div>
+                  <div className="text-xs text-gray-500">{fmt(d.trips)} {t('fleetHub.overview.tripsOnTime')} {d.onTimeRate}%</div>
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-bold text-gray-900">{d.score}</div>
-                  <div className="text-[10px] text-gray-400">Score</div>
+                  <div className="text-[10px] text-gray-400">{t('fleetHub.overview.score')}</div>
                 </div>
               </div>
             ))}
@@ -749,7 +752,7 @@ function OverviewTab({ kpi, alerts, costBreakdown, deliveryTrend, topDrivers, to
       {/* Top Vehicles */}
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
-          <Truck className="w-4 h-4 text-blue-600" /> Biaya Armada Tertinggi (MTD)
+          <Truck className="w-4 h-4 text-blue-600" /> {t('fleetHub.overview.topFleetCost')}
         </h3>
         {topVehicles.length > 0 ? (
           <ResponsiveContainer width="100%" height={220}>
@@ -768,7 +771,7 @@ function OverviewTab({ kpi, alerts, costBreakdown, deliveryTrend, topDrivers, to
 }
 
 // ========================= Quick Links Grid =========================
-function QuickLinksGrid({ title, items, color }: { title: string; items: any[]; color: string }) {
+function QuickLinksGrid({ title, items, color, t }: { title: string; items: any[]; color: string; t: (k: string) => string }) {
   const colorMap: Record<string, string> = {
     blue: 'from-blue-500 to-cyan-500',
     purple: 'from-purple-500 to-pink-500',
@@ -793,7 +796,7 @@ function QuickLinksGrid({ title, items, color }: { title: string; items: any[]; 
               </div>
               <div className="font-semibold text-gray-900 mb-1">{it.label}</div>
               <div className="flex items-center text-xs text-gray-400 group-hover:text-indigo-600">
-                Buka <ChevronRight className="w-3 h-3 ml-1" />
+                {t('fleetHub.common.open')} <ChevronRight className="w-3 h-3 ml-1" />
               </div>
             </Link>
           );
@@ -804,16 +807,16 @@ function QuickLinksGrid({ title, items, color }: { title: string; items: any[]; 
 }
 
 // ========================= Module Hub (all links) =========================
-function ModuleHub({ links }: { links: any }) {
+function ModuleHub({ links, t }: { links: any; t: (k: string) => string }) {
   if (!links) return <EmptyMini />;
   const sections = [
-    { key: 'operations', title: 'Operasional Armada', color: 'blue' },
-    { key: 'tracking', title: 'Pelacakan & GPS', color: 'purple' },
-    { key: 'transport', title: 'Transportasi', color: 'green' },
-    { key: 'analytics', title: 'Analitik', color: 'amber' },
-    { key: 'financial', title: 'Keuangan', color: 'rose' },
-    { key: 'supplyChain', title: 'Supply Chain & Manufaktur', color: 'purple' },
-    { key: 'admin', title: 'Admin & Dokumen', color: 'blue' },
+    { key: 'operations', title: t('fleetHub.moduleHub.operations'), color: 'blue' },
+    { key: 'tracking', title: t('fleetHub.moduleHub.tracking'), color: 'purple' },
+    { key: 'transport', title: t('fleetHub.moduleHub.transport'), color: 'green' },
+    { key: 'analytics', title: t('fleetHub.moduleHub.analytics'), color: 'amber' },
+    { key: 'financial', title: t('fleetHub.moduleHub.financial'), color: 'rose' },
+    { key: 'supplyChain', title: t('fleetHub.moduleHub.supplyMfg'), color: 'purple' },
+    { key: 'admin', title: t('fleetHub.moduleHub.admin'), color: 'blue' },
   ];
   return (
     <div className="space-y-8">
@@ -829,7 +832,7 @@ function ModuleHub({ links }: { links: any }) {
             }`} />
             {s.title}
           </h3>
-          <QuickLinksGrid title="" items={links[s.key] || []} color={s.color} />
+          <QuickLinksGrid title="" items={links[s.key] || []} color={s.color} t={t} />
         </div>
       ))}
     </div>
@@ -838,26 +841,28 @@ function ModuleHub({ links }: { links: any }) {
 
 // ========================= Driver App Tab =========================
 function DriverAppTab({ summary, expenses, sessions, pods, loading, onRefresh }: any) {
+  const { t } = useTranslation();
+  const dh = t('fleetHub.driverApp.headersLine').split('|');
   return (
     <div className="space-y-6">
       <IntegrationHeader
-        title="Integrasi Aplikasi Driver"
-        description="Monitor sesi live, POD (Proof of Delivery), dan reimbursement dari aplikasi driver."
+        title={t('fleetHub.driverApp.title')}
+        description={t('fleetHub.driverApp.desc')}
         icon={Smartphone}
         gradient="from-indigo-500 to-purple-500"
         onRefresh={onRefresh}
       />
       <StatGrid stats={[
-        { label: 'Akun Driver App', value: fmt(summary?.accounts || 0), icon: Users, color: 'indigo' },
-        { label: 'Sesi 24 Jam', value: fmt(summary?.activeSessions || 0), icon: Activity, color: 'green', sub: 'login aktif' },
-        { label: 'Expense Pending', value: fmt(summary?.pendingExpenses || 0), icon: Wallet, color: 'amber', sub: fmtRpShort(summary?.pendingAmount || 0) },
-        { label: 'POD Hari Ini', value: fmt(summary?.podToday || 0), icon: CheckCircle, color: 'emerald' },
+        { label: t('fleetHub.driverApp.statAccounts'), value: fmt(summary?.accounts || 0), icon: Users, color: 'indigo' },
+        { label: t('fleetHub.driverApp.statSessions24'), value: fmt(summary?.activeSessions || 0), icon: Activity, color: 'green', sub: t('fleetHub.driverApp.loginActive') },
+        { label: t('fleetHub.driverApp.statExpensePending'), value: fmt(summary?.pendingExpenses || 0), icon: Wallet, color: 'amber', sub: fmtRpShort(summary?.pendingAmount || 0) },
+        { label: t('fleetHub.driverApp.statPodToday'), value: fmt(summary?.podToday || 0), icon: CheckCircle, color: 'emerald' },
       ]} />
 
-      <SectionPanel title="Expense Driver Menunggu Persetujuan" count={expenses.length} icon={Wallet}>
+      <SectionPanel title={t('fleetHub.driverApp.pendingExpenses')} count={expenses.length} icon={Wallet}>
         {expenses.length === 0 ? <EmptyMini /> : (
           <Table
-            headers={['Nomor', 'Driver', 'Kendaraan', 'Tipe', 'Jumlah', 'Tgl', 'Aksi']}
+            headers={dh}
             rows={expenses.slice(0, 20).map((e: any) => [
               e.expense_number || '-',
               e.driver_name || '-',
@@ -865,21 +870,21 @@ function DriverAppTab({ summary, expenses, sessions, pods, loading, onRefresh }:
               e.expense_type || '-',
               <span className="font-semibold">{fmtRp(e.amount)}</span>,
               fmtDate(e.submitted_at),
-              <Link href="/hq/fleet/expenses" className="text-indigo-600 hover:underline text-xs">Review</Link>,
+              <Link href="/hq/fleet/expenses" className="text-indigo-600 hover:underline text-xs">{t('fleetHub.common.review')}</Link>,
             ])}
           />
         )}
       </SectionPanel>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SectionPanel title="Sesi Driver Aktif" count={sessions.length} icon={Activity}>
+        <SectionPanel title={t('fleetHub.driverApp.activeSessions')} count={sessions.length} icon={Activity}>
           {sessions.length === 0 ? <EmptyMini /> : (
             <ul className="divide-y divide-gray-100">
               {sessions.slice(0, 10).map((s: any, i: number) => (
                 <li key={i} className="py-2 flex items-center justify-between">
                   <div>
                     <div className="font-semibold text-sm text-gray-900">{s.driver_name || '-'}</div>
-                    <div className="text-xs text-gray-500">{s.driver_code} · {s.assigned_plate || 'Tanpa kendaraan'}</div>
+                    <div className="text-xs text-gray-500">{s.driver_code} · {s.assigned_plate || t('fleetHub.common.noVehicle')}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-xs text-gray-500">{fmtDateTime(s.last_login_at)}</div>
@@ -890,7 +895,7 @@ function DriverAppTab({ summary, expenses, sessions, pods, loading, onRefresh }:
             </ul>
           )}
         </SectionPanel>
-        <SectionPanel title="POD Terbaru" count={pods.length} icon={CheckCircle}>
+        <SectionPanel title={t('fleetHub.driverApp.recentPod')} count={pods.length} icon={CheckCircle}>
           {pods.length === 0 ? <EmptyMini /> : (
             <ul className="divide-y divide-gray-100">
               {pods.slice(0, 10).map((p: any, i: number) => (
@@ -917,39 +922,41 @@ function DriverAppTab({ summary, expenses, sessions, pods, loading, onRefresh }:
 
 // ========================= HRIS Tab =========================
 function HRISTab({ summary, drivers, attendance, payroll, loading, onRefresh }: any) {
+  const { t } = useTranslation();
+  const hh = t('fleetHub.hris.headersLine').split('|');
   return (
     <div className="space-y-6">
       <IntegrationHeader
-        title="Integrasi HRIS & Kepegawaian"
-        description="Hubungkan data driver ke karyawan HRIS untuk payroll, kehadiran, dan performance review."
+        title={t('fleetHub.hris.title')}
+        description={t('fleetHub.hris.desc')}
         icon={HeartPulse}
         gradient="from-emerald-500 to-teal-500"
         onRefresh={onRefresh}
       />
       <StatGrid stats={[
-        { label: 'Total Driver/Kurir', value: fmt(summary?.totalDriverEmployees || 0), icon: Users, color: 'emerald' },
-        { label: 'Terhubung HRIS', value: fmt(summary?.linkedDrivers || 0), icon: Link2, color: 'teal' },
-        { label: 'Belum Terhubung', value: fmt(summary?.unlinkedDrivers || 0), icon: AlertCircle, color: 'amber' },
-        { label: 'Hadir Hari Ini', value: fmt(summary?.presentToday || 0), icon: CheckCircle, color: 'green', sub: `${summary?.absentToday || 0} absen` },
+        { label: t('fleetHub.hris.statTotal'), value: fmt(summary?.totalDriverEmployees || 0), icon: Users, color: 'emerald' },
+        { label: t('fleetHub.hris.statLinked'), value: fmt(summary?.linkedDrivers || 0), icon: Link2, color: 'teal' },
+        { label: t('fleetHub.hris.statUnlinked'), value: fmt(summary?.unlinkedDrivers || 0), icon: AlertCircle, color: 'amber' },
+        { label: t('fleetHub.hris.statPresent'), value: fmt(summary?.presentToday || 0), icon: CheckCircle, color: 'green', sub: `${summary?.absentToday || 0} ${t('fleetHub.hris.absentSuffix')}` },
       ]} />
 
-      <SectionPanel title="Pemetaan Driver → Karyawan" count={drivers.length} icon={Link2}>
+      <SectionPanel title={t('fleetHub.hris.mappingTitle')} count={drivers.length} icon={Link2}>
         {drivers.length === 0 ? <EmptyMini /> : (
           <Table
-            headers={['Kode Driver', 'Nama', 'Jabatan HRIS', 'Departemen', 'Mulai Kerja', 'Gaji Pokok', 'Status Link']}
+            headers={hh}
             rows={drivers.slice(0, 30).map((d: any) => [
               d.driver_code || '-',
               <div><div className="font-semibold">{d.full_name}</div><div className="text-xs text-gray-500">{d.phone}</div></div>,
-              d.position || <span className="text-gray-400 text-xs">Belum link</span>,
+              d.position || <span className="text-gray-400 text-xs">{t('fleetHub.common.notLinked')}</span>,
               d.department || '-',
               fmtDate(d.hire_date),
               d.base_salary ? fmtRp(d.base_salary) : '-',
               d.employee_id ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold">
-                  <BadgeCheck className="w-3 h-3" /> Terhubung
+                  <BadgeCheck className="w-3 h-3" /> {t('fleetHub.common.linked')}
                 </span>
               ) : (
-                <span className="inline-flex px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px]">Belum</span>
+                <span className="inline-flex px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[10px]">{t('fleetHub.common.notYet')}</span>
               ),
             ])}
           />
@@ -957,14 +964,14 @@ function HRISTab({ summary, drivers, attendance, payroll, loading, onRefresh }: 
       </SectionPanel>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SectionPanel title="Kehadiran Driver Hari Ini" count={attendance.length} icon={Calendar}>
+        <SectionPanel title={t('fleetHub.hris.attendanceToday')} count={attendance.length} icon={Calendar}>
           {attendance.length === 0 ? <EmptyMini /> : (
             <ul className="divide-y divide-gray-100">
               {attendance.slice(0, 12).map((a: any, i: number) => (
                 <li key={i} className="py-2 flex items-center justify-between">
                   <div>
                     <div className="font-semibold text-sm text-gray-900">{a.full_name}</div>
-                    <div className="text-xs text-gray-500">{a.driver_code || a.position} · {a.assigned_vehicle || 'Tanpa kendaraan'}</div>
+                    <div className="text-xs text-gray-500">{a.driver_code || a.position} · {a.assigned_vehicle || t('fleetHub.common.noVehicle')}</div>
                   </div>
                   <div className="text-right">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${
@@ -973,7 +980,7 @@ function HRISTab({ summary, drivers, attendance, payroll, loading, onRefresh }: 
                       {a.status || '-'}
                     </span>
                     <div className="text-[10px] text-gray-400 mt-0.5">
-                      In: {a.check_in_time || '-'} | Jam: {a.work_hours || 0}h
+                      {t('fleetHub.hris.inOut')}: {a.check_in_time || '-'} | {t('fleetHub.hris.hours')}: {a.work_hours || 0}h
                     </div>
                   </div>
                 </li>
@@ -982,20 +989,20 @@ function HRISTab({ summary, drivers, attendance, payroll, loading, onRefresh }: 
           )}
         </SectionPanel>
 
-        <SectionPanel title="Dampak Payroll Driver" icon={Wallet}>
+        <SectionPanel title={t('fleetHub.hris.payrollImpact')} icon={Wallet}>
           {payroll?.totals ? (
             <div>
               <div className="grid grid-cols-3 gap-2 mb-3">
                 <div className="p-3 bg-emerald-50 rounded-lg">
-                  <div className="text-[10px] text-emerald-700 font-semibold">GAJI POKOK</div>
+                  <div className="text-[10px] text-emerald-700 font-semibold">{t('fleetHub.common.basePay')}</div>
                   <div className="text-sm font-bold text-gray-900">{fmtRpShort(payroll.totals.base)}</div>
                 </div>
                 <div className="p-3 bg-amber-50 rounded-lg">
-                  <div className="text-[10px] text-amber-700 font-semibold">TUNJANGAN</div>
+                  <div className="text-[10px] text-amber-700 font-semibold">{t('fleetHub.common.allowance')}</div>
                   <div className="text-sm font-bold text-gray-900">{fmtRpShort(payroll.totals.allowance)}</div>
                 </div>
                 <div className="p-3 bg-indigo-50 rounded-lg">
-                  <div className="text-[10px] text-indigo-700 font-semibold">TOTAL</div>
+                  <div className="text-[10px] text-indigo-700 font-semibold">{t('fleetHub.common.total')}</div>
                   <div className="text-sm font-bold text-gray-900">{fmtRpShort(payroll.totals.total)}</div>
                 </div>
               </div>
@@ -1004,7 +1011,7 @@ function HRISTab({ summary, drivers, attendance, payroll, loading, onRefresh }: 
                   <li key={i} className="py-2 flex items-center justify-between">
                     <div>
                       <div className="font-semibold text-sm text-gray-900">{d.full_name}</div>
-                      <div className="text-xs text-gray-500">{d.driver_code} · {d.trips_month || 0} trip/bln</div>
+                      <div className="text-xs text-gray-500">{d.driver_code} · {d.trips_month || 0} {t('fleetHub.common.tripsPerMo')}</div>
                     </div>
                     <div className="text-right text-xs">
                       <div className="font-semibold text-gray-900">{fmtRpShort(Number(d.base_salary) + Number(d.allowance))}</div>
@@ -1023,27 +1030,31 @@ function HRISTab({ summary, drivers, attendance, payroll, loading, onRefresh }: 
 
 // ========================= Finance Tab =========================
 function FinanceTab({ summary, journals, payables, freight, loading, onRefresh }: any) {
+  const { t } = useTranslation();
+  const jl = t('fleetHub.finance.jHeadersLine').split('|');
+  const pl = t('fleetHub.finance.pHeadersLine').split('|');
+  const fl = t('fleetHub.finance.fHeadersLine').split('|');
   return (
     <div className="space-y-6">
       <IntegrationHeader
-        title="Integrasi Finance & Akuntansi"
-        description="Posting otomatis biaya armada ke jurnal, kelola utang vendor, dan freight revenue."
+        title={t('fleetHub.finance.title')}
+        description={t('fleetHub.finance.desc')}
         icon={Wallet}
         gradient="from-amber-500 to-orange-500"
         onRefresh={onRefresh}
       />
       <StatGrid stats={[
-        { label: 'OPEX Armada MTD', value: fmtRpShort(summary?.opexMTD || 0), icon: DollarSign, color: 'rose' },
-        { label: 'Utang Vendor', value: fmtRpShort(summary?.payablesOutstanding || 0), icon: Receipt, color: 'amber', sub: 'belum terbayar' },
-        { label: 'Freight Revenue MTD', value: fmtRpShort(summary?.freightRevenueMTD || 0), icon: TrendingUp, color: 'emerald' },
-        { label: 'Margin Operasional', value: fmtRpShort(summary?.marginMTD || 0), icon: Gauge, color: 'indigo' },
+        { label: t('fleetHub.finance.statOpex'), value: fmtRpShort(summary?.opexMTD || 0), icon: DollarSign, color: 'rose' },
+        { label: t('fleetHub.finance.statPayables'), value: fmtRpShort(summary?.payablesOutstanding || 0), icon: Receipt, color: 'amber', sub: t('fleetHub.finance.unpaid') },
+        { label: t('fleetHub.finance.statFreightRev'), value: fmtRpShort(summary?.freightRevenueMTD || 0), icon: TrendingUp, color: 'emerald' },
+        { label: t('fleetHub.finance.statMargin'), value: fmtRpShort(summary?.marginMTD || 0), icon: Gauge, color: 'indigo' },
       ]} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SectionPanel title="Journal Entries Terbaru" count={journals.length} icon={FileText}>
+        <SectionPanel title={t('fleetHub.finance.journals')} count={journals.length} icon={FileText}>
           {journals.length === 0 ? <EmptyMini /> : (
             <Table
-              headers={['No', 'Tgl', 'Deskripsi', 'Ref', 'Jumlah', 'Status']}
+              headers={jl}
               rows={journals.slice(0, 20).map((j: any) => [
                 <span className="font-mono text-xs">{j.entry_number}</span>,
                 fmtDate(j.entry_date),
@@ -1056,10 +1067,10 @@ function FinanceTab({ summary, journals, payables, freight, loading, onRefresh }
           )}
         </SectionPanel>
 
-        <SectionPanel title="Utang Vendor Armada" count={payables.length} icon={Receipt}>
+        <SectionPanel title={t('fleetHub.finance.payables')} count={payables.length} icon={Receipt}>
           {payables.length === 0 ? <EmptyMini /> : (
             <Table
-              headers={['No', 'Supplier', 'Total', 'Sisa', 'Jatuh Tempo', 'Status']}
+              headers={pl}
               rows={payables.slice(0, 15).map((p: any) => [
                 <span className="font-mono text-xs">{p.payable_number}</span>,
                 p.supplier_name || '-',
@@ -1077,10 +1088,10 @@ function FinanceTab({ summary, journals, payables, freight, loading, onRefresh }
         </SectionPanel>
       </div>
 
-      <SectionPanel title="Freight Invoices (Revenue)" count={freight.length} icon={CreditCard}>
+      <SectionPanel title={t('fleetHub.finance.freight')} count={freight.length} icon={CreditCard}>
         {freight.length === 0 ? <EmptyMini /> : (
           <Table
-            headers={['No Tagihan', 'Tgl', 'Pelanggan', 'Pengangkut', 'Total', 'Sisa', 'Status']}
+            headers={fl}
             rows={freight.slice(0, 20).map((f: any) => [
               <span className="font-mono text-xs">{f.bill_number}</span>,
               fmtDate(f.bill_date),
@@ -1107,11 +1118,16 @@ function InventoryTab({
   warehouses, transfers, receipts, reorder,
   loading, onRefresh, onDispatchTransfer, onPickupReceipt, onGenerateReorderPO,
 }: any) {
+  const { t } = useTranslation();
+  const pol = t('fleetHub.inventory.poHeadersLine').split('|');
+  const lol = t('fleetHub.inventory.lowHeadersLine').split('|');
+  const rol = t('fleetHub.inventory.reorderRecHeadersLine').split('|');
+  const dol = t('fleetHub.inventory.dHeadersLine').split('|');
   return (
     <div className="space-y-6">
       <IntegrationHeader
-        title="Integrasi Inventory & Spare Part"
-        description="Kelola stok spare part, transfer antar gudang, penerimaan PO, dan dispatch barang terhubung armada."
+        title={t('fleetHub.inventory.title')}
+        description={t('fleetHub.inventory.desc')}
         icon={Warehouse}
         gradient="from-sky-500 to-cyan-500"
         onRefresh={onRefresh}
@@ -1119,20 +1135,20 @@ function InventoryTab({
 
       {/* KPI Grid: 2 rows */}
       <StatGrid stats={[
-        { label: 'Total Spare Part', value: fmt(summary?.spareParts || 0), icon: Disc, color: 'sky' },
-        { label: 'Stok Menipis', value: fmt(summary?.lowStock || 0), icon: AlertTriangle, color: 'amber', sub: 'perlu reorder' },
-        { label: 'Nilai Stok', value: fmtRpShort(summary?.totalStockValue || 0), icon: DollarSign, color: 'emerald' },
-        { label: 'Issued MTD', value: fmt(summary?.issuedMTD || 0), icon: Package, color: 'indigo', sub: 'dipakai maintenance' },
+        { label: t('fleetHub.inventory.statSpare'), value: fmt(summary?.spareParts || 0), icon: Disc, color: 'sky' },
+        { label: t('fleetHub.inventory.statLow'), value: fmt(summary?.lowStock || 0), icon: AlertTriangle, color: 'amber', sub: t('fleetHub.inventory.needReorder') },
+        { label: t('fleetHub.inventory.statValue'), value: fmtRpShort(summary?.totalStockValue || 0), icon: DollarSign, color: 'emerald' },
+        { label: t('fleetHub.inventory.statIssued'), value: fmt(summary?.issuedMTD || 0), icon: Package, color: 'indigo', sub: t('fleetHub.inventory.usedMaint') },
       ]} />
       <StatGrid stats={[
-        { label: 'Gudang Aktif', value: fmt(summary?.warehouseCount || warehouses?.length || 0), icon: Warehouse, color: 'teal' },
-        { label: 'Transfer Tertunda', value: fmt(summary?.pendingTransfers || 0), icon: ArrowRightLeft, color: 'purple', sub: 'butuh armada' },
-        { label: 'PO Menunggu', value: fmt(summary?.pendingReceipts || 0), icon: Inbox, color: 'rose', sub: 'pickup supplier' },
-        { label: 'Dispatch MTD', value: fmt(summary?.dispatchShipments || 0), icon: Send, color: 'blue' },
+        { label: t('fleetHub.inventory.statWh'), value: fmt(summary?.warehouseCount || warehouses?.length || 0), icon: Warehouse, color: 'teal' },
+        { label: t('fleetHub.inventory.statTransfer'), value: fmt(summary?.pendingTransfers || 0), icon: ArrowRightLeft, color: 'purple', sub: t('fleetHub.inventory.needFleet') },
+        { label: t('fleetHub.inventory.statPo'), value: fmt(summary?.pendingReceipts || 0), icon: Inbox, color: 'rose', sub: t('fleetHub.inventory.pickupSupplier') },
+        { label: t('fleetHub.inventory.statDispatch'), value: fmt(summary?.dispatchShipments || 0), icon: Send, color: 'blue' },
       ]} />
 
       {/* Jaringan Gudang */}
-      <SectionPanel title="Jaringan Gudang" count={warehouses?.length || 0} icon={Building2}>
+      <SectionPanel title={t('fleetHub.inventory.warehouseNet')} count={warehouses?.length || 0} icon={Building2}>
         {!warehouses?.length ? <EmptyMini /> : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {warehouses.slice(0, 9).map((w: any) => (
@@ -1154,15 +1170,15 @@ function InventoryTab({
                     <div className="font-bold text-gray-800">{fmt(w.sku_count || 0)}</div>
                   </div>
                   <div>
-                    <div className="text-gray-400">Nilai</div>
+                    <div className="text-gray-400">{t('fleetHub.common.value')}</div>
                     <div className="font-bold text-gray-800">{fmtRpShort(w.stock_value || 0)}</div>
                   </div>
                   <div>
-                    <div className="text-gray-400">Total Qty</div>
+                    <div className="text-gray-400">{t('fleetHub.common.totalQty')}</div>
                     <div className="font-bold text-gray-800">{fmt(w.total_stock || 0)}</div>
                   </div>
                   <div>
-                    <div className="text-gray-400">Spare Part</div>
+                    <div className="text-gray-400">{t('fleetHub.common.sparePart')}</div>
                     <div className="font-bold text-sky-600">{fmt(w.sparepart_sku || 0)}</div>
                   </div>
                 </div>
@@ -1174,34 +1190,34 @@ function InventoryTab({
 
       {/* Transfer + Reorder side-by-side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SectionPanel title="Transfer Antar Gudang (Butuh Armada)" count={transfers?.length || 0} icon={ArrowRightLeft}>
+        <SectionPanel title={t('fleetHub.inventory.transferNeed')} count={transfers?.length || 0} icon={ArrowRightLeft}>
           {!transfers?.length ? <EmptyMini /> : (
             <div className="space-y-2 max-h-[360px] overflow-y-auto">
-              {transfers.slice(0, 10).map((t: any) => (
-                <div key={t.id} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50">
+              {transfers.slice(0, 10).map((xfer: any) => (
+                <div key={xfer.id} className="border border-gray-100 rounded-lg p-3 hover:bg-gray-50">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs font-mono text-gray-500">{t.transfer_number || `TRF-${t.id}`}</div>
+                      <div className="text-xs font-mono text-gray-500">{xfer.transfer_number || `TRF-${xfer.id}`}</div>
                       <div className="text-sm font-semibold text-gray-900 flex items-center gap-1 flex-wrap">
-                        <span className="truncate">{t.from_warehouse || '-'}</span>
+                        <span className="truncate">{xfer.from_warehouse || '-'}</span>
                         <ArrowRight className="w-3 h-3 text-indigo-500 flex-shrink-0" />
-                        <span className="truncate">{t.to_warehouse || '-'}</span>
+                        <span className="truncate">{xfer.to_warehouse || '-'}</span>
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        <span className="inline-flex px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 text-[10px] font-medium mr-2">{t.status}</span>
-                        {t.item_count || 0} item · {fmt(t.total_qty)} qty
+                        <span className="inline-flex px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 text-[10px] font-medium mr-2">{xfer.status}</span>
+                        {xfer.item_count || 0} {t('fleetHub.inventory.itemsQty')} · {fmt(xfer.total_qty)}
                       </div>
                     </div>
-                    {t.has_shipment ? (
+                    {xfer.has_shipment ? (
                       <span className="text-[10px] text-emerald-600 font-semibold inline-flex items-center gap-1 flex-shrink-0">
-                        <BadgeCheck className="w-3 h-3" /> Terkirim
+                        <BadgeCheck className="w-3 h-3" /> {t('fleetHub.common.sent')}
                       </span>
                     ) : (
                       <button
-                        onClick={() => onDispatchTransfer(t.id)}
+                        onClick={() => onDispatchTransfer(xfer.id)}
                         className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-[11px] font-semibold inline-flex items-center gap-1 flex-shrink-0"
                       >
-                        <Send className="w-3 h-3" /> Dispatch
+                        <Send className="w-3 h-3" /> {t('fleetHub.common.dispatch')}
                       </button>
                     )}
                   </div>
@@ -1212,14 +1228,14 @@ function InventoryTab({
         </SectionPanel>
 
         <SectionPanel
-          title="Rekomendasi Reorder Spare Part"
+          title={t('fleetHub.inventory.reorderTitle')}
           count={reorder?.length || 0}
           icon={ShoppingCart}
         >
           {!reorder?.length ? (
             <div className="text-center py-10 text-gray-400">
               <CheckCircle className="w-10 h-10 mx-auto mb-2 text-emerald-400" />
-              <p className="text-sm">Semua spare part stok aman</p>
+              <p className="text-sm">{t('fleetHub.inventory.allStockOk')}</p>
             </div>
           ) : (
             <>
@@ -1228,12 +1244,12 @@ function InventoryTab({
                   onClick={onGenerateReorderPO}
                   className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-semibold inline-flex items-center gap-1"
                 >
-                  <ShoppingCart className="w-3 h-3" /> Generate PO ({reorder.length} item)
+                  <ShoppingCart className="w-3 h-3" /> {t('fleetHub.inventory.genPo')} ({reorder.length})
                 </button>
               </div>
               <div className="max-h-[300px] overflow-y-auto">
                 <Table
-                  headers={['SKU', 'Nama', 'Stok', 'Rekomendasi', 'Estimasi']}
+                  headers={rol}
                   rows={reorder.slice(0, 15).map((r: any) => [
                     <span className="font-mono text-xs">{r.sku}</span>,
                     <div className="truncate max-w-[140px]">{r.name}</div>,
@@ -1249,10 +1265,10 @@ function InventoryTab({
       </div>
 
       {/* PO Pickup Queue */}
-      <SectionPanel title="PO Menunggu Pickup Supplier" count={receipts?.length || 0} icon={Inbox}>
+      <SectionPanel title={t('fleetHub.inventory.poPickup')} count={receipts?.length || 0} icon={Inbox}>
         {!receipts?.length ? <EmptyMini /> : (
           <Table
-            headers={['No PO', 'Supplier', 'Item', 'Nilai', 'Expected', 'Status', 'Aksi']}
+            headers={pol}
             rows={receipts.slice(0, 10).map((p: any) => [
               <span className="font-mono text-xs">{p.po_number}</span>,
               <div className="truncate max-w-[140px]">{p.supplier_name || '-'}</div>,
@@ -1262,14 +1278,14 @@ function InventoryTab({
               <span className="inline-flex px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-semibold">{p.status}</span>,
               p.has_pickup ? (
                 <span className="text-[10px] text-emerald-600 font-semibold inline-flex items-center gap-1">
-                  <BadgeCheck className="w-3 h-3" /> Pickup Set
+                  <BadgeCheck className="w-3 h-3" /> {t('fleetHub.common.pickupSet')}
                 </span>
               ) : (
                 <button
                   onClick={() => onPickupReceipt(p.id, p.supplier_address)}
                   className="px-2 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-md text-[11px] font-semibold inline-flex items-center gap-1"
                 >
-                  <Truck className="w-3 h-3" /> Pickup
+                  <Truck className="w-3 h-3" /> {t('fleetHub.common.pickup')}
                 </button>
               ),
             ])}
@@ -1278,10 +1294,10 @@ function InventoryTab({
       </SectionPanel>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SectionPanel title="Spare Part Stok Menipis" count={lowStock.length} icon={AlertTriangle}>
+        <SectionPanel title={t('fleetHub.inventory.lowStock')} count={lowStock.length} icon={AlertTriangle}>
           {lowStock.length === 0 ? <EmptyMini /> : (
             <Table
-              headers={['SKU', 'Nama', 'Stok', 'Reorder', 'Harga']}
+              headers={lol}
               rows={lowStock.slice(0, 10).map((p: any) => [
                 <span className="font-mono text-xs">{p.sku}</span>,
                 <div className="truncate max-w-[180px]">{p.name}</div>,
@@ -1293,7 +1309,7 @@ function InventoryTab({
           )}
         </SectionPanel>
 
-        <SectionPanel title="Pergerakan Stok Terbaru" count={movements.length} icon={Activity}>
+        <SectionPanel title={t('fleetHub.inventory.movements')} count={movements.length} icon={Activity}>
           {movements.length === 0 ? <EmptyMini /> : (
             <ul className="divide-y divide-gray-100 max-h-[320px] overflow-y-auto">
               {movements.slice(0, 12).map((m: any, i: number) => (
@@ -1315,10 +1331,10 @@ function InventoryTab({
         </SectionPanel>
       </div>
 
-      <SectionPanel title="Dispatch dari Order POS/Warehouse" count={dispatch.length} icon={Send}>
+      <SectionPanel title={t('fleetHub.inventory.dispatchOrders')} count={dispatch.length} icon={Send}>
         {dispatch.length === 0 ? <EmptyMini /> : (
           <Table
-            headers={['No Pengiriman', 'Pelanggan', 'Asal → Tujuan', 'Kendaraan', 'Driver', 'Status', 'Tgl']}
+            headers={dol}
             rows={dispatch.slice(0, 15).map((s: any) => [
               <span className="font-mono text-xs">{s.shipment_number}</span>,
               s.customer_name || '-',
@@ -1343,33 +1359,36 @@ function ManufacturingTab({
   summary, active, ready, materials, shipments, capacity, output,
   loading, onRefresh, onDispatchFG,
 }: any) {
+  const { t } = useTranslation();
+  const mhl = t('fleetHub.mfgTab.matHeadersLine').split('|');
+  const shl = t('fleetHub.mfgTab.shipHeadersLine').split('|');
   return (
     <div className="space-y-6">
       <IntegrationHeader
-        title="Integrasi Manufaktur & Produksi"
-        description="Hubungkan batch produksi ke armada: supply bahan baku, dispatch finished goods, dan pelacakan supply chain end-to-end."
+        title={t('fleetHub.mfgTab.title')}
+        description={t('fleetHub.mfgTab.desc')}
         icon={Factory}
         gradient="from-fuchsia-500 to-pink-500"
         onRefresh={onRefresh}
       />
 
       <StatGrid stats={[
-        { label: 'Batch Aktif', value: fmt(summary?.activeBatches || 0), icon: Factory, color: 'purple', sub: `${summary?.totalBatches || 0} total` },
-        { label: 'Selesai Hari Ini', value: fmt(summary?.completedToday || 0), icon: CheckCircle, color: 'emerald' },
-        { label: 'Produksi MTD', value: fmt(summary?.producedQty || 0), icon: Boxes, color: 'indigo', sub: 'unit/kg' },
-        { label: 'FG Siap Kirim', value: fmt(summary?.fgReadyToDispatch || 0), icon: Package, color: 'sky', sub: 'butuh armada' },
+        { label: t('fleetHub.mfgTab.batchActive'), value: fmt(summary?.activeBatches || 0), icon: Factory, color: 'purple', sub: `${summary?.totalBatches || 0} ${t('fleetHub.mfgTab.totalSuffix')}` },
+        { label: t('fleetHub.mfgTab.doneToday'), value: fmt(summary?.completedToday || 0), icon: CheckCircle, color: 'emerald' },
+        { label: t('fleetHub.mfgTab.prodMtd'), value: fmt(summary?.producedQty || 0), icon: Boxes, color: 'indigo', sub: t('fleetHub.mfgTab.unitKg') },
+        { label: t('fleetHub.mfgTab.fgReady'), value: fmt(summary?.fgReadyToDispatch || 0), icon: Package, color: 'sky', sub: t('fleetHub.mfgTab.needFleet') },
       ]} />
       <StatGrid stats={[
-        { label: 'Request Bahan Baku', value: fmt(summary?.materialRequests || 0), icon: Inbox, color: 'amber' },
-        { label: 'Shipment Produksi MTD', value: fmt(summary?.productionShipments || 0), icon: Send, color: 'rose' },
-        { label: 'Biaya Material MTD', value: fmtRpShort(summary?.totalMaterialCost || 0), icon: DollarSign, color: 'green' },
-        { label: 'Rata² Durasi Batch', value: `${Number(summary?.avgCompletionHours || 0).toFixed(1)} jam`, icon: Clock, color: 'teal' },
+        { label: t('fleetHub.mfgTab.matReq'), value: fmt(summary?.materialRequests || 0), icon: Inbox, color: 'amber' },
+        { label: t('fleetHub.mfgTab.shipMtd'), value: fmt(summary?.productionShipments || 0), icon: Send, color: 'rose' },
+        { label: t('fleetHub.mfgTab.matCostMtd'), value: fmtRpShort(summary?.totalMaterialCost || 0), icon: DollarSign, color: 'green' },
+        { label: t('fleetHub.mfgTab.avgBatchH'), value: `${Number(summary?.avgCompletionHours || 0).toFixed(1)} ${t('fleetHub.mfgTab.hours')}`, icon: Clock, color: 'teal' },
       ]} />
 
       {/* Capacity vs Output chart */}
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-3">
-          <TrendingUp className="w-4 h-4 text-fuchsia-600" /> Kapasitas Armada vs Output Produksi (7 Hari)
+          <TrendingUp className="w-4 h-4 text-fuchsia-600" /> {t('fleetHub.mfgTab.capVsOut')}
         </h3>
         {!capacity?.length ? <EmptyMini /> : (
           <ResponsiveContainer width="100%" height={280}>
@@ -1380,9 +1399,9 @@ function ManufacturingTab({
               <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
               <Tooltip />
               <Legend />
-              <Bar yAxisId="left" dataKey="production_qty" fill="#A855F7" name="Produksi (qty)" />
-              <Bar yAxisId="left" dataKey="shipped_weight" fill="#06B6D4" name="Berat Dikirim (kg)" />
-              <Bar yAxisId="right" dataKey="shipment_count" fill="#F59E0B" name="Jumlah Shipment" />
+              <Bar yAxisId="left" dataKey="production_qty" fill="#A855F7" name={t('fleetHub.common.productionQty')} />
+              <Bar yAxisId="left" dataKey="shipped_weight" fill="#06B6D4" name={t('fleetHub.common.shippedWeightKg')} />
+              <Bar yAxisId="right" dataKey="shipment_count" fill="#F59E0B" name={t('fleetHub.common.shipmentCount')} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -1390,7 +1409,7 @@ function ManufacturingTab({
 
       {/* FG Ready to Dispatch + Material supply side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SectionPanel title="Finished Goods Siap Dikirim" count={ready?.length || 0} icon={Package}>
+        <SectionPanel title={t('fleetHub.mfgTab.fgReadyTitle')} count={ready?.length || 0} icon={Package}>
           {!ready?.length ? <EmptyMini /> : (
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {ready.slice(0, 10).map((r: any) => (
@@ -1403,22 +1422,22 @@ function ManufacturingTab({
                         {fmt(r.produced_quantity)} {r.unit}
                         {r.quality_grade && (
                           <span className="ml-2 inline-flex px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 text-[10px] font-semibold">
-                            Grade {r.quality_grade}
+                            {t('fleetHub.common.grade')} {r.quality_grade}
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-gray-400">Selesai {fmtDate(r.completion_time)}</div>
+                      <div className="text-[10px] text-gray-400">{t('fleetHub.common.done')} {fmtDate(r.completion_time)}</div>
                     </div>
                     {r.has_shipment ? (
                       <span className="text-[10px] text-emerald-600 font-semibold inline-flex items-center gap-1 flex-shrink-0">
-                        <BadgeCheck className="w-3 h-3" /> Terkirim
+                        <BadgeCheck className="w-3 h-3" /> {t('fleetHub.common.sent')}
                       </span>
                     ) : (
                       <button
                         onClick={() => onDispatchFG(r.id)}
                         className="px-2 py-1 bg-fuchsia-600 hover:bg-fuchsia-700 text-white rounded-md text-[11px] font-semibold inline-flex items-center gap-1 flex-shrink-0"
                       >
-                        <Send className="w-3 h-3" /> Dispatch
+                        <Send className="w-3 h-3" /> {t('fleetHub.common.dispatch')}
                       </button>
                     )}
                   </div>
@@ -1428,7 +1447,7 @@ function ManufacturingTab({
           )}
         </SectionPanel>
 
-        <SectionPanel title="Batch Produksi Aktif" count={active?.length || 0} icon={Factory}>
+        <SectionPanel title={t('fleetHub.mfgTab.batchActiveTitle')} count={active?.length || 0} icon={Factory}>
           {!active?.length ? <EmptyMini /> : (
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {active.slice(0, 10).map((b: any) => {
@@ -1442,7 +1461,7 @@ function ManufacturingTab({
                         <div className="text-xs font-mono text-gray-500">{b.batch_number}</div>
                         <div className="text-sm font-bold text-gray-900 truncate">{b.product_name || b.recipe_name}</div>
                         <div className="text-xs text-gray-500 mt-0.5">
-                          Supervisor: {b.supervisor_name || '-'} · {b.material_count || 0} material
+                          {t('fleetHub.common.supervisor')}: {b.supervisor_name || '-'} · {b.material_count || 0} {t('fleetHub.common.material')}
                         </div>
                       </div>
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold flex-shrink-0 ${
@@ -1467,10 +1486,10 @@ function ManufacturingTab({
       </div>
 
       {/* Material supply queue */}
-      <SectionPanel title="Bahan Baku Butuh Supply (Queue ke Armada)" count={materials?.length || 0} icon={ArrowRightLeft}>
+      <SectionPanel title={t('fleetHub.mfgTab.matQueue')} count={materials?.length || 0} icon={ArrowRightLeft}>
         {!materials?.length ? <EmptyMini /> : (
           <Table
-            headers={['Batch', 'Material', 'Dibutuhkan', 'Terpakai', 'Kurang', 'Stok Tersedia', 'Tgl Produksi']}
+            headers={mhl}
             rows={materials.slice(0, 12).map((m: any) => [
               <span className="font-mono text-xs">{m.batch_number}</span>,
               <div className="truncate max-w-[160px]">{m.product_name || m.product_sku}</div>,
@@ -1488,11 +1507,11 @@ function ManufacturingTab({
 
       {/* Shipments + Output side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SectionPanel title="Shipment Produksi Terbaru" count={shipments?.length || 0} icon={Send}>
+        <SectionPanel title={t('fleetHub.mfgTab.shipRecent')} count={shipments?.length || 0} icon={Send}>
           {!shipments?.length ? <EmptyMini /> : (
             <div className="max-h-[360px] overflow-y-auto">
               <Table
-                headers={['No', 'Kategori', 'Tujuan', 'Kendaraan', 'Status']}
+                headers={shl}
                 rows={shipments.slice(0, 12).map((s: any) => [
                   <span className="font-mono text-[11px]">{s.shipment_number}</span>,
                   <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold ${
@@ -1500,7 +1519,7 @@ function ManufacturingTab({
                       ? 'bg-amber-100 text-amber-700'
                       : 'bg-fuchsia-100 text-fuchsia-700'
                   }`}>
-                    {s.shipment_category === 'material_supply' ? 'Supply' : 'FG'}
+                    {s.shipment_category === 'material_supply' ? t('fleetHub.common.supply') : t('fleetHub.common.fg')}
                   </span>,
                   <div className="text-xs truncate max-w-[140px]">{s.destination_address}</div>,
                   s.vehicle_plate || '-',
@@ -1511,7 +1530,7 @@ function ManufacturingTab({
           )}
         </SectionPanel>
 
-        <SectionPanel title="Output per Produk (30 Hari)" count={output?.length || 0} icon={BarChart3}>
+        <SectionPanel title={t('fleetHub.mfgTab.outPerProduct')} count={output?.length || 0} icon={BarChart3}>
           {!output?.length ? <EmptyMini /> : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={output} layout="vertical" margin={{ left: 80 }}>
@@ -1519,7 +1538,7 @@ function ManufacturingTab({
                 <XAxis type="number" tick={{ fontSize: 10 }} />
                 <YAxis type="category" dataKey="product_name" tick={{ fontSize: 10 }} width={100} />
                 <Tooltip />
-                <Bar dataKey="total_produced" fill="#A855F7" name="Qty Produksi" />
+                <Bar dataKey="total_produced" fill="#A855F7" name={t('fleetHub.common.qtyProduction')} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -1531,11 +1550,12 @@ function ManufacturingTab({
 
 // ========================= Supply Chain Tab =========================
 function SupplyChainTab({ kpi, flow, network, loading, onRefresh }: any) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6">
       <IntegrationHeader
-        title="Supply Chain Command"
-        description="Alur end-to-end: Supplier → Gudang Bahan Baku → Pabrik → Gudang FG → Outlet/Customer. Pemantauan realtime Inventory, Manufaktur, dan Fleet."
+        title={t('fleetHub.supplyChain.title')}
+        description={t('fleetHub.supplyChain.desc')}
         icon={Workflow}
         gradient="from-indigo-500 via-purple-500 to-pink-500"
         onRefresh={onRefresh}
@@ -1543,38 +1563,38 @@ function SupplyChainTab({ kpi, flow, network, loading, onRefresh }: any) {
 
       {/* KPI Supply Chain */}
       <StatGrid stats={[
-        { label: 'Gudang Aktif', value: fmt(kpi?.totalWarehouses || 0), icon: Warehouse, color: 'sky' },
-        { label: 'Nilai Stok Total', value: fmtRpShort(kpi?.totalStockValue || 0), icon: DollarSign, color: 'emerald' },
-        { label: 'Inventory Turnover', value: `${Number(kpi?.inventoryTurnover || 0).toFixed(2)}x`, icon: Activity, color: 'indigo', sub: `DOI ${Number(kpi?.daysOfInventory || 0).toFixed(0)} hari` },
-        { label: 'On-Shelf Availability', value: `${kpi?.onShelfAvailability || 0}%`, icon: CheckCircle, color: 'green' },
+        { label: t('fleetHub.supplyChain.statWh'), value: fmt(kpi?.totalWarehouses || 0), icon: Warehouse, color: 'sky' },
+        { label: t('fleetHub.supplyChain.statStockVal'), value: fmtRpShort(kpi?.totalStockValue || 0), icon: DollarSign, color: 'emerald' },
+        { label: t('fleetHub.supplyChain.invTurn'), value: `${Number(kpi?.inventoryTurnover || 0).toFixed(2)}x`, icon: Activity, color: 'indigo', sub: `${t('fleetHub.supplyChain.doiPrefix')} ${Number(kpi?.daysOfInventory || 0).toFixed(0)} ${t('fleetHub.supplyChain.doiDays')}` },
+        { label: t('fleetHub.supplyChain.onShelf'), value: `${kpi?.onShelfAvailability || 0}%`, icon: CheckCircle, color: 'green' },
       ]} />
       <StatGrid stats={[
-        { label: 'Batch Produksi Aktif', value: fmt(kpi?.activeBatches || 0), icon: Factory, color: 'purple' },
-        { label: 'Produksi MTD', value: fmt(kpi?.producedQtyMTD || 0), icon: Boxes, color: 'pink', sub: 'unit/kg' },
-        { label: 'FG Menunggu Kirim', value: fmt(kpi?.fgReadyToDispatch || 0), icon: Package, color: 'amber' },
-        { label: 'Fleet Fill Rate', value: `${kpi?.fleetFillRate || 0}%`, icon: Timer, color: 'teal', sub: '30 hari' },
+        { label: t('fleetHub.supplyChain.batchActive'), value: fmt(kpi?.activeBatches || 0), icon: Factory, color: 'purple' },
+        { label: t('fleetHub.supplyChain.prodMtd'), value: fmt(kpi?.producedQtyMTD || 0), icon: Boxes, color: 'pink', sub: t('fleetHub.mfgTab.unitKg') },
+        { label: t('fleetHub.supplyChain.fgWait'), value: fmt(kpi?.fgReadyToDispatch || 0), icon: Package, color: 'amber' },
+        { label: t('fleetHub.supplyChain.fleetFill'), value: `${kpi?.fleetFillRate || 0}%`, icon: Timer, color: 'teal', sub: t('fleetHub.supplyChain.last30') },
       ]} />
 
       {/* Flow Diagram (Horizontal) */}
       <div className="bg-white rounded-xl border border-gray-100 p-6">
         <h3 className="font-bold text-gray-900 flex items-center gap-2 mb-5">
-          <Workflow className="w-4 h-4 text-indigo-600" /> Alur Supply Chain Realtime
+          <Workflow className="w-4 h-4 text-indigo-600" /> {t('fleetHub.supplyChain.flowTitle')}
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 items-center">
-          <FlowNode icon={ShoppingCart} label="Request Bahan" value={flow?.rawMaterialRequests || 0} color="amber" />
+          <FlowNode icon={ShoppingCart} label={t('fleetHub.supplyChain.flowRaw')} value={flow?.rawMaterialRequests || 0} color="amber" />
           <FlowArrow />
-          <FlowNode icon={Factory} label="Batch Produksi" value={flow?.batchesInProgress || 0} color="purple" />
+          <FlowNode icon={Factory} label={t('fleetHub.supplyChain.flowBatch')} value={flow?.batchesInProgress || 0} color="purple" />
           <FlowArrow />
-          <FlowNode icon={Package} label="FG Siap Kirim" value={flow?.fgReadyToShip || 0} color="pink" />
+          <FlowNode icon={Package} label={t('fleetHub.supplyChain.flowFg')} value={flow?.fgReadyToShip || 0} color="pink" />
           <FlowArrow className="hidden md:block md:col-span-5 mx-auto mt-2 rotate-90 md:rotate-0" />
-          <FlowNode icon={Truck} label="Dalam Perjalanan" value={flow?.shipmentsInTransit || 0} color="sky" />
+          <FlowNode icon={Truck} label={t('fleetHub.supplyChain.flowTransit')} value={flow?.shipmentsInTransit || 0} color="sky" />
           <FlowArrow />
-          <FlowNode icon={CheckCircle} label="Selesai 7 Hari" value={flow?.completedThisWeek || 0} color="emerald" />
+          <FlowNode icon={CheckCircle} label={t('fleetHub.supplyChain.flowDone')} value={flow?.completedThisWeek || 0} color="emerald" />
         </div>
       </div>
 
       {/* Warehouse Network */}
-      <SectionPanel title="Jaringan Gudang" count={network?.nodes?.length || 0} icon={Building2}>
+      <SectionPanel title={t('fleetHub.supplyChain.whNet')} count={network?.nodes?.length || 0} icon={Building2}>
         {!network?.nodes?.length ? <EmptyMini /> : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {network.nodes.map((n: any) => {
@@ -1592,22 +1612,22 @@ function SupplyChainTab({ kpi, flow, network, loading, onRefresh }: any) {
                   <div className="text-xs text-gray-500 truncate mb-2">{n.city || n.address || '-'}</div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <div className="text-gray-400 text-[10px]">Stok</div>
+                      <div className="text-gray-400 text-[10px]">{t('fleetHub.common.stock')}</div>
                       <div className="font-bold">{fmt(n.stock_qty || 0)}</div>
                     </div>
                     <div>
-                      <div className="text-gray-400 text-[10px]">Nilai</div>
+                      <div className="text-gray-400 text-[10px]">{t('fleetHub.common.value')}</div>
                       <div className="font-bold">{fmtRpShort(n.stock_value || 0)}</div>
                     </div>
                     <div>
                       <div className="text-emerald-500 text-[10px] inline-flex items-center gap-0.5">
-                        <ArrowRight className="w-2.5 h-2.5 rotate-180" /> Masuk
+                        <ArrowRight className="w-2.5 h-2.5 rotate-180" /> {t('fleetHub.common.in')}
                       </div>
                       <div className="font-bold text-emerald-600">{fmt(incoming || 0)}</div>
                     </div>
                     <div>
                       <div className="text-rose-500 text-[10px] inline-flex items-center gap-0.5">
-                        Keluar <ArrowRight className="w-2.5 h-2.5" />
+                        {t('fleetHub.common.out')} <ArrowRight className="w-2.5 h-2.5" />
                       </div>
                       <div className="font-bold text-rose-600">{fmt(outgoing || 0)}</div>
                     </div>
@@ -1623,25 +1643,25 @@ function SupplyChainTab({ kpi, flow, network, loading, onRefresh }: any) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <AlertCard
           icon={Inbox}
-          title="Transfer Menunggu Armada"
+          title={t('fleetHub.supplyChain.alertTransfer')}
           value={fmt(kpi?.pendingTransfers || 0)}
-          desc="Transfer antar gudang belum terhubung armada"
+          desc={t('fleetHub.supplyChain.alertTransferDesc')}
           color="purple"
           href="/hq/inventory/transfers"
         />
         <AlertCard
           icon={ShoppingCart}
-          title="PO Menunggu Pickup"
+          title={t('fleetHub.supplyChain.alertPo')}
           value={fmt(kpi?.pendingReceipts || 0)}
-          desc="Purchase Order siap diterima dari supplier"
+          desc={t('fleetHub.supplyChain.alertPoDesc')}
           color="amber"
           href="/hq/procurement"
         />
         <AlertCard
           icon={Package}
-          title="Bahan Baku Butuh Dikirim"
+          title={t('fleetHub.supplyChain.alertMat')}
           value={fmt(kpi?.materialSupplyRequests || 0)}
-          desc="Material request untuk batch produksi aktif"
+          desc={t('fleetHub.supplyChain.alertMatDesc')}
           color="rose"
           href="/hq/manufacturing"
         />
@@ -1690,6 +1710,7 @@ function AlertCard({ icon: Icon, title, value, desc, color, href }: any) {
 
 // ========================= Shared Sub-Components =========================
 function IntegrationHeader({ title, description, icon: Icon, gradient, onRefresh }: any) {
+  const { t } = useTranslation();
   return (
     <div className={`rounded-xl p-5 bg-gradient-to-r ${gradient} text-white flex items-center justify-between`}>
       <div className="flex items-center gap-3">
@@ -1703,7 +1724,7 @@ function IntegrationHeader({ title, description, icon: Icon, gradient, onRefresh
       </div>
       {onRefresh && (
         <button onClick={onRefresh} className="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium inline-flex items-center gap-2">
-          <RefreshCw className="w-4 h-4" /> Refresh
+          <RefreshCw className="w-4 h-4" /> {t('fleetHub.common.refresh')}
         </button>
       )}
     </div>
@@ -1772,10 +1793,11 @@ function Table({ headers, rows }: { headers: string[]; rows: any[][] }) {
 }
 
 function EmptyMini() {
+  const { t } = useTranslation();
   return (
     <div className="text-center py-10 text-gray-400">
       <Gift className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-      <p className="text-sm">Belum ada data</p>
+      <p className="text-sm">{t('fleetHub.common.noData')}</p>
     </div>
   );
 }

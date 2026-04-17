@@ -38,8 +38,11 @@ import { modulePageTranslations, mergeTranslations } from '@/lib/translations/hq
 import { moduleDetailTranslations } from '@/lib/translations/hq-module-detail';
 import { moduleArticleTranslations } from '@/lib/translations/hq-module-articles';
 import { extendedTranslations } from '@/lib/translations/hq-extended';
+import { pjmTranslations } from '@/lib/translations/hq-pjm';
+import { fleetHubTranslations } from '@/lib/translations/hq-fleet-hub';
+import { mfgUiTranslations } from '@/lib/translations/hq-mfg-ui';
 
-const mergedHqTranslations = mergeTranslations(mergeTranslations(mergeTranslations(mergeTranslations(hqTranslations, modulePageTranslations), moduleDetailTranslations), moduleArticleTranslations), extendedTranslations);
+const mergedHqTranslations = mergeTranslations(mergeTranslations(mergeTranslations(mergeTranslations(mergeTranslations(mergeTranslations(mergeTranslations(hqTranslations, modulePageTranslations), moduleDetailTranslations), moduleArticleTranslations), extendedTranslations), pjmTranslations), fleetHubTranslations), mfgUiTranslations);
 
 interface HQLayoutProps {
   children: React.ReactNode;

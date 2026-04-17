@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
 import { Megaphone, Search, Plus, Eye, Edit, Trash2, X, Check, Users, Star, TrendingUp, Target, BarChart3, FileText, Loader2, DollarSign, Calendar, Tag, Layers, Image, PieChart, CheckCircle2, XCircle, Filter, RefreshCw, Zap, Gift, Percent, ShoppingBag } from 'lucide-react';
+import { rowsOr, MOCK_HQ_CAMPAIGNS, MOCK_HQ_PROMOTIONS, MOCK_HQ_SEGMENTS, MOCK_HQ_MKT_BUDGETS } from '@/lib/hq/mock-data';
 
 type TabKey = 'dashboard' | 'campaigns' | 'promotions' | 'segments' | 'budgets';
 
@@ -28,10 +29,10 @@ const fmtNum = (n: number) => (n || 0).toLocaleString('id-ID');
 export default function MarketingPage() {
   const [tab, setTab] = useState<TabKey>('dashboard');
   const [dashboard, setDashboard] = useState<any>(null);
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [promotions, setPromotions] = useState<any[]>([]);
-  const [segments, setSegments] = useState<any[]>([]);
-  const [budgets, setBudgets] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>(MOCK_HQ_CAMPAIGNS);
+  const [promotions, setPromotions] = useState<any[]>(MOCK_HQ_PROMOTIONS);
+  const [segments, setSegments] = useState<any[]>(MOCK_HQ_SEGMENTS);
+  const [budgets, setBudgets] = useState<any[]>(MOCK_HQ_MKT_BUDGETS);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showModal, setShowModal] = useState<string | null>(null);
@@ -51,10 +52,10 @@ export default function MarketingPage() {
   };
 
   const fetchDashboard = useCallback(async () => { try { const r = await api('dashboard'); if (r.data) setDashboard(r.data); } catch (e) {} }, []);
-  const fetchCampaigns = useCallback(async () => { try { const r = await api('campaigns'); if (r.data) setCampaigns(Array.isArray(r.data) ? r.data : []); } catch (e) {} }, []);
-  const fetchPromotions = useCallback(async () => { try { const r = await api('promotions'); if (r.data) setPromotions(Array.isArray(r.data) ? r.data : []); } catch (e) {} }, []);
-  const fetchSegments = useCallback(async () => { try { const r = await api('segments'); if (r.data) setSegments(Array.isArray(r.data) ? r.data : []); } catch (e) {} }, []);
-  const fetchBudgets = useCallback(async () => { try { const r = await api('budgets'); if (r.data) setBudgets(Array.isArray(r.data) ? r.data : []); } catch (e) {} }, []);
+  const fetchCampaigns = useCallback(async () => { try { const r = await api('campaigns'); if (r.data) setCampaigns(rowsOr(Array.isArray(r.data) ? r.data : [], MOCK_HQ_CAMPAIGNS)); } catch (e) {} }, []);
+  const fetchPromotions = useCallback(async () => { try { const r = await api('promotions'); if (r.data) setPromotions(rowsOr(Array.isArray(r.data) ? r.data : [], MOCK_HQ_PROMOTIONS)); } catch (e) {} }, []);
+  const fetchSegments = useCallback(async () => { try { const r = await api('segments'); if (r.data) setSegments(rowsOr(Array.isArray(r.data) ? r.data : [], MOCK_HQ_SEGMENTS)); } catch (e) {} }, []);
+  const fetchBudgets = useCallback(async () => { try { const r = await api('budgets'); if (r.data) setBudgets(rowsOr(Array.isArray(r.data) ? r.data : [], MOCK_HQ_MKT_BUDGETS)); } catch (e) {} }, []);
 
   useEffect(() => {
     setLoading(true);
