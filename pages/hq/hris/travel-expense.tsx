@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Plane, Receipt, Wallet, Plus, Edit, Trash2, X, Check, Eye, Search, MapPin, Calendar, DollarSign } from 'lucide-react';
 
 interface TravelReq { id: string; employee_id: number; request_number: string; destination: string; departure_city: string; purpose: string; departure_date: string; return_date: string; travel_type: string; transportation: string; accommodation_needed: boolean; estimated_budget: number; actual_cost: number; advance_amount: number; status: string; itinerary: any[]; notes: string; }
@@ -23,6 +24,7 @@ const MOCK_TE_BUDGETS: Budget[] = [
 ];
 
 export default function TravelExpensePage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('requests');
   const [overview, setOverview] = useState<any>(MOCK_TE_OVERVIEW);
   const [requests, setRequests] = useState<TravelReq[]>(MOCK_TE_REQUESTS);
@@ -112,7 +114,7 @@ export default function TravelExpensePage() {
   ];
 
   return (
-    <HQLayout title="Manajemen Perjalanan & Pengeluaran">
+    <HQLayout title={t('hris.travelExpenseTitle')}>
     <div className="p-6 max-w-7xl mx-auto">
       {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 

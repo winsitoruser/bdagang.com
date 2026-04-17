@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useBuilder } from './BuilderContext';
 import { widgetRegistry, getAllCategories, getWidgetsByCategory } from './widgets/registry';
 import { CATEGORY_LABELS, WidgetCategory, WidgetDefinition } from './types';
+import { useTranslation } from '../../lib/i18n';
 import {
   Search, ChevronDown, ChevronRight, GripVertical, Layers, FileText, LayoutGrid,
   Plus, FolderOpen, Star, Clock, Sparkles,
@@ -25,6 +26,7 @@ interface WidgetCardProps {
 
 function WidgetCard({ widget }: WidgetCardProps) {
   const { addWidget, addWidgetToSection, dispatch, currentSections, state } = useBuilder();
+  const { t } = useTranslation();
   const Icon = widget.icon;
   const color = categoryColors[widget.category] || '#6b7280';
 
@@ -61,7 +63,7 @@ function WidgetCard({ widget }: WidgetCardProps) {
       className="group relative flex items-center gap-3 p-2.5 rounded-lg border border-transparent
         hover:border-gray-200 hover:bg-white hover:shadow-sm cursor-grab active:cursor-grabbing
         transition-all duration-150"
-      title={`Drag atau klik untuk menambahkan ${widget.name}`}
+      title={t('wb.widgetPanel.dragOrClick', { name: widget.name })}
     >
       <div
         className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110"
@@ -79,6 +81,7 @@ function WidgetCard({ widget }: WidgetCardProps) {
 }
 
 export default function WidgetPanel() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['layout', 'text', 'media']));
   const [viewMode, setViewMode] = useState<'category' | 'all'>('category');
@@ -106,7 +109,7 @@ export default function WidgetPanel() {
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Cari widget..."
+            placeholder={t('wb.widgetPanel.searchWidgets')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-200 bg-white
@@ -121,7 +124,7 @@ export default function WidgetPanel() {
               viewMode === 'category' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-100'
             }`}
           >
-            Kategori
+            {t('wb.widgetPanel.category')}
           </button>
           <button
             onClick={() => setViewMode('all')}
@@ -129,7 +132,7 @@ export default function WidgetPanel() {
               viewMode === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-100'
             }`}
           >
-            Semua
+            {t('wb.widgetPanel.all')}
           </button>
         </div>
       </div>
@@ -140,12 +143,12 @@ export default function WidgetPanel() {
           // Search results
           <div className="space-y-0.5">
             <div className="px-2 py-1.5 text-xs font-medium text-gray-400">
-              {filteredWidgets.length} hasil ditemukan
+              {t('wb.widgetPanel.resultsFound', { count: filteredWidgets.length })}
             </div>
             {filteredWidgets.map(w => <WidgetCard key={w.type} widget={w} />)}
             {filteredWidgets.length === 0 && (
               <div className="text-center py-8 text-gray-400 text-sm">
-                Tidak ada widget yang cocok
+                {t('wb.widgetPanel.noMatch')}
               </div>
             )}
           </div>
@@ -200,7 +203,7 @@ export default function WidgetPanel() {
       {/* Bottom hint */}
       <div className="p-3 border-t border-gray-100">
         <div className="text-[11px] text-gray-400 text-center leading-relaxed">
-          Drag widget ke canvas atau klik untuk menambahkan
+          {t('wb.widgetPanel.dragHint')}
         </div>
       </div>
     </div>

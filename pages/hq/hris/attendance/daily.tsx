@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Calendar, Clock, UserCheck, UserX, Users, Building2, Search,
   Download, Filter, ChevronLeft, ChevronRight, CheckCircle, XCircle,
@@ -34,6 +35,7 @@ const MOCK_DAILY_RECORDS: DailyRecord[] = [
 ];
 
 export default function DailyAttendancePage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [records, setRecords] = useState<DailyRecord[]>(MOCK_DAILY_RECORDS);
   const [loading, setLoading] = useState(true);
@@ -121,7 +123,7 @@ export default function DailyAttendancePage() {
   };
 
   return (
-    <HQLayout title="Absensi Harian" subtitle="Monitor kehadiran real-time per hari">
+    <HQLayout title={t('hris.dailyAttendanceTitle')} subtitle={t('hris.dailyAttendanceSubtitle')}>
       <div className="space-y-6">
         {/* Date Navigator + Stats */}
         <div className="bg-white rounded-xl shadow-sm border p-4">

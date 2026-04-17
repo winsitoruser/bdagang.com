@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
@@ -104,6 +105,7 @@ const MOCK_BANK_ACCOUNTS: BankAccount[] = [
 ];
 
 export default function CashFlowManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const { period } = useFinancePeriod();
@@ -277,8 +279,8 @@ export default function CashFlowManagement() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Cash Flow Management</h1>
-              <p className="text-gray-500">Monitor dan kelola arus kas perusahaan</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.cfTitle')}</h1>
+              <p className="text-gray-500">{t('finance.cfSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -287,7 +289,7 @@ export default function CashFlowManagement() {
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-              <Plus className="w-4 h-4" /> New Transaction
+              <Plus className="w-4 h-4" /> {t('finance.newTransaction')}
             </button>
             <button onClick={() => {
               const rows = cashFlowItems.map(i => `${i.date},${i.description},${i.category},${i.type},${i.amount},${i.status},${i.reference}`);
@@ -296,7 +298,7 @@ export default function CashFlowManagement() {
               const a = document.createElement('a'); a.href = url; a.download = `cash-flow-${period}.csv`; a.click(); URL.revokeObjectURL(url);
               toast.success('Export cash flow berhasil');
             }} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              <Download className="w-4 h-4" /> Export
+              <Download className="w-4 h-4" /> {t('finance.export')}
             </button>
           </div>
         </div>
@@ -304,14 +306,14 @@ export default function CashFlowManagement() {
         {/* Summary Cards */}
         <div className="grid grid-cols-5 gap-4">
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Opening Balance</p>
+            <p className="text-gray-500 text-sm">{t('finance.openingBalance')}</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.openingBalance)}</p>
           </div>
 
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <ArrowDownRight className="w-5 h-5 opacity-80" />
-              <p className="text-green-100 text-sm">Cash Inflow</p>
+              <p className="text-green-100 text-sm">{t('finance.cfInflow')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.cashInflow)}</p>
           </div>
@@ -319,13 +321,13 @@ export default function CashFlowManagement() {
           <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <ArrowUpRight className="w-5 h-5 opacity-80" />
-              <p className="text-red-100 text-sm">Cash Outflow</p>
+              <p className="text-red-100 text-sm">{t('finance.cfOutflow')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.cashOutflow)}</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Net Change</p>
+            <p className="text-gray-500 text-sm">{t('finance.cfNet')}</p>
             <p className={`text-2xl font-bold ${summary.netChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {summary.netChange >= 0 ? '+' : ''}{formatCurrency(summary.netChange)}
             </p>
@@ -334,7 +336,7 @@ export default function CashFlowManagement() {
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <Wallet className="w-5 h-5 opacity-80" />
-              <p className="text-blue-100 text-sm">Closing Balance</p>
+              <p className="text-blue-100 text-sm">{t('finance.closingBalance')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.closingBalance)}</p>
           </div>
@@ -348,7 +350,7 @@ export default function CashFlowManagement() {
                 <TrendingUp className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Operating Cash Flow</p>
+                <p className="text-xs text-gray-500">{t('finance.operatingCashFlow')}</p>
                 <p className="text-lg font-bold text-green-600">{formatCurrency(summary.operatingCashFlow)}</p>
               </div>
             </div>
@@ -360,7 +362,7 @@ export default function CashFlowManagement() {
                 <Building2 className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Investing Cash Flow</p>
+                <p className="text-xs text-gray-500">{t('finance.investingCashFlow')}</p>
                 <p className="text-lg font-bold text-red-600">{formatCurrency(summary.investingCashFlow)}</p>
               </div>
             </div>
@@ -372,7 +374,7 @@ export default function CashFlowManagement() {
                 <Landmark className="w-5 h-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Financing Cash Flow</p>
+                <p className="text-xs text-gray-500">{t('finance.financingCashFlow')}</p>
                 <p className="text-lg font-bold text-red-600">{formatCurrency(summary.financingCashFlow)}</p>
               </div>
             </div>
@@ -384,7 +386,7 @@ export default function CashFlowManagement() {
                 <BanknoteIcon className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Free Cash Flow</p>
+                <p className="text-xs text-gray-500">{t('finance.freeCashFlow')}</p>
                 <p className="text-lg font-bold text-green-600">{formatCurrency(summary.freeCashFlow)}</p>
               </div>
             </div>
@@ -394,10 +396,10 @@ export default function CashFlowManagement() {
         {/* View Mode Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
           {[
-            { key: 'overview', label: 'Ringkasan', icon: TrendingUp },
-            { key: 'transactions', label: 'Transaksi', icon: ArrowRightLeft },
-            { key: 'accounts', label: 'Rekening Bank', icon: Landmark },
-            { key: 'forecast', label: 'Proyeksi', icon: Calendar }
+            { key: 'overview', label: t('finance.cfOverview'), icon: TrendingUp },
+            { key: 'transactions', label: t('finance.cfTransactions'), icon: ArrowRightLeft },
+            { key: 'accounts', label: t('finance.cfBankAccounts'), icon: Landmark },
+            { key: 'forecast', label: t('finance.cfProjection'), icon: Calendar }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -413,22 +415,22 @@ export default function CashFlowManagement() {
         {viewMode === 'overview' && (
           <div className="grid grid-cols-2 gap-6">
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Weekly Cash Flow</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('finance.weeklyCashFlow')}</h3>
               <Chart options={cashFlowChartOptions} series={cashFlowChartSeries} type="bar" height={300} />
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Balance Trend</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('finance.balanceTrend')}</h3>
               <Chart options={balanceTrendOptions} series={balanceTrendSeries} type="area" height={300} />
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Cash Flow by Activity</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('finance.cfByActivity')}</h3>
               <Chart options={cashFlowBreakdownOptions} series={cashFlowBreakdownSeries} type="bar" height={200} />
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Bank Account Summary</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('finance.bankAccountSummary')}</h3>
               <div className="space-y-3">
                 {bankAccounts.slice(0, 4).map((account) => (
                   <div key={account.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -446,7 +448,7 @@ export default function CashFlowManagement() {
                 ))}
               </div>
               <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-                <p className="font-medium text-gray-700">Total Balance</p>
+                <p className="font-medium text-gray-700">{t('finance.totalBalance')}</p>
                 <p className="text-xl font-bold text-blue-600">{formatCurrency(totalBankBalance)}</p>
               </div>
             </div>

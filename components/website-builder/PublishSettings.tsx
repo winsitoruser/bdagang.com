@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBuilder } from './BuilderContext';
+import { useTranslation } from '../../lib/i18n';
 import {
   Globe, Lock, Shield, CheckCircle, AlertCircle, Clock, Copy,
   ExternalLink, RefreshCw, ChevronDown, ChevronRight, Eye, EyeOff,
@@ -38,6 +39,7 @@ function Section({ title, icon: Icon, children, defaultOpen = false, badge, badg
 
 export default function PublishSettings() {
   const { state, dispatch } = useBuilder();
+  const { t } = useTranslation();
   const domain = state.siteConfig?.domain || DEFAULT_DOMAIN;
   const publish = state.siteConfig?.publish || DEFAULT_PUBLISH;
   const [copied, setCopied] = useState(false);
@@ -78,17 +80,17 @@ export default function PublishSettings() {
   };
 
   const sslStatusConfig = {
-    none: { color: 'text-gray-400', bg: 'bg-gray-100', icon: Shield, label: 'Belum dikonfigurasi' },
-    pending: { color: 'text-yellow-600', bg: 'bg-yellow-50', icon: Clock, label: 'Sedang diproses...' },
-    active: { color: 'text-green-600', bg: 'bg-green-50', icon: CheckCircle, label: 'Aktif & Aman' },
+    none: { color: 'text-gray-400', bg: 'bg-gray-100', icon: Shield, label: t('wb.common.settings') },
+    pending: { color: 'text-yellow-600', bg: 'bg-yellow-50', icon: Clock, label: t('wb.common.loading') },
+    active: { color: 'text-green-600', bg: 'bg-green-50', icon: CheckCircle, label: 'Active' },
     error: { color: 'text-red-600', bg: 'bg-red-50', icon: AlertCircle, label: 'Error' },
   };
 
   const dnsStatusConfig = {
-    not_configured: { color: 'text-gray-400', bg: 'bg-gray-100', label: 'Belum dikonfigurasi' },
-    pending: { color: 'text-yellow-600', bg: 'bg-yellow-50', label: 'Menunggu verifikasi' },
-    verified: { color: 'text-green-600', bg: 'bg-green-50', label: 'Terverifikasi' },
-    error: { color: 'text-red-600', bg: 'bg-red-50', label: 'Error - Periksa DNS' },
+    not_configured: { color: 'text-gray-400', bg: 'bg-gray-100', label: t('wb.common.settings') },
+    pending: { color: 'text-yellow-600', bg: 'bg-yellow-50', label: t('wb.common.loading') },
+    verified: { color: 'text-green-600', bg: 'bg-green-50', label: 'Verified' },
+    error: { color: 'text-red-600', bg: 'bg-red-50', label: 'Error - DNS' },
   };
 
   const ssl = sslStatusConfig[domain.sslStatus];
@@ -100,7 +102,7 @@ export default function PublishSettings() {
       <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-violet-50 to-purple-50">
         <div className="flex items-center gap-2 mb-2">
           <Globe size={16} className="text-violet-600" />
-          <h3 className="text-sm font-bold text-gray-800">Publish & Domain</h3>
+          <h3 className="text-sm font-bold text-gray-800">{t('wb.publishSettings.title')}</h3>
         </div>
 
         {/* Publish Status */}
@@ -111,7 +113,7 @@ export default function PublishSettings() {
             'bg-gray-100 text-gray-600'
           }`}>
             {publish.status === 'published' ? <CheckCircle size={11} /> : <Clock size={11} />}
-            {publish.status === 'published' ? 'Published' : publish.status === 'scheduled' ? 'Terjadwal' : 'Draft'}
+            {publish.status === 'published' ? t('wb.common.published') : publish.status === 'scheduled' ? t('wb.common.scheduled') : t('wb.common.draft')}
           </span>
           {publish.publishedAt && (
             <span className="text-[10px] text-gray-400">
@@ -130,7 +132,7 @@ export default function PublishSettings() {
                 <div className="flex items-center gap-1.5 p-2.5 bg-green-50 rounded-lg border border-green-200">
                   <Globe size={13} className="text-green-600 flex-shrink-0" />
                   <span className="text-xs text-green-700 truncate flex-1">{getPublishedUrl()}</span>
-                  <button onClick={handleCopyUrl} className="p-1 hover:bg-green-100 rounded" title="Salin URL">
+                  <button onClick={handleCopyUrl} className="p-1 hover:bg-green-100 rounded" title="Copy URL">
                     {copied ? <CheckCircle size={13} className="text-green-600" /> : <Copy size={13} className="text-green-500" />}
                   </button>
                   <a href={getPublishedUrl()} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-green-100 rounded">
@@ -160,18 +162,18 @@ export default function PublishSettings() {
               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white text-sm font-bold hover:from-violet-600 hover:to-purple-700 transition-all shadow-lg shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Zap size={16} />
-              Publish Sekarang
+              {t('wb.publishSettings.publishNow')}
             </button>
           )}
           {!domain.subdomain && !domain.customDomain && publish.status !== 'published' && (
             <p className="text-[10px] text-amber-600 mt-2 flex items-center gap-1">
-              <AlertCircle size={10} /> Atur subdomain atau domain kustom terlebih dahulu
+              <AlertCircle size={10} /> {t('wb.publishSettings.subdomain')} / {t('wb.publishSettings.customDomain')}
             </p>
           )}
         </div>
 
         {/* Domain Type Selection */}
-        <Section title="Pengaturan Domain" icon={Globe} defaultOpen={true}
+        <Section title={t('wb.publishSettings.domain')} icon={Globe} defaultOpen={true}
           badge={domain.domainType === 'custom' ? 'Custom' : 'Subdomain'}
           badgeColor={domain.domainType === 'custom' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}
         >
@@ -191,13 +193,13 @@ export default function PublishSettings() {
                 domain.domainType === 'custom' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500'
               }`}
             >
-              Domain Sendiri
+              {t('wb.publishSettings.customDomain')}
             </button>
           </div>
 
           {domain.domainType === 'subdomain' ? (
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Pilih Subdomain</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.publishSettings.subdomain')}</label>
               <div className="flex items-center">
                 <input
                   type="text"
@@ -219,7 +221,7 @@ export default function PublishSettings() {
           ) : (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Domain Kustom</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.publishSettings.customDomain')}</label>
                 <input
                   type="text"
                   value={domain.customDomain}
@@ -233,7 +235,7 @@ export default function PublishSettings() {
                 <div className="space-y-2">
                   {/* DNS Instructions */}
                   <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                    <p className="text-[11px] font-semibold text-amber-700 mb-2">Konfigurasi DNS yang Diperlukan:</p>
+                    <p className="text-[11px] font-semibold text-amber-700 mb-2">{t('wb.publishSettings.dns')}:</p>
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between p-2 bg-white rounded-md border border-amber-100">
                         <div className="text-[10px]">
@@ -268,7 +270,7 @@ export default function PublishSettings() {
                       onClick={() => updateDomain({ dnsStatus: 'verified' })}
                       className="ml-auto text-[10px] font-medium text-blue-600 hover:underline"
                     >
-                      Verifikasi
+                      Verify
                     </button>
                   </div>
                 </div>
@@ -279,7 +281,7 @@ export default function PublishSettings() {
           {/* Extra Options */}
           <div className="space-y-2 pt-2 border-t border-gray-100">
             <label className="flex items-center justify-between cursor-pointer">
-              <span className="text-xs text-gray-600">Aktifkan www redirect</span>
+              <span className="text-xs text-gray-600">WWW Redirect</span>
               <div
                 onClick={() => updateDomain({ enableWWW: !domain.enableWWW })}
                 className={`relative cursor-pointer rounded-full transition-colors ${domain.enableWWW ? 'bg-blue-500' : 'bg-gray-300'}`}
@@ -291,7 +293,7 @@ export default function PublishSettings() {
               </div>
             </label>
             <label className="flex items-center justify-between cursor-pointer">
-              <span className="text-xs text-gray-600">Paksa HTTPS</span>
+              <span className="text-xs text-gray-600">Force HTTPS</span>
               <div
                 onClick={() => updateDomain({ forceHTTPS: !domain.forceHTTPS })}
                 className={`relative cursor-pointer rounded-full transition-colors ${domain.forceHTTPS ? 'bg-blue-500' : 'bg-gray-300'}`}
@@ -306,7 +308,7 @@ export default function PublishSettings() {
         </Section>
 
         {/* SSL Certificate */}
-        <Section title="Sertifikat SSL" icon={Lock}
+        <Section title={t('wb.publishSettings.ssl')} icon={Lock}
           badge={ssl.label}
           badgeColor={`${ssl.bg} ${ssl.color}`}
         >
@@ -324,17 +326,17 @@ export default function PublishSettings() {
               onClick={() => updateDomain({ sslStatus: 'pending' })}
               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
             >
-              <Shield size={13} /> Aktifkan SSL Gratis (Let&apos;s Encrypt)
+              <Shield size={13} /> {t('wb.publishSettings.ssl')} (Let&apos;s Encrypt)
             </button>
           )}
         </Section>
 
         {/* Access Control */}
-        <Section title="Kontrol Akses" icon={Key}>
+        <Section title={t('wb.publishSettings.passwordProtect')} icon={Key}>
           <label className="flex items-center justify-between cursor-pointer">
             <div className="flex items-center gap-2">
               <Lock size={13} className="text-gray-400" />
-              <span className="text-xs text-gray-600">Proteksi Password</span>
+              <span className="text-xs text-gray-600">{t('wb.publishSettings.passwordProtect')}</span>
             </div>
             <div
               onClick={() => updatePublish({ passwordProtected: !publish.passwordProtected })}
@@ -348,12 +350,12 @@ export default function PublishSettings() {
           </label>
           {publish.passwordProtected && (
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Password</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.publishSettings.passwordProtect')}</label>
               <input
                 type="password"
                 value={publish.password}
                 onChange={e => updatePublish({ password: e.target.value })}
-                placeholder="Masukkan password..."
+                placeholder="Password..."
                 className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
@@ -362,7 +364,7 @@ export default function PublishSettings() {
           <label className="flex items-center justify-between cursor-pointer">
             <div className="flex items-center gap-2">
               <Settings size={13} className="text-gray-400" />
-              <span className="text-xs text-gray-600">Mode Pemeliharaan</span>
+              <span className="text-xs text-gray-600">{t('wb.publishSettings.maintenance')}</span>
             </div>
             <div
               onClick={() => updatePublish({ maintenanceMode: !publish.maintenanceMode })}
@@ -376,7 +378,7 @@ export default function PublishSettings() {
           </label>
           {publish.maintenanceMode && (
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Pesan Pemeliharaan</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.publishSettings.maintenanceMsg')}</label>
               <textarea
                 value={publish.maintenanceMessage}
                 onChange={e => updatePublish({ maintenanceMessage: e.target.value })}
@@ -388,9 +390,9 @@ export default function PublishSettings() {
         </Section>
 
         {/* Favicon */}
-        <Section title="Favicon & Branding" icon={Globe}>
+        <Section title="Favicon" icon={Globe}>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">URL Favicon</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Favicon URL</label>
             <input
               type="url"
               value={domain.favicon}
@@ -406,12 +408,12 @@ export default function PublishSettings() {
             </div>
           )}
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Halaman 404 Kustom</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">404 Page</label>
             <input
               type="text"
               value={domain.customNotFoundPage}
               onChange={e => updateDomain({ customNotFoundPage: e.target.value })}
-              placeholder="Slug halaman 404 (misal: not-found)"
+              placeholder="not-found"
               className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </div>

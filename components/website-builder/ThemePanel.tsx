@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBuilder } from './BuilderContext';
+import { useTranslation } from '../../lib/i18n';
 import {
   Palette, Type, Layout, Maximize2, Sparkles, Moon, Sun,
   ChevronDown, ChevronRight, RotateCcw, Zap, Square, Circle,
@@ -100,6 +101,7 @@ const FONT_OPTIONS = [
 
 export default function ThemePanel() {
   const { state, dispatch } = useBuilder();
+  const { t } = useTranslation();
   const theme = state.siteConfig?.theme || DEFAULT_THEME;
 
   const updateTheme = (updates: Partial<ThemeSettings>) => {
@@ -117,12 +119,12 @@ export default function ThemePanel() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Palette size={16} className="text-pink-600" />
-            <h3 className="text-sm font-bold text-gray-800">Tema & Gaya Global</h3>
+            <h3 className="text-sm font-bold text-gray-800">{t('wb.themePanel.title')}</h3>
           </div>
           <button
             onClick={resetTheme}
             className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg transition-colors"
-            title="Reset ke default"
+            title="Reset"
           >
             <RotateCcw size={13} />
           </button>
@@ -131,7 +133,7 @@ export default function ThemePanel() {
 
       <div className="flex-1 overflow-y-auto builder-panel">
         {/* Preset Themes */}
-        <Section title="Preset Tema" icon={Sparkles} defaultOpen={true}>
+        <Section title="Preset" icon={Sparkles} defaultOpen={true}>
           <div className="grid grid-cols-2 gap-2">
             {PRESET_THEMES.map(preset => (
               <button
@@ -151,31 +153,31 @@ export default function ThemePanel() {
         </Section>
 
         {/* Colors */}
-        <Section title="Warna" icon={Palette} defaultOpen={true}>
+        <Section title={t('wb.themePanel.colors')} icon={Palette} defaultOpen={true}>
           <div className="space-y-2.5">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Brand</p>
-            <ColorField label="Primer" value={theme.colorPrimary} onChange={v => updateTheme({ colorPrimary: v })} />
-            <ColorField label="Sekunder" value={theme.colorSecondary} onChange={v => updateTheme({ colorSecondary: v })} />
-            <ColorField label="Aksen" value={theme.colorAccent} onChange={v => updateTheme({ colorAccent: v })} />
+            <ColorField label={t('wb.themePanel.colorPrimary')} value={theme.colorPrimary} onChange={v => updateTheme({ colorPrimary: v })} />
+            <ColorField label={t('wb.themePanel.colorSecondary')} value={theme.colorSecondary} onChange={v => updateTheme({ colorSecondary: v })} />
+            <ColorField label={t('wb.themePanel.colorAccent')} value={theme.colorAccent} onChange={v => updateTheme({ colorAccent: v })} />
 
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider pt-2">Status</p>
-            <ColorField label="Sukses" value={theme.colorSuccess} onChange={v => updateTheme({ colorSuccess: v })} />
-            <ColorField label="Peringatan" value={theme.colorWarning} onChange={v => updateTheme({ colorWarning: v })} />
-            <ColorField label="Bahaya" value={theme.colorDanger} onChange={v => updateTheme({ colorDanger: v })} />
+            <ColorField label={t('wb.themePanel.colorSuccess')} value={theme.colorSuccess} onChange={v => updateTheme({ colorSuccess: v })} />
+            <ColorField label={t('wb.themePanel.colorWarning')} value={theme.colorWarning} onChange={v => updateTheme({ colorWarning: v })} />
+            <ColorField label={t('wb.themePanel.colorDanger')} value={theme.colorDanger} onChange={v => updateTheme({ colorDanger: v })} />
 
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider pt-2">UI</p>
-            <ColorField label="Teks" value={theme.colorText} onChange={v => updateTheme({ colorText: v })} />
-            <ColorField label="Teks Sekunder" value={theme.colorTextSecondary} onChange={v => updateTheme({ colorTextSecondary: v })} />
-            <ColorField label="Background" value={theme.colorBackground} onChange={v => updateTheme({ colorBackground: v })} />
+            <ColorField label={t('wb.themePanel.colorText')} value={theme.colorText} onChange={v => updateTheme({ colorText: v })} />
+            <ColorField label="Text Secondary" value={theme.colorTextSecondary} onChange={v => updateTheme({ colorTextSecondary: v })} />
+            <ColorField label={t('wb.themePanel.colorBackground')} value={theme.colorBackground} onChange={v => updateTheme({ colorBackground: v })} />
             <ColorField label="Surface" value={theme.colorSurface} onChange={v => updateTheme({ colorSurface: v })} />
             <ColorField label="Border" value={theme.colorBorder} onChange={v => updateTheme({ colorBorder: v })} />
           </div>
         </Section>
 
         {/* Typography */}
-        <Section title="Tipografi" icon={Type}>
+        <Section title={t('wb.themePanel.typography')} icon={Type}>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Font Heading</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.themePanel.fontHeading')}</label>
             <select
               value={theme.fontHeading}
               onChange={e => updateTheme({ fontHeading: e.target.value })}
@@ -186,7 +188,7 @@ export default function ThemePanel() {
             <p className="mt-1.5 text-sm font-bold" style={{ fontFamily: theme.fontHeading }}>Preview Heading Abc</p>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Font Body</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.themePanel.fontBody')}</label>
             <select
               value={theme.fontBody}
               onChange={e => updateTheme({ fontBody: e.target.value })}
@@ -198,7 +200,7 @@ export default function ThemePanel() {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-[10px] font-medium text-gray-500 mb-1">Ukuran Base</label>
+              <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('wb.themePanel.fontSize')}</label>
               <div className="flex items-center gap-1">
                 <input
                   type="range"
@@ -212,7 +214,7 @@ export default function ThemePanel() {
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-medium text-gray-500 mb-1">Line Height</label>
+              <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('wb.themePanel.lineHeight')}</label>
               <div className="flex items-center gap-1">
                 <input
                   type="range"
@@ -230,9 +232,9 @@ export default function ThemePanel() {
         </Section>
 
         {/* Layout */}
-        <Section title="Layout & Spacing" icon={Layout}>
+        <Section title={t('wb.common.layout') + ' & ' + t('wb.themePanel.spacing')} icon={Layout}>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Lebar Maksimum: {theme.maxWidth}px</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Max Width: {theme.maxWidth}px</label>
             <input
               type="range"
               min={800}
@@ -248,7 +250,7 @@ export default function ThemePanel() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Padding Container: {theme.containerPadding}px</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Container Padding: {theme.containerPadding}px</label>
             <input
               type="range"
               min={8}
@@ -260,7 +262,7 @@ export default function ThemePanel() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Base Spacing: {theme.spacing}px</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.themePanel.spacing')}: {theme.spacing}px</label>
             <input
               type="range"
               min={4}
@@ -272,7 +274,7 @@ export default function ThemePanel() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Border Radius: {theme.borderRadius}px</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.themePanel.borderRadius')}: {theme.borderRadius}px</label>
             <input
               type="range"
               min={0}
@@ -295,9 +297,9 @@ export default function ThemePanel() {
         </Section>
 
         {/* Component Styles */}
-        <Section title="Gaya Komponen" icon={Maximize2}>
+        <Section title={t('wb.common.style')} icon={Maximize2}>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Gaya Tombol</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('wb.themePanel.buttonStyle')}</label>
             <div className="flex gap-2">
               {([
                 { value: 'rounded', label: 'Rounded', radius: '8px' },
@@ -318,7 +320,7 @@ export default function ThemePanel() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Gaya Input</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('wb.themePanel.inputStyle')}</label>
             <div className="flex gap-2">
               {([
                 { value: 'rounded', label: 'Rounded' },
@@ -338,13 +340,13 @@ export default function ThemePanel() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Bayangan</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('wb.themePanel.shadow')}</label>
             <div className="flex gap-2">
               {([
-                { value: 'none', label: 'Tanpa' },
-                { value: 'subtle', label: 'Halus' },
-                { value: 'medium', label: 'Sedang' },
-                { value: 'strong', label: 'Kuat' },
+                { value: 'none', label: 'None' },
+                { value: 'subtle', label: 'Subtle' },
+                { value: 'medium', label: 'Medium' },
+                { value: 'strong', label: 'Strong' },
               ] as const).map(s => (
                 <button
                   key={s.value}
@@ -359,13 +361,13 @@ export default function ThemePanel() {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1.5">Kecepatan Animasi</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1.5">{t('wb.themePanel.animation')}</label>
             <div className="flex gap-2">
               {([
-                { value: 'none', label: 'Mati' },
-                { value: 'fast', label: 'Cepat' },
+                { value: 'none', label: 'Off' },
+                { value: 'fast', label: 'Fast' },
                 { value: 'normal', label: 'Normal' },
-                { value: 'slow', label: 'Lambat' },
+                { value: 'slow', label: 'Slow' },
               ] as const).map(s => (
                 <button
                   key={s.value}
@@ -382,11 +384,11 @@ export default function ThemePanel() {
         </Section>
 
         {/* Dark Mode */}
-        <Section title="Mode Gelap" icon={Moon}>
+        <Section title={t('wb.themePanel.darkMode')} icon={Moon}>
           <label className="flex items-center justify-between cursor-pointer">
             <div className="flex items-center gap-2">
               {theme.darkMode ? <Moon size={13} className="text-indigo-500" /> : <Sun size={13} className="text-yellow-500" />}
-              <span className="text-xs text-gray-600">Aktifkan Mode Gelap</span>
+              <span className="text-xs text-gray-600">{t('wb.themePanel.darkMode')}</span>
             </div>
             <div
               onClick={() => updateTheme({ darkMode: !theme.darkMode })}
@@ -409,9 +411,9 @@ export default function ThemePanel() {
         </Section>
 
         {/* Custom CSS */}
-        <Section title="CSS Kustom" icon={Zap}>
+        <Section title={t('wb.themePanel.customCSS')} icon={Zap}>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Tambahan CSS Global</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.themePanel.customCSS')}</label>
             <textarea
               value={theme.customCSS}
               onChange={e => updateTheme({ customCSS: e.target.value })}
@@ -424,7 +426,7 @@ export default function ThemePanel() {
 
         {/* Theme Preview */}
         <div className="px-4 py-4 border-t border-gray-100">
-          <p className="text-[10px] font-semibold text-gray-500 mb-2 uppercase tracking-wider">Preview Tema</p>
+          <p className="text-[10px] font-semibold text-gray-500 mb-2 uppercase tracking-wider">{t('wb.common.preview')}</p>
           <div
             className="p-4 rounded-lg border border-gray-200 space-y-3"
             style={{ backgroundColor: theme.colorBackground, fontFamily: theme.fontBody }}

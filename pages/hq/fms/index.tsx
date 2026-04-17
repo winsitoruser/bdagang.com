@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Truck, Users, Wrench, Fuel, FileText, Shield, DollarSign, AlertTriangle,
   Plus, Search, Filter, RefreshCw, Edit, Eye, MapPin, Calendar, Clock,
@@ -88,6 +89,7 @@ const MOCK_FMS_DRIVERS = [
 ];
 
 export default function FMSPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [tab, setTab] = useState<TabType>('dashboard');
   const [loading, setLoading] = useState(false);
@@ -416,7 +418,7 @@ export default function FMSPage() {
           {/* Title Bar */}
           <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2 truncate"><Truck className="w-6 h-6 text-blue-600 flex-shrink-0" />Manajemen Armada</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2 truncate"><Truck className="w-6 h-6 text-blue-600 flex-shrink-0" />{t('fms.title')}</h1>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <div className="relative hidden sm:block"><Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" /><input className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm w-52 lg:w-64 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Cari..." value={search} onChange={e => setSearch(e.target.value)} /></div>

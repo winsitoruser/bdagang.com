@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Fingerprint, Wifi, WifiOff, Plus, Settings, RefreshCw, Trash2,
   Edit, Monitor, Server, Smartphone, Clock, CheckCircle, XCircle,
@@ -45,6 +46,7 @@ const MOCK_DEVICES: Device[] = [
 ];
 
 export default function DeviceManagementPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [devices, setDevices] = useState<Device[]>(MOCK_DEVICES);
   const [loading, setLoading] = useState(true);
@@ -188,7 +190,7 @@ export default function DeviceManagementPage() {
   };
 
   return (
-    <HQLayout title="Manajemen Device Absensi" subtitle="Kelola perangkat fingerprint, face recognition, dan integrasi absensi">
+    <HQLayout title={t('hris.devicesTitle')} subtitle={t('hris.devicesSubtitle')}>
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

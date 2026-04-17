@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   GraduationCap, Search, Plus, Eye, Edit, X, Calendar, Clock, Users, MapPin,
   Star, Award, BookOpen, CheckCircle2, BarChart3, TrendingUp, FileText, Download,
@@ -69,6 +70,7 @@ const statusBadge = (s: string) => <span className={`text-xs px-2 py-0.5 rounded
 // Main Component
 // ═══════════════════════════════════════════
 export default function TrainingDevelopmentPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('dashboard');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -252,7 +254,7 @@ export default function TrainingDevelopmentPage() {
   // RENDER
   // ═══════════════════════════════════════════
   return (
-    <HQLayout title="Training & Development" subtitle="Modul Pelatihan, Ujian, Kelulusan & Penempatan Karyawan — Mendukung Industri Umum & Outsourcing">
+    <HQLayout title={t('hris.trainingDevTitle')} subtitle={t('hris.trainingDevSubtitle')}>
       <div className="space-y-6">
         {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 

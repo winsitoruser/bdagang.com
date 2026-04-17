@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { MessageCircle, Award, Bell, Plus, Edit, Trash2, X, Heart, Star, Send, Eye, BarChart3, Users } from 'lucide-react';
 
 interface SurveyItem { id: string; title: string; description: string; survey_type: string; status: string; start_date: string; end_date: string; is_anonymous: boolean; questions: any[]; total_responses: number; }
@@ -28,6 +29,7 @@ const MOCK_ANNOUNCEMENTS: AnnouncementItem[] = [
 ];
 
 export default function EngagementPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('surveys');
   const [overview, setOverview] = useState<any>(MOCK_ENG_OVERVIEW);
   const [surveys, setSurveys] = useState<SurveyItem[]>(MOCK_SURVEYS);
@@ -129,7 +131,7 @@ export default function EngagementPage() {
   ];
 
   return (
-    <HQLayout title="Keterlibatan Karyawan & Budaya">
+    <HQLayout title={t('hris.engagementTitle')}>
     <div className="p-6 max-w-7xl mx-auto">
       {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { UserPlus, Search, Filter, Plus, Eye, Edit, Trash2, X, Check, ChevronRight, Briefcase, MapPin, Clock, Users, Star, FileText, Download, Upload, Calendar, DollarSign, BarChart3, TrendingUp, CheckCircle2, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 type TabKey = 'openings' | 'candidates' | 'pipeline' | 'analytics';
@@ -35,6 +36,7 @@ const MOCK_RECRUITMENT_ANALYTICS = {
 };
 
 export default function RecruitmentPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('openings');
   const [openings, setOpenings] = useState<any[]>(MOCK_OPENINGS);
   const [candidates, setCandidates] = useState<any[]>(MOCK_CANDIDATES);
@@ -189,7 +191,7 @@ export default function RecruitmentPage() {
   const getCandidateStage = (c: any) => c.stage || c.current_stage || 'applied';
 
   return (
-    <HQLayout title="Rekrutmen" subtitle="Manajemen Lowongan & Proses Seleksi Karyawan">
+    <HQLayout title={t('hris.recruitmentTitle')} subtitle={t('hris.recruitmentSubtitle')}>
       <div className="space-y-6">
         {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 

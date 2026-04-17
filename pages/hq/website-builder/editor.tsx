@@ -17,11 +17,13 @@ import {
   Blocks, FileText, Layers, PanelRightClose, PanelRightOpen,
   Search, Palette, Globe, Settings2, Sliders,
 } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n';
 
 function EditorContent() {
   const router = useRouter();
   const { pageId } = router.query;
   const { state, dispatch, loadFromLocalStorage, saveToLocalStorage, initSiteConfig, createPage } = useBuilder();
+  const { t } = useTranslation();
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -104,16 +106,16 @@ function EditorContent() {
   }, [state.pages, saveToLocalStorage]);
 
   const leftPanelTabs = [
-    { id: 'widgets' as const, icon: Blocks, label: 'Widget' },
-    { id: 'pages' as const, icon: FileText, label: 'Halaman' },
-    { id: 'layers' as const, icon: Layers, label: 'Layer' },
+    { id: 'widgets' as const, icon: Blocks, label: t('wb.panel.widgets') },
+    { id: 'pages' as const, icon: FileText, label: t('wb.panel.pages') },
+    { id: 'layers' as const, icon: Layers, label: t('wb.panel.layers') },
   ];
 
   const rightPanelTabs = [
-    { id: 'properties' as const, icon: Sliders, label: 'Properti' },
-    { id: 'seo' as const, icon: Search, label: 'SEO' },
-    { id: 'theme' as const, icon: Palette, label: 'Tema' },
-    { id: 'publish' as const, icon: Globe, label: 'Publish' },
+    { id: 'properties' as const, icon: Sliders, label: t('wb.panel.properties') },
+    { id: 'seo' as const, icon: Search, label: t('wb.panel.seo') },
+    { id: 'theme' as const, icon: Palette, label: t('wb.panel.theme') },
+    { id: 'publish' as const, icon: Globe, label: t('wb.panel.publish') },
   ];
 
   return (
@@ -204,7 +206,7 @@ function EditorContent() {
               border-r-0 rounded-l-md flex items-center justify-center text-gray-400 hover:text-gray-600
               hover:bg-gray-50 transition-colors shadow-sm"
             style={{ right: state.rightPanelOpen ? '320px' : 0 }}
-            title={state.rightPanelOpen ? 'Tutup Panel' : 'Buka Panel'}
+            title={state.rightPanelOpen ? t('wb.common.close') : t('wb.common.settings')}
           >
             {state.rightPanelOpen ? <PanelRightClose size={12} /> : <PanelRightOpen size={12} />}
           </button>
@@ -219,20 +221,20 @@ function EditorContent() {
         <div className="flex items-center gap-3">
           <span>Section: {state.pages.find(p => p.id === state.currentPageId)?.sections?.length || 0}</span>
           <span>Widget: {state.pages.find(p => p.id === state.currentPageId)?.widgets.length || 0}</span>
-          <span>Grid: {state.showGrid ? 'ON' : 'OFF'}</span>
-          <span>Perangkat: {state.devicePreview} ({state.devicePreview === 'desktop' ? '1440' : state.devicePreview === 'tablet' ? '768' : '375'}px)</span>
+          <span>{t('wb.common.grid')}: {state.showGrid ? 'ON' : 'OFF'}</span>
+          <span>{t('wb.common.device')}: {state.devicePreview} ({state.devicePreview === 'desktop' ? '1440' : state.devicePreview === 'tablet' ? '768' : '375'}px)</span>
         </div>
         <div className="flex items-center gap-3">
           <span>Zoom: {state.zoom}%</span>
-          <span>Riwayat: {state.historyIndex + 1}/{state.history.length}</span>
+          <span>{t('wb.common.history')}: {state.historyIndex + 1}/{state.history.length}</span>
           {state.lastSavedAt && (
             <span className="text-green-500">
-              Tersimpan {new Date(state.lastSavedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              {t('wb.common.savedAt', { time: new Date(state.lastSavedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) })}
             </span>
           )}
-          {!state.lastSavedAt && <span className="text-green-500">Auto-save aktif</span>}
+          {!state.lastSavedAt && <span className="text-green-500">{t('wb.common.autoSaveActive')}</span>}
           {state.siteConfig?.publish?.status === 'published' && (
-            <span className="text-blue-500 flex items-center gap-1">● Published</span>
+            <span className="text-blue-500 flex items-center gap-1">● {t('wb.common.published')}</span>
           )}
         </div>
       </div>
@@ -254,7 +256,7 @@ export default dynamic(() => Promise.resolve(WebsiteBuilderEditorInner), {
     <div className="h-screen flex items-center justify-center bg-gray-100">
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-500 font-medium">Memuat Editor...</p>
+        <p className="text-gray-500 font-medium">Loading Editor...</p>
       </div>
     </div>
   ),

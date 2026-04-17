@@ -76,6 +76,9 @@ import {
   BookOpen,
   Car,
   Code2,
+  Smartphone,
+  QrCode,
+  Percent,
   type LucideIcon
 } from 'lucide-react';
 
@@ -483,6 +486,13 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'hris-performance', name: 'Penilaian Kinerja', href: '/hq/hris/performance', icon: Award },
             { id: 'hris-leave', name: 'Manajemen Cuti', href: '/hq/hris/leave', icon: CalendarDays },
             { id: 'hris-payroll', name: 'Penggajian', href: '/hq/hris/payroll', icon: Banknote },
+            { id: 'hris-payroll-main', name: 'Proses Gaji', href: '/hq/hris/payroll/main', icon: Calculator },
+            { id: 'hris-payroll-slip', name: 'Slip Gaji', href: '/hq/hris/payroll/slip-gaji', icon: FileText },
+            { id: 'hris-payroll-thr', name: 'THR', href: '/hq/hris/payroll/thr', icon: Gift },
+            { id: 'hris-payroll-pph21', name: 'PPh 21', href: '/hq/hris/payroll/pph21', icon: Percent },
+            { id: 'hris-payroll-bpjs', name: 'BPJS', href: '/hq/hris/payroll/bpjs', icon: Shield },
+            { id: 'hris-payroll-lembur', name: 'Lembur', href: '/hq/hris/payroll/lembur', icon: Clock },
+            { id: 'hris-payroll-laporan', name: 'Laporan Gaji', href: '/hq/hris/payroll/laporan', icon: BarChart3 },
             { id: 'hris-employees', name: 'Database Karyawan', href: '/hq/hris/employees', icon: Users },
             { id: 'hris-organization', name: 'Struktur Organisasi', href: '/hq/hris/organization', icon: Network },
             { id: 'hris-workflow', name: 'Klaim & Mutasi', href: '/hq/hris/mss', icon: ArrowRightLeft },
@@ -734,7 +744,16 @@ export const branchSidebarConfig: SidebarConfig = {
         { id: 'pos', name: 'Kasir', href: '/pos', icon: ShoppingCart, modules: ['pos'] },
         { id: 'inventory', name: 'Inventori', href: '/inventory', icon: Package, modules: ['inventory'] },
         { id: 'customers', name: 'Pelanggan', href: '/customers', icon: Users, modules: ['customers'] },
-        { id: 'employees', name: 'Jadwal & Shift', href: '/employees/schedules', icon: CalendarDays, modules: ['employees'] },
+        {
+          id: 'employees',
+          name: 'Karyawan',
+          icon: Users,
+          modules: ['employees'],
+          children: [
+            { id: 'employees-schedules', name: 'Jadwal & Shift', href: '/employees/schedules', icon: CalendarDays },
+            { id: 'employees-mobile', name: 'Aplikasi Mobile Karyawan', href: '/employee', icon: Smartphone },
+          ]
+        },
         { id: 'loyalty', name: 'Program Loyalitas', href: '/loyalty-program', icon: Award, modules: ['loyalty'] },
       ]
     },
@@ -746,6 +765,23 @@ export const branchSidebarConfig: SidebarConfig = {
         { id: 'reservations', name: 'Reservasi', href: '/reservations', icon: Calendar, modules: ['reservations'] },
         { id: 'kitchen', name: 'Manajemen Dapur', href: '/kitchen', icon: ChefHat, modules: ['kitchen'] },
         { id: 'promo', name: 'Promo & Voucher', href: '/promo-voucher', icon: Ticket, modules: ['promo'] },
+        {
+          id: 'fleet',
+          name: 'Manajemen Armada',
+          icon: Truck,
+          modules: ['fms', 'fleet'],
+          roles: ['super_admin', 'owner', 'admin', 'manager'],
+          children: [
+            { id: 'fleet-dashboard', name: 'Dasbor Armada', href: '/hq/fms', icon: LayoutDashboard },
+            { id: 'fleet-vehicles', name: 'Kendaraan', href: '/hq/fms?tab=vehicles', icon: Truck },
+            { id: 'fleet-drivers', name: 'Pengemudi', href: '/hq/fms?tab=drivers', icon: Users },
+            { id: 'fleet-routes', name: 'Rute', href: '/hq/fms?tab=routes', icon: MapPin },
+            { id: 'fleet-maintenance', name: 'Pemeliharaan', href: '/hq/fms?tab=maintenance', icon: Wrench },
+            { id: 'fleet-fuel', name: 'BBM', href: '/hq/fms?tab=fuel', icon: Fuel },
+            { id: 'fleet-gps', name: 'GPS Live', href: '/hq/fms?tab=gps', icon: Navigation },
+            { id: 'fleet-costs', name: 'Biaya', href: '/hq/fms?tab=costs', icon: DollarSign },
+          ]
+        },
       ]
     },
     {

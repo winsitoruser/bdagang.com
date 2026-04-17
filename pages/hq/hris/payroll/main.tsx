@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import * as XLSX from 'xlsx';
 import {
@@ -81,6 +82,7 @@ const MOCK_PAYROLL_STATS = {
 };
 
 export default function PayrollPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'salaries' | 'runs' | 'components' | 'bulk-upload'>('overview');
@@ -566,7 +568,7 @@ export default function PayrollPage() {
   if (!mounted) return null;
 
   return (
-    <HQLayout title="Penggajian" subtitle="Perhitungan gaji, komponen, dan slip gaji karyawan">
+    <HQLayout title={t('hris.payrollTitle')} subtitle={t('hris.payrollSubtitle')}>
       <div className="space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

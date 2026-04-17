@@ -41,12 +41,23 @@ const sidebarTranslationMap: Record<string, string> = {
   'pos': 'sidebar.cashier',
   'inventory': 'sidebar.stockManagement',
   'customers': 'sidebar.customerList',
-  'employees': 'sidebar.employeeSchedules',
+  'employees': 'sidebar.employees',
+  'employees-schedules': 'sidebar.employeeSchedules',
+  'employees-mobile': 'sidebar.employeeMobileApp',
   'loyalty': 'sidebar.loyaltyPoints',
   'tables': 'sidebar.tableManagement',
   'reservations': 'sidebar.reservationMgmt',
   'kitchen': 'sidebar.kitchenDisplay',
   'promo': 'sidebar.promoVoucher',
+  'fleet': 'sidebar.fleetManagement',
+  'fleet-dashboard': 'sidebar.fleetDashboard',
+  'fleet-vehicles': 'sidebar.fleetVehicles',
+  'fleet-drivers': 'sidebar.fleetDrivers',
+  'fleet-routes': 'sidebar.fleetRoutes',
+  'fleet-maintenance': 'sidebar.fleetMaintenance',
+  'fleet-fuel': 'sidebar.fleetFuel',
+  'fleet-gps': 'sidebar.fleetGps',
+  'fleet-costs': 'sidebar.fleetCosts',
   'finance': 'sidebar.financeOverview',
   'reports': 'sidebar.salesReports',
   'settings': 'sidebar.settingsMenu',
@@ -59,6 +70,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { t, language, setLanguage, currency, setCurrency } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [langOpen, setLangOpen] = useState(false);
   const [currOpen, setCurrOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -132,30 +144,92 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     return router.pathname === href || router.pathname.startsWith(href + '/');
   };
 
-  const renderMenuItem = (item: MenuItem) => {
+  const isChildActive = (item: MenuItem): boolean =>
+    item.children ? item.children.some(c => isActive(c.href) || isChildActive(c)) : false;
+
+  const toggleMenu = (id: string) => {
+    setExpandedMenus(prev =>
+      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    );
+  };
+
+  // Auto-expand parent when navigating to a child route
+  React.useEffect(() => {
+    const autoExpand = (items: MenuItem[]) => {
+      items.forEach(item => {
+        if (item.children) {
+          if (item.children.some(c => isActive(c.href))) {
+            setExpandedMenus(prev => prev.includes(item.id) ? prev : [...prev, item.id]);
+          }
+          autoExpand(item.children);
+        }
+      });
+    };
+    filteredConfig.groups.forEach(g => autoExpand(g.items));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.pathname]);
+
+  const renderMenuItem = (item: MenuItem, depth = 0) => {
     const Icon = item.icon;
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedMenus.includes(item.id);
     const active = isActive(item.href);
-    
+    const childActive = isChildActive(item);
+    const isChild = depth > 0;
+
+    if (hasChildren) {
+      return (
+        <div key={item.id}>
+          <button
+            onClick={() => toggleMenu(item.id)}
+            className={`w-full flex items-center justify-between px-4 py-2 rounded-lg transition-all ${
+              isExpanded || childActive
+                ? 'bg-sky-50 text-sky-600 font-medium'
+                : 'text-gray-700 hover:bg-gray-50'
+            } ${sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}
+            title={sidebarCollapsed ? item.name : ''}
+          >
+            <div className={`flex items-center space-x-3 ${sidebarCollapsed ? 'lg:justify-center' : ''}`}>
+              <Icon className={`w-5 h-5 flex-shrink-0 ${sidebarCollapsed ? 'lg:mx-auto' : ''}`} />
+              <span className={`text-sm transition-all ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
+                {getTranslatedName(item.id, item.name)}
+              </span>
+            </div>
+            {!sidebarCollapsed && (
+              <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+            )}
+          </button>
+          {!sidebarCollapsed && isExpanded && (
+            <div className="ml-4 mt-0.5 space-y-0.5 border-l-2 border-sky-100 pl-3">
+              {item.children!.map(child => renderMenuItem(child, depth + 1))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <Link
         key={item.id}
         href={item.href || '#'}
-        className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-all group relative ${
-          active
-            ? 'bg-sky-50 text-sky-600 font-medium'
-            : 'text-gray-700 hover:bg-gray-50'
+        className={`flex items-center space-x-3 rounded-lg transition-all group relative ${
+          isChild ? 'px-3 py-1.5' : 'px-4 py-2'
         } ${
-          sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''
-        }`}
+          active
+            ? isChild
+              ? 'bg-sky-600 text-white font-medium'
+              : 'bg-sky-50 text-sky-600 font-medium'
+            : isChild
+              ? 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+              : 'text-gray-700 hover:bg-gray-50'
+        } ${sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''}`}
         title={sidebarCollapsed ? item.name : ''}
       >
-        <Icon className={`w-5 h-5 flex-shrink-0 ${
-          sidebarCollapsed ? 'lg:mx-auto' : ''
-        }`} />
-        <span className={`text-sm transition-all ${
-          sidebarCollapsed ? 'lg:hidden' : ''
-        }`}>{getTranslatedName(item.id, item.name)}</span>
-        
+        <Icon className={`flex-shrink-0 ${isChild ? 'w-4 h-4' : 'w-5 h-5'} ${sidebarCollapsed ? 'lg:mx-auto' : ''}`} />
+        <span className={`transition-all ${isChild ? 'text-xs' : 'text-sm'} ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
+          {getTranslatedName(item.id, item.name)}
+        </span>
+
         {/* Tooltip for collapsed state */}
         {sidebarCollapsed && (
           <div className="hidden lg:block absolute left-full ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">

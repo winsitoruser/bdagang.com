@@ -3,6 +3,7 @@ import { useBuilder } from './BuilderContext';
 import { sectionTemplates } from './SectionTemplates';
 import { SECTION_CATEGORY_LABELS, SectionTemplateItem, DEFAULT_SECTION_STYLE, WidgetInstance } from './types';
 import { getWidgetDefinition } from './widgets/registry';
+import { useTranslation } from '../../lib/i18n';
 import { v4 as uuidv4 } from 'uuid';
 import {
   X, Search, LayoutTemplate, Plus, Sparkles,
@@ -44,6 +45,7 @@ function buildWidgetsFromTemplate(template: SectionTemplateItem): WidgetInstance
 
 export default function SectionTemplatePicker() {
   const { state, dispatch, addSection } = useBuilder();
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<SectionTemplateItem['category'] | 'all'>('all');
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export default function SectionTemplatePicker() {
 
   const handleAddBlank = () => {
     addSection(
-      'Section Baru',
+      t('wb.section.newSection'),
       'custom',
       state.sectionPickerInsertIndex >= 0 ? state.sectionPickerInsertIndex : undefined,
     );
@@ -98,8 +100,8 @@ export default function SectionTemplatePicker() {
               <LayoutTemplate size={18} className="text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Tambah Section</h2>
-              <p className="text-xs text-gray-500">Pilih template section atau mulai dari kosong</p>
+              <h2 className="text-lg font-bold text-gray-900">{t('wb.templatePicker.title')}</h2>
+              <p className="text-xs text-gray-500">{t('wb.templatePicker.subtitle')}</p>
             </div>
           </div>
           <button
@@ -118,7 +120,7 @@ export default function SectionTemplatePicker() {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Cari template section..."
+              placeholder={t('wb.templatePicker.search')}
               className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400"
               autoFocus
             />
@@ -132,7 +134,7 @@ export default function SectionTemplatePicker() {
                   : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
               }`}
             >
-              Semua ({sectionTemplates.length})
+              {t('wb.templatePicker.allCategories')} ({sectionTemplates.length})
             </button>
             {categoryOrder.map(cat => {
               const count = sectionTemplates.filter(t => t.category === cat).length;
@@ -166,8 +168,8 @@ export default function SectionTemplatePicker() {
               <Plus size={22} className="text-gray-400 group-hover:text-purple-600" />
             </div>
             <div className="text-left">
-              <div className="text-sm font-bold text-gray-700 group-hover:text-purple-700">Section Kosong</div>
-              <div className="text-xs text-gray-400">Mulai dari nol dan tambahkan widget sendiri</div>
+              <div className="text-sm font-bold text-gray-700 group-hover:text-purple-700">{t('wb.templatePicker.blankSection')}</div>
+              <div className="text-xs text-gray-400">{t('wb.templatePicker.blankSectionDesc')}</div>
             </div>
           </button>
 
@@ -175,8 +177,8 @@ export default function SectionTemplatePicker() {
           {filtered.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <Search size={36} className="mx-auto mb-3 text-gray-300" />
-              <p className="text-sm font-medium">Tidak ada template ditemukan</p>
-              <p className="text-xs mt-1">Coba kata kunci lain</p>
+              <p className="text-sm font-medium">{t('wb.widgetPanel.noMatch')}</p>
+              <p className="text-xs mt-1">{t('wb.common.search')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -229,7 +231,7 @@ export default function SectionTemplatePicker() {
                     }`}>
                       <div className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-lg text-sm font-bold text-purple-600 shadow-lg">
                         <Plus size={16} />
-                        Gunakan
+                        {t('wb.templatePicker.insert')}
                       </div>
                     </div>
                   </div>
@@ -265,13 +267,13 @@ export default function SectionTemplatePicker() {
         <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
           <span className="text-xs text-gray-400">
             <Sparkles size={12} className="inline mr-1" />
-            {filtered.length} template tersedia
+            {filtered.length} template
           </span>
           <button
             onClick={() => dispatch({ type: 'HIDE_SECTION_PICKER' })}
             className="px-4 py-2 text-xs font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Batal
+            {t('wb.common.cancel')}
           </button>
         </div>
       </div>

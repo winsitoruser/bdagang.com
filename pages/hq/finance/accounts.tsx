@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import {
   ArrowUpRight,
@@ -120,6 +121,7 @@ const MOCK_PAYABLES: Payable[] = [
 ];
 
 export default function AccountsManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<AccountsSummary>(MOCK_ACCT_SUMMARY);
@@ -231,8 +233,8 @@ export default function AccountsManagement() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Accounts Management</h1>
-              <p className="text-gray-500">Kelola piutang dan hutang perusahaan</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.accTitle')}</h1>
+              <p className="text-gray-500">{t('finance.accSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -244,11 +246,11 @@ export default function AccountsManagement() {
             </button>
             <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               <Plus className="w-4 h-4" />
-              New Invoice
+              {t('finance.newInvoice')}
             </button>
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
-              Export
+              {t('finance.export')}
             </button>
           </div>
         </div>
@@ -258,7 +260,7 @@ export default function AccountsManagement() {
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <ArrowDownRight className="w-5 h-5 opacity-80" />
-              <p className="text-green-100 text-sm">Total Receivables (A/R)</p>
+              <p className="text-green-100 text-sm">{t('finance.totalReceivables')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.totalReceivables)}</p>
             <p className="text-green-200 text-xs mt-1">{formatCurrency(summary.overdueReceivables)} overdue</p>
@@ -267,14 +269,14 @@ export default function AccountsManagement() {
           <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <ArrowUpRight className="w-5 h-5 opacity-80" />
-              <p className="text-red-100 text-sm">Total Payables (A/P)</p>
+              <p className="text-red-100 text-sm">{t('finance.totalPayables')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.totalPayables)}</p>
             <p className="text-red-200 text-xs mt-1">{formatCurrency(summary.overduePayables)} overdue</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Net Position</p>
+            <p className="text-gray-500 text-sm">{t('finance.netPosition')}</p>
             <p className={`text-2xl font-bold ${summary.netPosition >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {summary.netPosition >= 0 ? '+' : ''}{formatCurrency(summary.netPosition)}
             </p>
@@ -282,7 +284,7 @@ export default function AccountsManagement() {
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Due This Week</p>
+            <p className="text-gray-500 text-sm">{t('finance.dueThisWeek')}</p>
             <p className="text-2xl font-bold text-orange-600">{formatCurrency(summary.dueThisWeek)}</p>
             <p className="text-xs text-gray-500 mt-1">Requires attention</p>
           </div>
@@ -297,12 +299,12 @@ export default function AccountsManagement() {
                   <ArrowDownRight className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Collected This Month</p>
+                  <p className="text-sm text-gray-500">{t('finance.collectedThisMonth')}</p>
                   <p className="text-xl font-bold text-green-600">{formatCurrency(summary.collectedThisMonth)}</p>
                 </div>
               </div>
               <Link href="/hq/finance/accounts?tab=collections" className="text-sm text-blue-600 hover:underline">
-                View Details
+                {t('finance.viewDetails')}
               </Link>
             </div>
           </div>
@@ -314,12 +316,12 @@ export default function AccountsManagement() {
                   <ArrowUpRight className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Paid This Month</p>
+                  <p className="text-sm text-gray-500">{t('finance.paidThisMonth')}</p>
                   <p className="text-xl font-bold text-red-600">{formatCurrency(summary.paidThisMonth)}</p>
                 </div>
               </div>
               <Link href="/hq/finance/accounts?tab=payments" className="text-sm text-blue-600 hover:underline">
-                View Details
+                {t('finance.viewDetails')}
               </Link>
             </div>
           </div>
@@ -333,21 +335,21 @@ export default function AccountsManagement() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'receivables' ? 'bg-green-50 text-green-600' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               <ArrowDownRight className="w-4 h-4" />
-              Receivables (A/R)
+              {t('finance.receivablesAR')}
             </button>
             <button
               onClick={() => setViewMode('payables')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'payables' ? 'bg-red-50 text-red-600' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               <ArrowUpRight className="w-4 h-4" />
-              Payables (A/P)
+              {t('finance.payablesAP')}
             </button>
             <button
               onClick={() => setViewMode('aging')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'aging' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               <Calendar className="w-4 h-4" />
-              Aging Analysis
+              {t('finance.agingAnalysis')}
             </button>
           </div>
           <div className="flex items-center gap-2">
@@ -356,11 +358,11 @@ export default function AccountsManagement() {
               onChange={(e) => setFilterStatus(e.target.value as any)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
             >
-              <option value="all">All Status</option>
-              <option value="current">Current</option>
-              <option value="overdue">Overdue</option>
-              <option value="partial">Partial</option>
-              <option value="paid">Paid</option>
+              <option value="all">{t('finance.allStatus')}</option>
+              <option value="current">{t('finance.current')}</option>
+              <option value="overdue">{t('finance.overdue')}</option>
+              <option value="partial">{t('finance.partial')}</option>
+              <option value="paid">{t('finance.paid')}</option>
             </select>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />

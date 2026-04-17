@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import TransactionFormModal from '../../../components/hq/finance/TransactionFormModal';
 import Link from 'next/link';
 import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
@@ -110,6 +111,7 @@ const MOCK_PRODUCT_REV: ProductRevenue[] = [
 ];
 
 export default function RevenueAnalysis() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const { period } = useFinancePeriod();
@@ -322,8 +324,8 @@ export default function RevenueAnalysis() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Revenue Analysis</h1>
-              <p className="text-gray-500">Analisis pendapatan global dan per cabang</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.revTitle')}</h1>
+              <p className="text-gray-500">{t('finance.revSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -336,7 +338,7 @@ export default function RevenueAnalysis() {
             </button>
             <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               <Download className="w-4 h-4" />
-              Export
+              {t('finance.export')}
             </button>
           </div>
         </div>
@@ -351,7 +353,7 @@ export default function RevenueAnalysis() {
                 {Math.abs(revenueData.growth)}%
               </span>
             </div>
-            <p className="text-blue-100 text-sm">Total Revenue</p>
+            <p className="text-blue-100 text-sm">{t('finance.totalRevenue')}</p>
             <p className="text-2xl font-bold">{formatCurrency(revenueData.totalRevenue)}</p>
             <p className="text-blue-200 text-xs mt-1">vs {formatCurrency(revenueData.previousRevenue)} prev</p>
           </div>
@@ -362,7 +364,7 @@ export default function RevenueAnalysis() {
                 <Calendar className="w-5 h-5 text-green-600" />
               </div>
             </div>
-            <p className="text-gray-500 text-sm">Avg Daily Revenue</p>
+            <p className="text-gray-500 text-sm">{t('finance.avgDailyRevenue')}</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(revenueData.avgDailyRevenue)}</p>
           </div>
 
@@ -372,7 +374,7 @@ export default function RevenueAnalysis() {
                 <ShoppingCart className="w-5 h-5 text-purple-600" />
               </div>
             </div>
-            <p className="text-gray-500 text-sm">Total Transactions</p>
+            <p className="text-gray-500 text-sm">{t('finance.totalTransactions')}</p>
             <p className="text-2xl font-bold text-gray-900">{revenueData.totalTransactions.toLocaleString()}</p>
           </div>
 
@@ -382,7 +384,7 @@ export default function RevenueAnalysis() {
                 <Target className="w-5 h-5 text-orange-600" />
               </div>
             </div>
-            <p className="text-gray-500 text-sm">Avg Ticket Size</p>
+            <p className="text-gray-500 text-sm">{t('finance.avgTicketSize')}</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(revenueData.avgTicketSize)}</p>
           </div>
         </div>
@@ -395,7 +397,7 @@ export default function RevenueAnalysis() {
                 <Banknote className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Cash Sales</p>
+                <p className="text-xs text-gray-500">{t('finance.cashSales')}</p>
                 <p className="text-lg font-bold text-gray-900">{formatCurrency(revenueData.cashSales)}</p>
               </div>
             </div>
@@ -411,7 +413,7 @@ export default function RevenueAnalysis() {
                 <CreditCard className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Card Sales</p>
+                <p className="text-xs text-gray-500">{t('finance.cardSales')}</p>
                 <p className="text-lg font-bold text-gray-900">{formatCurrency(revenueData.cardSales)}</p>
               </div>
             </div>
@@ -427,7 +429,7 @@ export default function RevenueAnalysis() {
                 <Smartphone className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Digital Payment</p>
+                <p className="text-xs text-gray-500">{t('finance.digitalPayment')}</p>
                 <p className="text-lg font-bold text-gray-900">{formatCurrency(revenueData.digitalSales)}</p>
               </div>
             </div>
@@ -441,12 +443,12 @@ export default function RevenueAnalysis() {
         {/* Charts Row */}
         <div className="grid grid-cols-2 gap-6">
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Revenue Trend</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.revenueTrend')}</h3>
             <Chart options={revenueTrendOptions} series={revenueTrendSeries} type="area" height={280} />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Hourly Revenue Distribution</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.hourlyRevenue')}</h3>
             <Chart options={hourlyOptions} series={hourlySeries} type="bar" height={280} />
           </div>
         </div>
@@ -454,17 +456,17 @@ export default function RevenueAnalysis() {
         {/* Payment & Channel Charts */}
         <div className="grid grid-cols-3 gap-6">
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Payment Methods</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.paymentMethods')}</h3>
             <Chart options={paymentMethodOptions} series={paymentMethodSeries} type="donut" height={250} />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Sales Channel</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.salesChannel')}</h3>
             <Chart options={channelOptions} series={channelSeries} type="pie" height={250} />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Revenue by Branch</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.revenueByBranch')}</h3>
             <Chart options={branchCompareOptions} series={branchCompareSeries} type="bar" height={250} />
           </div>
         </div>
@@ -478,21 +480,21 @@ export default function RevenueAnalysis() {
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'branch' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
               >
                 <Building2 className="w-4 h-4" />
-                By Branch
+                {t('finance.byBranch')}
               </button>
               <button
                 onClick={() => setViewMode('product')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'product' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
               >
                 <Package className="w-4 h-4" />
-                By Product
+                {t('finance.byProduct')}
               </button>
               <button
                 onClick={() => setViewMode('time')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'time' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
               >
                 <Clock className="w-4 h-4" />
-                By Time
+                {t('finance.byTime')}
               </button>
               <div className="ml-auto flex items-center gap-2">
                 <div className="relative">

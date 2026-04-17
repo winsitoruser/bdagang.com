@@ -545,6 +545,128 @@ export const appTranslations: Record<Language, Record<string, any>> = {
       deleteFailed: 'Gagal menghapus produk',
       deleteError: 'Terjadi kesalahan saat menghapus produk',
 
+      // HQ Inventory Quick Links
+      qlGlobalStock: 'Stok Global',
+      qlCategories: 'Kategori',
+      qlPricing: 'Harga',
+      qlTransfers: 'Transfer',
+      qlAlerts: 'Peringatan',
+      qlStocktake: 'Stock Opname',
+      qlReceipts: 'Penerimaan',
+      qlPurchaseOrders: 'Pesanan Pembelian',
+
+      // HQ Inventory Dashboard
+      today: 'Hari Ini',
+      thisWeek: 'Minggu Ini',
+      thisMonth: 'Bulan Ini',
+      sync: 'Sinkronisasi',
+      smartWarehouse: 'Smart Warehouse',
+      exporting: 'Mengekspor...',
+      export: 'Ekspor',
+      exportSuccess: 'Data berhasil diekspor',
+      exportFailed: 'Gagal mengekspor data',
+
+      // Movement badges
+      fastMoving: 'Cepat',
+      medium: 'Sedang',
+      slowMoving: 'Lambat',
+
+      // Tabs
+      tabOverview: 'Ringkasan',
+      tabKpis: 'KPI Industri',
+      tabForecast: 'Prediksi & Reorder',
+      tabAbc: 'Analisis ABC',
+
+      // Summary cards
+      totalStockUnits: 'Total Unit Stok',
+      viewAll: 'Lihat Semua',
+      itemsNeedAttention: 'Item Perlu Perhatian',
+
+      // Alert banner
+      alertCriticalTitle: 'Peringatan Stok Kritis!',
+      alertCriticalDesc: '{{outOfStock}} produk habis stok dan {{lowStock}} produk stok rendah memerlukan perhatian segera.',
+      reviewNow: 'Tinjau Sekarang',
+
+      // Charts
+      stockMovementTrend: 'Tren Pergerakan Stok',
+      stockIn: 'Stok Masuk',
+      stockOut: 'Stok Keluar',
+      stockDistByCategory: 'Distribusi Stok per Kategori',
+
+      // Branch stock table
+      stockPerBranch: 'Stok per Cabang',
+      viewDetail: 'Lihat Detail',
+      branch: 'Cabang',
+      products: 'Produk',
+      totalStock: 'Total Stok',
+      syncStatus: 'Status Sinkronisasi',
+      action: 'Aksi',
+
+      // Top products & activities
+      topProducts: 'Produk Teratas',
+      viewAllLink: 'Lihat Semua',
+      unit: 'unit',
+      recentActivities: 'Aktivitas Terbaru',
+
+      // Pending actions
+      transferPending: 'Transfer Tertunda',
+      transferPendingDesc: 'Permintaan transfer menunggu persetujuan',
+      poPending: 'PO Tertunda',
+      poPendingDesc: 'Pesanan pembelian menunggu konfirmasi',
+
+      // Enhanced KPIs
+      inventoryTurnover: 'Perputaran Inventori',
+      perYear: 'per tahun',
+      daysOnHand: 'Hari Tersedia',
+      avgHoldingPeriod: 'Rata-rata periode penyimpanan',
+      fillRate: 'Fill Rate',
+      orderFulfillment: 'Pemenuhan pesanan',
+      deadStock: 'Dead Stock',
+      deadStockDesc: 'Nilai stok tidak bergerak',
+
+      // Warehouse health
+      warehouseHealth: 'Kesehatan Gudang',
+      capacity: 'Kapasitas',
+      temp: 'Suhu',
+      humidity: 'Kelembaban',
+      issuesDetected: '{{count}} masalah terdeteksi',
+
+      // Reorder suggestions
+      aiReorderSuggestions: 'Saran Reorder AI',
+      itemsNeedReorder: '{{count}} item perlu reorder',
+      product: 'Produk',
+      current: 'Saat Ini',
+      reorderPoint: 'Titik Reorder',
+      suggestedQty: 'Qty Disarankan',
+      supplier: 'Pemasok',
+      leadTime: 'Lead Time',
+      urgency: 'Urgensi',
+
+      // Industry KPIs
+      industryKpiDesc: 'KPI spesifik industri untuk mengukur performa inventori Anda.',
+      onTarget: 'Sesuai Target',
+      belowTarget: 'Di Bawah Target',
+      loadingKpis: 'Memuat KPI...',
+
+      // Forecast
+      forecastDesc: 'Prediksi stok dan jadwal reorder berdasarkan analisis data historis.',
+      stockDepletionForecast: 'Prediksi Penipisan Stok',
+      reorderSchedule: 'Jadwal Reorder',
+      currentStock: 'Stok Saat Ini',
+      avgDailySales: 'Rata-rata Penjualan Harian',
+      daysUntilStockout: 'Hari Hingga Habis',
+      reorderDate: 'Tanggal Reorder',
+      status: 'Status',
+      loadingForecast: 'Memuat prediksi...',
+
+      // ABC Analysis
+      abcDesc: 'Klasifikasi produk berdasarkan nilai dan kontribusi terhadap total inventori.',
+      items: 'item',
+      avgTurnover: 'Rata-rata Perputaran',
+      valueDistribution: 'Distribusi Nilai',
+      itemsDistribution: 'Distribusi Item',
+      loadingAbc: 'Memuat analisis ABC...',
+
       // Product Detail Modal
       productDetail: {
         inactive: 'Tidak Aktif',
@@ -1839,6 +1961,128 @@ export const appTranslations: Record<Language, Record<string, any>> = {
       deleteFailed: 'Failed to delete product',
       deleteError: 'An error occurred while deleting the product',
 
+      // HQ Inventory Quick Links
+      qlGlobalStock: 'Global Stock',
+      qlCategories: 'Categories',
+      qlPricing: 'Pricing',
+      qlTransfers: 'Transfers',
+      qlAlerts: 'Alerts',
+      qlStocktake: 'Stocktake',
+      qlReceipts: 'Receipts',
+      qlPurchaseOrders: 'Purchase Orders',
+
+      // HQ Inventory Dashboard
+      today: 'Today',
+      thisWeek: 'This Week',
+      thisMonth: 'This Month',
+      sync: 'Sync',
+      smartWarehouse: 'Smart Warehouse',
+      exporting: 'Exporting...',
+      export: 'Export',
+      exportSuccess: 'Data exported successfully',
+      exportFailed: 'Failed to export data',
+
+      // Movement badges
+      fastMoving: 'Fast',
+      medium: 'Medium',
+      slowMoving: 'Slow',
+
+      // Tabs
+      tabOverview: 'Overview',
+      tabKpis: 'Industry KPIs',
+      tabForecast: 'Forecast & Reorder',
+      tabAbc: 'ABC Analysis',
+
+      // Summary cards
+      totalStockUnits: 'Total Stock Units',
+      viewAll: 'View All',
+      itemsNeedAttention: 'Items Need Attention',
+
+      // Alert banner
+      alertCriticalTitle: 'Critical Stock Alert!',
+      alertCriticalDesc: '{{outOfStock}} products out of stock and {{lowStock}} low stock products need immediate attention.',
+      reviewNow: 'Review Now',
+
+      // Charts
+      stockMovementTrend: 'Stock Movement Trend',
+      stockIn: 'Stock In',
+      stockOut: 'Stock Out',
+      stockDistByCategory: 'Stock Distribution by Category',
+
+      // Branch stock table
+      stockPerBranch: 'Stock per Branch',
+      viewDetail: 'View Detail',
+      branch: 'Branch',
+      products: 'Products',
+      totalStock: 'Total Stock',
+      syncStatus: 'Sync Status',
+      action: 'Action',
+
+      // Top products & activities
+      topProducts: 'Top Products',
+      viewAllLink: 'View All',
+      unit: 'unit',
+      recentActivities: 'Recent Activities',
+
+      // Pending actions
+      transferPending: 'Pending Transfers',
+      transferPendingDesc: 'Transfer requests awaiting approval',
+      poPending: 'Pending PO',
+      poPendingDesc: 'Purchase orders awaiting confirmation',
+
+      // Enhanced KPIs
+      inventoryTurnover: 'Inventory Turnover',
+      perYear: 'per year',
+      daysOnHand: 'Days on Hand',
+      avgHoldingPeriod: 'Average holding period',
+      fillRate: 'Fill Rate',
+      orderFulfillment: 'Order fulfillment',
+      deadStock: 'Dead Stock',
+      deadStockDesc: 'Non-moving stock value',
+
+      // Warehouse health
+      warehouseHealth: 'Warehouse Health',
+      capacity: 'Capacity',
+      temp: 'Temperature',
+      humidity: 'Humidity',
+      issuesDetected: '{{count}} issues detected',
+
+      // Reorder suggestions
+      aiReorderSuggestions: 'AI Reorder Suggestions',
+      itemsNeedReorder: '{{count}} items need reorder',
+      product: 'Product',
+      current: 'Current',
+      reorderPoint: 'Reorder Point',
+      suggestedQty: 'Suggested Qty',
+      supplier: 'Supplier',
+      leadTime: 'Lead Time',
+      urgency: 'Urgency',
+
+      // Industry KPIs
+      industryKpiDesc: 'Industry-specific KPIs to measure your inventory performance.',
+      onTarget: 'On Target',
+      belowTarget: 'Below Target',
+      loadingKpis: 'Loading KPIs...',
+
+      // Forecast
+      forecastDesc: 'Stock predictions and reorder schedule based on historical data analysis.',
+      stockDepletionForecast: 'Stock Depletion Forecast',
+      reorderSchedule: 'Reorder Schedule',
+      currentStock: 'Current Stock',
+      avgDailySales: 'Avg Daily Sales',
+      daysUntilStockout: 'Days Until Stockout',
+      reorderDate: 'Reorder Date',
+      status: 'Status',
+      loadingForecast: 'Loading forecast...',
+
+      // ABC Analysis
+      abcDesc: 'Product classification based on value and contribution to total inventory.',
+      items: 'items',
+      avgTurnover: 'Avg Turnover',
+      valueDistribution: 'Value Distribution',
+      itemsDistribution: 'Items Distribution',
+      loadingAbc: 'Loading ABC analysis...',
+
       // Product Detail Modal
       productDetail: {
         inactive: 'Inactive',
@@ -3039,6 +3283,128 @@ export const appTranslations: Record<Language, Record<string, any>> = {
       reportsSubtitle: '在庫の値、動き、分析レポート',
       loadingReports: 'レポートデータを読み込み中...',
       alertsPageTitle: '在庫アラート＆推奨 | BEDAGANG Cloud POS',
+
+      // HQ Inventory Quick Links
+      qlGlobalStock: 'グローバル在庫',
+      qlCategories: 'カテゴリ',
+      qlPricing: '価格設定',
+      qlTransfers: '移動',
+      qlAlerts: 'アラート',
+      qlStocktake: '棚卸し',
+      qlReceipts: '入荷',
+      qlPurchaseOrders: '発注書',
+
+      // HQ Inventory Dashboard
+      today: '今日',
+      thisWeek: '今週',
+      thisMonth: '今月',
+      sync: '同期',
+      smartWarehouse: 'スマート倉庫',
+      exporting: 'エクスポート中...',
+      export: 'エクスポート',
+      exportSuccess: 'データのエクスポートに成功しました',
+      exportFailed: 'データのエクスポートに失敗しました',
+
+      // Movement badges
+      fastMoving: '高速',
+      medium: '中速',
+      slowMoving: '低速',
+
+      // Tabs
+      tabOverview: '概要',
+      tabKpis: '業界KPI',
+      tabForecast: '予測＆再発注',
+      tabAbc: 'ABC分析',
+
+      // Summary cards
+      totalStockUnits: '総在庫数',
+      viewAll: 'すべて表示',
+      itemsNeedAttention: '要注意アイテム',
+
+      // Alert banner
+      alertCriticalTitle: '在庫警告！',
+      alertCriticalDesc: '{{outOfStock}}件の在庫切れと{{lowStock}}件の在庫不足があります。',
+      reviewNow: '今すぐ確認',
+
+      // Charts
+      stockMovementTrend: '在庫移動トレンド',
+      stockIn: '入庫',
+      stockOut: '出庫',
+      stockDistByCategory: 'カテゴリ別在庫分布',
+
+      // Branch stock table
+      stockPerBranch: '支店別在庫',
+      viewDetail: '詳細を見る',
+      branch: '支店',
+      products: '製品',
+      totalStock: '総在庫',
+      syncStatus: '同期状況',
+      action: 'アクション',
+
+      // Top products & activities
+      topProducts: 'トップ製品',
+      viewAllLink: 'すべて表示',
+      unit: '個',
+      recentActivities: '最近のアクティビティ',
+
+      // Pending actions
+      transferPending: '保留中の移動',
+      transferPendingDesc: '承認待ちの移動リクエスト',
+      poPending: '保留中のPO',
+      poPendingDesc: '確認待ちの発注書',
+
+      // Enhanced KPIs
+      inventoryTurnover: '在庫回転率',
+      perYear: '年間',
+      daysOnHand: '在庫日数',
+      avgHoldingPeriod: '平均保持期間',
+      fillRate: '充足率',
+      orderFulfillment: '注文充足',
+      deadStock: 'デッドストック',
+      deadStockDesc: '動かない在庫の価値',
+
+      // Warehouse health
+      warehouseHealth: '倉庫の健全性',
+      capacity: '容量',
+      temp: '温度',
+      humidity: '湿度',
+      issuesDetected: '{{count}}件の問題を検出',
+
+      // Reorder suggestions
+      aiReorderSuggestions: 'AI再発注提案',
+      itemsNeedReorder: '{{count}}件の再発注が必要',
+      product: '製品',
+      current: '現在',
+      reorderPoint: '再発注点',
+      suggestedQty: '推奨数量',
+      supplier: 'サプライヤー',
+      leadTime: 'リードタイム',
+      urgency: '緊急度',
+
+      // Industry KPIs
+      industryKpiDesc: '在庫パフォーマンスを測定する業界固有のKPI。',
+      onTarget: '目標達成',
+      belowTarget: '目標未達',
+      loadingKpis: 'KPIを読み込み中...',
+
+      // Forecast
+      forecastDesc: '過去データ分析に基づく在庫予測と再発注スケジュール。',
+      stockDepletionForecast: '在庫枯渇予測',
+      reorderSchedule: '再発注スケジュール',
+      currentStock: '現在の在庫',
+      avgDailySales: '平均日販',
+      daysUntilStockout: '在庫切れまでの日数',
+      reorderDate: '再発注日',
+      status: 'ステータス',
+      loadingForecast: '予測を読み込み中...',
+
+      // ABC Analysis
+      abcDesc: '価値と総在庫への貢献度に基づく製品分類。',
+      items: 'アイテム',
+      avgTurnover: '平均回転率',
+      valueDistribution: '価値分布',
+      itemsDistribution: 'アイテム分布',
+      loadingAbc: 'ABC分析を読み込み中...',
     },
 
     finance: {
@@ -3519,6 +3885,128 @@ export const appTranslations: Record<Language, Record<string, any>> = {
       reportsSubtitle: '库存价值、变动和分析报表',
       loadingReports: '正在加载报表数据...',
       alertsPageTitle: '库存警报和建议 | BEDAGANG Cloud POS',
+
+      // HQ Inventory Quick Links
+      qlGlobalStock: '全局库存',
+      qlCategories: '分类',
+      qlPricing: '定价',
+      qlTransfers: '调拨',
+      qlAlerts: '警报',
+      qlStocktake: '盘点',
+      qlReceipts: '收货',
+      qlPurchaseOrders: '采购订单',
+
+      // HQ Inventory Dashboard
+      today: '今天',
+      thisWeek: '本周',
+      thisMonth: '本月',
+      sync: '同步',
+      smartWarehouse: '智能仓库',
+      exporting: '导出中...',
+      export: '导出',
+      exportSuccess: '数据导出成功',
+      exportFailed: '数据导出失败',
+
+      // Movement badges
+      fastMoving: '快速',
+      medium: '中速',
+      slowMoving: '慢速',
+
+      // Tabs
+      tabOverview: '概览',
+      tabKpis: '行业KPI',
+      tabForecast: '预测与补货',
+      tabAbc: 'ABC分析',
+
+      // Summary cards
+      totalStockUnits: '总库存数量',
+      viewAll: '查看全部',
+      itemsNeedAttention: '需要关注的项目',
+
+      // Alert banner
+      alertCriticalTitle: '库存警告！',
+      alertCriticalDesc: '{{outOfStock}}个产品缺货，{{lowStock}}个产品库存不足，需要立即处理。',
+      reviewNow: '立即查看',
+
+      // Charts
+      stockMovementTrend: '库存变动趋势',
+      stockIn: '入库',
+      stockOut: '出库',
+      stockDistByCategory: '按分类库存分布',
+
+      // Branch stock table
+      stockPerBranch: '分店库存',
+      viewDetail: '查看详情',
+      branch: '分店',
+      products: '产品',
+      totalStock: '总库存',
+      syncStatus: '同步状态',
+      action: '操作',
+
+      // Top products & activities
+      topProducts: '热门产品',
+      viewAllLink: '查看全部',
+      unit: '件',
+      recentActivities: '最近活动',
+
+      // Pending actions
+      transferPending: '待处理调拨',
+      transferPendingDesc: '等待审批的调拨请求',
+      poPending: '待处理采购单',
+      poPendingDesc: '等待确认的采购订单',
+
+      // Enhanced KPIs
+      inventoryTurnover: '库存周转率',
+      perYear: '每年',
+      daysOnHand: '库存天数',
+      avgHoldingPeriod: '平均持有期',
+      fillRate: '满足率',
+      orderFulfillment: '订单履行',
+      deadStock: '呆滞库存',
+      deadStockDesc: '不流动库存价值',
+
+      // Warehouse health
+      warehouseHealth: '仓库健康度',
+      capacity: '容量',
+      temp: '温度',
+      humidity: '湿度',
+      issuesDetected: '检测到{{count}}个问题',
+
+      // Reorder suggestions
+      aiReorderSuggestions: 'AI补货建议',
+      itemsNeedReorder: '{{count}}个项目需要补货',
+      product: '产品',
+      current: '当前',
+      reorderPoint: '补货点',
+      suggestedQty: '建议数量',
+      supplier: '供应商',
+      leadTime: '交货期',
+      urgency: '紧急程度',
+
+      // Industry KPIs
+      industryKpiDesc: '衡量库存绩效的行业特定KPI。',
+      onTarget: '达标',
+      belowTarget: '未达标',
+      loadingKpis: '正在加载KPI...',
+
+      // Forecast
+      forecastDesc: '基于历史数据分析的库存预测和补货计划。',
+      stockDepletionForecast: '库存消耗预测',
+      reorderSchedule: '补货计划',
+      currentStock: '当前库存',
+      avgDailySales: '日均销量',
+      daysUntilStockout: '断货天数',
+      reorderDate: '补货日期',
+      status: '状态',
+      loadingForecast: '正在加载预测...',
+
+      // ABC Analysis
+      abcDesc: '基于价值和对总库存贡献的产品分类。',
+      items: '项',
+      avgTurnover: '平均周转率',
+      valueDistribution: '价值分布',
+      itemsDistribution: '项目分布',
+      loadingAbc: '正在加载ABC分析...',
     },
 
     finance: {

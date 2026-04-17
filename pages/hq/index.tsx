@@ -1,12 +1,15 @@
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
+import type { GetServerSideProps } from 'next';
+
+/**
+ * /hq → server redirect to /hq/home (avoids client-only replace and empty SSR).
+ */
+export const getServerSideProps: GetServerSideProps = async () => ({
+  redirect: {
+    destination: '/hq/home',
+    permanent: false,
+  },
+});
 
 export default function HQIndex() {
-  const router = useRouter();
-  
-  useEffect(() => {
-    router.replace('/hq/home');
-  }, [router]);
-  
   return null;
 }

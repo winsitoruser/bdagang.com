@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import {
@@ -112,6 +113,7 @@ const MOCK_SCAN_RESULT: ScanResult = {
 };
 
 export default function AIGuardianPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'guardian' | 'autonomous'>('guardian');
   const [scanning, setScanning] = useState(false);
@@ -314,8 +316,8 @@ export default function AIGuardianPage() {
                 <Shield className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">AI Finance Guardian</h1>
-                <p className="text-gray-500 text-sm">Pengawas & pengingat cerdas untuk keuangan Anda</p>
+                <h1 className="text-2xl font-bold text-gray-900">{t('finance.aiTitle')}</h1>
+                <p className="text-gray-500 text-sm">{t('finance.aiSubtitle')}</p>
               </div>
             </div>
           </div>

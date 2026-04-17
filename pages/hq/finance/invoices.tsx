@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import {
@@ -95,6 +96,7 @@ const MOCK_INVOICES: Invoice[] = [
 ];
 
 export default function InvoiceManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<InvoiceSummary>(MOCK_INV_SUMMARY);
@@ -299,8 +301,8 @@ export default function InvoiceManagement() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Invoice Management</h1>
-              <p className="text-gray-500">Kelola faktur dan tagihan pelanggan</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.invTitle')}</h1>
+              <p className="text-gray-500">{t('finance.invSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -309,11 +311,11 @@ export default function InvoiceManagement() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
-              Create Invoice
+              {t('finance.invCreate')}
             </button>
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
-              Export
+              {t('finance.export')}
             </button>
           </div>
         </div>
@@ -321,7 +323,7 @@ export default function InvoiceManagement() {
         {/* Summary Cards */}
         <div className="grid grid-cols-5 gap-4">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
-            <p className="text-blue-100 text-sm">Total Invoices</p>
+            <p className="text-blue-100 text-sm">{t('finance.totalInvoices')}</p>
             <p className="text-2xl font-bold">{summary.totalInvoices}</p>
             <p className="text-blue-200 text-xs mt-1">{formatCurrency(summary.totalAmount)}</p>
           </div>
@@ -329,7 +331,7 @@ export default function InvoiceManagement() {
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
-              <p className="text-gray-500 text-sm">Paid</p>
+              <p className="text-gray-500 text-sm">{t('finance.paid')}</p>
             </div>
             <p className="text-2xl font-bold text-green-600">{summary.paidCount}</p>
             <p className="text-xs text-gray-500 mt-1">{formatCurrency(summary.paidAmount)}</p>
@@ -338,7 +340,7 @@ export default function InvoiceManagement() {
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="w-5 h-5 text-blue-500" />
-              <p className="text-gray-500 text-sm">Pending</p>
+              <p className="text-gray-500 text-sm">{t('finance.pending')}</p>
             </div>
             <p className="text-2xl font-bold text-blue-600">{summary.sentCount}</p>
             <p className="text-xs text-gray-500 mt-1">{formatCurrency(summary.pendingAmount)}</p>
@@ -347,7 +349,7 @@ export default function InvoiceManagement() {
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="w-5 h-5 text-red-500" />
-              <p className="text-gray-500 text-sm">Overdue</p>
+              <p className="text-gray-500 text-sm">{t('finance.overdue')}</p>
             </div>
             <p className="text-2xl font-bold text-red-600">{summary.overdueCount}</p>
             <p className="text-xs text-gray-500 mt-1">{formatCurrency(summary.overdueAmount)}</p>
@@ -356,7 +358,7 @@ export default function InvoiceManagement() {
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <FileText className="w-5 h-5 text-gray-500" />
-              <p className="text-gray-500 text-sm">Draft</p>
+              <p className="text-gray-500 text-sm">{t('finance.draft')}</p>
             </div>
             <p className="text-2xl font-bold text-gray-600">{summary.draftCount}</p>
             <p className="text-xs text-gray-500 mt-1">Awaiting send</p>
@@ -382,7 +384,7 @@ export default function InvoiceManagement() {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search invoices..."
+                  placeholder={t('finance.invSearch')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm w-64"
@@ -397,14 +399,14 @@ export default function InvoiceManagement() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issue Date</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
-                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.invoiceNo')}</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.customer')}</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.branch')}</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.issueDate')}</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.dueDate')}</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.amount')}</th>
+                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('finance.status')}</th>
+                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('finance.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">

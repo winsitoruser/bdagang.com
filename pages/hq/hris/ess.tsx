@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   User, FileText, Calendar, DollarSign, Clock, Bell, Shield,
   Award, GraduationCap, Heart, Briefcase, Send, Eye, CheckCircle,
@@ -23,6 +24,7 @@ const MOCK_ESS_CLAIMS = [
 ];
 
 export default function ESSPortalPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ESSTab>('overview');
@@ -152,7 +154,7 @@ export default function ESSPortalPage() {
   if (!mounted) return null;
 
   return (
-    <HQLayout title="Layanan Mandiri Karyawan" currentMenu="hris">
+    <HQLayout title={t('hris.essTitle')} currentMenu="hris">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
           {toast.message}

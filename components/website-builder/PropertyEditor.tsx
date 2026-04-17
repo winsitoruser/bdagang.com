@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useBuilder } from './BuilderContext';
 import { getWidgetDefinition } from './widgets/registry';
-import { WidgetProperty } from './types';
+import { WidgetProperty, BuilderRow, BuilderColumn, ROW_LAYOUT_PRESETS } from './types';
+import { useTranslation } from '../../lib/i18n';
 import {
   X, Trash2, Copy, Lock, Unlock, Eye, EyeOff,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   ChevronDown, ChevronRight, Settings, Palette, Layout, Type,
+  Rows3, Columns, ArrowUpDown,
 } from 'lucide-react';
 
 const groupIcons: Record<string, React.FC<any>> = {
@@ -164,8 +166,292 @@ function PropertyField({ prop, value, onChange }: {
   }
 }
 
+// ======== Row Properties Editor ========
+function RowPropertiesEditor() {
+  const { state, dispatch, currentSections } = useBuilder();
+  const { t } = useTranslation();
+
+  const selectedRow = useMemo(() => {
+    if (!state.selectedRowId) return null;
+    for (const section of currentSections) {
+      const row = (section.rows || []).find(r => r.id === state.selectedRowId);
+      if (row) return { row, sectionId: section.id };
+    }
+    return null;
+  }, [state.selectedRowId, currentSections]);
+
+  if (!selectedRow) return null;
+  const { row, sectionId } = selectedRow;
+
+  const updateStyle = (key: string, value: any) => {
+    dispatch({ type: 'UPDATE_ROW_STYLE', sectionId, rowId: row.id, style: { [key]: value } });
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-gray-50/50">
+      <div className="p-3 border-b border-gray-100 bg-white">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+              <Rows3 size={16} className="text-indigo-600" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-gray-800">{t('wb.propertyEditor.rowProperties')}</div>
+              <div className="text-[10px] text-gray-400">{row.columns.length} {t('wb.row.columns')}</div>
+            </div>
+          </div>
+          <button
+            onClick={() => dispatch({ type: 'SELECT_ROW', rowId: null })}
+            className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        {/* Column Layout Presets */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-2">{t('wb.canvas.columnLayout')}</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            {ROW_LAYOUT_PRESETS.map(preset => (
+              <button
+                key={preset.id}
+                onClick={() => dispatch({ type: 'SET_ROW_LAYOUT', sectionId, rowId: row.id, columns: preset.columns })}
+                className="flex flex-col items-center gap-1 p-2 rounded-lg border border-gray-100
+                  hover:border-indigo-400 hover:bg-indigo-50 transition-all"
+              >
+                <div className="flex w-full gap-0.5 h-5">
+                  {preset.columns.map((w, i) => (
+                    <div key={i} style={{ width: `${w}%` }} className="bg-gray-200 rounded-sm" />
+                  ))}
+                </div>
+                <span className="text-[9px] text-gray-500 font-medium">{preset.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Gap */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('wb.row.gap')}</label>
+          <div className="flex items-center gap-2">
+            <input type="range" min={0} max={48} step={4} value={row.style?.gap ?? 16}
+              onChange={e => updateStyle('gap', Number(e.target.value))}
+              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-500" />
+            <span className="text-xs text-gray-500 font-mono w-8 text-right">{row.style?.gap ?? 16}px</span>
+          </div>
+        </div>
+
+        {/* Vertical Alignment */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('wb.row.verticalAlign')}</label>
+          <div className="flex gap-1">
+            {(['top', 'middle', 'bottom', 'stretch'] as const).map(val => (
+              <button key={val}
+                onClick={() => updateStyle('verticalAlign', val)}
+                className={`flex-1 py-1.5 text-[10px] font-medium rounded-md transition-colors ${
+                  (row.style?.verticalAlign || 'top') === val
+                    ? 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+                    : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {t(`wb.row.${val}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Background Color */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('wb.row.backgroundColor')}</label>
+          <div className="flex items-center gap-2">
+            <input type="color" value={row.style?.backgroundColor || '#ffffff'}
+              onChange={e => updateStyle('backgroundColor', e.target.value)}
+              className="w-8 h-8 rounded-md border border-gray-200 cursor-pointer p-0.5" />
+            <input type="text" value={row.style?.backgroundColor || 'transparent'}
+              onChange={e => updateStyle('backgroundColor', e.target.value)}
+              className="flex-1 px-2 py-1.5 text-xs font-mono border border-gray-200 rounded-md bg-white" />
+          </div>
+        </div>
+
+        {/* Padding */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('wb.row.padding')}</label>
+          <div className="grid grid-cols-2 gap-2">
+            {(['paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight'] as const).map(key => (
+              <div key={key} className="flex items-center gap-1">
+                <span className="text-[10px] text-gray-400 w-4">{key.replace('padding', '')[0]}</span>
+                <input type="number" min={0} max={200} value={row.style?.[key] ?? 8}
+                  onChange={e => updateStyle(key, Number(e.target.value))}
+                  className="flex-1 px-2 py-1 text-xs border border-gray-200 rounded-md bg-white w-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Mobile Options */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Mobile</label>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={row.style?.stackOnMobile ?? true}
+                onChange={e => updateStyle('stackOnMobile', e.target.checked)}
+                className="rounded border-gray-300 text-indigo-600" />
+              <span className="text-xs text-gray-600">{t('wb.row.stackOnMobile')}</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={row.style?.reverseOnMobile ?? false}
+                onChange={e => updateStyle('reverseOnMobile', e.target.checked)}
+                className="rounded border-gray-300 text-indigo-600" />
+              <span className="text-xs text-gray-600">{t('wb.row.reverseOnMobile')}</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Min Height */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('wb.row.minHeight')}</label>
+          <input type="number" min={0} max={1000} value={row.style?.minHeight ?? 0}
+            onChange={e => updateStyle('minHeight', Number(e.target.value))}
+            className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======== Column Properties Editor ========
+function ColumnPropertiesEditor() {
+  const { state, dispatch, currentSections } = useBuilder();
+  const { t } = useTranslation();
+
+  const selectedColumn = useMemo(() => {
+    if (!state.selectedColumnId) return null;
+    for (const section of currentSections) {
+      for (const row of (section.rows || [])) {
+        const col = row.columns.find(c => c.id === state.selectedColumnId);
+        if (col) return { column: col, sectionId: section.id, rowId: row.id };
+      }
+    }
+    return null;
+  }, [state.selectedColumnId, currentSections]);
+
+  if (!selectedColumn) return null;
+  const { column, sectionId, rowId } = selectedColumn;
+
+  const updateStyle = (key: string, value: any) => {
+    dispatch({ type: 'UPDATE_COLUMN_STYLE', sectionId, rowId, columnId: column.id, style: { [key]: value } });
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-gray-50/50">
+      <div className="p-3 border-b border-gray-100 bg-white">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center">
+              <Columns size={16} className="text-cyan-600" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-gray-800">{t('wb.propertyEditor.columnProperties')}</div>
+              <div className="text-[10px] text-gray-400">{t('wb.column.width')}: {Math.round(column.width)}%</div>
+            </div>
+          </div>
+          <button
+            onClick={() => dispatch({ type: 'SELECT_COLUMN', columnId: null })}
+            className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        {/* Width */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('wb.column.widthPercent')}</label>
+          <div className="flex items-center gap-2">
+            <input type="range" min={10} max={100} step={5} value={column.width}
+              onChange={e => dispatch({ type: 'UPDATE_COLUMN_STYLE', sectionId, rowId, columnId: column.id, style: { width: Number(e.target.value) } })}
+              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-cyan-500" />
+            <span className="text-xs text-gray-500 font-mono w-10 text-right">{Math.round(column.width)}%</span>
+          </div>
+        </div>
+
+        {/* Background Color */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('wb.column.backgroundColor')}</label>
+          <div className="flex items-center gap-2">
+            <input type="color" value={column.style?.backgroundColor || '#ffffff'}
+              onChange={e => updateStyle('backgroundColor', e.target.value)}
+              className="w-8 h-8 rounded-md border border-gray-200 cursor-pointer p-0.5" />
+            <input type="text" value={column.style?.backgroundColor || 'transparent'}
+              onChange={e => updateStyle('backgroundColor', e.target.value)}
+              className="flex-1 px-2 py-1.5 text-xs font-mono border border-gray-200 rounded-md bg-white" />
+          </div>
+        </div>
+
+        {/* Padding */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('wb.column.padding')}</label>
+          <div className="flex items-center gap-2">
+            <input type="range" min={0} max={48} step={4} value={column.style?.padding ?? 8}
+              onChange={e => updateStyle('padding', Number(e.target.value))}
+              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-cyan-500" />
+            <span className="text-xs text-gray-500 font-mono w-8 text-right">{column.style?.padding ?? 8}px</span>
+          </div>
+        </div>
+
+        {/* Vertical Alignment */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('wb.column.verticalAlign')}</label>
+          <div className="flex gap-1">
+            {(['top', 'middle', 'bottom', 'stretch'] as const).map(val => (
+              <button key={val}
+                onClick={() => updateStyle('verticalAlign', val)}
+                className={`flex-1 py-1.5 text-[10px] font-medium rounded-md transition-colors ${
+                  (column.style?.verticalAlign || 'top') === val
+                    ? 'bg-cyan-50 text-cyan-600 border border-cyan-200'
+                    : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {t(`wb.row.${val}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Border Radius */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('wb.column.borderRadius')}</label>
+          <div className="flex items-center gap-2">
+            <input type="range" min={0} max={32} step={2} value={column.style?.borderRadius ?? 0}
+              onChange={e => updateStyle('borderRadius', Number(e.target.value))}
+              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-cyan-500" />
+            <span className="text-xs text-gray-500 font-mono w-8 text-right">{column.style?.borderRadius ?? 0}px</span>
+          </div>
+        </div>
+
+        {/* Shadow */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">{t('wb.column.shadow')}</label>
+          <select value={column.style?.shadow || 'none'}
+            onChange={e => updateStyle('shadow', e.target.value)}
+            className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-white">
+            <option value="none">None</option>
+            <option value="sm">Small</option>
+            <option value="md">Medium</option>
+            <option value="lg">Large</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PropertyEditor() {
-  const { state, selectedWidget, dispatch } = useBuilder();
+  const { state, selectedWidget, dispatch, currentSections } = useBuilder();
+  const { t } = useTranslation();
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['Konten', 'Style', 'Layout', 'Pengaturan', 'Links']));
 
   const definition = selectedWidget ? getWidgetDefinition(selectedWidget.type) : null;
@@ -192,15 +478,25 @@ export default function PropertyEditor() {
     dispatch({ type: 'UPDATE_WIDGET_PROPERTY', widgetId: selectedWidget.id, key, value });
   };
 
+  // Show row properties if a row is selected
+  if (state.selectedRowId && !selectedWidget) {
+    return <RowPropertiesEditor />;
+  }
+
+  // Show column properties if a column is selected
+  if (state.selectedColumnId && !selectedWidget) {
+    return <ColumnPropertiesEditor />;
+  }
+
   if (!selectedWidget || !definition) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-gray-400 p-6">
         <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
           <Settings size={28} className="text-gray-300" />
         </div>
-        <p className="text-sm font-medium text-gray-500 mb-1">Tidak ada widget dipilih</p>
+        <p className="text-sm font-medium text-gray-500 mb-1">{t('wb.propertyEditor.noWidget')}</p>
         <p className="text-xs text-center text-gray-400 leading-relaxed">
-          Pilih widget di canvas untuk mengedit propertinya
+          {t('wb.propertyEditor.selectWidget')}
         </p>
       </div>
     );
@@ -239,16 +535,16 @@ export default function PropertyEditor() {
             }}
             className="flex-1 flex items-center justify-center gap-1 p-1.5 rounded-md text-xs
               text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
-            title="Duplikasi"
+            title={t('wb.common.duplicate')}
           >
             <Copy size={13} />
-            <span>Duplikasi</span>
+            <span>{t('wb.common.duplicate')}</span>
           </button>
           <button
             onClick={() => dispatch({ type: 'LOCK_WIDGET', id: selectedWidget.id })}
             className="flex items-center justify-center gap-1 p-1.5 rounded-md text-xs
               text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
-            title={selectedWidget.locked ? 'Buka Kunci' : 'Kunci'}
+            title={selectedWidget.locked ? t('wb.common.unlock') : t('wb.common.lock')}
           >
             {selectedWidget.locked ? <Lock size={13} /> : <Unlock size={13} />}
           </button>
@@ -256,7 +552,7 @@ export default function PropertyEditor() {
             onClick={() => dispatch({ type: 'TOGGLE_WIDGET_VISIBILITY', id: selectedWidget.id })}
             className="flex items-center justify-center gap-1 p-1.5 rounded-md text-xs
               text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors"
-            title={selectedWidget.hidden ? 'Tampilkan' : 'Sembunyikan'}
+            title={selectedWidget.hidden ? t('wb.common.show') : t('wb.common.hide')}
           >
             {selectedWidget.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
           </button>
@@ -267,7 +563,7 @@ export default function PropertyEditor() {
             }}
             className="flex items-center justify-center gap-1 p-1.5 rounded-md text-xs
               text-red-500 bg-red-50 hover:bg-red-100 transition-colors"
-            title="Hapus"
+            title={t('wb.common.delete')}
           >
             <Trash2 size={13} />
           </button>

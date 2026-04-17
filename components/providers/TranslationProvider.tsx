@@ -19,6 +19,16 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
     setLanguageState(detectedLang);
     const detectedCurrency = detectCurrency();
     setCurrencyState(detectedCurrency);
+
+    // Listen for language changes from other TranslationProvider instances
+    const handleLangSync = (e: Event) => {
+      const lang = (e as CustomEvent).detail as Language;
+      setLanguageState(lang);
+      const newCurrency = defaultCurrencyForLang[lang];
+      setCurrencyState(newCurrency);
+    };
+    window.addEventListener('bedagang-language-change', handleLangSync);
+    return () => window.removeEventListener('bedagang-language-change', handleLangSync);
   }, []);
 
   const setLanguage = useCallback((lang: Language) => {
@@ -28,6 +38,8 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({ childr
     const newCurrency = defaultCurrencyForLang[lang];
     setCurrencyState(newCurrency);
     saveCurrency(newCurrency);
+    // Broadcast to all TranslationProvider instances (for nested providers)
+    window.dispatchEvent(new CustomEvent('bedagang-language-change', { detail: lang }));
   }, []);
 
   const setCurrency = useCallback((cur: Currency) => {

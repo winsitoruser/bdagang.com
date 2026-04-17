@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import HQLayout from '../../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   User, 
   Phone, 
@@ -23,6 +24,7 @@ import { getMockDriverById } from '../../../../lib/mockData/fleet';
 import { getTripsByDriver, calculateDriverPerformance } from '../../../../lib/mockData/fleetAdvanced';
 
 export default function DriverDetailPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = router.query;
   const [mounted, setMounted] = useState(false);

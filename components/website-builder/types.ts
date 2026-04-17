@@ -324,6 +324,100 @@ export interface TemplateWidget {
 }
 
 // ============================================
+// ROW / COLUMN TYPES (Elementor-like)
+// ============================================
+
+export interface ColumnStyle {
+  backgroundColor: string;
+  padding: number;
+  verticalAlign: 'top' | 'middle' | 'bottom' | 'stretch';
+  borderRadius: number;
+  shadow: 'none' | 'sm' | 'md' | 'lg';
+  customCSS: string;
+}
+
+export const DEFAULT_COLUMN_STYLE: ColumnStyle = {
+  backgroundColor: 'transparent',
+  padding: 8,
+  verticalAlign: 'top',
+  borderRadius: 0,
+  shadow: 'none',
+  customCSS: '',
+};
+
+export interface BuilderColumn {
+  id: string;
+  width: number; // percentage 0-100
+  widgets: WidgetInstance[];
+  style: ColumnStyle;
+}
+
+export interface RowStyle {
+  backgroundColor: string;
+  gap: number;
+  paddingTop: number;
+  paddingBottom: number;
+  paddingLeft: number;
+  paddingRight: number;
+  marginTop: number;
+  marginBottom: number;
+  minHeight: number;
+  verticalAlign: 'top' | 'middle' | 'bottom' | 'stretch';
+  reverseOnMobile: boolean;
+  stackOnMobile: boolean;
+  fullWidth: boolean;
+  customCSS: string;
+}
+
+export const DEFAULT_ROW_STYLE: RowStyle = {
+  backgroundColor: 'transparent',
+  gap: 16,
+  paddingTop: 8,
+  paddingBottom: 8,
+  paddingLeft: 0,
+  paddingRight: 0,
+  marginTop: 0,
+  marginBottom: 0,
+  minHeight: 0,
+  verticalAlign: 'stretch',
+  reverseOnMobile: false,
+  stackOnMobile: true,
+  fullWidth: false,
+  customCSS: '',
+};
+
+export interface BuilderRow {
+  id: string;
+  columns: BuilderColumn[];
+  style: RowStyle;
+  collapsed?: boolean;
+  locked?: boolean;
+  hidden?: boolean;
+  order: number;
+}
+
+// Row layout presets (column width distributions)
+export interface RowLayoutPreset {
+  id: string;
+  label: string;
+  columns: number[]; // widths in percent
+  icon: string; // visual representation
+}
+
+export const ROW_LAYOUT_PRESETS: RowLayoutPreset[] = [
+  { id: '100', label: '1 Column', columns: [100], icon: '█████████████' },
+  { id: '50-50', label: '2 Equal', columns: [50, 50], icon: '██████ ██████' },
+  { id: '33-33-33', label: '3 Equal', columns: [33.33, 33.33, 33.34], icon: '████ ████ ████' },
+  { id: '25-25-25-25', label: '4 Equal', columns: [25, 25, 25, 25], icon: '███ ███ ███ ███' },
+  { id: '30-70', label: 'Left Sidebar', columns: [30, 70], icon: '████ ████████' },
+  { id: '70-30', label: 'Right Sidebar', columns: [70, 30], icon: '████████ ████' },
+  { id: '25-50-25', label: 'Center Wide', columns: [25, 50, 25], icon: '███ ██████ ███' },
+  { id: '60-40', label: 'Left Wide', columns: [60, 40], icon: '███████ █████' },
+  { id: '40-60', label: 'Right Wide', columns: [40, 60], icon: '█████ ███████' },
+  { id: '20-60-20', label: 'Centered', columns: [20, 60, 20], icon: '██ ████████ ██' },
+];
+
+// ============================================
 // SECTION / BLOCK TYPES
 // ============================================
 
@@ -369,7 +463,8 @@ export interface Section {
   id: string;
   name: string;
   type: 'header' | 'hero' | 'content' | 'features' | 'cta' | 'testimonials' | 'gallery' | 'pricing' | 'contact' | 'footer' | 'custom';
-  widgets: WidgetInstance[];
+  widgets: WidgetInstance[]; // legacy flat widgets (backward compat)
+  rows: BuilderRow[]; // new row/column structure
   style: SectionStyle;
   collapsed?: boolean;
   locked?: boolean;
@@ -470,6 +565,9 @@ export interface HistoryEntry {
   description: string;
 }
 
+// Selection context for property editor
+export type SelectionType = 'widget' | 'row' | 'column' | 'section' | null;
+
 // ============================================
 // BUILDER STATE (UPDATED)
 // ============================================
@@ -481,6 +579,8 @@ export interface BuilderState {
   selectedWidgetId: string | null;
   hoveredWidgetId: string | null;
   selectedSectionId: string | null;
+  selectedRowId: string | null;
+  selectedColumnId: string | null;
   devicePreview: DeviceType;
   zoom: number;
   showGrid: boolean;
@@ -497,6 +597,9 @@ export interface BuilderState {
   showResponsivePreview: boolean;
   showSectionPicker: boolean;
   sectionPickerInsertIndex: number;
+  showRowLayoutPicker: boolean;
+  rowLayoutPickerSectionId: string | null;
+  rowLayoutPickerInsertIndex: number;
   responsivePreviewUrl: string;
   isSaving: boolean;
   lastSavedAt: string | null;

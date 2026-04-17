@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   Star, TrendingUp, TrendingDown, Award, Users, 
   Calendar, Download, Search, Target, Plus, Save,
@@ -63,6 +64,7 @@ const MOCK_PERF_TEMPLATES: PerformanceTemplate[] = [
 ];
 
 export default function PerformancePage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [reviews, setReviews] = useState<PerformanceReview[]>(MOCK_REVIEWS);
   const [templates, setTemplates] = useState<PerformanceTemplate[]>(MOCK_PERF_TEMPLATES);
@@ -457,7 +459,7 @@ export default function PerformancePage() {
   );
 
   return (
-    <HQLayout title="Evaluasi Kinerja" subtitle="Evaluasi dan penilaian kinerja karyawan">
+    <HQLayout title={t('hris.performanceTitle')} subtitle={t('hris.performanceSubtitle')}>
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

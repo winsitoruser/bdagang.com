@@ -26,6 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (action === 'mutation') return createMutation(req, res, session);
       if (action === 'approve-claim') return approveClaim(req, res, session);
       if (action === 'reject-claim') return rejectClaim(req, res, session);
+      if (action === 'resubmit-claim') return resubmitClaim(req, res, session);
       if (action === 'approve-mutation') return approveMutation(req, res, session);
       if (action === 'reject-mutation') return rejectMutation(req, res, session);
       return res.status(400).json({ error: 'Unknown action' });
@@ -119,16 +120,65 @@ async function approveClaim(req: NextApiRequest, res: NextApiResponse, session: 
 }
 
 async function rejectClaim(req: NextApiRequest, res: NextApiResponse, session: any) {
-  if (!sequelize) return res.json({ success: true });
-  const { id, comments } = req.body;
+  if (!sequelize) return res.json({ success: true, message: 'Claim rejected' });
+  const { id, comments, rejection_reason } = req.body;
   if (!id) return res.status(400).json({ error: 'id required' });
+  if (!rejection_reason && !comments) return res.status(400).json({ success: false, error: 'Alasan penolakan wajib diisi' });
+
+  const reason = rejection_reason || comments;
+  const rejectedBy = (session.user as any)?.id || null;
+  const rejectedByName = (session.user as any)?.name || null;
 
   await sequelize.query(`
-    UPDATE employee_claims SET status = 'rejected', notes = :comments, updated_at = NOW()
+    UPDATE employee_claims
+    SET status = 'rejected',
+        rejection_reason = :reason,
+        notes = :comments,
+        rejected_by = :rejectedBy,
+        rejected_by_name = :rejectedByName,
+        rejected_at = NOW(),
+        updated_at = NOW()
     WHERE id = :id
-  `, { replacements: { id, comments: comments || null } });
+  `, { replacements: { id, reason, comments: reason, rejectedBy, rejectedByName } });
 
-  return res.json({ success: true, message: 'Claim rejected' });
+  return res.json({ success: true, message: 'Klaim berhasil ditolak' });
+}
+
+async function resubmitClaim(req: NextApiRequest, res: NextApiResponse, session: any) {
+  if (!sequelize) return res.json({ success: true, message: 'Klaim berhasil diajukan ulang' });
+  const { id, amount, description, receipt_date, attachments } = req.body;
+  if (!id) return res.status(400).json({ error: 'id required' });
+
+  // Verify the claim is owned by the requester and is currently rejected
+  const tenantId = (session.user as any)?.tenantId;
+  const [claims] = await sequelize.query(
+    `SELECT c.* FROM employee_claims c WHERE c.id = :id AND c.tenant_id = :tenantId AND c.status = 'rejected'`,
+    { replacements: { id, tenantId } }
+  );
+  if (!claims || (claims as any[]).length === 0) {
+    return res.status(404).json({ success: false, error: 'Klaim tidak ditemukan atau tidak dapat diajukan ulang' });
+  }
+
+  const receiptUrl = attachments?.length ? JSON.stringify(attachments.map((a: any) => a.name)) : null;
+
+  await sequelize.query(`
+    UPDATE employee_claims
+    SET status = 'pending',
+        amount = COALESCE(:amount, amount),
+        description = COALESCE(:description, description),
+        receipt_date = COALESCE(:receipt_date, receipt_date),
+        receipt_url = COALESCE(:receiptUrl, receipt_url),
+        rejection_reason = NULL,
+        rejected_by = NULL,
+        rejected_by_name = NULL,
+        rejected_at = NULL,
+        resubmitted_at = NOW(),
+        resubmit_count = COALESCE(resubmit_count, 0) + 1,
+        updated_at = NOW()
+    WHERE id = :id
+  `, { replacements: { id, amount: amount ? parseFloat(amount) : null, description: description || null, receipt_date: receipt_date || null, receiptUrl } });
+
+  return res.json({ success: true, message: 'Klaim berhasil diajukan ulang dan sedang menunggu persetujuan' });
 }
 
 // ===== MUTATIONS =====

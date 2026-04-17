@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Settings, Clock, MapPin, Fingerprint, Smartphone, Bell, Save,
   Building2, Calendar, Timer, Shield, Coffee, AlertTriangle,
@@ -50,6 +51,7 @@ const defaultSettings: AttSettings = {
 const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
 export default function AttendanceSettingsPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [settings, setSettings] = useState<AttSettings>(defaultSettings);
   const [loading, setLoading] = useState(true);
@@ -120,7 +122,7 @@ export default function AttendanceSettingsPage() {
   );
 
   return (
-    <HQLayout title="Pengaturan Absensi" subtitle="Konfigurasi jam kerja, toleransi, GPS, fingerprint, dan notifikasi">
+    <HQLayout title={t('hris.attendanceSettingsTitle')} subtitle={t('hris.attendanceSettingsSubtitle')}>
       <div className="space-y-6 max-w-4xl">
         {/* Branch selector */}
         <div className="bg-white rounded-xl shadow-sm border p-4 flex items-center justify-between">

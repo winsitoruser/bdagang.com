@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   CreditCard,
   Package,
@@ -208,6 +209,7 @@ const MOCK_BILLING: BillingData = {
 };
 
 export default function BillingInfoPage() {
+  const { t } = useTranslation();
   const { data: session, status: authStatus } = useSession();
   const router = useRouter();
   const [data, setData] = useState<BillingData | null>(MOCK_BILLING);
@@ -249,11 +251,11 @@ export default function BillingInfoPage() {
 
   if (authStatus === 'loading' || loading) {
     return (
-      <HQLayout title="Informasi Tagihan">
+      <HQLayout title={t('billingInfo.title')}>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex flex-col items-center gap-3">
             <RefreshCw className="w-8 h-8 text-blue-500 animate-spin" />
-            <p className="text-sm text-gray-500">Memuat informasi billing...</p>
+            <p className="text-sm text-gray-500">{t('billingInfo.loadingBilling')}</p>
           </div>
         </div>
       </HQLayout>
@@ -262,13 +264,13 @@ export default function BillingInfoPage() {
 
   if (error) {
     return (
-      <HQLayout title="Informasi Tagihan">
+      <HQLayout title={t('billingInfo.title')}>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
             <p className="text-gray-600 mb-4">{error}</p>
             <button onClick={fetchData} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              Coba Lagi
+              {t('billingInfo.tryAgain')}
             </button>
           </div>
         </div>
@@ -283,14 +285,14 @@ export default function BillingInfoPage() {
   const usage = data.usage;
 
   const tabs = [
-    { id: 'overview' as const, label: 'Ringkasan', icon: BarChart3 },
-    { id: 'usage' as const, label: 'Pemakaian Layanan', icon: TrendingUp },
-    { id: 'invoices' as const, label: 'Riwayat Invoice', icon: FileText },
-    { id: 'modules' as const, label: 'Modul Aktif', icon: Package },
+    { id: 'overview' as const, label: t('billingInfo.tabOverview'), icon: BarChart3 },
+    { id: 'usage' as const, label: t('billingInfo.tabUsage'), icon: TrendingUp },
+    { id: 'invoices' as const, label: t('billingInfo.tabInvoices'), icon: FileText },
+    { id: 'modules' as const, label: t('billingInfo.tabModules'), icon: Package },
   ];
 
   return (
-    <HQLayout title="Informasi Tagihan" subtitle="Informasi langganan, pemakaian layanan, dan riwayat pembayaran">
+    <HQLayout title={t('billingInfo.title')} subtitle={t('billingInfo.subtitle')}>
       {/* Tabs */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-6 overflow-x-auto">
         {tabs.map((tab) => {

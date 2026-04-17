@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   History, Search, Filter, Download, Eye, User, Building2, Calendar,
   Clock, Shield, AlertTriangle, FileText, Package, DollarSign, Settings,
@@ -59,6 +60,7 @@ const MOCK_AUDIT_LOGS: AuditLog[] = [
 const MOCK_AUDIT_STATS: Stats = { total: 1250, today: 45, thisWeek: 280, activeUsers: 18, byAction: [{ action: 'UPDATE', count: 520, label: 'Update', color: 'bg-blue-500' }, { action: 'CREATE', count: 380, label: 'Create', color: 'bg-green-500' }, { action: 'DELETE', count: 85, label: 'Delete', color: 'bg-red-500' }, { action: 'LOGIN', count: 180, label: 'Login', color: 'bg-purple-500' }], byEntity: [{ entity_type: 'transaction', count: 420, label: 'Transaksi' }, { entity_type: 'product', count: 280, label: 'Produk' }, { entity_type: 'employee', count: 150, label: 'Karyawan' }], byUser: [{ user_id: 1, user_name: 'Admin HQ', role: 'super_admin', count: 380 }, { user_id: 2, user_name: 'Budi Santoso', role: 'branch_manager', count: 220 }], dailyTrend: [{ date: '2026-03-09', count: 38 }, { date: '2026-03-10', count: 42 }, { date: '2026-03-11', count: 35 }, { date: '2026-03-12', count: 48 }, { date: '2026-03-13', count: 40 }, { date: '2026-03-14', count: 52 }, { date: '2026-03-15', count: 45 }] };
 
 export default function AuditLogViewer() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [tab, setTab] = useState<'logs' | 'analytics'>('logs');
 
@@ -165,20 +167,20 @@ export default function AuditLogViewer() {
   const maxEntity = stats?.byEntity ? Math.max(...stats.byEntity.map(e => e.count), 1) : 1;
 
   return (
-    <HQLayout title="Audit Log" subtitle="Riwayat aktivitas dan perubahan sistem">
+    <HQLayout title={t('auditLogs.title')} subtitle={t('auditLogs.subtitle')}>
       <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1">
             <button onClick={() => setTab('logs')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'logs' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              <History className="w-4 h-4 inline mr-1.5" />Log Aktivitas
+              <History className="w-4 h-4 inline mr-1.5" />{t('auditLogs.activityLog')}
             </button>
             <button onClick={() => setTab('analytics')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'analytics' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-              <BarChart3 className="w-4 h-4 inline mr-1.5" />Analitik
+              <BarChart3 className="w-4 h-4 inline mr-1.5" />{t('auditLogs.analytics')}
             </button>
           </div>
           <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-colors">
-            <Download className="w-4 h-4" /> Ekspor Excel
+            <Download className="w-4 h-4" /> {t('auditLogs.exportExcel')}
           </button>
         </div>
 
@@ -189,18 +191,18 @@ export default function AuditLogViewer() {
               <div className="flex items-center gap-2 flex-1 min-w-[200px]">
                 <Search className="w-4 h-4 text-gray-400" />
                 <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                  placeholder="Cari user, entity, ID..." className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  placeholder={t('auditLogs.searchPlaceholder')} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
               </div>
               <select value={filterAction} onChange={e => { setFilterAction(e.target.value); setPage(1); }} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="all">Semua Aksi</option>
+                <option value="all">{t('auditLogs.allActions')}</option>
                 {filterOptions.actions.map(a => <option key={a.value} value={a.value}>{a.label}</option>)}
               </select>
               <select value={filterEntity} onChange={e => { setFilterEntity(e.target.value); setPage(1); }} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="all">Semua Entity</option>
+                <option value="all">{t('auditLogs.allEntities')}</option>
                 {filterOptions.entities.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
               </select>
               <select value={filterUser} onChange={e => { setFilterUser(e.target.value); setPage(1); }} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="all">Semua User</option>
+                <option value="all">{t('auditLogs.allUsers')}</option>
                 {filterOptions.users.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
               </select>
               <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm" />
@@ -213,10 +215,10 @@ export default function AuditLogViewer() {
           {/* Stats row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Total Log', value: total, icon: History, color: 'blue' },
-              { label: 'Halaman', value: `${page}/${totalPages || 1}`, icon: FileText, color: 'gray' },
-              { label: 'Penghapusan', value: logs.filter(l => l.action === 'DELETE').length, icon: Trash2, color: 'red' },
-              { label: 'Aksi HQ', value: logs.filter(l => l.isHqIntervention).length, icon: Shield, color: 'purple' },
+              { label: t('auditLogs.totalLogs'), value: total, icon: History, color: 'blue' },
+              { label: t('auditLogs.page'), value: `${page}/${totalPages || 1}`, icon: FileText, color: 'gray' },
+              { label: t('auditLogs.deletions'), value: logs.filter(l => l.action === 'DELETE').length, icon: Trash2, color: 'red' },
+              { label: t('auditLogs.hqActions'), value: logs.filter(l => l.isHqIntervention).length, icon: Shield, color: 'purple' },
             ].map((s, i) => (
               <div key={i} className="bg-white rounded-xl shadow-sm border p-4 flex items-center justify-between">
                 <div><p className="text-xs text-gray-500">{s.label}</p><p className={`text-xl font-bold text-${s.color}-600`}>{s.value}</p></div>
@@ -228,13 +230,13 @@ export default function AuditLogViewer() {
           {/* Table */}
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
             {loading ? (
-              <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-blue-500 mr-2" /> Memuat...</div>
+              <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-blue-500 mr-2" /> {t('auditLogs.loading')}</div>
             ) : logs.length === 0 ? (
-              <div className="text-center py-20 text-gray-400"><History className="w-10 h-10 mx-auto mb-3 opacity-30" /><p>Belum ada audit log</p></div>
+              <div className="text-center py-20 text-gray-400"><History className="w-10 h-10 mx-auto mb-3 opacity-30" /><p>{t('auditLogs.noLogs')}</p></div>
             ) : (
               <table className="w-full text-sm">
                 <thead><tr className="bg-gray-50 border-b">
-                  {['Waktu', 'User', 'Aksi', 'Entity', 'Detail', 'IP', ''].map((h, i) => (
+                  {[t('auditLogs.time'), t('auditLogs.user'), t('auditLogs.action'), t('auditLogs.entity'), t('auditLogs.detail'), 'IP', ''].map((h, i) => (
                     <th key={i} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{h}</th>
                   ))}
                 </tr></thead>
@@ -278,7 +280,7 @@ export default function AuditLogViewer() {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
-                <span className="text-xs text-gray-500">Menampilkan {(page-1)*pageSize+1}-{Math.min(page*pageSize, total)} dari {total}</span>
+                <span className="text-xs text-gray-500">{t('auditLogs.showing')} {(page-1)*pageSize+1}-{Math.min(page*pageSize, total)} {t('auditLogs.of')} {total}</span>
                 <div className="flex items-center gap-1">
                   <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page <= 1} className="p-1.5 rounded hover:bg-gray-200 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {

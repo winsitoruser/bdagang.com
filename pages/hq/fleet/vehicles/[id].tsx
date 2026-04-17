@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import HQLayout from '../../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   Truck, 
   MapPin, 
@@ -25,6 +26,7 @@ import {
 } from '../../../../lib/mockData/fleetAdvanced';
 
 export default function VehicleDetailPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = router.query;
   const [mounted, setMounted] = useState(false);

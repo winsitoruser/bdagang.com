@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Briefcase, Users, Clock, DollarSign, Plus, Edit, Trash2, X, Check, Eye, Search, BarChart3, Calendar, FileText, FolderOpen, Upload, Download, File, FileSpreadsheet, FileImage, FilePlus, Tag, Filter, Star, Shield, AlertTriangle, ChevronDown, ChevronRight, ExternalLink, Copy, Paperclip } from 'lucide-react';
 
 interface ProjectItem { id: string; project_code: string; name: string; description: string; client_name: string; location: string; start_date: string; end_date: string; status: string; budget_amount: number; actual_cost: number; project_manager_id: number; department: string; industry: string; completion_percent: number; priority: string; milestones: any[]; }
@@ -28,6 +29,7 @@ const MOCK_PM_TIMESHEETS: Timesheet[] = [
 ];
 
 export default function ProjectManagementPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('projects');
   const [overview, setOverview] = useState<any>(MOCK_PM_OVERVIEW);
   const [projects, setProjects] = useState<ProjectItem[]>(MOCK_PROJECTS);
@@ -365,7 +367,7 @@ export default function ProjectManagementPage() {
   ];
 
   return (
-    <HQLayout title="Manajemen Proyek & Pekerja Kontrak">
+    <HQLayout title={t('hris.projectManagementTitle')}>
     <div className="p-6 max-w-7xl mx-auto">
       {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 

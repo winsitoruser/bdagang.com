@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   Wrench, 
   Plus,
@@ -15,6 +16,7 @@ import {
 import { mockMaintenanceRecords } from '../../../lib/mockData/fleetAdvanced';
 
 export default function MaintenanceManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [schedules, setSchedules] = useState<any[]>([]);
   const [records, setRecords] = useState<any[]>(mockMaintenanceRecords);
@@ -65,8 +67,8 @@ export default function MaintenanceManagement() {
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Maintenance Management</h1>
-          <p className="text-gray-600">Track vehicle maintenance schedules and service history</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('fleet.maintenanceTitle')}</h1>
+          <p className="text-gray-600">{t('fleet.maintenanceSubtitle')}</p>
         </div>
 
         {/* Summary Cards */}
@@ -77,7 +79,7 @@ export default function MaintenanceManagement() {
                 <Calendar className="w-6 h-6 text-blue-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Active Schedules</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.activeSchedules')}</p>
             <p className="text-2xl font-bold text-gray-900">{activeSchedules}</p>
           </div>
 
@@ -87,7 +89,7 @@ export default function MaintenanceManagement() {
                 <AlertCircle className="w-6 h-6 text-red-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Overdue</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.overdueLabel')}</p>
             <p className="text-2xl font-bold text-gray-900">{overdueSchedules}</p>
           </div>
 
@@ -129,7 +131,7 @@ export default function MaintenanceManagement() {
                 }`}
               >
                 <Calendar className="w-4 h-4" />
-                Schedules ({schedules.length})
+                {t('fleet.schedules')} ({schedules.length})
               </button>
               <button
                 onClick={() => setActiveTab('history')}

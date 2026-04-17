@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   MapPin, 
   Plus,
@@ -26,6 +27,7 @@ const MOCK_ASSIGNMENTS = [
 ];
 
 export default function RouteManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [routes, setRoutes] = useState<any[]>(MOCK_ROUTES);
   const [assignments, setAssignments] = useState<any[]>(MOCK_ASSIGNMENTS);
@@ -63,8 +65,8 @@ export default function RouteManagement() {
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Route Management (Ritasi)</h1>
-          <p className="text-gray-600">Manage delivery routes and assignments</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('fleet.routesTitle')}</h1>
+          <p className="text-gray-600">{t('fleet.routesSubtitle')}</p>
         </div>
 
         {/* Summary Cards */}
@@ -75,7 +77,7 @@ export default function RouteManagement() {
                 <MapPin className="w-6 h-6 text-blue-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Active Routes</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.activeRoutes')}</p>
             <p className="text-2xl font-bold text-gray-900">{activeRoutes}</p>
           </div>
 
@@ -85,7 +87,7 @@ export default function RouteManagement() {
                 <Calendar className="w-6 h-6 text-green-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Assignments Today</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.assignmentsToday')}</p>
             <p className="text-2xl font-bold text-gray-900">{todayAssignments.length}</p>
           </div>
 
@@ -95,7 +97,7 @@ export default function RouteManagement() {
                 <TrendingUp className="w-6 h-6 text-purple-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">In Progress</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.inProgress')}</p>
             <p className="text-2xl font-bold text-gray-900">{inProgress}</p>
           </div>
 
@@ -105,7 +107,7 @@ export default function RouteManagement() {
                 <CheckCircle className="w-6 h-6 text-orange-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Completed Today</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.completedToday')}</p>
             <p className="text-2xl font-bold text-gray-900">{completedToday}</p>
           </div>
         </div>

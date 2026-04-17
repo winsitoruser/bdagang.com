@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import { Shield, FileText, AlertTriangle, Users, CheckSquare, Plus, Edit, Trash2, Eye, Search, ChevronDown, X, Clock, AlertCircle, Download } from 'lucide-react';
 
@@ -39,6 +40,7 @@ const MOCK_CHECKLISTS: Checklist[] = [
 ];
 
 export default function IndustrialRelationsPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('regulations');
   const [regulations, setRegulations] = useState<Regulation[]>(MOCK_REGULATIONS);
   const [warnings, setWarnings] = useState<Warning[]>(MOCK_WARNINGS);
@@ -155,7 +157,7 @@ export default function IndustrialRelationsPage() {
   };
 
   return (
-    <HQLayout title="Hubungan Industrial & Kepatuhan Hukum">
+    <HQLayout title={t('hris.industrialRelationsTitle')}>
     <div className="p-6 max-w-7xl mx-auto">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>

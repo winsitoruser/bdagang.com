@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { GraduationCap, Search, Plus, Eye, Edit, X, Calendar, Clock, Users, MapPin, Star, Award, BookOpen, CheckCircle2, BarChart3, TrendingUp, FileText, Download, Filter, ChevronRight, Target, Bookmark, Video, Monitor, Loader2, Trash2 } from 'lucide-react';
 
 type TabKey = 'programs' | 'schedule' | 'certifications' | 'reports';
@@ -33,6 +34,7 @@ const MOCK_TRAINING_ANALYTICS = {
 };
 
 export default function TrainingPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('programs');
   const [programs, setPrograms] = useState<any[]>(MOCK_PROGRAMS);
   const [certs, setCerts] = useState<any[]>(MOCK_CERTS);
@@ -150,7 +152,7 @@ export default function TrainingPage() {
   const getCertNumber = (c: any) => c.cert_number || c.credential_id || '-';
 
   return (
-    <HQLayout title="Pelatihan & Sertifikasi" subtitle="Program Pengembangan SDM & Manajemen Sertifikasi">
+    <HQLayout title={t('hris.trainingTitle')} subtitle={t('hris.trainingSubtitle')}>
       <div className="space-y-6">
         {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 

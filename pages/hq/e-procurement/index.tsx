@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { toast } from 'react-hot-toast';
 import {
   BarChart3, TrendingUp, AlertTriangle, FileText, Loader2,
@@ -18,6 +19,7 @@ import {
 } from '../../../components/procurement/shared';
 
 export default function EProcurementPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [loading, setLoading] = useState(true);
@@ -123,27 +125,27 @@ export default function EProcurementPage() {
   if (!mounted) return null;
 
   const tabs: { id: TabType; name: string; icon: any }[] = [
-    { id: 'dashboard', name: 'Dasbor', icon: BarChart3 },
-    { id: 'vendors', name: 'Vendor', icon: Building2 },
-    { id: 'procurement-requests', name: 'Permintaan (PR)', icon: ClipboardList },
+    { id: 'dashboard', name: t('eProcurement.tabDashboard'), icon: BarChart3 },
+    { id: 'vendors', name: t('eProcurement.tabVendors'), icon: Building2 },
+    { id: 'procurement-requests', name: t('eProcurement.tabPR'), icon: ClipboardList },
     { id: 'rfqs', name: 'RFQ', icon: Send },
     { id: 'tenders', name: 'Tender', icon: Award },
     { id: 'purchase-orders', name: 'Purchase Order', icon: ShoppingCart },
     { id: 'goods-receipts', name: 'Goods Receipt', icon: Truck },
     { id: 'invoices', name: 'Invoice', icon: Receipt },
-    { id: 'contracts', name: 'Kontrak', icon: FileText },
-    { id: 'evaluations', name: 'Evaluasi', icon: Star },
+    { id: 'contracts', name: t('eProcurement.tabContracts'), icon: FileText },
+    { id: 'evaluations', name: t('eProcurement.tabEvaluations'), icon: Star },
     { id: 'approvals', name: 'Approval', icon: ShieldCheck },
     { id: 'budget', name: 'Budget', icon: Wallet },
-    { id: 'analytics', name: 'Analitik', icon: PieChart },
+    { id: 'analytics', name: t('eProcurement.tabAnalytics'), icon: PieChart },
     { id: 'audit-trail', name: 'Audit Trail', icon: History },
-    { id: 'settings', name: 'Pengaturan', icon: Settings },
+    { id: 'settings', name: t('eProcurement.tabSettings'), icon: Settings },
   ];
 
   const tbProps = { search, setSearch, statusFilter, setStatusFilter, onRefresh: refresh, onCreateClick: () => { setForm({}); setShowCreate(true); }, loading };
 
   return (
-    <HQLayout title="E-Procurement" subtitle="Pengadaan barang & jasa terintegrasi — Enterprise">
+    <HQLayout title={t('eProcurement.title')} subtitle={t('eProcurement.subtitle')}>
       {/* Tab Navigation */}
       <div className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10">
         <div className="flex overflow-x-auto px-4 gap-1 scrollbar-hide">
@@ -164,7 +166,7 @@ export default function EProcurementPage() {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
               <Loader2 className="w-8 h-8 animate-spin text-white" />
             </div>
-            <p className="text-sm font-medium text-gray-600">Memuat data...</p>
+            <p className="text-sm font-medium text-gray-600">{t('eProcurement.loadingData')}</p>
           </div>
         ) : (<>
 

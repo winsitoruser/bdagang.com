@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   CalendarDays, Clock, CheckCircle, XCircle, AlertTriangle, Users,
   Search, Filter, Download, Plus, Eye, ChevronDown, Building2,
@@ -118,6 +119,7 @@ const MOCK_LEAVE_BALANCES = [
 ];
 
 export default function LeaveManagementPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'requests' | 'approval-config' | 'leave-types' | 'balances'>('requests');
@@ -411,7 +413,7 @@ export default function LeaveManagementPage() {
   };
 
   return (
-    <HQLayout title="Manajemen Cuti" subtitle="Kelola pengajuan, approval berjenjang, dan konfigurasi cuti karyawan">
+    <HQLayout title={t('hris.leaveTitle')} subtitle={t('hris.leaveSubtitle')}>
       <div className="space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import VehicleFormModal from '../../../components/hq/fleet/VehicleFormModal';
 import DriverFormModal from '../../../components/hq/fleet/DriverFormModal';
 import { 
@@ -79,6 +80,7 @@ const MOCK_VEHICLE_STATS: Stats = { total: 8, active: 5, maintenance: 1, onRoute
 const MOCK_DRIVER_STATS = { total: 7, active: 6, available: 2, onDuty: 4 };
 
 export default function FleetManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
   const [drivers, setDrivers] = useState<Driver[]>(MOCK_DRIVERS);
@@ -212,19 +214,19 @@ export default function FleetManagement() {
 
   const getVehicleTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      truck: 'Truk',
-      van: 'Van',
-      motorcycle: 'Motor',
-      car: 'Mobil'
+      truck: t('fleet.truck'),
+      van: t('fleet.van'),
+      motorcycle: t('fleet.motorcycle'),
+      car: t('fleet.car')
     };
     return labels[type] || type;
   };
 
   const getStatusBadge = (status: string) => {
     const badges: Record<string, { color: string; label: string; icon: any }> = {
-      active: { color: 'bg-green-100 text-green-800', label: 'Aktif', icon: CheckCircle },
-      maintenance: { color: 'bg-yellow-100 text-yellow-800', label: 'Perawatan', icon: Wrench },
-      retired: { color: 'bg-gray-100 text-gray-800', label: 'Pensiun', icon: AlertCircle }
+      active: { color: 'bg-green-100 text-green-800', label: t('fleet.active'), icon: CheckCircle },
+      maintenance: { color: 'bg-yellow-100 text-yellow-800', label: t('fleet.maintenance'), icon: Wrench },
+      retired: { color: 'bg-gray-100 text-gray-800', label: t('fleet.retired'), icon: AlertCircle }
     };
     const badge = badges[status] || badges.active;
     const Icon = badge.icon;
@@ -238,9 +240,9 @@ export default function FleetManagement() {
 
   const getAvailabilityBadge = (status: string) => {
     const badges: Record<string, { color: string; label: string }> = {
-      available: { color: 'bg-green-100 text-green-800', label: 'Tersedia' },
-      on_duty: { color: 'bg-blue-100 text-blue-800', label: 'Bertugas' },
-      off_duty: { color: 'bg-gray-100 text-gray-800', label: 'Tidak Bertugas' }
+      available: { color: 'bg-green-100 text-green-800', label: t('fleet.available') },
+      on_duty: { color: 'bg-blue-100 text-blue-800', label: t('fleet.onDutyStatus') },
+      off_duty: { color: 'bg-gray-100 text-gray-800', label: t('fleet.offDuty') }
     };
     const badge = badges[status] || badges.available;
     return (
@@ -262,8 +264,8 @@ export default function FleetManagement() {
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Manajemen Armada</h1>
-          <p className="text-gray-600">Kelola kendaraan dan pengemudi untuk operasional pengiriman</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('fleet.title')}</h1>
+          <p className="text-gray-600">{t('fleet.subtitle')}</p>
         </div>
 
         {/* Stats Cards */}
@@ -271,7 +273,7 @@ export default function FleetManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Kendaraan</p>
+                <p className="text-sm text-gray-600">{t('fleet.totalVehicles')}</p>
                 <p className="text-2xl font-bold text-gray-900">{vehicleStats.total}</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-lg">
@@ -283,7 +285,7 @@ export default function FleetManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Kendaraan Aktif</p>
+                <p className="text-sm text-gray-600">{t('fleet.activeVehicles')}</p>
                 <p className="text-2xl font-bold text-green-600">{vehicleStats.active}</p>
               </div>
               <div className="p-3 bg-green-100 rounded-lg">
@@ -295,7 +297,7 @@ export default function FleetManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Pengemudi</p>
+                <p className="text-sm text-gray-600">{t('fleet.totalDrivers')}</p>
                 <p className="text-2xl font-bold text-gray-900">{driverStats.total}</p>
               </div>
               <div className="p-3 bg-purple-100 rounded-lg">
@@ -307,7 +309,7 @@ export default function FleetManagement() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Sedang Bertugas</p>
+                <p className="text-sm text-gray-600">{t('fleet.onDuty')}</p>
                 <p className="text-2xl font-bold text-blue-600">{driverStats.onDuty}</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-lg">
@@ -331,7 +333,7 @@ export default function FleetManagement() {
               >
                 <div className="flex items-center gap-2">
                   <Truck className="w-4 h-4" />
-                  Kendaraan ({vehicleStats.total})
+                  {t('fleet.vehiclesTab')} ({vehicleStats.total})
                 </div>
               </button>
               <button
@@ -344,7 +346,7 @@ export default function FleetManagement() {
               >
                 <div className="flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  Pengemudi ({driverStats.total})
+                  {t('fleet.driversTab')} ({driverStats.total})
                 </div>
               </button>
             </div>
@@ -362,7 +364,7 @@ export default function FleetManagement() {
                         type="text"
                         value={vehicleSearch}
                         onChange={(e) => setVehicleSearch(e.target.value)}
-                        placeholder="Cari kendaraan..."
+                        placeholder={t('fleet.searchVehicle')}
                         className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
@@ -383,10 +385,10 @@ export default function FleetManagement() {
                               onChange={(e) => setVehicleFilter(prev => ({ ...prev, status: e.target.value }))}
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                             >
-                              <option value="all">Semua</option>
-                              <option value="active">Aktif</option>
-                              <option value="maintenance">Perawatan</option>
-                              <option value="retired">Pensiun</option>
+                              <option value="all">{t('fleet.all')}</option>
+                              <option value="active">{t('fleet.active')}</option>
+                              <option value="maintenance">{t('fleet.maintenance')}</option>
+                              <option value="retired">{t('fleet.retired')}</option>
                             </select>
                           </div>
                           <div>
@@ -396,11 +398,11 @@ export default function FleetManagement() {
                               onChange={(e) => setVehicleFilter(prev => ({ ...prev, type: e.target.value }))}
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                             >
-                              <option value="all">Semua</option>
-                              <option value="truck">Truk</option>
-                              <option value="van">Van</option>
-                              <option value="motorcycle">Motor</option>
-                              <option value="car">Mobil</option>
+                              <option value="all">{t('fleet.all')}</option>
+                              <option value="truck">{t('fleet.truck')}</option>
+                              <option value="van">{t('fleet.van')}</option>
+                              <option value="motorcycle">{t('fleet.motorcycle')}</option>
+                              <option value="car">{t('fleet.car')}</option>
                             </select>
                           </div>
                         </div>
@@ -413,7 +415,7 @@ export default function FleetManagement() {
                       className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                     >
                       <Download className="w-4 h-4" />
-                      Ekspor
+                      {t('fleet.export')}
                     </button>
                     <button 
                       onClick={fetchFleetData}
@@ -426,7 +428,7 @@ export default function FleetManagement() {
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                       <Plus className="w-4 h-4" />
-                      Tambah Kendaraan
+                      {t('fleet.addVehicle')}
                     </button>
                   </div>
                 </div>
@@ -434,25 +436,25 @@ export default function FleetManagement() {
                 {loading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-gray-600 mt-4">Memuat data...</p>
+                    <p className="text-gray-600 mt-4">{t('fleet.loading')}</p>
                   </div>
                 ) : vehicles.length === 0 ? (
                   <div className="text-center py-12">
                     <Truck className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600">Belum ada kendaraan</p>
+                    <p className="text-gray-600">{t('fleet.noVehicles')}</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">No. Plat</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Tipe</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Merk/Model</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Odometer</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Servis Berikutnya</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Status</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Aksi</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.licensePlate')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.type')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.brandModel')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.odometer')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.nextService')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.status')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.actions')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -518,7 +520,7 @@ export default function FleetManagement() {
                         type="text"
                         value={driverSearch}
                         onChange={(e) => setDriverSearch(e.target.value)}
-                        placeholder="Cari pengemudi..."
+                        placeholder={t('fleet.searchDriver')}
                         className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
@@ -539,10 +541,10 @@ export default function FleetManagement() {
                               onChange={(e) => setDriverFilter(prev => ({ ...prev, status: e.target.value }))}
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                             >
-                              <option value="all">Semua</option>
-                              <option value="active">Aktif</option>
-                              <option value="on_leave">Cuti</option>
-                              <option value="suspended">Ditangguhkan</option>
+                              <option value="all">{t('fleet.all')}</option>
+                              <option value="active">{t('fleet.active')}</option>
+                              <option value="on_leave">{t('fleet.onLeave')}</option>
+                              <option value="suspended">{t('fleet.suspended')}</option>
                             </select>
                           </div>
                           <div>
@@ -552,10 +554,10 @@ export default function FleetManagement() {
                               onChange={(e) => setDriverFilter(prev => ({ ...prev, availability: e.target.value }))}
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                             >
-                              <option value="all">Semua</option>
-                              <option value="available">Tersedia</option>
-                              <option value="on_duty">Bertugas</option>
-                              <option value="off_duty">Tidak Bertugas</option>
+                              <option value="all">{t('fleet.all')}</option>
+                              <option value="available">{t('fleet.available')}</option>
+                              <option value="on_duty">{t('fleet.onDutyStatus')}</option>
+                              <option value="off_duty">{t('fleet.offDuty')}</option>
                             </select>
                           </div>
                         </div>
@@ -581,7 +583,7 @@ export default function FleetManagement() {
                       className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                     >
                       <Plus className="w-4 h-4" />
-                      Tambah Pengemudi
+                      {t('fleet.addDriver')}
                     </button>
                   </div>
                 </div>
@@ -589,26 +591,26 @@ export default function FleetManagement() {
                 {loading ? (
                   <div className="text-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-gray-600 mt-4">Memuat data...</p>
+                    <p className="text-gray-600 mt-4">{t('fleet.loading')}</p>
                   </div>
                 ) : drivers.length === 0 ? (
                   <div className="text-center py-12">
                     <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-600">Belum ada pengemudi</p>
+                    <p className="text-gray-600">{t('fleet.noDrivers')}</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Nama</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">No. SIM</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Telepon</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Total Pengiriman</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Ketepatan Waktu</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Skor Keselamatan</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Status</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Aksi</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.name')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.licenseNumber')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.phone')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.totalDeliveries')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.onTimeRate')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.safetyScore')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.status')}</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">{t('fleet.actions')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -697,23 +699,22 @@ export default function FleetManagement() {
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Konfirmasi Hapus</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">{t('fleet.deleteConfirmTitle')}</h3>
             <p className="text-gray-600 mb-6">
-              Apakah Anda yakin ingin menghapus {deleteConfirm.type === 'vehicle' ? 'kendaraan' : 'pengemudi'} ini?
-              Tindakan ini tidak dapat dibatalkan.
+              {deleteConfirm.type === 'vehicle' ? t('fleet.deleteConfirmVehicle') : t('fleet.deleteConfirmDriver')}
             </p>
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setDeleteConfirm(null)}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                Batal
+                {t('fleet.cancel')}
               </button>
               <button
                 onClick={handleDelete}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
-                Hapus
+                {t('fleet.delete')}
               </button>
             </div>
           </div>

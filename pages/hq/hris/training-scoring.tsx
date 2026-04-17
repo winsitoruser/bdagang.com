@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Settings, Plus, Loader2, X, Target, BarChart3, Users, GraduationCap, Award,
   CheckCircle2, Trash2, Eye, Calculator, RefreshCw, PenTool, Layers, UserPlus,
@@ -31,6 +32,7 @@ const MOCK_TS_COMPETENCIES = [
 ];
 
 export default function TrainingScoringPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('configs');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -173,7 +175,7 @@ export default function TrainingScoringPage() {
   ];
 
   return (
-    <HQLayout title="Scoring & Penilaian" subtitle="Konfigurasi bobot penilaian, skala grade, dan manajemen akun kandidat portal">
+    <HQLayout title={t('hris.trainingScoringTitle')} subtitle={t('hris.trainingScoringSubtitle')}>
       <div className="space-y-6">
         {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 

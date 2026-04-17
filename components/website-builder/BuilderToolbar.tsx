@@ -8,16 +8,18 @@ import {
   Rocket, Settings, CheckCircle, Loader2,
 } from 'lucide-react';
 import { DeviceType, DEVICE_WIDTHS } from './types';
+import { useTranslation } from '../../lib/i18n';
 import Link from 'next/link';
 
-const deviceOptions: { type: DeviceType; icon: React.FC<any>; label: string; width: number }[] = [
-  { type: 'desktop', icon: Monitor, label: 'Desktop', width: DEVICE_WIDTHS.desktop },
-  { type: 'tablet', icon: Tablet, label: 'Tablet', width: DEVICE_WIDTHS.tablet },
-  { type: 'mobile', icon: Smartphone, label: 'Mobile', width: DEVICE_WIDTHS.mobile },
+const deviceOptions: { type: DeviceType; icon: React.FC<any>; labelKey: string; width: number }[] = [
+  { type: 'desktop', icon: Monitor, labelKey: 'wb.toolbar.desktop', width: DEVICE_WIDTHS.desktop },
+  { type: 'tablet', icon: Tablet, labelKey: 'wb.toolbar.tablet', width: DEVICE_WIDTHS.tablet },
+  { type: 'mobile', icon: Smartphone, labelKey: 'wb.toolbar.mobile', width: DEVICE_WIDTHS.mobile },
 ];
 
 export default function BuilderToolbar() {
   const { state, dispatch, currentPage, saveToLocalStorage } = useBuilder();
+  const { t } = useTranslation();
 
   const canUndo = state.historyIndex > 0;
   const canRedo = state.historyIndex < state.history.length - 1;
@@ -82,7 +84,7 @@ export default function BuilderToolbar() {
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors text-sm"
         >
           <ArrowLeft size={16} />
-          <span className="hidden sm:inline font-medium">Kembali</span>
+          <span className="hidden sm:inline font-medium">{t('wb.toolbar.back')}</span>
         </Link>
 
         <div className="w-px h-6 bg-gray-200 mx-1" />
@@ -90,7 +92,7 @@ export default function BuilderToolbar() {
         {/* Page Name */}
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-gray-800 max-w-[160px] truncate">
-            {currentPage?.name || 'Halaman Baru'}
+            {currentPage?.name || t('wb.toolbar.newPage')}
           </span>
           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
             currentPage?.status === 'published'
@@ -99,14 +101,14 @@ export default function BuilderToolbar() {
               ? 'bg-blue-100 text-blue-700'
               : 'bg-amber-100 text-amber-700'
           }`}>
-            {currentPage?.status === 'published' ? 'Terbit' : currentPage?.status === 'scheduled' ? 'Terjadwal' : 'Draf'}
+            {currentPage?.status === 'published' ? t('wb.common.published') : currentPage?.status === 'scheduled' ? t('wb.common.scheduled') : t('wb.common.draft')}
           </span>
         </div>
       </div>
 
       {/* Center Section - Device Preview with dimensions */}
       <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
-        {deviceOptions.map(({ type, icon: Icon, label, width }) => (
+        {deviceOptions.map(({ type, icon: Icon, labelKey, width }) => (
           <button
             key={type}
             onClick={() => dispatch({ type: 'SET_DEVICE', device: type })}
@@ -115,10 +117,10 @@ export default function BuilderToolbar() {
                 ? 'bg-white text-blue-600 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
-            title={`${label} (${width}px)`}
+            title={`${t(labelKey)} (${width}px)`}
           >
             <Icon size={14} />
-            <span className="hidden md:inline">{label}</span>
+            <span className="hidden md:inline">{t(labelKey)}</span>
             {state.devicePreview === type && (
               <span className="hidden lg:inline text-[10px] text-blue-400 ml-0.5">{width}px</span>
             )}
@@ -135,7 +137,7 @@ export default function BuilderToolbar() {
           className={`p-1.5 rounded-md transition-colors ${
             canUndo ? 'text-gray-600 hover:bg-gray-100' : 'text-gray-300 cursor-not-allowed'
           }`}
-          title="Undo (Ctrl+Z)"
+          title={`${t('wb.common.undo')} (Ctrl+Z)`}
         >
           <Undo2 size={16} />
         </button>
@@ -145,7 +147,7 @@ export default function BuilderToolbar() {
           className={`p-1.5 rounded-md transition-colors ${
             canRedo ? 'text-gray-600 hover:bg-gray-100' : 'text-gray-300 cursor-not-allowed'
           }`}
-          title="Redo (Ctrl+Y)"
+          title={`${t('wb.common.redo')} (Ctrl+Y)`}
         >
           <Redo2 size={16} />
         </button>
@@ -156,21 +158,21 @@ export default function BuilderToolbar() {
         <button
           onClick={() => dispatch({ type: 'SET_ZOOM', zoom: state.zoom - 10 })}
           className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
-          title="Perkecil"
+          title={t('wb.common.zoomOut')}
         >
           <ZoomOut size={16} />
         </button>
         <button
           onClick={() => dispatch({ type: 'SET_ZOOM', zoom: 100 })}
           className="px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors min-w-[44px] text-center"
-          title="Reset Zoom"
+          title={t('wb.common.resetZoom')}
         >
           {state.zoom}%
         </button>
         <button
           onClick={() => dispatch({ type: 'SET_ZOOM', zoom: state.zoom + 10 })}
           className="p-1.5 rounded-md text-gray-600 hover:bg-gray-100 transition-colors"
-          title="Perbesar"
+          title={t('wb.common.zoomIn')}
         >
           <ZoomIn size={16} />
         </button>
@@ -183,7 +185,7 @@ export default function BuilderToolbar() {
           className={`p-1.5 rounded-md transition-colors ${
             state.showGrid ? 'text-blue-600 bg-blue-50' : 'text-gray-500 hover:bg-gray-100'
           }`}
-          title="Toggle Grid"
+          title={t('wb.toolbar.toggleGrid')}
         >
           <Grid3X3 size={16} />
         </button>
@@ -194,7 +196,7 @@ export default function BuilderToolbar() {
           className={`p-1.5 rounded-md transition-colors ${
             state.rightPanelTab === 'seo' ? 'text-emerald-600 bg-emerald-50' : 'text-gray-500 hover:bg-gray-100'
           }`}
-          title="SEO Settings"
+          title={t('wb.toolbar.seoSettings')}
         >
           <Search size={16} />
         </button>
@@ -205,7 +207,7 @@ export default function BuilderToolbar() {
           className={`p-1.5 rounded-md transition-colors ${
             state.rightPanelTab === 'theme' ? 'text-pink-600 bg-pink-50' : 'text-gray-500 hover:bg-gray-100'
           }`}
-          title="Tema & Gaya"
+          title={t('wb.toolbar.themeStyle')}
         >
           <Palette size={16} />
         </button>
@@ -220,17 +222,17 @@ export default function BuilderToolbar() {
               ? 'bg-blue-500 text-white hover:bg-blue-600'
               : 'text-gray-600 hover:bg-gray-100'
           }`}
-          title="Preview (Ctrl+P)"
+          title={`${t('wb.common.preview')} (Ctrl+P)`}
         >
           {state.isPreviewing ? <EyeOff size={14} /> : <Eye size={14} />}
-          <span className="hidden sm:inline">{state.isPreviewing ? 'Edit' : 'Preview'}</span>
+          <span className="hidden sm:inline">{state.isPreviewing ? t('wb.toolbar.editMode') : t('wb.toolbar.previewMode')}</span>
         </button>
 
         {/* Export */}
         <button
           onClick={handleExportHTML}
           className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 transition-colors"
-          title="Export HTML"
+          title={t('wb.common.exportHTML')}
         >
           <Download size={16} />
         </button>
@@ -242,7 +244,7 @@ export default function BuilderToolbar() {
             hover:bg-gray-900 transition-colors shadow-sm"
         >
           {state.isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-          <span className="hidden sm:inline">{state.isSaving ? 'Saving...' : 'Simpan'}</span>
+          <span className="hidden sm:inline">{state.isSaving ? t('wb.common.saving') : t('wb.common.save')}</span>
         </button>
 
         {/* Publish */}
@@ -255,7 +257,7 @@ export default function BuilderToolbar() {
           }`}
         >
           {publishStatus === 'published' ? <CheckCircle size={14} /> : <Rocket size={14} />}
-          <span className="hidden sm:inline">{publishStatus === 'published' ? 'Published' : 'Publish'}</span>
+          <span className="hidden sm:inline">{publishStatus === 'published' ? t('wb.common.published') : t('wb.common.publish')}</span>
         </button>
       </div>
     </div>

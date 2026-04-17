@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBuilder } from './BuilderContext';
+import { useTranslation } from '../../lib/i18n';
 import {
   Search, Globe, Image, Share2, Code, FileText, Eye, EyeOff,
   ChevronDown, ChevronRight, AlertCircle, CheckCircle, Info,
@@ -33,13 +34,13 @@ function Section({ title, icon: Icon, children, defaultOpen = false }: SectionPr
   );
 }
 
-function SEOScoreBar({ score }: { score: number }) {
+function SEOScoreBar({ score, scoreLabel }: { score: number; scoreLabel: string }) {
   const color = score >= 80 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-500';
-  const label = score >= 80 ? 'Bagus' : score >= 50 ? 'Perlu Perbaikan' : 'Buruk';
+  const label = score >= 80 ? '✓' : score >= 50 ? '~' : '✗';
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-xs">
-        <span className="font-medium text-gray-600">Skor SEO</span>
+        <span className="font-medium text-gray-600">{scoreLabel}</span>
         <span className={`font-bold ${score >= 80 ? 'text-green-600' : score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
           {score}/100 — {label}
         </span>
@@ -53,12 +54,13 @@ function SEOScoreBar({ score }: { score: number }) {
 
 export default function SEOPanel() {
   const { state, dispatch, currentPage } = useBuilder();
+  const { t } = useTranslation();
   const seo = currentPage?.seo;
 
   if (!currentPage || !seo) {
     return (
       <div className="h-full flex items-center justify-center text-gray-400 text-sm p-4">
-        <p>Pilih halaman untuk mengatur SEO</p>
+        <p>{t('wb.seoPanel.title')}</p>
       </div>
     );
   }
@@ -106,9 +108,9 @@ export default function SEOPanel() {
       <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-teal-50">
         <div className="flex items-center gap-2 mb-2">
           <Search size={16} className="text-emerald-600" />
-          <h3 className="text-sm font-bold text-gray-800">SEO & Meta Tags</h3>
+          <h3 className="text-sm font-bold text-gray-800">{t('wb.seoPanel.title')}</h3>
         </div>
-        <SEOScoreBar score={seoScore} />
+        <SEOScoreBar score={seoScore} scoreLabel={t('wb.seoPanel.score')} />
       </div>
 
       <div className="flex-1 overflow-y-auto builder-panel">
@@ -117,18 +119,18 @@ export default function SEOPanel() {
           <div className="flex items-start gap-2">
             <Zap size={14} className="text-blue-500 mt-0.5 flex-shrink-0" />
             <div className="text-[11px] text-blue-700 leading-relaxed">
-              {seoScore < 50 ? 'Tambahkan meta title dan description untuk meningkatkan visibilitas di mesin pencari.' :
-               seoScore < 80 ? 'Bagus! Tambahkan Open Graph image dan structured data untuk skor lebih tinggi.' :
-               'SEO halaman ini sudah optimal! Pastikan konten tetap relevan.'}
+              {seoScore < 50 ? t('wb.seoPanel.metaTitle') + ' & ' + t('wb.seoPanel.metaDescription') :
+               seoScore < 80 ? 'Open Graph & Structured Data' :
+               'SEO ✓'}
             </div>
           </div>
         </div>
 
         {/* Meta Tags */}
-        <Section title="Meta Tags" icon={Tag} defaultOpen={true}>
+        <Section title={t('wb.seoPanel.metaTitle')} icon={Tag} defaultOpen={true}>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Meta Title
+              {t('wb.seoPanel.metaTitle')}
               <span className={`ml-1 ${seo.metaTitle.length > 60 ? 'text-red-500' : 'text-gray-400'}`}>
                 ({seo.metaTitle.length}/60)
               </span>
@@ -137,18 +139,18 @@ export default function SEOPanel() {
               type="text"
               value={seo.metaTitle}
               onChange={e => updateSEO({ metaTitle: e.target.value })}
-              placeholder="Judul halaman untuk mesin pencari..."
+              placeholder={t('wb.seoPanel.metaTitle') + '...'}
               className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
             />
             {seo.metaTitle.length > 60 && (
               <p className="text-[10px] text-red-500 mt-0.5 flex items-center gap-1">
-                <AlertCircle size={10} /> Terlalu panjang, idealnya 10-60 karakter
+                <AlertCircle size={10} /> Max 60
               </p>
             )}
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Meta Description
+              {t('wb.seoPanel.metaDescription')}
               <span className={`ml-1 ${seo.metaDescription.length > 160 ? 'text-red-500' : 'text-gray-400'}`}>
                 ({seo.metaDescription.length}/160)
               </span>
@@ -156,20 +158,20 @@ export default function SEOPanel() {
             <textarea
               value={seo.metaDescription}
               onChange={e => updateSEO({ metaDescription: e.target.value })}
-              placeholder="Deskripsi singkat halaman untuk hasil pencarian..."
+              placeholder={t('wb.seoPanel.metaDescription') + '...'}
               rows={3}
               className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 resize-none"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Kata Kunci</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.metaKeywords')}</label>
             <div className="flex gap-1.5">
               <input
                 type="text"
                 value={keywordInput}
                 onChange={e => setKeywordInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && addKeyword()}
-                placeholder="Tambah kata kunci..."
+                placeholder={t('wb.seoPanel.metaKeywords') + '...'}
                 className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
               <button onClick={addKeyword} className="px-2.5 py-1.5 text-xs bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">+</button>
@@ -186,7 +188,7 @@ export default function SEOPanel() {
             )}
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Canonical URL</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.canonicalUrl')}</label>
             <input
               type="url"
               value={seo.canonicalUrl}
@@ -198,29 +200,29 @@ export default function SEOPanel() {
         </Section>
 
         {/* Open Graph */}
-        <Section title="Open Graph (Facebook/LinkedIn)" icon={Share2}>
+        <Section title="Open Graph" icon={Share2}>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">OG Title</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.ogTitle')}</label>
             <input
               type="text"
               value={seo.ogTitle}
               onChange={e => updateSEO({ ogTitle: e.target.value })}
-              placeholder={seo.metaTitle || 'Judul untuk media sosial...'}
+              placeholder={seo.metaTitle || t('wb.seoPanel.ogTitle') + '...'}
               className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">OG Description</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.ogDescription')}</label>
             <textarea
               value={seo.ogDescription}
               onChange={e => updateSEO({ ogDescription: e.target.value })}
-              placeholder={seo.metaDescription || 'Deskripsi untuk media sosial...'}
+              placeholder={seo.metaDescription || t('wb.seoPanel.ogDescription') + '...'}
               rows={2}
               className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">OG Image URL</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.ogImage')}</label>
             <input
               type="url"
               value={seo.ogImage}
@@ -230,7 +232,7 @@ export default function SEOPanel() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">OG Type</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.ogType')}</label>
             <select
               value={seo.ogType}
               onChange={e => updateSEO({ ogType: e.target.value as any })}
@@ -255,17 +257,17 @@ export default function SEOPanel() {
               </div>
               <div className="p-2.5">
                 <p className="text-[10px] text-gray-400 truncate">example.com</p>
-                <p className="text-xs font-semibold text-gray-800 truncate">{seo.ogTitle || seo.metaTitle || 'Judul Halaman'}</p>
-                <p className="text-[10px] text-gray-500 line-clamp-2">{seo.ogDescription || seo.metaDescription || 'Deskripsi halaman...'}</p>
+                <p className="text-xs font-semibold text-gray-800 truncate">{seo.ogTitle || seo.metaTitle || t('wb.seoPanel.metaTitle')}</p>
+                <p className="text-[10px] text-gray-500 line-clamp-2">{seo.ogDescription || seo.metaDescription || t('wb.seoPanel.metaDescription')}</p>
               </div>
             </div>
           </div>
         </Section>
 
         {/* Twitter Card */}
-        <Section title="Twitter Card" icon={Twitter}>
+        <Section title={t('wb.seoPanel.twitterCard')} icon={Twitter}>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Card Type</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.twitterCard')}</label>
             <select
               value={seo.twitterCard}
               onChange={e => updateSEO({ twitterCard: e.target.value as any })}
@@ -276,21 +278,21 @@ export default function SEOPanel() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Twitter Title</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.twitterTitle')}</label>
             <input
               type="text"
               value={seo.twitterTitle}
               onChange={e => updateSEO({ twitterTitle: e.target.value })}
-              placeholder={seo.ogTitle || seo.metaTitle || 'Judul untuk Twitter...'}
+              placeholder={seo.ogTitle || seo.metaTitle || t('wb.seoPanel.twitterTitle') + '...'}
               className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Twitter Description</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.twitterDescription')}</label>
             <textarea
               value={seo.twitterDescription}
               onChange={e => updateSEO({ twitterDescription: e.target.value })}
-              placeholder={seo.ogDescription || seo.metaDescription || 'Deskripsi untuk Twitter...'}
+              placeholder={seo.ogDescription || seo.metaDescription || t('wb.seoPanel.twitterDescription') + '...'}
               rows={2}
               className="w-full px-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500/20 resize-none"
             />
@@ -298,12 +300,12 @@ export default function SEOPanel() {
         </Section>
 
         {/* Indexing & Robots */}
-        <Section title="Pengindeksan & Robots" icon={Eye}>
+        <Section title={t('wb.seoPanel.robotsIndex')} icon={Eye}>
           <div className="space-y-2.5">
             {([
-              { key: 'robotsIndex', label: 'Izinkan mesin pencari mengindeks halaman ini', icon: Search },
-              { key: 'robotsFollow', label: 'Izinkan mesin pencari mengikuti tautan', icon: Link2 },
-              { key: 'sitemap', label: 'Sertakan dalam sitemap.xml', icon: FileText },
+              { key: 'robotsIndex', label: t('wb.seoPanel.robotsIndex'), icon: Search },
+              { key: 'robotsFollow', label: t('wb.seoPanel.robotsFollow'), icon: Link2 },
+              { key: 'sitemap', label: t('wb.seoPanel.sitemap'), icon: FileText },
             ] as const).map(item => (
               <label key={item.key} className="flex items-center justify-between cursor-pointer group">
                 <div className="flex items-center gap-2">
@@ -331,7 +333,7 @@ export default function SEOPanel() {
           {seo.sitemap && (
             <div className="grid grid-cols-2 gap-2 mt-2">
               <div>
-                <label className="block text-[10px] font-medium text-gray-500 mb-1">Prioritas Sitemap</label>
+                <label className="block text-[10px] font-medium text-gray-500 mb-1">{t('wb.seoPanel.sitemap')}</label>
                 <select
                   value={seo.sitemapPriority}
                   onChange={e => updateSEO({ sitemapPriority: parseFloat(e.target.value) })}
@@ -343,7 +345,7 @@ export default function SEOPanel() {
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-gray-500 mb-1">Frek. Perubahan</label>
+                <label className="block text-[10px] font-medium text-gray-500 mb-1">Change Freq.</label>
                 <select
                   value={seo.sitemapChangeFreq}
                   onChange={e => updateSEO({ sitemapChangeFreq: e.target.value as any })}
@@ -363,9 +365,9 @@ export default function SEOPanel() {
         </Section>
 
         {/* Schema / Structured Data */}
-        <Section title="Structured Data (Schema)" icon={Code}>
+        <Section title={t('wb.seoPanel.schemaType')} icon={Code}>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Tipe Schema</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.schemaType')}</label>
             <select
               value={seo.schemaType}
               onChange={e => updateSEO({ schemaType: e.target.value as any })}
@@ -392,9 +394,9 @@ export default function SEOPanel() {
         </Section>
 
         {/* Analytics */}
-        <Section title="Analitik" icon={BarChart3}>
+        <Section title={t('wb.seoPanel.analytics')} icon={BarChart3}>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Google Analytics ID</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.analytics')}</label>
             <input
               type="text"
               value={seo.analyticsId}
@@ -406,9 +408,9 @@ export default function SEOPanel() {
         </Section>
 
         {/* Custom Head Tags */}
-        <Section title="Custom Head Tags" icon={Code}>
+        <Section title={t('wb.seoPanel.customHead')} icon={Code}>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Tag HTML Kustom (di &lt;head&gt;)</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t('wb.seoPanel.customHead')}</label>
             <textarea
               value={seo.customHeadTags}
               onChange={e => updateSEO({ customHeadTags: e.target.value })}
@@ -421,14 +423,14 @@ export default function SEOPanel() {
 
         {/* Google Preview */}
         <div className="px-4 py-4 border-t border-gray-100">
-          <p className="text-[10px] font-semibold text-gray-500 mb-2 uppercase tracking-wider">Preview Hasil Pencarian Google</p>
+          <p className="text-[10px] font-semibold text-gray-500 mb-2 uppercase tracking-wider">{t('wb.seoPanel.preview')}</p>
           <div className="p-3 bg-white rounded-lg border border-gray-200">
             <p className="text-[11px] text-green-700 truncate">{seo.canonicalUrl || 'https://example.com/' + currentPage.slug}</p>
             <p className="text-sm font-medium text-blue-700 hover:underline cursor-pointer truncate mt-0.5">
-              {seo.metaTitle || currentPage.name || 'Judul Halaman'}
+              {seo.metaTitle || currentPage.name || t('wb.seoPanel.metaTitle')}
             </p>
             <p className="text-[11px] text-gray-600 line-clamp-2 mt-0.5">
-              {seo.metaDescription || 'Tambahkan meta description untuk melihat preview...'}
+              {seo.metaDescription || t('wb.seoPanel.metaDescription') + '...'}
             </p>
           </div>
         </div>

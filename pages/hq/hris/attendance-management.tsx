@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Clock, Users, UserCheck, UserX, MapPin, Shield, Settings, Calendar,
   Plus, Edit, Trash2, Save, X, RefreshCw, CheckCircle, AlertCircle,
@@ -72,6 +73,7 @@ const MOCK_AM_RECORDS = [
 ];
 
 export default function AttendanceManagementPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'live' | 'shifts' | 'geofence' | 'rotations' | 'settings'>('live');
@@ -281,7 +283,7 @@ export default function AttendanceManagementPage() {
   };
 
   return (
-    <HQLayout title="Time & Attendance" subtitle="Manajemen kehadiran, shift, geofencing, dan konfigurasi absensi">
+    <HQLayout title={t('hris.timeAttendanceTitle')} subtitle={t('hris.timeAttendanceSubtitle')}>
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-3">

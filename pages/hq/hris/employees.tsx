@@ -5,11 +5,17 @@ import {
   Users, Search, Plus, Eye, Edit, Trash2, X, Save, ChevronRight,
   Building2, Briefcase, GraduationCap, Award, FileText, Heart,
   Phone, Mail, MapPin, Calendar, User, Shield, AlertCircle,
-  Filter, Download, RefreshCw, Clock, CheckCircle, XCircle, ChevronDown
+  Filter, Download, RefreshCw, Clock, CheckCircle, XCircle, ChevronDown,
+  UserCheck, UserX, ArrowRightLeft, TrendingUp, Star, Zap, BarChart3,
+  Banknote, CalendarDays, Timer, Target, PrinterIcon, Camera,
+  ClipboardList, History, ChevronUp, Minus
 } from 'lucide-react';
 
 type TabType = 'list' | 'detail';
-type DetailTab = 'personal' | 'family' | 'education' | 'certification' | 'experience' | 'documents' | 'contracts';
+type DetailTab =
+  | 'personal' | 'family' | 'education' | 'certification'
+  | 'experience' | 'documents' | 'contracts'
+  | 'skills' | 'payroll' | 'leave' | 'attendance' | 'overtime' | 'kpi' | 'mutations';
 
 const MOCK_EMPLOYEES = [
   { id: 1, employee_id: 'EMP-001', name: 'Ahmad Wijaya', email: 'ahmad@bedagang.com', department: 'MANAGEMENT', position: 'General Manager', branch_name: 'Kantor Pusat Jakarta', contract_type: 'PKWTT', contract_end: null, status: 'ACTIVE', phone_number: '081234567890' },
@@ -54,11 +60,112 @@ export default function EmployeeManagementPage() {
   const [subModalType, setSubModalType] = useState<string>('');
   const [subForm, setSubForm] = useState<any>({});
 
+  // ── Create Employee ────────────────────────────────────────────────────────
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState({ name: '', email: '', phone_number: '', department: '', position: '', branch_name: '', contract_type: 'PKWTT', join_date: '', gender: 'male', nik: '' });
+  const [createLoading, setCreateLoading] = useState(false);
+
+  // ── Quick Actions ──────────────────────────────────────────────────────────
+  const [showQuickAction, setShowQuickAction] = useState(false);
+  const [quickActionType, setQuickActionType] = useState<'terminate' | 'mutasi' | 'promosi' | null>(null);
+  const [quickActionForm, setQuickActionForm] = useState<any>({});
+  const [quickActionLoading, setQuickActionLoading] = useState(false);
+
+  // ── Extra tab data ─────────────────────────────────────────────────────────
+  const [tabExtra, setTabExtra] = useState<any>({});
+  const [tabExtraLoading, setTabExtraLoading] = useState(false);
+
+  // ── Delete confirm ─────────────────────────────────────────────────────────
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+
   // Toast
   const [toast, setToast] = useState<any>(null);
+  const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+  const fmtCur  = (n: any) => `Rp ${(Number(n) || 0).toLocaleString('id-ID')}`;
+  const initials = (name: string) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
+
   const showToast = (type: string, message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // Derived stats from employees list
+  const statsData = {
+    total:    employees.length,
+    active:   employees.filter(e => e.status === 'ACTIVE').length,
+    onLeave:  employees.filter(e => e.status === 'ON_LEAVE').length,
+    inactive: employees.filter(e => e.status === 'INACTIVE').length,
+    pkwtExpiring: employees.filter(e => {
+      if (!e.contract_end || e.contract_type !== 'PKWT') return false;
+      const days = (new Date(e.contract_end).getTime() - Date.now()) / 86400000;
+      return days > 0 && days <= 90;
+    }).length,
+  };
+
+  // ── fetchTabExtra: load data for new tabs ─────────────────────────────────
+  const fetchTabExtra = useCallback(async (tab: DetailTab, empId: any) => {
+    const newTabs: DetailTab[] = ['skills', 'payroll', 'leave', 'attendance', 'overtime', 'kpi', 'mutations'];
+    if (!newTabs.includes(tab)) return;
+    setTabExtraLoading(true);
+    try {
+      const res = await fetch(`/api/hq/hris/employee-profile?action=${tab}&employeeId=${empId}`);
+      const json = await res.json();
+      setTabExtra((prev: any) => ({ ...prev, [tab]: json.data }));
+    } catch { setTabExtra((prev: any) => ({ ...prev, [tab]: null })); }
+    finally { setTabExtraLoading(false); }
+  }, []);
+
+  // ── Create employee handler ───────────────────────────────────────────────
+  const handleCreateEmployee = async () => {
+    if (!createForm.name || !createForm.email || !createForm.department || !createForm.position) {
+      showToast('error', 'Nama, email, departemen, dan jabatan wajib diisi'); return;
+    }
+    setCreateLoading(true);
+    try {
+      const res = await fetch('/api/hq/hris/employee-profile?action=create', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(createForm)
+      });
+      const json = await res.json();
+      if (json.success) { showToast('success', json.message || 'Karyawan berhasil ditambahkan'); setShowCreateModal(false); fetchEmployees(); setCreateForm({ name: '', email: '', phone_number: '', department: '', position: '', branch_name: '', contract_type: 'PKWTT', join_date: '', gender: 'male', nik: '' }); }
+      else showToast('error', json.error || 'Gagal menambahkan karyawan');
+    } catch { showToast('error', 'Gagal menambahkan karyawan'); }
+    setCreateLoading(false);
+  };
+
+  // ── Quick action handler ──────────────────────────────────────────────────
+  const handleQuickAction = async () => {
+    if (!selectedEmployee || !quickActionType) return;
+    setQuickActionLoading(true);
+    try {
+      const res = await fetch(`/api/hq/hris/employee-profile?action=${quickActionType}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId: selectedEmployee.id, ...quickActionForm })
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast('success', json.message || 'Berhasil');
+        setShowQuickAction(false); setQuickActionType(null); setQuickActionForm({});
+        const res2 = await fetch(`/api/hq/hris/employee-profile?action=detail&employeeId=${selectedEmployee.id}`);
+        const json2 = await res2.json();
+        if (json2.data) { setSelectedEmployee(json2.data); setPersonalForm(json2.data); }
+        fetchEmployees();
+      } else showToast('error', json.error || 'Gagal');
+    } catch { showToast('error', 'Gagal melakukan aksi'); }
+    setQuickActionLoading(false);
+  };
+
+  // ── Delete employee handler ───────────────────────────────────────────────
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const res = await fetch('/api/hq/hris/employee-profile?action=delete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ employeeId: deleteTarget.id })
+      });
+      const json = await res.json();
+      if (json.success) { showToast('success', 'Karyawan berhasil dihapus'); setShowDeleteConfirm(false); setDeleteTarget(null); fetchEmployees(); }
+      else showToast('error', json.error || 'Gagal menghapus');
+    } catch { showToast('error', 'Gagal menghapus'); }
   };
 
   useEffect(() => { setMounted(true); }, []);
@@ -162,7 +269,6 @@ export default function EmployeeManagementPage() {
   };
   const DEPARTMENTS = Object.keys(DEPT_LABELS);
 
-  const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
   const fmtCurrency = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n || 0);
 
   const statusBadge = (status: string) => {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   TrendingUp, 
   TrendingDown,
@@ -46,6 +47,7 @@ import {
 } from 'recharts';
 
 export default function FleetKPIDashboard() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [kpis, setKpis] = useState<any>(mockFleetKPIs);
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month' | 'year'>('month');
@@ -151,8 +153,8 @@ export default function FleetKPIDashboard() {
                     <BarChart3 className="w-8 h-8" />
                   </div>
                   <div>
-                    <h1 className="text-4xl font-bold">Fleet KPI Dashboard</h1>
-                    <p className="text-blue-100 mt-1">Real-time Performance Analytics & Insights</p>
+                    <h1 className="text-4xl font-bold">{t('fleet.kpiTitle')}</h1>
+                    <p className="text-blue-100 mt-1">{t('fleet.kpiSubtitle')}</p>
                   </div>
                 </div>
               </div>
@@ -174,7 +176,7 @@ export default function FleetKPIDashboard() {
                 </div>
                 <button className="flex items-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-xl hover:bg-blue-50 transition-all shadow-lg font-semibold">
                   <Download className="w-5 h-5" />
-                  Export Report
+                  {t('fleet.exportReport')}
                 </button>
               </div>
             </div>
@@ -187,7 +189,7 @@ export default function FleetKPIDashboard() {
             <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
               <Activity className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Ringkasan Armada</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('fleet.fleetSummary')}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <KPICard
@@ -232,7 +234,7 @@ export default function FleetKPIDashboard() {
             <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Operational Performance</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('fleet.operationalPerformance')}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <KPICard
@@ -509,7 +511,7 @@ export default function FleetKPIDashboard() {
             <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg">
               <Shield className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Keselamatan & Kepatuhan</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('fleet.safetyCompliance')}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <KPICard
@@ -556,7 +558,7 @@ export default function FleetKPIDashboard() {
             <div className="p-2 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg">
               <DollarSign className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Cost Analysis</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('fleet.costAnalysis')}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <KPICard

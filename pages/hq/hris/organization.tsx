@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Building2, Network, Award, Plus, Edit, Trash2, X, Save,
   ChevronRight, ChevronDown, Users, Briefcase, Search,
@@ -53,6 +54,7 @@ const MOCK_ORG_SUMMARY = {
 };
 
 export default function OrganizationPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<MainTab>('org-structure');
@@ -247,7 +249,7 @@ export default function OrganizationPage() {
   if (!mounted) return null;
 
   return (
-    <HQLayout title="Struktur Organisasi" currentMenu="hris">
+    <HQLayout title={t('hris.organizationTitle')} currentMenu="hris">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
           {toast.message}

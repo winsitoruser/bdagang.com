@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
@@ -107,6 +108,7 @@ const MOCK_BRANCH_PL: BranchPL[] = [
 ];
 
 export default function ProfitLossReport() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const { period } = useFinancePeriod();
@@ -210,8 +212,8 @@ export default function ProfitLossReport() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Profit & Loss Statement</h1>
-              <p className="text-gray-500">Laporan laba rugi konsolidasi</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.plTitle')}</h1>
+              <p className="text-gray-500">{t('finance.plSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -220,8 +222,8 @@ export default function ProfitLossReport() {
             </select>
             <PeriodSelector />
             <select value={comparePeriod} onChange={(e) => setComparePeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-              <option value="previous">vs Periode Sebelumnya</option>
-              <option value="yoy">vs Tahun Lalu</option>
+              <option value="previous">{t('finance.vsPreviousPeriod')}</option>
+              <option value="yoy">{t('finance.vsLastYear')}</option>
             </select>
             <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -240,7 +242,7 @@ export default function ProfitLossReport() {
         {/* Summary Cards */}
         <div className="grid grid-cols-5 gap-4">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
-            <p className="text-blue-100 text-sm">Total Revenue</p>
+            <p className="text-blue-100 text-sm">{t('finance.totalRevenue')}</p>
             <p className="text-2xl font-bold">{formatCurrency(summary.revenue)}</p>
             <div className="flex items-center gap-1 mt-2 text-sm text-blue-200">
               <ArrowUpRight className="w-4 h-4" />
@@ -249,13 +251,13 @@ export default function ProfitLossReport() {
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Gross Profit</p>
+            <p className="text-gray-500 text-sm">{t('finance.grossProfit')}</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.grossProfit)}</p>
             <p className="text-sm text-green-600 mt-2">Margin: {summary.grossMargin}%</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Operating Income</p>
+            <p className="text-gray-500 text-sm">{t('finance.operatingIncome')}</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.operatingIncome)}</p>
             <p className="text-sm text-green-600 mt-2">Margin: {summary.operatingMargin}%</p>
           </div>
@@ -267,7 +269,7 @@ export default function ProfitLossReport() {
           </div>
 
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
-            <p className="text-green-100 text-sm">Net Income</p>
+            <p className="text-green-100 text-sm">{t('finance.netIncome')}</p>
             <p className="text-2xl font-bold">{formatCurrency(summary.netIncome)}</p>
             <div className="flex items-center gap-1 mt-2 text-sm text-green-200">
               <ArrowUpRight className="w-4 h-4" />
@@ -279,10 +281,10 @@ export default function ProfitLossReport() {
         {/* View Mode Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
           {([
-            { v: 'statement' as const, l: 'Laporan', icon: FileText },
-            { v: 'branch' as const, l: 'Per Cabang', icon: Building2 },
-            { v: 'trend' as const, l: 'Trend', icon: TrendingUp },
-            { v: 'margins' as const, l: 'Analisis Margin', icon: PieChartIcon },
+            { v: 'statement' as const, l: t('finance.plStatement'), icon: FileText },
+            { v: 'branch' as const, l: t('finance.byBranch'), icon: Building2 },
+            { v: 'trend' as const, l: t('finance.plTrend'), icon: TrendingUp },
+            { v: 'margins' as const, l: t('finance.plMarginAnalysis'), icon: PieChartIcon },
           ]).map(t => (
             <button key={t.v} onClick={() => setViewMode(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
               <t.icon className="w-4 h-4" />{t.l}
@@ -294,10 +296,10 @@ export default function ProfitLossReport() {
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="p-4 border-b border-gray-200 bg-gray-50">
               <div className="grid grid-cols-5 gap-4 text-xs font-medium text-gray-500 uppercase">
-                <div className="col-span-2">Account</div>
-                <div className="text-right">Current Period</div>
-                <div className="text-right">Previous Period</div>
-                <div className="text-right">Change</div>
+                <div className="col-span-2">{t('finance.account')}</div>
+                <div className="text-right">{t('finance.currentPeriod')}</div>
+                <div className="text-right">{t('finance.previousPeriod')}</div>
+                <div className="text-right">{t('finance.change')}</div>
               </div>
             </div>
             <div className="divide-y divide-gray-100">
@@ -328,7 +330,7 @@ export default function ProfitLossReport() {
         {viewMode === 'branch' && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Revenue vs Net Income by Branch</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('finance.revenueVsNetIncomeByBranch')}</h3>
               <Chart options={branchPLOptions} series={branchPLSeries} type="bar" height={300} />
             </div>
 
@@ -337,13 +339,13 @@ export default function ProfitLossReport() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.branch')}</th>
+                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.revenue')}</th>
                       <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">COGS</th>
-                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Gross Profit</th>
+                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.grossProfit')}</th>
                       <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Opex</th>
-                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Net Income</th>
-                      <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Margin</th>
+                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.netIncome')}</th>
+                      <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('finance.margin')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">

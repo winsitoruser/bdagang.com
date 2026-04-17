@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -33,6 +34,7 @@ const MOCK_TRANSACTIONS = [
 const MOCK_TXN_STATS = { totalIncome: 113500000, totalExpense: 167200000, totalTransfer: 50000000, netCashFlow: -53700000 };
 
 export default function TransactionsPage() {
+  const { t } = useTranslation();
   const [transactions, setTransactions] = useState<any[]>(MOCK_TRANSACTIONS);
   const [branches, setBranches] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -288,8 +290,8 @@ export default function TransactionsPage() {
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
-            <p className="text-gray-600 mt-1">Manage all financial transactions</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('finance.trxTitle')}</h1>
+            <p className="text-gray-600 mt-1">{t('finance.trxSubtitle')}</p>
           </div>
           <button
             onClick={() => {
@@ -299,7 +301,7 @@ export default function TransactionsPage() {
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg"
           >
             <Plus className="w-5 h-5" />
-            New Transaction
+            {t('finance.newTransaction')}
           </button>
         </div>
 
@@ -308,7 +310,7 @@ export default function TransactionsPage() {
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm">Total Income</p>
+                <p className="text-green-100 text-sm">{t('finance.totalIncome')}</p>
                 <p className="text-2xl font-bold mt-1">{formatCurrency(stats.totalIncome)}</p>
               </div>
               <TrendingUp className="w-12 h-12 text-green-200" />
@@ -318,7 +320,7 @@ export default function TransactionsPage() {
           <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-red-100 text-sm">Total Expense</p>
+                <p className="text-red-100 text-sm">{t('finance.totalExpense')}</p>
                 <p className="text-2xl font-bold mt-1">{formatCurrency(stats.totalExpense)}</p>
               </div>
               <TrendingDown className="w-12 h-12 text-red-200" />
@@ -328,7 +330,7 @@ export default function TransactionsPage() {
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm">Total Transfer</p>
+                <p className="text-blue-100 text-sm">{t('finance.totalTransfer')}</p>
                 <p className="text-2xl font-bold mt-1">{formatCurrency(stats.totalTransfer)}</p>
               </div>
               <ArrowUpDown className="w-12 h-12 text-blue-200" />
@@ -338,7 +340,7 @@ export default function TransactionsPage() {
           <div className={`bg-gradient-to-br ${stats.netCashFlow >= 0 ? 'from-emerald-500 to-emerald-600' : 'from-orange-500 to-orange-600'} rounded-xl p-6 text-white shadow-lg`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white/80 text-sm">Net Cash Flow</p>
+                <p className="text-white/80 text-sm">{t('finance.netCashFlow')}</p>
                 <p className="text-2xl font-bold mt-1">{formatCurrency(stats.netCashFlow)}</p>
               </div>
               <DollarSign className="w-12 h-12 text-white/60" />
@@ -352,7 +354,7 @@ export default function TransactionsPage() {
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Search className="w-4 h-4 inline mr-1" />
-                Search
+                {t('finance.search')}
               </label>
               <div className="flex gap-2">
                 <input
@@ -360,7 +362,7 @@ export default function TransactionsPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="Search by number or description..."
+                  placeholder={t('finance.trxSearch')}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <button
@@ -375,33 +377,33 @@ export default function TransactionsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Tag className="w-4 h-4 inline mr-1" />
-                Type
+                {t('finance.type')}
               </label>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="all">All Types</option>
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-                <option value="transfer">Transfer</option>
+                <option value="all">{t('finance.allTypes')}</option>
+                <option value="income">{t('finance.income')}</option>
+                <option value="expense">{t('finance.expense')}</option>
+                <option value="transfer">{t('finance.transfer')}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Filter className="w-4 h-4 inline mr-1" />
-                Status
+                {t('finance.status')}
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="all">All Status</option>
-                <option value="draft">Draft</option>
-                <option value="pending">Pending</option>
+                <option value="all">{t('finance.allStatus')}</option>
+                <option value="draft">{t('finance.draft')}</option>
+                <option value="pending">{t('finance.pending')}</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>

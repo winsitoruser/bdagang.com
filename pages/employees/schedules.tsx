@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import {
@@ -8,6 +9,7 @@ import {
   FaUser, FaMapMarkerAlt, FaSpinner, FaChevronLeft, FaChevronRight,
   FaCalendarWeek, FaCalendarDay, FaCheck, FaTimes, FaExclamationCircle
 } from 'react-icons/fa';
+import { Smartphone, ExternalLink, Copy, CheckCheck } from 'lucide-react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -60,6 +62,16 @@ const EmployeeSchedules: NextPage = () => {
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<Schedule[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  const employeeAppUrl = typeof window !== 'undefined' ? `${window.location.origin}/employee` : '/employee';
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(employeeAppUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -312,6 +324,39 @@ const EmployeeSchedules: NextPage = () => {
             <FaPlus />
             <span>{t('employees.addSchedule')}</span>
           </button>
+        </div>
+
+        {/* Employee Mobile App Banner */}
+        <div className="flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl px-5 py-4 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Smartphone className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Aplikasi Mobile Karyawan</p>
+              <p className="text-xs text-blue-100 mt-0.5">Bagikan link ini kepada karyawan untuk akses absensi, cuti, dan KPI</p>
+              <div className="flex items-center gap-2 mt-1.5 bg-white/10 rounded-lg px-2.5 py-1 w-fit">
+                <span className="text-xs text-white font-mono">{employeeAppUrl}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded-lg transition-colors"
+            >
+              {copied ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? 'Tersalin!' : 'Salin Link'}
+            </button>
+            <Link
+              href="/employee"
+              target="_blank"
+              className="flex items-center gap-1.5 px-3 py-2 bg-white text-blue-600 hover:bg-blue-50 text-xs font-semibold rounded-lg transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Buka
+            </Link>
+          </div>
         </div>
 
         {/* Stats Cards */}

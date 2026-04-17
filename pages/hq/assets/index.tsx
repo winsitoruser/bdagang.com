@@ -3,6 +3,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { ModuleGuard } from '@/components/guards/ModuleGuard';
 import {
   Package, Plus, Search, Filter, BarChart3, Wrench, ArrowRightLeft, FileText,
@@ -108,6 +109,7 @@ const MOCK_DEPR_SUMMARY = {
 // MAIN PAGE
 // ============================================================
 export default function AssetManagementPage() {
+  const { t } = useTranslation();
   const { data: session, status } = useSession();
   const router = useRouter();
   const { tab } = router.query;
@@ -354,7 +356,7 @@ export default function AssetManagementPage() {
   const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('id-ID') : '-';
 
   return (
-    <HQLayout title="Manajemen Aset" noPadding>
+    <HQLayout title={t('assets.title')} noPadding>
     <ModuleGuard moduleCode="asset_management">
       <AssetManagementContent
         activeTab={activeTab} setActiveTab={setActiveTab} loading={loading}
@@ -397,6 +399,7 @@ export default function AssetManagementPage() {
 
 // Extracted content component to keep ModuleGuard wrapper clean
 function AssetManagementContent(props: any) {
+  const { t } = useTranslation();
   const {
     activeTab, setActiveTab, loading, dashboardData, assets, totalAssets,
     searchTerm, filterStatus, filterCategory, currentPage, categories,
@@ -423,21 +426,21 @@ function AssetManagementContent(props: any) {
   };
 
   const tabs = [
-    { id: 'dashboard', label: 'Dasbor', icon: BarChart3 },
-    { id: 'registry', label: 'Daftar Aset', icon: Package },
-    { id: 'categories', label: 'Kategori', icon: Layers },
-    { id: 'movements', label: 'Mutasi & Transfer', icon: ArrowRightLeft },
-    { id: 'depreciation', label: 'Penyusutan', icon: TrendingDown },
-    { id: 'maintenance', label: 'Pemeliharaan', icon: Wrench },
-    { id: 'licenses', label: 'Lisensi Perangkat Lunak', icon: Key },
-    { id: 'tenancy', label: 'Penyewaan', icon: Home },
-    { id: 'alerts', label: 'Peringatan', icon: AlertCircle },
-    { id: 'settings', label: 'Pengaturan', icon: Settings },
+    { id: 'dashboard', label: t('assets.tabDashboard'), icon: BarChart3 },
+    { id: 'registry', label: t('assets.tabRegistry'), icon: Package },
+    { id: 'categories', label: t('assets.tabCategories'), icon: Layers },
+    { id: 'movements', label: t('assets.tabMovements'), icon: ArrowRightLeft },
+    { id: 'depreciation', label: t('assets.tabDepreciation'), icon: TrendingDown },
+    { id: 'maintenance', label: t('assets.tabMaintenance'), icon: Wrench },
+    { id: 'licenses', label: t('assets.tabLicenses'), icon: Key },
+    { id: 'tenancy', label: t('assets.tabTenancy'), icon: Home },
+    { id: 'alerts', label: t('assets.tabAlerts'), icon: AlertCircle },
+    { id: 'settings', label: t('assets.tabSettings'), icon: Settings },
   ];
 
   return (
     <>
-      <Head><title>Manajemen Aset - Bedagang</title></Head>
+      <Head><title>{t('assets.title')} - Bedagang</title></Head>
       <div className="p-4 md:p-6 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -446,25 +449,25 @@ function AssetManagementContent(props: any) {
               <Package className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Manajemen Aset</h1>
-              <p className="text-xs text-gray-500">Registrasi, Siklus Hidup, Penyusutan & Pemeliharaan Aset</p>
+              <h1 className="text-xl font-bold text-gray-900">{t('assets.title')}</h1>
+              <p className="text-xs text-gray-500">{t('assets.subtitle')}</p>
             </div>
           </div>
           <button onClick={onCreateNew}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
-            <Plus className="w-4 h-4" /> Tambah Aset
+            <Plus className="w-4 h-4" /> {t('assets.addAsset')}
           </button>
         </div>
 
         {/* Tabs */}
         <div className="bg-white rounded-xl border">
           <div className="flex gap-1 overflow-x-auto px-4 scrollbar-hide">
-            {tabs.map(t => (
-              <button key={t.id} onClick={() => { setActiveTab(t.id); router.push(`/hq/assets?tab=${t.id}`, undefined, { shallow: true }); }}
+            {tabs.map(tb => (
+              <button key={tb.id} onClick={() => { setActiveTab(tb.id); router.push(`/hq/assets?tab=${tb.id}`, undefined, { shallow: true }); }}
                 className={`flex items-center gap-1.5 px-3 py-2.5 text-sm whitespace-nowrap border-b-2 transition font-medium ${
-                  activeTab === t.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  activeTab === tb.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}>
-                <t.icon className="w-4 h-4" /> {t.label}
+                <tb.icon className="w-4 h-4" /> {tb.label}
               </button>
             ))}
           </div>

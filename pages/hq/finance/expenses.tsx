@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import TransactionFormModal from '../../../components/hq/finance/TransactionFormModal';
 import Link from 'next/link';
 import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
@@ -144,6 +145,7 @@ const MOCK_BRANCH_EXP: BranchExpense[] = [
 ];
 
 export default function ExpenseManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const { period } = useFinancePeriod();
@@ -344,8 +346,8 @@ export default function ExpenseManagement() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Expense Management</h1>
-              <p className="text-gray-500">Kelola dan monitor pengeluaran perusahaan</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.expTitle')}</h1>
+              <p className="text-gray-500">{t('finance.expSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -361,7 +363,7 @@ export default function ExpenseManagement() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
-              Add Expense
+              {t('finance.add')} {t('finance.expenses')}
             </button>
             
             {/* Transaction Form Modal */}
@@ -398,7 +400,7 @@ export default function ExpenseManagement() {
             />
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
-              Export
+              {t('finance.export')}
             </button>
           </div>
         </div>
@@ -413,7 +415,7 @@ export default function ExpenseManagement() {
                 {Math.abs(summary.growth)}%
               </span>
             </div>
-            <p className="text-red-100 text-sm">Total Expenses</p>
+            <p className="text-red-100 text-sm">{t('finance.totalExpenses')}</p>
             <p className="text-2xl font-bold">{formatCurrency(summary.totalExpenses)}</p>
             <p className="text-red-200 text-xs mt-1">vs {formatCurrency(summary.previousExpenses)} prev</p>
           </div>
@@ -451,7 +453,7 @@ export default function ExpenseManagement() {
                 </span>
               )}
             </div>
-            <p className="text-gray-500 text-sm">Budget Used</p>
+            <p className="text-gray-500 text-sm">{t('finance.budgetUsed')}</p>
             <p className="text-2xl font-bold text-gray-900">{summary.budgetUsed}%</p>
             <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
               <div 
@@ -491,19 +493,19 @@ export default function ExpenseManagement() {
         {/* Charts Row */}
         <div className="grid grid-cols-2 gap-6">
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Expense Trend</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.expenseTrend')}</h3>
             <Chart options={expenseTrendOptions} series={expenseTrendSeries} type="area" height={280} />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Expense by Category</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.expenseByCategory')}</h3>
             <Chart options={categoryPieOptions} series={categoryPieSeries} type="donut" height={280} />
           </div>
         </div>
 
         {/* Monthly Comparison */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">Monthly Expense Comparison by Category</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('finance.monthlyExpenseComparison')}</h3>
           <Chart options={monthlyCompareOptions} series={monthlyCompareSeries} type="bar" height={320} />
         </div>
 
@@ -516,14 +518,14 @@ export default function ExpenseManagement() {
                   onClick={() => setViewMode('list')}
                   className={`px-4 py-2 rounded-lg font-medium ${viewMode === 'list' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
                 >
-                  All Expenses
+                  {t('finance.allExpenses')}
                 </button>
                 <button
                   onClick={() => setViewMode('branch')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'branch' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
                 >
                   <Building2 className="w-4 h-4" />
-                  By Branch
+                  {t('finance.byBranch')}
                 </button>
               </div>
               <div className="flex items-center gap-2">
@@ -532,16 +534,16 @@ export default function ExpenseManagement() {
                   onChange={(e) => setFilterStatus(e.target.value as any)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 >
-                  <option value="all">All Status</option>
-                  <option value="approved">Approved</option>
-                  <option value="pending">Pending</option>
-                  <option value="rejected">Rejected</option>
+                  <option value="all">{t('finance.allStatus')}</option>
+                  <option value="approved">{t('finance.approved')}</option>
+                  <option value="pending">{t('finance.pending')}</option>
+                  <option value="rejected">{t('finance.rejected')}</option>
                 </select>
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search expenses..."
+                    placeholder={t('finance.search')}
                     className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm"
                   />
                 </div>
@@ -554,13 +556,13 @@ export default function ExpenseManagement() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.date')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.description')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.category')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.branch')}</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.amount')}</th>
+                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('finance.status')}</th>
+                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('finance.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -602,13 +604,13 @@ export default function ExpenseManagement() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Expenses</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.branch')}</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.totalExpenses')}</th>
                     <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">COGS</th>
                     <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Payroll</th>
-                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Utilities</th>
-                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Other</th>
-                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Budget Used</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.utilities')}</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.other')}</th>
+                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('finance.budgetUsed')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">

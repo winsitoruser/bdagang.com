@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useBuilder } from './BuilderContext';
 import { BuilderPage } from './types';
+import { useTranslation } from '../../lib/i18n';
 import {
   Plus, FileText, Trash2, Edit3, Check, X, Home, Globe,
   Copy, MoreHorizontal, ChevronRight,
@@ -8,6 +9,7 @@ import {
 
 export default function PageManager() {
   const { state, dispatch, createPage } = useBuilder();
+  const { t } = useTranslation();
   const [isCreating, setIsCreating] = useState(false);
   const [newPageName, setNewPageName] = useState('');
   const [newPageSlug, setNewPageSlug] = useState('');
@@ -42,7 +44,7 @@ export default function PageManager() {
   };
 
   const handleDuplicate = (page: BuilderPage) => {
-    const newPage = createPage(`${page.name} (Salinan)`, `${page.slug}-copy`);
+    const newPage = createPage(`${page.name} (${t('wb.common.duplicate')})`, `${page.slug}-copy`);
     dispatch({
       type: 'UPDATE_PAGE',
       id: newPage.id,
@@ -65,18 +67,18 @@ export default function PageManager() {
     <div className="h-full flex flex-col bg-gray-50/50">
       <div className="p-3 border-b border-gray-100">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-gray-700">Halaman</h3>
+          <h3 className="text-sm font-semibold text-gray-700">{t('wb.pageManager.title')}</h3>
           <button
             onClick={() => setIsCreating(true)}
             className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500 text-white text-xs font-medium
               hover:bg-blue-600 transition-colors"
           >
             <Plus size={12} />
-            Baru
+            {t('wb.common.add')}
           </button>
         </div>
         <p className="text-[11px] text-gray-400">
-          {state.pages.length} halaman
+          {state.pages.length} {t('wb.panel.pages').toLowerCase()}
         </p>
       </div>
 
@@ -85,7 +87,7 @@ export default function PageManager() {
         <div className="p-3 border-b border-gray-100 bg-blue-50/50 space-y-2">
           <input
             type="text"
-            placeholder="Nama halaman..."
+            placeholder={t('wb.pageManager.pageName') + '...'}
             value={newPageName}
             onChange={e => {
               setNewPageName(e.target.value);
@@ -108,7 +110,7 @@ export default function PageManager() {
                 font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Check size={12} />
-              Buat
+              {t('wb.common.add')}
             </button>
             <button
               onClick={() => { setIsCreating(false); setNewPageName(''); setNewPageSlug(''); }}
@@ -125,8 +127,8 @@ export default function PageManager() {
         {state.pages.length === 0 ? (
           <div className="text-center py-12">
             <FileText size={32} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-sm text-gray-500 font-medium">Belum ada halaman</p>
-            <p className="text-xs text-gray-400 mt-1">Klik "Baru" untuk membuat halaman pertama</p>
+            <p className="text-sm text-gray-500 font-medium">{t('wb.layersPanel.noWidgets')}</p>
+            <p className="text-xs text-gray-400 mt-1">{t('wb.pageManager.addPage')}</p>
           </div>
         ) : (
           state.pages.map(page => {
@@ -186,7 +188,7 @@ export default function PageManager() {
                               ? 'bg-green-100 text-green-700'
                               : 'bg-gray-100 text-gray-500'
                           }`}>
-                            {page.status === 'published' ? 'Terbit' : 'Draf'}
+                            {page.status === 'published' ? t('wb.common.published') : t('wb.common.draft')}
                           </span>
                           <span className="text-[10px] text-gray-300">{page.widgets.length} widget</span>
                         </div>
@@ -199,21 +201,21 @@ export default function PageManager() {
                       <button
                         onClick={(e) => { e.stopPropagation(); handleStartEdit(page); }}
                         className="p-1 rounded hover:bg-gray-100 text-gray-400"
-                        title="Ubah Nama"
+                        title={t('wb.common.edit')}
                       >
                         <Edit3 size={11} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDuplicate(page); }}
                         className="p-1 rounded hover:bg-gray-100 text-gray-400"
-                        title="Duplikasi"
+                        title={t('wb.common.duplicate')}
                       >
                         <Copy size={11} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleToggleStatus(page); }}
                         className="p-1 rounded hover:bg-gray-100 text-gray-400"
-                        title={page.status === 'published' ? 'Batalkan Terbit' : 'Terbitkan'}
+                        title={page.status === 'published' ? t('wb.publishSettings.unpublish') : t('wb.common.publish')}
                       >
                         <Globe size={11} />
                       </button>
@@ -221,7 +223,7 @@ export default function PageManager() {
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDelete(page.id); }}
                           className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
-                          title="Hapus"
+                          title={t('wb.common.delete')}
                         >
                           <Trash2 size={11} />
                         </button>

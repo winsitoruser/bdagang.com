@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import FleetMap from '../../../components/hq/fleet/FleetMap';
 import { 
   MapPin, 
@@ -20,6 +21,7 @@ import {
 import { mockGPSLocations, mockLocationAlerts, mockGeofences } from '../../../lib/mockData/fleetPhase2';
 
 export default function GPSTracking() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [locations, setLocations] = useState<any[]>(mockGPSLocations);
   const [alerts, setAlerts] = useState<any[]>(mockLocationAlerts);
@@ -91,8 +93,8 @@ export default function GPSTracking() {
                   <Map className="w-8 h-8" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold">GPS Tracking & Location</h1>
-                  <p className="text-blue-100 mt-1">Real-time vehicle tracking and monitoring</p>
+                  <h1 className="text-3xl font-bold">{t('fleet.trackingTitle')}</h1>
+          <p className="text-blue-100 mt-1">{t('fleet.trackingSubtitle')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">

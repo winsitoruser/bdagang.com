@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   DollarSign, 
   Plus,
@@ -22,6 +23,7 @@ const MOCK_FLEET_COSTS = [
 const MOCK_FLEET_COST_SUMMARY = { totalAmount: 28500000, byCategory: { fuel: 12500000, maintenance: 8500000, salary: 5000000, insurance: 2500000 } };
 
 export default function CostReporting() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [costs, setCosts] = useState<any[]>(MOCK_FLEET_COSTS);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -71,8 +73,8 @@ export default function CostReporting() {
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Cost Reporting & Analysis</h1>
-          <p className="text-gray-600">Comprehensive fleet cost tracking and analysis</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('fleet.costsTitle')}</h1>
+          <p className="text-gray-600">{t('fleet.costsSubtitle')}</p>
         </div>
 
         {/* Summary Cards */}
@@ -84,7 +86,7 @@ export default function CostReporting() {
               </div>
               <TrendingUp className="w-5 h-5 text-red-600" />
             </div>
-            <p className="text-sm text-gray-600 mb-1">Total Operating Cost</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.totalOperatingCost')}</p>
             <p className="text-2xl font-bold text-gray-900">
               Rp {(totalCost / 1000000).toFixed(1)}Jt
             </p>
@@ -96,7 +98,7 @@ export default function CostReporting() {
                 <Fuel className="w-6 h-6 text-orange-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Fuel Cost</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.fuelCost')}</p>
             <p className="text-2xl font-bold text-gray-900">
               Rp {(fuelCost / 1000000).toFixed(1)}Jt
             </p>
@@ -111,7 +113,7 @@ export default function CostReporting() {
                 <Wrench className="w-6 h-6 text-purple-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Maintenance Cost</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.maintenanceCost')}</p>
             <p className="text-2xl font-bold text-gray-900">
               Rp {(maintenanceCost / 1000000).toFixed(1)}Jt
             </p>
@@ -126,7 +128,7 @@ export default function CostReporting() {
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Driver Cost</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.driverCost')}</p>
             <p className="text-2xl font-bold text-gray-900">
               Rp {(salaryCost / 1000000).toFixed(1)}Jt
             </p>

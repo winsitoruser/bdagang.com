@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Clock, Users, UserCheck, UserX, MapPin, Shield, Settings, Calendar,
   Plus, Edit, Trash2, Save, X, RefreshCw, CheckCircle, AlertCircle,
@@ -113,6 +114,7 @@ const MOCK_BRANCH_SUMMARY: BranchSummary[] = [
 ];
 
 export default function AttendancePage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('live');
@@ -325,7 +327,7 @@ export default function AttendancePage() {
   ];
 
   return (
-    <HQLayout title="Kehadiran & Absensi" subtitle="Monitoring kehadiran, shift, geofencing, dan konfigurasi absensi">
+    <HQLayout title={t('hris.attendanceTitle')} subtitle={t('hris.attendanceSubtitle')}>
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-3">

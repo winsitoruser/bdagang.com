@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { BarChart3, Users, TrendingUp, TrendingDown, Plus, Edit, Trash2, X, DollarSign, Target, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface HeadcountPlan { id: string; name: string; period_start: string; period_end: string; department: string; current_headcount: number; planned_headcount: number; approved_headcount: number; budget_amount: number; status: string; justification: string; details: any[]; }
@@ -20,6 +21,7 @@ const MOCK_WA_TURNOVER = { monthlyRate: 1.9, annualRate: 8.5, voluntaryRate: 6.2
 const MOCK_WA_PRODUCTIVITY = { revenuePerEmployee: 27200000, avgWorkHours: 168, utilizationRate: 87, overtimeRate: 12, absenteeismRate: 3.2 };
 
 export default function WorkforceAnalyticsPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('dashboard');
   const [overview, setOverview] = useState<any>(MOCK_WA_OVERVIEW);
   const [plans, setPlans] = useState<HeadcountPlan[]>(MOCK_WA_PLANS);
@@ -110,7 +112,7 @@ export default function WorkforceAnalyticsPage() {
   ];
 
   return (
-    <HQLayout title="Perencanaan & Analitik SDM">
+    <HQLayout title={t('hris.workforceAnalyticsTitle')}>
     <div className="p-6 max-w-7xl mx-auto">
       {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 
