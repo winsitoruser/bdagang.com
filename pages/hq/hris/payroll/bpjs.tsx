@@ -57,7 +57,43 @@ export default function BPJSPage() {
   const [activeTab, setActiveTab] = useState<'kesehatan' | 'ketenagakerjaan' | 'tarif'>('kesehatan');
   const [selectedItem, setSelectedItem] = useState<BPJSItem | null>(null);
 
-  useEffect(() => { setMounted(true); setItems(MOCK_BPJS); }, []);
+  useEffect(() => {
+    setMounted(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/hq/hris/payroll?action=bpjs');
+        const json = await res.json().catch(() => null);
+        if (res.ok && Array.isArray(json?.data) && json.data.length > 0) {
+          const mapped: BPJSItem[] = json.data.map((r: any) => ({
+            id: String(r.id),
+            employee_name: r.employee_name,
+            position: r.position || '-',
+            department: r.department || '-',
+            base_salary: Number(r.base_salary || 0),
+            bpjs_kes_no: r.bpjs_kesehatan_number || '-',
+            bpjs_tk_no: r.bpjs_tk_number || '-',
+            kes_employee: Number(r.bpjs_kesehatan_employee || 0),
+            kes_company: Number(r.bpjs_kesehatan_employer || 0),
+            jht_employee: Number(r.jht_employee || 0),
+            jht_company: Number(r.jht_employer || 0),
+            jp_employee: Number(r.jp_employee || 0),
+            jp_company: Number(r.jp_employer || 0),
+            jkk: Number(r.jkk || 0),
+            jkm: Number(r.jkm || 0),
+            total_employee: Number(r.employee_total || 0),
+            total_company: Number(r.employer_total || 0),
+            dependents: 0,
+            status: 'active',
+          }));
+          setItems(mapped);
+        } else {
+          setItems(MOCK_BPJS);
+        }
+      } catch {
+        setItems(MOCK_BPJS);
+      }
+    })();
+  }, []);
 
   const filtered = useMemo(() => {
     if (!searchQuery) return items;

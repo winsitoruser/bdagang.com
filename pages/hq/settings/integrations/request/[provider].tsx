@@ -116,7 +116,7 @@ export default function IntegrationRequestPage() {
     const newErrors: Record<string, string> = {};
 
     if (step === 1 && provider) {
-      provider.applicationFields.forEach(field => {
+      (provider.applicationFields || []).forEach(field => {
         if (field.required && !formData[field.key]) {
           newErrors[field.key] = `${field.label} wajib diisi`;
         }
@@ -158,14 +158,38 @@ export default function IntegrationRequestPage() {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Redirect to success page or requests list
+      const documentsSummary: Record<string, any> = {};
+      Object.entries(documents).forEach(([k, f]) => {
+        if (f) {
+          documentsSummary[k] = {
+            filename: f.name,
+            size: f.size,
+            uploadedAt: new Date().toISOString()
+          };
+        }
+      });
+
+      const res = await fetch('/api/hq/integrations/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          providerId: provider?.id,
+          requestType: 'new_merchant',
+          businessInfo: formData,
+          ownerInfo: ownerData,
+          bankInfo: bankData,
+          documents: documentsSummary,
+          status: 'submitted'
+        })
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.message || 'Gagal mengirim pengajuan');
+      }
       router.push('/hq/settings/integrations?tab=requests&success=true');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting request:', error);
-      alert('Terjadi kesalahan. Silakan coba lagi.');
+      alert(error.message || 'Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -210,7 +234,7 @@ export default function IntegrationRequestPage() {
               <h2 className="text-2xl font-bold">{provider.name}</h2>
               <p className="text-white/80 mt-1">{provider.description}</p>
               <div className="flex flex-wrap gap-2 mt-4">
-                {provider.features.slice(0, 5).map((feature, idx) => (
+                {(provider.features || []).slice(0, 5).map((feature, idx) => (
                   <span key={idx} className="px-3 py-1 bg-white/20 rounded-full text-sm">
                     {feature}
                   </span>
@@ -268,7 +292,7 @@ export default function IntegrationRequestPage() {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold text-gray-900">Informasi Bisnis</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {provider.applicationFields.map(field => (
+                {(provider.applicationFields || []).map(field => (
                   <div key={field.key} className={field.type === 'textarea' ? 'md:col-span-2' : ''}>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {field.label}
@@ -468,7 +492,7 @@ export default function IntegrationRequestPage() {
                 </div>
               </div>
               <div className="space-y-4">
-                {provider.requiredDocuments.map((doc, idx) => (
+                {(provider.requiredDocuments || []).map((doc, idx) => (
                   <div key={idx} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -577,7 +601,7 @@ export default function IntegrationRequestPage() {
                   Dokumen
                 </h4>
                 <div className="space-y-2">
-                  {provider.requiredDocuments.map((doc, idx) => (
+                  {(provider.requiredDocuments || []).map((doc, idx) => (
                     <div key={idx} className="flex items-center justify-between text-sm">
                       <span className="text-gray-600">{doc}</span>
                       {documents[doc] ? (

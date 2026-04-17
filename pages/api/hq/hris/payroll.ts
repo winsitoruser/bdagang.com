@@ -26,6 +26,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (action === 'employee-salaries') return getEmployeeSalaries(req, res, session);
         if (action === 'runs') return getPayrollRuns(req, res, session);
         if (action === 'payslip') return getPayslip(req, res, session);
+        if (action === 'thr') return getTHR(req, res, session);
+        if (action === 'bpjs') return getBPJS(req, res, session);
+        if (action === 'pph21') return getPPh21Report(req, res, session);
+        if (action === 'lembur') return getLemburReport(req, res, session);
+        if (action === 'laporan') return getLaporan(req, res, session);
         return getOverview(req, res, session);
       case 'POST':
         if (action === 'employee-salary') return upsertEmployeeSalary(req, res, session);
@@ -624,6 +629,216 @@ function calculatePPh21(pkp: number): number {
   if (pkp > 60000000) { tax += (pkp - 60000000) * 0.15; pkp = 60000000; }
   tax += pkp * 0.05;
   return Math.round(tax);
+}
+
+// ===== GET: THR Report =====
+async function getTHR(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const tenantId = session.user.tenantId;
+  const year = parseInt(String(req.query.year || new Date().getFullYear()));
+  const minimumMonths = parseInt(String(req.query.minimumMonths || 1));
+  const includeAllowances = String(req.query.includeAllowances || 'true') === 'true';
+  const refDate = String(req.query.refDate || `${year}-06-01`);
+  try {
+    if (!sequelize) return res.json({ success: true, data: [] });
+    const [rows] = await sequelize.query(`
+      SELECT e.id, e.employee_id, e.name, e.position, e.department, e.join_date,
+             COALESCE(es.basic_salary, 0) AS basic_salary,
+             COALESCE(es.transport_allowance, 0) + COALESCE(es.meal_allowance, 0) + COALESCE(es.position_allowance, 0) AS allowances
+      FROM employees e
+      LEFT JOIN employee_salaries es ON es.employee_id = e.id AND es.is_active = true
+      WHERE e.status = 'active' ${tenantId ? 'AND e.tenant_id = :tenantId' : ''}
+      ORDER BY e.name
+    `, { replacements: { tenantId } });
+    const items = (rows || []).map((r: any) => {
+      const joinDate = new Date(r.join_date);
+      const ref = new Date(refDate);
+      const months = Math.max(0, Math.floor((ref.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24 * 30)));
+      const fullAmount = includeAllowances ? Number(r.basic_salary) + Number(r.allowances) : Number(r.basic_salary);
+      let thr_amount = 0, status = 'not_eligible', calculation = `Belum memenuhi syarat (<${minimumMonths} bulan)`;
+      if (months >= minimumMonths) {
+        if (months >= 12) { thr_amount = fullAmount; status = 'eligible'; calculation = '1 bulan gaji (>12 bulan)'; }
+        else { thr_amount = Math.round(fullAmount * months / 12); status = 'prorata'; calculation = `Prorata ${months}/12 bulan`; }
+      }
+      return {
+        id: r.id, employee_id: r.employee_id || r.id, employee_name: r.name,
+        position: r.position, department: r.department, join_date: r.join_date,
+        months_worked: months, base_salary: Number(r.basic_salary), allowances: Number(r.allowances),
+        thr_amount, calculation, status
+      };
+    });
+    return res.json({ success: true, data: items });
+  } catch (e: any) {
+    return res.json({ success: true, data: [], error: e.message });
+  }
+}
+
+// ===== GET: BPJS Report =====
+async function getBPJS(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const tenantId = session.user.tenantId;
+  try {
+    if (!sequelize) return res.json({ success: true, data: [] });
+    const [rows] = await sequelize.query(`
+      SELECT e.id, e.employee_id, e.name, e.position, e.department,
+             es.basic_salary, es.bpjs_kesehatan_number, es.bpjs_ketenagakerjaan_number
+      FROM employees e
+      LEFT JOIN employee_salaries es ON es.employee_id = e.id AND es.is_active = true
+      WHERE e.status = 'active' ${tenantId ? 'AND e.tenant_id = :tenantId' : ''}
+      ORDER BY e.name
+    `, { replacements: { tenantId } });
+    const CAP_KESEHATAN = 12000000;
+    const CAP_JP = 10547400;
+    const items = (rows || []).map((r: any) => {
+      const base = Number(r.basic_salary || 0);
+      const bpjsKesEmployee = Math.round(Math.min(base, CAP_KESEHATAN) * 0.01);
+      const bpjsKesEmployer = Math.round(Math.min(base, CAP_KESEHATAN) * 0.04);
+      const jhtEmployee = Math.round(base * 0.02);
+      const jhtEmployer = Math.round(base * 0.037);
+      const jkk = Math.round(base * 0.0024);
+      const jkm = Math.round(base * 0.003);
+      const jpEmployee = Math.round(Math.min(base, CAP_JP) * 0.01);
+      const jpEmployer = Math.round(Math.min(base, CAP_JP) * 0.02);
+      const employeeTotal = bpjsKesEmployee + jhtEmployee + jpEmployee;
+      const employerTotal = bpjsKesEmployer + jhtEmployer + jkk + jkm + jpEmployer;
+      return {
+        id: r.id, employee_id: r.employee_id || r.id, employee_name: r.name,
+        position: r.position, department: r.department, base_salary: base,
+        bpjs_kesehatan_number: r.bpjs_kesehatan_number, bpjs_tk_number: r.bpjs_ketenagakerjaan_number,
+        bpjs_kesehatan_employee: bpjsKesEmployee, bpjs_kesehatan_employer: bpjsKesEmployer,
+        jht_employee: jhtEmployee, jht_employer: jhtEmployer,
+        jkk, jkm, jp_employee: jpEmployee, jp_employer: jpEmployer,
+        employee_total: employeeTotal, employer_total: employerTotal, grand_total: employeeTotal + employerTotal
+      };
+    });
+    return res.json({ success: true, data: items });
+  } catch (e: any) {
+    return res.json({ success: true, data: [], error: e.message });
+  }
+}
+
+// ===== GET: PPh21 Report =====
+async function getPPh21Report(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const tenantId = session.user.tenantId;
+  try {
+    if (!sequelize) return res.json({ success: true, data: [] });
+    const [rows] = await sequelize.query(`
+      SELECT e.id, e.employee_id, e.name, e.position, e.department,
+             es.basic_salary, COALESCE(es.transport_allowance,0)+COALESCE(es.meal_allowance,0)+COALESCE(es.position_allowance,0) AS total_allowances,
+             es.tax_status, es.npwp_number
+      FROM employees e
+      LEFT JOIN employee_salaries es ON es.employee_id = e.id AND es.is_active = true
+      WHERE e.status = 'active' ${tenantId ? 'AND e.tenant_id = :tenantId' : ''}
+      ORDER BY e.name
+    `, { replacements: { tenantId } });
+    const items = (rows || []).map((r: any) => {
+      const gross = (Number(r.basic_salary || 0) + Number(r.total_allowances || 0)) * 12;
+      const biayaJabatan = Math.min(gross * 0.05, 6000000);
+      const netto = gross - biayaJabatan;
+      const status = r.tax_status || 'TK/0';
+      const ptkp = getPTKP(status);
+      const pkp = Math.max(0, netto - ptkp);
+      const tax = calculatePPh21(pkp);
+      return {
+        id: r.id, employee_id: r.employee_id || r.id, employee_name: r.name,
+        position: r.position, department: r.department, npwp: r.npwp_number,
+        tax_status: status, gross_income: gross, biaya_jabatan: biayaJabatan,
+        netto_income: netto, ptkp, pkp, pph21_annual: tax, pph21_monthly: Math.round(tax / 12)
+      };
+    });
+    return res.json({ success: true, data: items });
+  } catch (e: any) {
+    return res.json({ success: true, data: [], error: e.message });
+  }
+}
+
+// ===== GET: Lembur Report =====
+async function getLemburReport(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const tenantId = session.user.tenantId;
+  const period = String(req.query.period || new Date().toISOString().slice(0, 7));
+  const [yr, mo] = period.split('-').map((x) => parseInt(x));
+  try {
+    if (!sequelize) return res.json({ success: true, data: [], summary: {} });
+    const [rows] = await sequelize.query(`
+      SELECT e.id, e.employee_id, e.name, e.position, e.department,
+             es.basic_salary,
+             COALESCE(SUM(ea.overtime_minutes),0) AS total_minutes,
+             COUNT(DISTINCT CASE WHEN ea.overtime_minutes>0 THEN ea.date END) AS days_worked
+      FROM employees e
+      LEFT JOIN employee_salaries es ON es.employee_id = e.id AND es.is_active = true
+      LEFT JOIN employee_attendance ea ON ea.employee_id = e.id
+        AND EXTRACT(YEAR FROM ea.date) = :yr AND EXTRACT(MONTH FROM ea.date) = :mo
+      WHERE e.status = 'active' ${tenantId ? 'AND e.tenant_id = :tenantId' : ''}
+      GROUP BY e.id, es.basic_salary
+      ORDER BY total_minutes DESC
+    `, { replacements: { tenantId, yr, mo } });
+    const items = (rows || []).map((r: any) => {
+      const hours = Number(r.total_minutes || 0) / 60;
+      const base = Number(r.basic_salary || 0);
+      const hourlyRate = base / 173;
+      const amount = Math.round(hours * hourlyRate * 1.5);
+      return {
+        id: r.id, employee_id: r.employee_id || r.id, employee_name: r.name,
+        position: r.position, department: r.department,
+        hours: Math.round(hours * 10) / 10, days_worked: Number(r.days_worked || 0),
+        hourly_rate: Math.round(hourlyRate), amount, status: 'approved', period
+      };
+    }).filter((it: any) => it.hours > 0);
+    const summary = {
+      totalEmployees: items.length,
+      totalHours: items.reduce((s: number, x: any) => s + x.hours, 0),
+      totalAmount: items.reduce((s: number, x: any) => s + x.amount, 0),
+    };
+    return res.json({ success: true, data: items, summary });
+  } catch (e: any) {
+    return res.json({ success: true, data: [], summary: {}, error: e.message });
+  }
+}
+
+// ===== GET: Laporan (Payroll Analytics) =====
+async function getLaporan(req: NextApiRequest, res: NextApiResponse, session: any) {
+  const tenantId = session.user.tenantId;
+  try {
+    if (!sequelize) return res.json({ success: true, monthly: [], byDepartment: [], distribution: [] });
+    // Monthly from payroll_runs
+    const [monthlyRows] = await sequelize.query(`
+      SELECT TO_CHAR(period_start, 'YYYY-MM') AS month,
+             SUM(total_gross) AS gross, SUM(total_net) AS net,
+             SUM(total_tax) AS tax, SUM(total_bpjs) AS bpjs
+      FROM payroll_runs
+      WHERE status IN ('paid','approved','calculated') ${tenantId ? 'AND tenant_id = :tenantId' : ''}
+      GROUP BY 1 ORDER BY 1 DESC LIMIT 12
+    `, { replacements: { tenantId } });
+    // Department breakdown
+    const [deptRows] = await sequelize.query(`
+      SELECT e.department, COUNT(DISTINCT e.id) AS employees,
+             SUM(COALESCE(es.basic_salary,0)) AS total_basic
+      FROM employees e
+      LEFT JOIN employee_salaries es ON es.employee_id = e.id AND es.is_active = true
+      WHERE e.status = 'active' ${tenantId ? 'AND e.tenant_id = :tenantId' : ''}
+      GROUP BY e.department ORDER BY total_basic DESC
+    `, { replacements: { tenantId } });
+    // Salary distribution buckets
+    const [distRows] = await sequelize.query(`
+      SELECT
+        CASE
+          WHEN basic_salary < 5000000 THEN '<5jt'
+          WHEN basic_salary < 10000000 THEN '5-10jt'
+          WHEN basic_salary < 15000000 THEN '10-15jt'
+          WHEN basic_salary < 25000000 THEN '15-25jt'
+          ELSE '>25jt'
+        END AS bucket,
+        COUNT(*) AS c
+      FROM employee_salaries WHERE is_active = true
+      GROUP BY bucket ORDER BY bucket
+    `);
+    return res.json({
+      success: true,
+      monthly: (monthlyRows || []).reverse(),
+      byDepartment: deptRows || [],
+      distribution: distRows || [],
+    });
+  } catch (e: any) {
+    return res.json({ success: true, monthly: [], byDepartment: [], distribution: [], error: e.message });
+  }
 }
 
 // ===== Mock Components =====

@@ -7,7 +7,8 @@ import {
   AlertTriangle, FileText, Loader2, Calendar, Users, DollarSign, Activity,
   ClipboardList, Flag, Timer, ListTodo, CheckCircle2, XCircle, Clock,
   ArrowUpRight, ArrowDownRight, Target, Zap, PieChart, GitBranch, Shield,
-  ChevronRight, Download, RefreshCw, Layers, Hash, Award, Percent, Edit3
+  ChevronRight, Download, RefreshCw, Layers, Hash, Award, Percent, Edit3,
+  Building2, Truck, Package, FileSpreadsheet, Rocket
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer,
@@ -15,8 +16,14 @@ import {
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
   LineChart, Line, ComposedChart
 } from 'recharts';
+import EmployeePicker from '../../../components/projectManagement/EmployeePicker';
+import LookupPicker from '../../../components/projectManagement/LookupPicker';
+import GanttChart from '../../../components/projectManagement/GanttChart';
+import CalendarView from '../../../components/projectManagement/CalendarView';
+import WorkloadHeatmap from '../../../components/projectManagement/WorkloadHeatmap';
+import EVMPanel from '../../../components/projectManagement/EVMPanel';
 
-type TabType = 'dashboard' | 'projects' | 'tasks' | 'milestones' | 'timesheets' | 'resources' | 'risks' | 'budgets' | 'documents';
+type TabType = 'dashboard' | 'projects' | 'tasks' | 'milestones' | 'timesheets' | 'resources' | 'risks' | 'budgets' | 'documents' | 'gantt' | 'calendar' | 'workload' | 'sprints' | 'evm';
 
 const SC: Record<string, string> = {
   planning: 'bg-blue-100 text-blue-700', active: 'bg-green-100 text-green-700',
@@ -194,11 +201,17 @@ export default function ProjectManagementPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
   const [taskViewMode, setTaskViewMode] = useState<'table' | 'kanban'>('table');
+  const [ganttData, setGanttData] = useState<any[]>([]);
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [workload, setWorkload] = useState<any[]>([]);
+  const [sprints, setSprints] = useState<any[]>([]);
+  const [evmData, setEvmData] = useState<any>(null);
+  const [criticalPath, setCriticalPath] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
     const tab = router.query.tab as string;
-    if (tab && ['dashboard','projects','tasks','milestones','timesheets','resources','risks','budgets','documents'].includes(tab)) {
+    if (tab && ['dashboard','projects','tasks','milestones','timesheets','resources','risks','budgets','documents','gantt','calendar','workload','sprints','evm'].includes(tab)) {
       setActiveTab(tab as TabType);
     }
   }, [router.query.tab]);
@@ -206,7 +219,17 @@ export default function ProjectManagementPage() {
   const fetchData = useCallback(async (tab: string) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ action: tab === 'dashboard' ? 'dashboard' : tab });
+      // Map UI tab name -> API action
+      const actionMap: Record<string, string> = {
+        dashboard: 'dashboard',
+        gantt: 'gantt',
+        calendar: 'calendar',
+        workload: 'workload',
+        sprints: 'sprints',
+        evm: 'evm',
+      };
+      const apiAction = actionMap[tab] || tab;
+      const params = new URLSearchParams({ action: apiAction });
       if (statusFilter !== 'all') params.set('status', statusFilter);
       if (searchTerm) params.set('search', searchTerm);
       if (selectedProjectId) params.set('projectId', selectedProjectId);
@@ -223,9 +246,24 @@ export default function ProjectManagementPage() {
         case 'risks': setRisks(d.data); break;
         case 'budgets': setBudgets(d.data); break;
         case 'documents': setDocuments(d.data); break;
+        case 'gantt': setGanttData(Array.isArray(d.data) ? d.data : (d.data?.items || [])); break;
+        case 'calendar': setCalendarEvents(Array.isArray(d.data) ? d.data : (d.data?.events || [])); break;
+        case 'workload': setWorkload(Array.isArray(d.data) ? d.data : (d.data?.rows || [])); break;
+        case 'sprints': setSprints(Array.isArray(d.data) ? d.data : (d.data?.rows || [])); break;
+        case 'evm': setEvmData(d.data); break;
       }
     } catch (e: any) { console.error(e); } finally { setLoading(false); }
   }, [statusFilter, searchTerm, selectedProjectId]);
+
+  // Ensure projects list is available even on non-projects tabs (for pickers and EVM selector)
+  useEffect(() => {
+    if (!mounted) return;
+    if (projects.length === 0) {
+      fetch('/api/hq/project-management?action=projects').then(r => r.json()).then(d => {
+        if (d.success) setProjects(d.data.rows || []);
+      }).catch(() => {});
+    }
+  }, [mounted]); // eslint-disable-line
 
   useEffect(() => { if (mounted) fetchData(activeTab); }, [mounted, activeTab, fetchData]);
 
@@ -265,14 +303,15 @@ export default function ProjectManagementPage() {
   const openEdit = (item: any) => {
     let editForm: any = {};
     switch (activeTab) {
-      case 'projects': editForm = { name: item.name, description: item.description, category: item.category, managerName: item.manager_name, priority: item.priority, budgetAmount: item.budget_amount, startDate: item.start_date, endDate: item.end_date, status: item.status, progressPercent: item.progress_percent }; break;
-      case 'tasks': editForm = { name: item.name, description: item.description, priority: item.priority, assigneeName: item.assignee_name, startDate: item.start_date, dueDate: item.due_date, estimatedHours: item.estimated_hours, status: item.status, progressPercent: item.progress_percent }; break;
+      case 'projects': editForm = { name: item.name, description: item.description, category: item.category, managerName: item.manager_name, managerEmployeeId: item.manager_employee_id, branchId: item.branch_id, branchName: item.branch_name, customerId: item.customer_id, clientName: item.client_name, priority: item.priority, budgetAmount: item.budget_amount, startDate: item.start_date, endDate: item.end_date, status: item.status, progressPercent: item.progress_percent }; break;
+      case 'tasks': editForm = { name: item.name, description: item.description, priority: item.priority, assigneeName: item.assignee_name, assigneeEmployeeId: item.assignee_employee_id, startDate: item.start_date, dueDate: item.due_date, estimatedHours: item.estimated_hours, status: item.status, progressPercent: item.progress_percent, storyPoints: item.story_points }; break;
       case 'milestones': editForm = { name: item.name, description: item.description, dueDate: item.due_date, status: item.status }; break;
-      case 'timesheets': editForm = { hoursWorked: item.hours_worked, description: item.description, status: item.status }; break;
-      case 'risks': editForm = { title: item.title, description: item.description, probability: item.probability, impact: item.impact, status: item.status, mitigationPlan: item.mitigation_plan, ownerName: item.owner_name }; break;
-      case 'resources': editForm = { resourceName: item.resource_name, resourceType: item.resource_type, role: item.role, allocationPercent: item.allocation_percent, costPerHour: item.cost_per_hour, startDate: item.start_date, endDate: item.end_date }; break;
-      case 'budgets': editForm = { category: item.category, description: item.description, plannedAmount: item.planned_amount, actualAmount: item.actual_amount }; break;
+      case 'timesheets': editForm = { hoursWorked: item.hours_worked, description: item.description, status: item.status, billable: !!item.billable }; break;
+      case 'risks': editForm = { title: item.title, description: item.description, probability: item.probability, impact: item.impact, status: item.status, mitigationPlan: item.mitigation_plan, ownerName: item.owner_name, ownerEmployeeId: item.owner_employee_id }; break;
+      case 'resources': editForm = { resourceName: item.resource_name, resourceType: item.resource_type, role: item.role, allocationPercent: item.allocation_percent, costPerHour: item.cost_per_hour, startDate: item.start_date, endDate: item.end_date, hrisEmployeeId: item.hris_employee_id, fleetVehicleId: item.fleet_vehicle_id, inventoryItemId: item.inventory_item_id, quantity: item.quantity }; break;
+      case 'budgets': editForm = { category: item.category, description: item.description, plannedAmount: item.planned_amount, actualAmount: item.actual_amount, purchaseOrderId: item.purchase_order_id, purchaseOrderNumber: item.purchase_order_number }; break;
       case 'documents': editForm = { title: item.title, documentType: item.document_type, description: item.description, fileUrl: item.file_url, version: item.version }; break;
+      case 'sprints': editForm = { name: item.name, goal: item.goal, startDate: item.start_date, endDate: item.end_date, capacity: item.capacity, status: item.status }; break;
     }
     setEditingItem(item); setForm(editForm); setShowEditModal(true);
   };
@@ -302,11 +341,16 @@ export default function ProjectManagementPage() {
     { id: 'dashboard', name: 'Dashboard', icon: BarChart3 },
     { id: 'projects', name: 'Proyek', icon: Briefcase },
     { id: 'tasks', name: 'Tugas', icon: ListTodo },
+    { id: 'gantt', name: 'Gantt', icon: GitBranch },
+    { id: 'calendar', name: 'Kalender', icon: Calendar },
+    { id: 'sprints', name: 'Sprint', icon: Rocket },
     { id: 'milestones', name: 'Milestone', icon: Flag },
     { id: 'timesheets', name: 'Timesheet', icon: Timer },
-    { id: 'resources', name: 'Sumber Daya', icon: Users },
+    { id: 'workload', name: 'Workload', icon: Users },
+    { id: 'resources', name: 'Sumber Daya', icon: Layers },
     { id: 'risks', name: 'Risiko', icon: AlertTriangle },
     { id: 'budgets', name: 'Anggaran', icon: DollarSign },
+    { id: 'evm', name: 'EVM', icon: Activity },
     { id: 'documents', name: 'Dokumen', icon: FileText },
   ];
 
@@ -974,6 +1018,173 @@ export default function ProjectManagementPage() {
               { key: 'created_at', label: 'Tanggal', render: v => fD(v) },
             ]} data={documents} onDelete="documents" onEdit={true} />
           </div>)}
+
+          {/* GANTT CHART TAB */}
+          {activeTab === 'gantt' && (<div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><GitBranch className="w-5 h-5 text-blue-600" />Gantt Chart & Timeline</h2>
+                <p className="text-xs text-gray-500">Visualisasi proyek, tugas, dan milestone beserta critical path</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <select className="border rounded-lg px-3 py-2 text-sm" value={selectedProjectId} onChange={e => setSelectedProjectId(e.target.value)}>
+                  <option value="">Semua Proyek</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}
+                </select>
+                <button onClick={() => fetchData('gantt')} className="px-3 py-2 border rounded-lg text-sm flex items-center gap-1 hover:bg-gray-50"><RefreshCw className="w-3.5 h-3.5" />Refresh</button>
+                <button onClick={() => router.push('/hq/project-management/gantt')}
+                  className="px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow">
+                  <Zap className="w-3.5 h-3.5" /> Gantt Pro
+                </button>
+              </div>
+            </div>
+            <GanttChart
+              items={ganttData.map((r: any) => ({
+                id: r.id, name: r.name, start: r.start_date || r.startDate || r.start,
+                end: r.end_date || r.endDate || r.due_date || r.end, progress: Number(r.progress_percent || r.progress || 0),
+                status: r.status, type: r.type || (r.due_date && !r.end_date ? 'milestone' : r.task_id ? 'task' : 'project'),
+                isCritical: !!r.is_critical, assigneeName: r.assignee_name || r.manager_name,
+              }))}
+              onItemClick={(it) => {
+                if (it.type === 'project') router.push(`/hq/project-management/${it.id}`);
+                else toast(`Tugas: ${it.name}`);
+              }}
+            />
+          </div>)}
+
+          {/* CALENDAR TAB */}
+          {activeTab === 'calendar' && (<div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Calendar className="w-5 h-5 text-emerald-600" />Kalender Proyek</h2>
+                <p className="text-xs text-gray-500">Deadline, milestone, dan jadwal penting dalam tampilan kalender</p>
+              </div>
+              <select className="border rounded-lg px-3 py-2 text-sm" value={selectedProjectId} onChange={e => setSelectedProjectId(e.target.value)}>
+                <option value="">Semua Proyek</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}
+              </select>
+            </div>
+            <CalendarView
+              events={calendarEvents.map((e: any) => ({
+                id: e.id, title: e.title || e.name,
+                date: e.date || e.due_date || e.start_date,
+                endDate: e.end_date,
+                type: e.type || (e.milestone_id ? 'milestone' : e.task_id ? 'task' : 'deadline'),
+                status: e.status,
+              }))}
+            />
+          </div>)}
+
+          {/* WORKLOAD TAB */}
+          {activeTab === 'workload' && (<div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Users className="w-5 h-5 text-purple-600" />Team Workload & Kapasitas</h2>
+                <p className="text-xs text-gray-500">Analisis beban kerja tim, deteksi overload dan resource yang idle</p>
+              </div>
+              <select className="border rounded-lg px-3 py-2 text-sm" value={selectedProjectId} onChange={e => setSelectedProjectId(e.target.value)}>
+                <option value="">Semua Proyek</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}
+              </select>
+            </div>
+            <WorkloadHeatmap
+              data={workload.map((w: any) => ({
+                employeeId: w.employee_id || w.id,
+                employeeName: w.employee_name || w.name || '-',
+                position: w.position,
+                branchId: w.branch_id,
+                activeTasks: Number(w.active_tasks || w.taskCount || 0),
+                totalHours: Number(w.total_hours || w.loggedHours || 0),
+                capacityHours: Number(w.capacity_hours || 40),
+                overdue: Number(w.overdue_count || 0),
+              }))}
+            />
+          </div>)}
+
+          {/* SPRINTS TAB */}
+          {activeTab === 'sprints' && (<div className="space-y-4">
+            <Toolbar placeholder="Cari sprint..." statuses={[{v:'planning',l:'Planning'},{v:'active',l:'Active'},{v:'completed',l:'Completed'}]} createLabel="Buat Sprint" />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {sprints.length === 0 && (
+                <div className="col-span-full bg-white border-2 border-dashed rounded-xl p-12 text-center">
+                  <Rocket className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-sm text-gray-500">Belum ada sprint. Klik "Buat Sprint" untuk mulai.</p>
+                </div>
+              )}
+              {sprints.map((sp: any) => {
+                const start = sp.start_date ? new Date(sp.start_date) : null;
+                const end = sp.end_date ? new Date(sp.end_date) : null;
+                const today = new Date();
+                let daysRemaining = 0;
+                if (end && start) {
+                  daysRemaining = Math.ceil((end.getTime() - today.getTime()) / 86400000);
+                }
+                const completion = sp.total_tasks > 0 ? (sp.completed_tasks / sp.total_tasks) * 100 : 0;
+                return (
+                  <div key={sp.id} className="bg-white border rounded-xl p-5 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="font-bold text-gray-800">{sp.name}</h4>
+                        <p className="text-xs text-gray-500 font-mono">{sp.sprint_code}</p>
+                      </div>
+                      <Badge value={sp.status} colors={SC} />
+                    </div>
+                    {sp.goal && <p className="text-xs text-gray-600 mb-3 line-clamp-2">{sp.goal}</p>}
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between text-gray-500">
+                        <span>Periode:</span>
+                        <span>{fD(sp.start_date)} — {fD(sp.end_date)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Progress:</span>
+                        <span className="font-semibold">{sp.completed_tasks || 0}/{sp.total_tasks || 0} ({completion.toFixed(0)}%)</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-blue-400 to-emerald-500 rounded-full transition-all" style={{ width: `${completion}%` }} />
+                      </div>
+                      {sp.status === 'active' && (
+                        <p className={`mt-2 text-xs font-medium ${daysRemaining < 3 ? 'text-red-600' : 'text-blue-600'}`}>
+                          {daysRemaining > 0 ? `${daysRemaining} hari tersisa` : daysRemaining === 0 ? 'Hari terakhir' : 'Sprint berakhir'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>)}
+
+          {/* EVM TAB */}
+          {activeTab === 'evm' && (<div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Activity className="w-5 h-5 text-indigo-600" />Earned Value Management</h2>
+                <p className="text-xs text-gray-500">Analisis kinerja biaya dan jadwal proyek (PV, EV, AC, SPI, CPI, EAC)</p>
+              </div>
+              <select className="border rounded-lg px-3 py-2 text-sm" value={selectedProjectId} onChange={e => setSelectedProjectId(e.target.value)}>
+                <option value="">Pilih Proyek untuk analisis</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}
+              </select>
+            </div>
+            {!selectedProjectId && (
+              <div className="bg-white border-2 border-dashed rounded-xl p-12 text-center">
+                <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-gray-500">Pilih proyek di atas untuk menampilkan analisis EVM.</p>
+              </div>
+            )}
+            {selectedProjectId && evmData && (
+              <EVMPanel data={{
+                BAC: Number(evmData.BAC || 0), PV: Number(evmData.PV || 0), EV: Number(evmData.EV || 0),
+                AC: Number(evmData.AC || 0), SV: Number(evmData.SV || 0), CV: Number(evmData.CV || 0),
+                SPI: Number(evmData.SPI || 0), CPI: Number(evmData.CPI || 0),
+                EAC: Number(evmData.EAC || 0), ETC: Number(evmData.ETC || 0), VAC: Number(evmData.VAC || 0),
+                progress: Number(evmData.progress || 0),
+              }} />
+            )}
+            {selectedProjectId && !evmData && !loading && (
+              <div className="bg-white border rounded-xl p-8 text-center text-sm text-gray-500">Data EVM belum tersedia untuk proyek ini.</div>
+            )}
+          </div>)}
         </>)}
       </div>
 
@@ -1005,7 +1216,22 @@ export default function ProjectManagementPage() {
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Deskripsi</label><textarea className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" rows={3} placeholder="Deskripsi singkat proyek" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Kategori</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. IT, Konstruksi" value={form.category || ''} onChange={e => setForm({ ...form, category: e.target.value })} /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Manager</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Nama PM" value={form.managerName || ''} onChange={e => setForm({ ...form, managerName: e.target.value })} /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Cabang</label>
+                    <LookupPicker action="branches" icon={Building2} value={form.branchId} nameValue={form.branchName}
+                      onChange={(b) => setForm({ ...form, branchId: b?.id, branchName: b?.name })} placeholder="Pilih cabang…" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Project Manager (HRIS) <span className="text-red-500">*</span></label>
+                  <EmployeePicker value={form.managerEmployeeId} nameValue={form.managerName}
+                    onChange={(emp) => setForm({ ...form, managerEmployeeId: emp?.id, managerName: emp?.name })}
+                    placeholder="Pilih PM dari HRIS…" branchId={form.branchId} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Klien (CRM)</label>
+                  <LookupPicker action="customers" value={form.customerId} nameValue={form.clientName}
+                    onChange={(c) => setForm({ ...form, customerId: c?.id, clientName: c?.name })}
+                    placeholder="Pilih pelanggan dari CRM…" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Prioritas</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.priority || 'normal'} onChange={e => setForm({ ...form, priority: e.target.value })}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
@@ -1015,14 +1241,19 @@ export default function ProjectManagementPage() {
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Mulai</label><input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.startDate || ''} onChange={e => setForm({ ...form, startDate: e.target.value })} /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Selesai</label><input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.endDate || ''} onChange={e => setForm({ ...form, endDate: e.target.value })} /></div>
                 </div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Klien</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Nama klien (opsional)" value={form.clientName || ''} onChange={e => setForm({ ...form, clientName: e.target.value })} /></div>
               </>)}
               {(activeTab === 'tasks') && (<>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Tugas <span className="text-red-500">*</span></label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Masukkan nama tugas" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Assignee (HRIS)</label>
+                  <EmployeePicker value={form.assigneeEmployeeId} nameValue={form.assigneeName}
+                    onChange={(emp) => setForm({ ...form, assigneeEmployeeId: emp?.id, assigneeName: emp?.name })}
+                    placeholder="Pilih dari HRIS…" />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Prioritas</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.priority || 'normal'} onChange={e => setForm({ ...form, priority: e.target.value })}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Assignee</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Nama assignee" value={form.assigneeName || ''} onChange={e => setForm({ ...form, assigneeName: e.target.value })} /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Story Points</label><input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. 3, 5, 8" value={form.storyPoints || ''} onChange={e => setForm({ ...form, storyPoints: e.target.value })} /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal Mulai</label><input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.startDate || ''} onChange={e => setForm({ ...form, startDate: e.target.value })} /></div>
@@ -1038,10 +1269,19 @@ export default function ProjectManagementPage() {
               </>)}
               {(activeTab === 'timesheets') && (<>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Karyawan <span className="text-red-500">*</span></label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Nama karyawan" value={form.employeeName || ''} onChange={e => setForm({ ...form, employeeName: e.target.value, employeeId: 1 })} /></div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Karyawan (HRIS) <span className="text-red-500">*</span></label>
+                  <EmployeePicker value={form.hrisEmployeeId} nameValue={form.employeeName}
+                    onChange={(emp) => setForm({ ...form, hrisEmployeeId: emp?.id, employeeName: emp?.name, employeeId: emp?.id })}
+                    placeholder="Pilih karyawan dari HRIS…" required />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tanggal <span className="text-red-500">*</span></label><input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.workDate || ''} onChange={e => setForm({ ...form, workDate: e.target.value })} /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Jam Kerja <span className="text-red-500">*</span></label><input type="number" step="0.5" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="8.0" value={form.hoursWorked || ''} onChange={e => setForm({ ...form, hoursWorked: parseFloat(e.target.value) })} /></div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="billable" checked={form.billable || false} onChange={e => setForm({ ...form, billable: e.target.checked })} />
+                  <label htmlFor="billable" className="text-xs text-gray-600">Jam billable (dapat ditagihkan ke klien)</label>
                 </div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Deskripsi Aktivitas</label><textarea className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" rows={2} placeholder="Apa yang dikerjakan?" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
               </>)}
@@ -1052,25 +1292,79 @@ export default function ProjectManagementPage() {
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Probabilitas</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.probability || 'medium'} onChange={e => setForm({ ...form, probability: e.target.value })}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="very_high">Very High</option></select></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Dampak</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.impact || 'medium'} onChange={e => setForm({ ...form, impact: e.target.value })}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="very_high">Very High</option></select></div>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Risk Owner (HRIS)</label>
+                  <EmployeePicker value={form.ownerEmployeeId} nameValue={form.ownerName}
+                    onChange={(emp) => setForm({ ...form, ownerEmployeeId: emp?.id, ownerName: emp?.name })}
+                    placeholder="Pilih risk owner…" />
+                </div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Rencana Mitigasi</label><textarea className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" rows={3} placeholder="Langkah mitigasi risiko" value={form.mitigationPlan || ''} onChange={e => setForm({ ...form, mitigationPlan: e.target.value })} /></div>
               </>)}
               {(activeTab === 'resources') && (<>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Resource <span className="text-red-500">*</span></label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Nama resource" value={form.resourceName || ''} onChange={e => setForm({ ...form, resourceName: e.target.value })} /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tipe Resource <span className="text-red-500">*</span></label>
+                  <select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.resourceType || 'human'} onChange={e => setForm({ ...form, resourceType: e.target.value, hrisEmployeeId: null, fleetVehicleId: null, inventoryItemId: null, resourceName: '' })}>
+                    <option value="human">Karyawan (HRIS)</option>
+                    <option value="equipment">Kendaraan/Alat (Fleet)</option>
+                    <option value="material">Material (Inventory)</option>
+                  </select>
+                </div>
+                {form.resourceType === 'human' || !form.resourceType ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Karyawan <span className="text-red-500">*</span></label>
+                    <EmployeePicker value={form.hrisEmployeeId} nameValue={form.resourceName}
+                      onChange={(emp) => setForm({ ...form, hrisEmployeeId: emp?.id, resourceName: emp?.name })}
+                      placeholder="Pilih karyawan…" required />
+                  </div>
+                ) : form.resourceType === 'equipment' ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Kendaraan <span className="text-red-500">*</span></label>
+                    <LookupPicker action="fleet-vehicles" icon={Truck} value={form.fleetVehicleId} nameValue={form.resourceName}
+                      onChange={(v) => setForm({ ...form, fleetVehicleId: v?.id, resourceName: v?.name })}
+                      placeholder="Pilih kendaraan…" required />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Material <span className="text-red-500">*</span></label>
+                    <LookupPicker action="inventory-items" icon={Package} value={form.inventoryItemId} nameValue={form.resourceName}
+                      onChange={(v) => setForm({ ...form, inventoryItemId: v?.id, resourceName: v?.name })}
+                      placeholder="Pilih item inventory…" required />
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Tipe</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.resourceType || 'human'} onChange={e => setForm({ ...form, resourceType: e.target.value })}><option value="human">Human</option><option value="equipment">Equipment</option><option value="material">Material</option></select></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. Developer" value={form.role || ''} onChange={e => setForm({ ...form, role: e.target.value })} /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Role/Kegunaan</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. Developer, Pickup" value={form.role || ''} onChange={e => setForm({ ...form, role: e.target.value })} /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">{form.resourceType === 'material' ? 'Kuantitas' : 'Alokasi (%)'}</label>
+                    {form.resourceType === 'material'
+                      ? <input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="0" value={form.quantity || ''} onChange={e => setForm({ ...form, quantity: e.target.value })} />
+                      : <input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="100" value={form.allocationPercent || 100} onChange={e => setForm({ ...form, allocationPercent: e.target.value })} />}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Alokasi (%)</label><input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="100" value={form.allocationPercent || 100} onChange={e => setForm({ ...form, allocationPercent: e.target.value })} /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Biaya/Jam (Rp)</label><input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="0" value={form.costPerHour || ''} onChange={e => setForm({ ...form, costPerHour: e.target.value })} /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Mulai Alokasi</label><input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.startDate || ''} onChange={e => setForm({ ...form, startDate: e.target.value })} /></div>
                 </div>
               </>)}
               {(activeTab === 'budgets') && (<>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Kategori <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.category || ''} onChange={e => setForm({ ...form, category: e.target.value })}><option value="">Pilih Kategori</option><option value="labor">Labor</option><option value="material">Material</option><option value="equipment">Equipment</option><option value="travel">Travel</option><option value="overhead">Overhead</option><option value="contingency">Contingency</option></select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Jumlah Rencana (Rp)</label><input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="0" value={form.plannedAmount || ''} onChange={e => setForm({ ...form, plannedAmount: e.target.value })} /></div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Purchase Order (opsional)</label>
+                  <LookupPicker action="purchase-orders" icon={FileSpreadsheet} value={form.purchaseOrderId} nameValue={form.purchaseOrderNumber}
+                    onChange={(po) => setForm({ ...form, purchaseOrderId: po?.id, purchaseOrderNumber: po?.name, committedAmount: form.committedAmount || form.plannedAmount })}
+                    placeholder="Link ke PO…" emptyHint="Belum ada Purchase Order" />
+                </div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Deskripsi</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Deskripsi anggaran" value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
+              </>)}
+              {(activeTab === 'sprints') && (<>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek <span className="text-red-500">*</span></label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Nama Sprint <span className="text-red-500">*</span></label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. Sprint 1 - Auth Module" value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Goal Sprint</label><textarea className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" rows={2} placeholder="Apa target utama sprint ini?" value={form.goal || ''} onChange={e => setForm({ ...form, goal: e.target.value })} /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Mulai <span className="text-red-500">*</span></label><input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.startDate || ''} onChange={e => setForm({ ...form, startDate: e.target.value })} /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Selesai <span className="text-red-500">*</span></label><input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.endDate || ''} onChange={e => setForm({ ...form, endDate: e.target.value })} /></div>
+                </div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Kapasitas (Story Points)</label><input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g. 40" value={form.capacity || ''} onChange={e => setForm({ ...form, capacity: e.target.value })} /></div>
               </>)}
               {(activeTab === 'documents') && (<>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Proyek</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.projectId || ''} onChange={e => setForm({ ...form, projectId: e.target.value })}><option value="">Pilih Proyek</option>{projects.map(p => <option key={p.id} value={p.id}>{p.project_code} - {p.name}</option>)}</select></div>
@@ -1115,7 +1409,11 @@ export default function ProjectManagementPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Kategori</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.category || ''} onChange={e => setForm({ ...form, category: e.target.value })} /></div>
-                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Manager</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.managerName || ''} onChange={e => setForm({ ...form, managerName: e.target.value })} /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Manager (HRIS)</label>
+                    <EmployeePicker value={form.managerEmployeeId} nameValue={form.managerName}
+                      onChange={(emp) => setForm({ ...form, managerEmployeeId: emp?.id, managerName: emp?.name })}
+                      placeholder="Pilih PM…" />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Anggaran</label><input type="number" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.budgetAmount || ''} onChange={e => setForm({ ...form, budgetAmount: e.target.value })} /></div>
@@ -1132,7 +1430,11 @@ export default function ProjectManagementPage() {
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.status || 'todo'} onChange={e => setForm({ ...form, status: e.target.value })}><option value="todo">To Do</option><option value="in_progress">In Progress</option><option value="review">Review</option><option value="done">Done</option><option value="blocked">Blocked</option></select></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Prioritas</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.priority || 'normal'} onChange={e => setForm({ ...form, priority: e.target.value })}><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
                 </div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Assignee</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.assigneeName || ''} onChange={e => setForm({ ...form, assigneeName: e.target.value })} /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Assignee (HRIS)</label>
+                  <EmployeePicker value={form.assigneeEmployeeId} nameValue={form.assigneeName}
+                    onChange={(emp) => setForm({ ...form, assigneeEmployeeId: emp?.id, assigneeName: emp?.name })}
+                    placeholder="Pilih assignee…" />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Deadline</label><input type="date" className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.dueDate || ''} onChange={e => setForm({ ...form, dueDate: e.target.value })} /></div>
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Progress (%)</label><input type="number" min={0} max={100} className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.progressPercent || ''} onChange={e => setForm({ ...form, progressPercent: e.target.value })} /></div>
@@ -1155,7 +1457,11 @@ export default function ProjectManagementPage() {
                   <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Dampak</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.impact || 'medium'} onChange={e => setForm({ ...form, impact: e.target.value })}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="very_high">Very High</option></select></div>
                 </div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Status</label><select className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.status || 'identified'} onChange={e => setForm({ ...form, status: e.target.value })}><option value="identified">Identified</option><option value="mitigating">Mitigating</option><option value="resolved">Resolved</option><option value="accepted">Accepted</option></select></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Owner</label><input className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" value={form.ownerName || ''} onChange={e => setForm({ ...form, ownerName: e.target.value })} /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Risk Owner (HRIS)</label>
+                  <EmployeePicker value={form.ownerEmployeeId} nameValue={form.ownerName}
+                    onChange={(emp) => setForm({ ...form, ownerEmployeeId: emp?.id, ownerName: emp?.name })}
+                    placeholder="Pilih owner…" />
+                </div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Rencana Mitigasi</label><textarea className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" rows={3} value={form.mitigationPlan || ''} onChange={e => setForm({ ...form, mitigationPlan: e.target.value })} /></div>
               </>)}
               {(activeTab === 'resources') && (<>

@@ -64,7 +64,40 @@ export default function PPh21Page() {
   const [simMethod, setSimMethod] = useState('gross');
   const [selectedItem, setSelectedItem] = useState<TaxItem | null>(null);
 
-  useEffect(() => { setMounted(true); setItems(MOCK_TAX); setLoading(false); }, []);
+  useEffect(() => {
+    setMounted(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/hq/hris/payroll?action=pph21');
+        const json = await res.json().catch(() => null);
+        if (res.ok && Array.isArray(json?.data) && json.data.length > 0) {
+          const mapped: TaxItem[] = json.data.map((r: any) => ({
+            id: String(r.id),
+            employee_name: r.employee_name,
+            position: r.position || '-',
+            department: r.department || '-',
+            tax_status: r.tax_status || 'TK/0',
+            gross_annual: Number(r.gross_income || 0),
+            deductible: Number(r.biaya_jabatan || 0),
+            ptkp: Number(r.ptkp || 0),
+            pkp: Number(r.pkp || 0),
+            annual_tax: Number(r.pph21_annual || 0),
+            monthly_tax: Number(r.pph21_monthly || 0),
+            ytd_paid: 0,
+            remaining: Number(r.pph21_annual || 0),
+            tax_method: 'gross',
+          }));
+          setItems(mapped);
+        } else {
+          setItems(MOCK_TAX);
+        }
+      } catch {
+        setItems(MOCK_TAX);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const filtered = useMemo(() => {
     if (!searchQuery) return items;

@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 
 const TaskCalendarModule = dynamic(() => import('@/components/sfa/TaskCalendarModule'), { ssr: false, loading: () => <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-amber-500" /></div> });
+const SalesManagementModule = dynamic(() => import('@/components/sfa/SalesManagementModule'), { ssr: false, loading: () => <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-amber-500" /></div> });
+const SfaExportModal = dynamic(() => import('@/components/sfa/SfaExportModal'), { ssr: false });
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend
@@ -23,7 +25,7 @@ import {
 // ══════════════════════════════════════════════════════
 // Types & Constants
 // ══════════════════════════════════════════════════════
-type Tab = 'dashboard' | 'leads' | 'pipeline' | 'teams' | 'visits' | 'orders' | 'targets' | 'incentives' | 'merchandising' | 'competitor' | 'survey' | 'approval' | 'settings' | 'customers' | 'communications' | 'tasks' | 'forecasting' | 'tickets' | 'automation' | 'import-export' | 'integration' | 'audit-trail' | 'ai-workflow';
+type Tab = 'dashboard' | 'leads' | 'pipeline' | 'teams' | 'visits' | 'field-tasks' | 'orders' | 'sales-mgmt' | 'targets' | 'incentives' | 'merchandising' | 'competitor' | 'survey' | 'approval' | 'settings' | 'customers' | 'communications' | 'tasks' | 'forecasting' | 'tickets' | 'automation' | 'import-export' | 'integration' | 'audit-trail' | 'ai-workflow';
 
 const TAB_GROUPS: { tKey: string; tabs: { id: Tab; tKey: string; icon: any; modules?: ('crm' | 'sfa')[] }[] }[] = [
   { tKey: 'groupMain', tabs: [
@@ -46,9 +48,11 @@ const TAB_GROUPS: { tKey: string; tabs: { id: Tab; tKey: string; icon: any; modu
   { tKey: 'groupFieldForce', tabs: [
     { id: 'teams', tKey: 'tabTeamsTerritory', icon: Users, modules: ['sfa'] },
     { id: 'visits', tKey: 'tabVisitsCoverage', icon: Navigation, modules: ['sfa'] },
+    { id: 'field-tasks', tKey: 'tabVisitPlanTasks', icon: CalendarDays, modules: ['sfa'] },
     { id: 'orders', tKey: 'tabOrdersQuotations', icon: ShoppingCart, modules: ['sfa'] },
   ]},
   { tKey: 'groupPerformance', tabs: [
+    { id: 'sales-mgmt', tKey: 'tabSalesManagement', icon: ShoppingCart, modules: ['sfa'] },
     { id: 'targets', tKey: 'tabTargetsAchievement', icon: Target, modules: ['sfa'] },
     { id: 'incentives', tKey: 'tabIncentivesCommissions', icon: Award, modules: ['sfa'] },
   ]},
@@ -181,7 +185,7 @@ const ChartLegendItem = ({ color, label, value, total, suffix = '' }: { color: s
     <span className="w-3 h-3 rounded-md shadow-sm shrink-0" style={{ background: color }} />
     <span className="text-xs text-gray-600 flex-1 truncate">{label}</span>
     <div className="flex items-center gap-2 shrink-0">
-      <span className="text-xs font-bold text-gray-900">{fmt(value)}{suffix}</span>
+      <span className="text-xs font-bold text-gray-900">{(value || 0).toLocaleString()}{suffix}</span>
       {total != null && total > 0 && <span className="text-[10px] text-gray-400 w-10 text-right">{((value / total) * 100).toFixed(0)}%</span>}
     </div>
   </div>
@@ -332,8 +336,12 @@ export default function SFAUnifiedPage() {
   const [tab, setTab] = useState<Tab>('dashboard');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [modal, setModal] = useState<string | null>(null);
   const [form, setForm] = useState<any>({});
+  const [customerImportOpen, setCustomerImportOpen] = useState(false);
+  const [customerImportCsv, setCustomerImportCsv] = useState('');
+  const [customerImportBusy, setCustomerImportBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -350,6 +358,13 @@ export default function SFAUnifiedPage() {
   const [visits, setVisits] = useState<any[]>([]);
   const [coveragePlans, setCoveragePlans] = useState<any[]>([]);
   const [compliance, setCompliance] = useState<any[]>([]);
+  /** Ringkasan integrasi kunjungan ↔ task (bulan berjalan) */
+  const [visitBridgeStat, setVisitBridgeStat] = useState<{
+    visits_in_period?: number;
+    visits_completed?: number;
+    visit_tasks_in_period?: number;
+    visit_tasks_completed?: number;
+  } | null>(null);
   const [fieldOrders, setFieldOrders] = useState<any[]>([]);
   const [quotations, setQuotations] = useState<any[]>([]);
   // Targets & Performance
@@ -490,10 +505,17 @@ export default function SFAUnifiedPage() {
           break;
         }
         case 'visits': {
-          const [r1, r2, r3] = await Promise.all([apiCore('visits'), apiAdv('coverage-plans'), apiAdv('coverage-compliance')]);
+          const period = new Date().toISOString().slice(0, 7);
+          const [r1, r2, r3, r4] = await Promise.all([
+            apiCore('visits'),
+            apiAdv('coverage-plans'),
+            apiAdv('coverage-compliance'),
+            fetch(`/api/hq/sfa/task-calendar?action=visit-bridge&period=${period}`).then(r => r.json()),
+          ]);
           if (r1.success) setVisits(r1.data || []);
           if (r2.success) setCoveragePlans(r2.data || []);
           if (r3.success) setCompliance(r3.data || []);
+          if (r4.success) setVisitBridgeStat(r4.data || null);
           break;
         }
         case 'orders': {
@@ -579,6 +601,9 @@ export default function SFAUnifiedPage() {
           if (r1.success) setCrmTasks(r1.data || []);
           if (r2.success) setCrmTaskSummary(r2.data);
           if (r3.success) setCrmCalendar(r3.data || []);
+          break;
+        }
+        case 'field-tasks': {
           break;
         }
         case 'forecasting': {
@@ -1002,9 +1027,20 @@ export default function SFAUnifiedPage() {
             <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-white" /> {localeDateLong}</span>
             <span className="hidden sm:flex items-center gap-1.5"><Activity className="w-3.5 h-3.5 text-emerald-300" /> <span className="text-emerald-200 font-bold">Live</span></span>
           </div>
-          <button onClick={fetchData} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white text-blue-600 text-[11px] font-bold shadow-sm hover:shadow-md active:scale-95 transition-all">
-            <RefreshCw className="w-3 h-3" /> {t('sfa.refresh')}
-          </button>
+          <div className="flex items-center gap-2">
+            {canExport && (
+              <button
+                type="button"
+                onClick={() => setExportModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/95 text-amber-700 text-[11px] font-bold shadow-sm hover:shadow-md active:scale-95 transition-all border border-amber-200/60"
+              >
+                <Download className="w-3 h-3" /> {t('sfa.openExportCenter')}
+              </button>
+            )}
+            <button onClick={fetchData} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white text-blue-600 text-[11px] font-bold shadow-sm hover:shadow-md active:scale-95 transition-all">
+              <RefreshCw className="w-3 h-3" /> {t('sfa.refresh')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1016,6 +1052,8 @@ export default function SFAUnifiedPage() {
           </div>
         </div>
       )}
+
+      <SfaExportModal open={exportModalOpen} onClose={() => setExportModalOpen(false)} t={t} hasCrm={hasCrm} hasSfa={hasSfa} />
 
       {/* ── Tab Navigation (Two-Level: Group → Sub-tabs) ── */}
       {(() => {
@@ -1714,6 +1752,42 @@ export default function SFAUnifiedPage() {
           {tab === 'visits' && (<>
             <SectionHeader title={t('sfa.visitsCoverage')} subtitle={`${visits.length} ${t('sfa.visits').toLowerCase()} | ${coveragePlans.length} coverage plans`}
               action={<PrimaryBtn onClick={() => { setModal('visit'); setForm({ visit_date: new Date().toISOString().split('T')[0] }); }} icon={Plus}>{t('sfa.scheduleBtn')}</PrimaryBtn>} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <Card className="p-4 lg:col-span-2 border border-violet-100 bg-gradient-to-r from-violet-50/80 to-indigo-50/80">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0">
+                      <Link2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">{t('sfa.visitTaskBridgeTitle')}</h3>
+                      <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{t('sfa.visitTaskBridgeSub')}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setTab('field-tasks'); setSearch(''); setSelectedItem(null); }}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 shadow-sm shrink-0"
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                    {t('sfa.openVisitPlanTasks')}
+                  </button>
+                </div>
+              </Card>
+              {visitBridgeStat && (
+                <Card className="p-4 border border-gray-100">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2">{t('sfa.visitBridgePeriod')}</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-gray-500">{t('sfa.visitsScheduled')}</span><div className="font-bold text-gray-900">{visitBridgeStat.visits_in_period ?? '—'}</div></div>
+                    <div><span className="text-gray-500">{t('sfa.visitsDone')}</span><div className="font-bold text-emerald-700">{visitBridgeStat.visits_completed ?? '—'}</div></div>
+                    <div><span className="text-gray-500">{t('sfa.visitTasksLinked')}</span><div className="font-bold text-violet-700">{visitBridgeStat.visit_tasks_in_period ?? '—'}</div></div>
+                    <div><span className="text-gray-500">{t('sfa.visitTasksDone')}</span><div className="font-bold text-indigo-700">{visitBridgeStat.visit_tasks_completed ?? '—'}</div></div>
+                  </div>
+                </Card>
+              )}
+            </div>
+
             {/* Visit Analytics */}
             {visits.length > 0 && (() => {
               const vStatusCounts = visits.reduce((a: any, v: any) => { a[v.status] = (a[v.status] || 0) + 1; return a; }, {});
@@ -1918,6 +1992,19 @@ export default function SFAUnifiedPage() {
               </TableWrap>
             </>)}
           </>)}
+
+          {/* ═══════════════════════════════════════════ */}
+          {/* SALES MANAGEMENT (Retail · FMCG · Direct Sales) */}
+          {/* ═══════════════════════════════════════════ */}
+          {tab === 'sales-mgmt' && (
+            <SalesManagementModule
+              fmtCur={fmtCur}
+              fmtDate={fmtDate}
+              fmtNum={fmt}
+              t={t}
+              canManage={isManager}
+            />
+          )}
 
           {/* ═══════════════════════════════════════════ */}
           {/* TARGET & ACHIEVEMENT (from Enhanced - replaces basic Core targets) */}
@@ -2838,7 +2925,20 @@ export default function SFAUnifiedPage() {
           {/* ═══════════════════════════════════════════ */}
           {tab === 'customers' && (<>
             <SectionHeader title={t('sfa.customer360')} subtitle={`${crmCustomers.length} ${t('sfa.registeredCustomers')}`}
-              action={<PrimaryBtn onClick={() => { setModal('crm-customer'); setForm({ customer_type: 'company', lifecycle_stage: 'prospect', customer_status: 'active' }); }} icon={Plus}>{t('sfa.addCustomer')}</PrimaryBtn>} />
+              action={
+                <div className="flex flex-wrap items-center gap-2">
+                  {isManager && (
+                    <button
+                      type="button"
+                      onClick={() => { setCustomerImportCsv(''); setCustomerImportOpen(true); }}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 shadow-sm"
+                    >
+                      <Upload className="w-4 h-4" /> Import CSV
+                    </button>
+                  )}
+                  <PrimaryBtn onClick={() => { setModal('crm-customer'); setForm({ customer_type: 'company', lifecycle_stage: 'prospect', customer_status: 'active' }); }} icon={Plus}>{t('sfa.addCustomer')}</PrimaryBtn>
+                </div>
+              } />
 
             {/* Customer Analytics Charts */}
             {crmAnalytics && (
@@ -2938,6 +3038,44 @@ export default function SFAUnifiedPage() {
                 </tbody>
               </table>
             </TableWrap>
+
+            {customerImportOpen && isManager && (
+              <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40" onClick={() => !customerImportBusy && setCustomerImportOpen(false)}>
+                <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
+                  <h3 className="text-lg font-bold text-gray-900">Import pelanggan (CSV)</h3>
+                  <p className="text-xs text-gray-500 mt-1 mb-4">
+                    Header wajib: <code className="bg-gray-100 px-1 rounded">display_name</code> atau <code className="bg-gray-100 px-1 rounded">company_name</code>.
+                    Opsional: address, city, province, segment, notes.
+                  </p>
+                  <textarea
+                    className="w-full min-h-[160px] text-xs font-mono border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-amber-300"
+                    placeholder={`display_name,company_name,city,segment\nToko Maju Jaya,PT Maju,Jakarta,platinum`}
+                    value={customerImportCsv}
+                    onChange={e => setCustomerImportCsv(e.target.value)}
+                  />
+                  <div className="flex justify-end gap-2 mt-4">
+                    <button type="button" disabled={customerImportBusy} onClick={() => setCustomerImportOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl">Batal</button>
+                    <button
+                      type="button"
+                      disabled={customerImportBusy || !customerImportCsv.trim()}
+                      onClick={async () => {
+                        setCustomerImportBusy(true);
+                        const r = await apiCrm('import-customers-csv', 'POST', { csv: customerImportCsv });
+                        setCustomerImportBusy(false);
+                        if (r.success) {
+                          showToast(r.message || `${r.inserted || 0} diimpor`);
+                          setCustomerImportOpen(false);
+                          fetchData();
+                        } else showToast(r.error || 'Gagal import');
+                      }}
+                      className="px-5 py-2 text-sm font-bold text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl disabled:opacity-50"
+                    >
+                      {customerImportBusy ? <Loader2 className="w-4 h-4 animate-spin inline" /> : null} Import
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>)}
 
           {/* ═══════════════════════════════════════════ */}
@@ -3030,6 +3168,10 @@ export default function SFAUnifiedPage() {
           {/* ═══════════════════════════════════════════ */}
           {tab === 'tasks' && (
             <TaskCalendarModule showToast={showToast} />
+          )}
+
+          {tab === 'field-tasks' && (
+            <TaskCalendarModule showToast={showToast} fieldForceBridge />
           )}
 
           {/* ═══════════════════════════════════════════ */}

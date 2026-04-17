@@ -125,9 +125,17 @@ export default function DeviceManagementPage() {
   const handleSync = async (deviceId: string) => {
     setSyncing(deviceId);
     try {
-      // Trigger manual sync - in production this would connect to the device
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast.success('Sync berhasil');
+      const res = await fetch('/api/hq/hris/attendance/device-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId, mode: 'manual', records: [] })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok || (json && (json.success || json.data))) {
+        toast.success(json?.message || 'Sinkronisasi berhasil diminta');
+      } else {
+        throw new Error(json?.error || 'Gagal sinkronisasi');
+      }
       fetchDevices();
     } catch (error) {
       toast.error('Sync gagal');

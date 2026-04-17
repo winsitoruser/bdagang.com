@@ -127,6 +127,61 @@ export default function KPIDashboard() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  const handleExportKPIPdf = (kpi: EmployeeKPI | null) => {
+    if (!kpi) return;
+    const w = window.open('', '_blank');
+    if (!w) {
+      showToast('error', 'Pop-up diblokir browser');
+      return;
+    }
+    const rows = (kpi.metrics || []).map((m) => {
+      const pct = m.target > 0 ? Math.round((m.actual / m.target) * 100) : 0;
+      return `<tr>
+        <td>${m.name}</td><td>${m.category}</td><td style="text-align:right">${m.weight}%</td>
+        <td style="text-align:right">${m.target}</td><td style="text-align:right">${m.actual}</td>
+        <td style="text-align:right"><strong>${pct}%</strong></td>
+      </tr>`;
+    }).join('');
+    w.document.write(`<!doctype html><html><head><title>KPI - ${kpi.employeeName}</title>
+      <style>
+        body{font-family:Arial,sans-serif;padding:24px;color:#111}
+        h1{font-size:20px;margin:0 0 4px}
+        .meta{color:#666;font-size:13px;margin-bottom:16px}
+        .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+        .card{border:1px solid #e5e7eb;border-radius:8px;padding:10px}
+        table{width:100%;border-collapse:collapse;font-size:13px}
+        th,td{border:1px solid #e5e7eb;padding:6px 8px}
+        th{background:#f9fafb;text-align:left}
+        @media print{.noprint{display:none}}
+      </style></head><body>
+      <h1>Laporan KPI Karyawan</h1>
+      <div class="meta">${kpi.employeeName} • ${kpi.position || ''} • ${kpi.branchName || ''} • Periode ${kpi.period || ''}</div>
+      <div class="grid">
+        <div class="card"><div>Skor Keseluruhan</div><strong style="font-size:22px">${kpi.overallScore ?? '-'}</strong></div>
+        <div class="card"><div>Pencapaian</div><strong style="font-size:22px">${kpi.overallAchievement ?? 0}%</strong></div>
+        <div class="card"><div>Status</div><strong style="font-size:16px">${kpi.status || '-'}</strong></div>
+      </div>
+      <table><thead><tr><th>Metrik</th><th>Kategori</th><th>Bobot</th><th>Target</th><th>Aktual</th><th>Pencapaian</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6" style="text-align:center;color:#999">Tidak ada metrik</td></tr>'}</tbody></table>
+      <div class="noprint" style="margin-top:20px"><button onclick="window.print()">Cetak / Simpan PDF</button></div>
+      </body></html>`);
+    w.document.close();
+  };
+
+  const handleEditKPI = (kpi: EmployeeKPI | null) => {
+    if (!kpi) return;
+    const firstMetric = kpi.metrics?.[0];
+    setAssignForm({
+      employeeId: kpi.employeeId || '',
+      branchId: '',
+      templateCode: firstMetric?.name || '',
+      target: String(firstMetric?.target || ''),
+      weight: Number(firstMetric?.weight || 100)
+    });
+    setSelectedKPI(null);
+    setShowAssignDialog(true);
+  };
+
   const getPeriodParam = () => {
     const now = new Date();
     if (periodFilter === 'last') {
@@ -780,10 +835,10 @@ export default function KPIDashboard() {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4 border-t">
-                  <button className="px-4 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                  <button onClick={() => handleExportKPIPdf(selectedKPI)} className="px-4 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2">
                     <Download className="w-4 h-4" /> Ekspor PDF
                   </button>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Edit KPI</button>
+                  <button onClick={() => handleEditKPI(selectedKPI)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Edit KPI</button>
                 </div>
               </div>
             </div>

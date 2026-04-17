@@ -108,19 +108,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         // ═══ KANBAN BOARD — Tasks grouped by status ═══
         case 'board': {
-          const { priority, type, assigned } = req.query;
+          const { priority, type, assigned, visit_link: visitLink } = req.query;
           let where = 'WHERE t.tenant_id = :tid';
           const params: any = { tid: tenantId };
 
           if (priority && priority !== 'all') { where += ' AND t.priority = :priority'; params.priority = priority; }
           if (type && type !== 'all') { where += ' AND t.task_type = :type'; params.type = type; }
           if (assigned && assigned !== 'all') { where += ' AND t.assigned_to = :assigned'; params.assigned = Number(assigned); }
+          if (visitLink === 'only') { where += ' AND t.sfa_visit_id IS NOT NULL'; }
 
           const tasks = await q(`
-            SELECT t.*, u.name as assigned_name, c.display_name as customer_name
+            SELECT t.*, u.name as assigned_name, c.display_name as customer_name,
+              sv.status as visit_row_status, sv.visit_date as linked_visit_date, sv.customer_name as visit_customer_name
             FROM crm_tasks t
             LEFT JOIN users u ON u.id = t.assigned_to
             LEFT JOIN crm_customers c ON c.id = t.customer_id
+            LEFT JOIN sfa_visits sv ON sv.id = t.sfa_visit_id AND sv.tenant_id = t.tenant_id
             ${where}
             ORDER BY
               CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
@@ -150,9 +153,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         // ═══ GANTT DATA — Tasks with timeline ═══
         case 'gantt': {
-          const { range } = req.query; // 'week', 'month', '3months'
+          const { range, visit_link: visitLink } = req.query; // 'week', 'month', '3months'
           let dateFilter = '';
           const params: any = { tid: tenantId };
+          const vf = visitLink === 'only' ? ' AND t.sfa_visit_id IS NOT NULL' : '';
 
           if (range === 'week') {
             dateFilter = "AND (t.start_date >= NOW() - INTERVAL '7 days' OR t.due_date >= NOW() - INTERVAL '7 days')";
@@ -166,12 +170,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             SELECT t.id, t.task_number, t.title, t.status, t.priority, t.task_type,
               t.start_date, t.due_date, t.completed_date, t.estimated_hours, t.actual_hours,
               t.assigned_to, u.name as assigned_name,
-              t.checklist, t.tags
+              t.checklist, t.tags, t.sfa_visit_id,
+              sv.status as visit_row_status
             FROM crm_tasks t
             LEFT JOIN users u ON u.id = t.assigned_to
+            LEFT JOIN sfa_visits sv ON sv.id = t.sfa_visit_id AND sv.tenant_id = t.tenant_id
             WHERE t.tenant_id = :tid
               AND t.start_date IS NOT NULL AND t.due_date IS NOT NULL
-              ${dateFilter}
+              ${dateFilter}${vf}
             ORDER BY t.start_date ASC, t.due_date ASC
           `, params);
 
@@ -232,12 +238,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             taskDateWhere = 'AND t.due_date >= :start AND t.due_date < :end';
           }
 
+          const vf = req.query.visit_link === 'only' ? ' AND t.sfa_visit_id IS NOT NULL' : '';
           const taskEvents = await q(`
             SELECT t.id, t.task_number, t.title, t.status, t.priority, t.task_type,
-              t.due_date, t.start_date, t.assigned_to, u.name as assigned_name
+              t.due_date, t.start_date, t.assigned_to, u.name as assigned_name,
+              t.sfa_visit_id, sv.status as visit_row_status
             FROM crm_tasks t
             LEFT JOIN users u ON u.id = t.assigned_to
-            WHERE t.tenant_id = :tid AND t.due_date IS NOT NULL ${taskDateWhere}
+            LEFT JOIN sfa_visits sv ON sv.id = t.sfa_visit_id AND sv.tenant_id = t.tenant_id
+            WHERE t.tenant_id = :tid AND t.due_date IS NOT NULL ${taskDateWhere}${vf}
             ORDER BY t.due_date ASC
           `, params);
 
@@ -310,6 +319,100 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           return res.json({ success: true, data: users });
         }
 
+        /** Ringkasan rencana kunjungan vs task CRM & realisasi (untuk dashboard SFA) */
+        case 'visit-bridge': {
+          const pm = String(req.query.period || new Date().toISOString().slice(0, 7));
+          const row = await qOne(`
+            SELECT
+              (SELECT COUNT(*)::int FROM sfa_visits WHERE tenant_id = :tid AND to_char(visit_date, 'YYYY-MM') = :pm) AS visits_in_period,
+              (SELECT COUNT(*)::int FROM sfa_visits WHERE tenant_id = :tid AND to_char(visit_date, 'YYYY-MM') = :pm AND status = 'completed') AS visits_completed,
+              (SELECT COUNT(*)::int FROM crm_tasks WHERE tenant_id = :tid AND sfa_visit_id IS NOT NULL AND task_type = 'field_visit' AND to_char(COALESCE(due_date, created_at), 'YYYY-MM') = :pm) AS visit_tasks_in_period,
+              (SELECT COUNT(*)::int FROM crm_tasks WHERE tenant_id = :tid AND sfa_visit_id IS NOT NULL AND task_type = 'field_visit' AND status = 'completed' AND to_char(COALESCE(completed_date, updated_at), 'YYYY-MM') = :pm) AS visit_tasks_completed
+          `, { tid: tenantId, pm });
+          return res.json({ success: true, data: row || {} });
+        }
+
+        // Pelanggan CRM untuk picker (call / visit)
+        case 'customer-picker': {
+          const qstr = String(req.query.q || '').trim();
+          const limit = Math.min(parseInt(String(req.query.limit || '30'), 10) || 30, 100);
+          const params: any = { tid: tenantId, limit };
+          let where = 'WHERE c.tenant_id = :tid AND c.customer_status = \'active\'';
+          if (qstr) {
+            where += ` AND (
+              c.display_name ILIKE :pat OR c.company_name ILIKE :pat OR c.customer_number ILIKE :pat
+              OR c.city ILIKE :pat OR COALESCE(c.address,'') ILIKE :pat
+            )`;
+            params.pat = `%${qstr}%`;
+          }
+          const rows = await q(
+            `SELECT c.id, c.customer_number, c.display_name, c.company_name, c.city, c.address, c.segment
+               FROM crm_customers c
+              ${where}
+              ORDER BY c.display_name ASC
+              LIMIT :limit`,
+            params,
+          );
+          return res.json({ success: true, data: rows });
+        }
+
+        // Saran rencana kunjungan dari produktivitas penjualan (top outlet periode)
+        case 'visit-suggestions': {
+          const period = String(req.query.period || '');
+          const p = /^\d{4}-\d{2}$/.test(period) ? period : new Date().toISOString().slice(0, 7);
+          const rows = await q(
+            `WITH agg AS (
+                SELECT outlet_id::text AS outlet_id,
+                       MAX(outlet_name) AS outlet_name,
+                       MAX(outlet_code) AS outlet_code,
+                       COALESCE(SUM(net_amount), 0)::numeric AS revenue,
+                       COUNT(*)::int AS trx_count
+                  FROM sfa_sales_entries
+                 WHERE tenant_id = :tid AND period = :period
+                   AND outlet_id IS NOT NULL AND status NOT IN ('cancelled') AND is_return = false
+                 GROUP BY outlet_id
+             ),
+             top AS (
+                SELECT * FROM (
+                  SELECT *, ROW_NUMBER() OVER (ORDER BY revenue DESC) AS rk FROM agg
+                ) x WHERE rk <= 30
+             )
+             SELECT a.outlet_id, a.outlet_name, a.outlet_code, a.revenue, a.trx_count,
+                    (SELECT c.id FROM crm_customers c
+                      WHERE c.tenant_id = :tid AND (
+                        LOWER(TRIM(BOTH FROM COALESCE(c.display_name,''))) = LOWER(TRIM(BOTH FROM COALESCE(a.outlet_name,'')))
+                        OR LOWER(TRIM(BOTH FROM COALESCE(c.company_name,''))) = LOWER(TRIM(BOTH FROM COALESCE(a.outlet_name,'')))
+                      ) LIMIT 1) AS matched_customer_id,
+                    (SELECT c.display_name FROM crm_customers c
+                      WHERE c.tenant_id = :tid AND (
+                        LOWER(TRIM(BOTH FROM COALESCE(c.display_name,''))) = LOWER(TRIM(BOTH FROM COALESCE(a.outlet_name,'')))
+                        OR LOWER(TRIM(BOTH FROM COALESCE(c.company_name,''))) = LOWER(TRIM(BOTH FROM COALESCE(a.outlet_name,'')))
+                      ) LIMIT 1) AS matched_customer_name
+               FROM top a
+              ORDER BY a.revenue DESC NULLS LAST`,
+            { tid: tenantId, period: p },
+          ).catch(() => []);
+          return res.json({
+            success: true,
+            data: {
+              period: p,
+              suggestions: (rows || []).map((r: any) => ({
+                outlet_id: r.outlet_id,
+                outlet_name: r.outlet_name,
+                outlet_code: r.outlet_code,
+                revenue: Number(r.revenue) || 0,
+                trx_count: parseInt(String(r.trx_count || '0'), 10),
+                customer_id: r.matched_customer_id || null,
+                customer_name: r.matched_customer_name || null,
+                suggested_purpose:
+                  Number(r.revenue) > 0
+                    ? 'Follow-up penjualan & relasi outlet prioritas omzet'
+                    : 'Kunjungan rutin',
+              })),
+            },
+          });
+        }
+
         default:
           return res.status(400).json({ success: false, error: 'Unknown action: ' + action });
       }
@@ -372,9 +475,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           const num = `TSK-${Date.now().toString(36).toUpperCase()}`;
           const err = await qExec(`
             INSERT INTO crm_tasks (id, tenant_id, task_number, title, description, task_type, priority, status,
-              due_date, start_date, customer_id, assigned_to, estimated_hours, tags, checklist, created_by)
+              due_date, start_date, customer_id, assigned_to, estimated_hours, tags, checklist,
+              purpose, outlet_code, outlet_name, created_by, sfa_visit_id)
             VALUES (gen_random_uuid(), :tid, :num, :title, :desc, :type, :priority, :status,
-              :due, :start, :cust, :assigned, :hours, :tags, :checklist, :uid)
+              :due, :start, :cust, :assigned, :hours, :tags, :checklist,
+              :purpose, :ocode, :oname, :uid, :sfa_vid)
           `, {
             tid: tenantId, num,
             title: b.title || 'Untitled Task',
@@ -389,7 +494,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             hours: b.estimated_hours || null,
             tags: JSON.stringify(b.tags || []),
             checklist: JSON.stringify(b.checklist || []),
+            purpose: b.purpose || null,
+            ocode: b.outlet_code || null,
+            oname: b.outlet_name || null,
             uid: userId,
+            sfa_vid: b.sfa_visit_id || null,
           });
           if (err) return res.status(500).json({ success: false, error: err });
           return res.json({ success: true, data: { task_number: num } });

@@ -110,6 +110,30 @@ export default function DailyAttendancePage() {
     return map[status] || map.absent;
   };
 
+  const handleExport = () => {
+    const headers = ['ID Karyawan', 'Nama', 'Posisi', 'Cabang', 'Clock In', 'Clock Out', 'Jam Kerja', 'Status', 'Sumber', 'Telat (mnt)', 'Pulang Awal (mnt)', 'Lembur (mnt)', 'Di Luar Geofence'];
+    const rows = filtered.map(r => [
+      r.employeeId, r.employeeName, r.position, r.branchName,
+      r.clockIn ? formatTime(r.clockIn) : '-',
+      r.clockOut ? formatTime(r.clockOut) : '-',
+      r.workHours.toFixed(2),
+      r.status,
+      r.source || '-',
+      r.lateMinutes, r.earlyLeaveMinutes, r.overtimeMinutes,
+      r.isOutsideGeofence ? 'Ya' : 'Tidak'
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rekap-absensi-harian-${selectedDate}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const getSourceIcon = (source: string) => {
     const map: Record<string, { icon: any; label: string }> = {
       fingerprint: { icon: Fingerprint, label: 'Fingerprint' },
@@ -195,8 +219,8 @@ export default function DailyAttendancePage() {
               <option value="gps_mobile">Mobile/GPS</option>
               <option value="manual">Manual</option>
             </select>
-            <button className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-              <Download className="w-4 h-4" /> Export
+            <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+              <Download className="w-4 h-4" /> Export CSV
             </button>
           </div>
         </div>

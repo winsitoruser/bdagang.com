@@ -9,7 +9,7 @@ import {
   Briefcase, DollarSign, FileText, Shield, Heart, Plane,
   GraduationCap, UserPlus, Settings, FolderOpen, ClipboardList,
   CheckCircle2, XCircle, ArrowRight, Bell, Zap, Activity,
-  PieChart, Layers, MapPin, CircleDot
+  PieChart, Layers, MapPin, CircleDot, Megaphone, KeyRound, PenTool, BookOpen, Timer
 } from 'lucide-react';
 
 // ── HRIS Module Definitions (translated via t()) ──
@@ -21,8 +21,11 @@ function getHrisModules(t: (key: string) => string) {
       modules: [
         { key: 'employees', label: t('hris.employeeData'), desc: t('hris.employeeDataDesc'), href: '/hq/hris/employees', icon: Users, color: 'bg-blue-500' },
         { key: 'organization', label: t('hris.orgStructure'), desc: t('hris.orgStructureDesc'), href: '/hq/hris/organization', icon: Building2, color: 'bg-blue-600' },
-        { key: 'ess', label: t('hris.employeeSelfService'), desc: t('hris.employeeSelfServiceDesc'), href: '/hq/hris/ess', icon: UserCheck, color: 'bg-blue-400' },
-        { key: 'mss', label: t('hris.managerSelfService'), desc: t('hris.managerSelfServiceDesc'), href: '/hq/hris/mss', icon: Briefcase, color: 'bg-blue-700' },
+        { key: 'onboarding', label: 'Onboarding', desc: 'Alur masuk karyawan baru & checklist', href: '/hq/hris/onboarding', icon: UserPlus, color: 'bg-blue-400' },
+        { key: 'offboarding', label: 'Offboarding / Exit', desc: 'Alur keluar, clearance, exit interview', href: '/hq/hris/offboarding', icon: KeyRound, color: 'bg-blue-700' },
+        { key: 'contracts', label: 'Kontrak & Reminder', desc: 'Masa kontrak, perpanjangan, notifikasi', href: '/hq/hris/contracts', icon: FileText, color: 'bg-sky-600' },
+        { key: 'ess', label: t('hris.employeeSelfService'), desc: t('hris.employeeSelfServiceDesc'), href: '/hq/hris/ess', icon: UserCheck, color: 'bg-blue-800' },
+        { key: 'mss', label: t('hris.managerSelfService'), desc: t('hris.managerSelfServiceDesc'), href: '/hq/hris/mss', icon: Briefcase, color: 'bg-indigo-700' },
       ]
     },
     {
@@ -30,9 +33,11 @@ function getHrisModules(t: (key: string) => string) {
       color: 'green',
       modules: [
         { key: 'attendance', label: t('hris.attendance'), desc: t('hris.attendanceDesc'), href: '/hq/hris/attendance', icon: Clock, color: 'bg-green-500' },
-        { key: 'attendance-mgmt', label: t('hris.attendanceMgmt'), desc: t('hris.attendanceMgmtDesc'), href: '/hq/hris/attendance-management', icon: Settings, color: 'bg-green-600' },
+        { key: 'attendance-daily', label: 'Rekap Harian', desc: 'Absensi harian per karyawan', href: '/hq/hris/attendance/daily', icon: ClipboardList, color: 'bg-green-500' },
+        { key: 'attendance-mgmt', label: t('hris.attendanceMgmt'), desc: t('hris.attendanceMgmtDesc'), href: '/hq/hris/attendance-management', icon: Timer, color: 'bg-green-600' },
         { key: 'leave', label: t('hris.leaveManagement'), desc: t('hris.leaveManagementDesc'), href: '/hq/hris/leave', icon: Calendar, color: 'bg-green-400' },
         { key: 'attendance-devices', label: t('hris.attendanceDevices'), desc: t('hris.attendanceDevicesDesc'), href: '/hq/hris/attendance/devices', icon: Layers, color: 'bg-green-700' },
+        { key: 'attendance-settings', label: 'Kebijakan Absensi', desc: 'Geofence, toleransi telat, shift', href: '/hq/hris/attendance/settings', icon: Settings, color: 'bg-emerald-700' },
       ]
     },
     {
@@ -50,6 +55,13 @@ function getHrisModules(t: (key: string) => string) {
       color: 'emerald',
       modules: [
         { key: 'payroll', label: t('hris.payroll'), desc: t('hris.payrollDesc'), href: '/hq/hris/payroll', icon: DollarSign, color: 'bg-emerald-500' },
+        { key: 'payroll-main', label: 'Proses Gaji', desc: 'Payroll run bulanan + bulk upload', href: '/hq/hris/payroll/main', icon: DollarSign, color: 'bg-emerald-700' },
+        { key: 'payroll-slip', label: 'Slip Gaji', desc: 'Distribusi payslip karyawan', href: '/hq/hris/payroll/slip-gaji', icon: FileText, color: 'bg-emerald-600' },
+        { key: 'payroll-thr', label: 'THR & Bonus', desc: 'Tunjangan Hari Raya tahunan', href: '/hq/hris/payroll/thr', icon: Star, color: 'bg-pink-500' },
+        { key: 'payroll-pph21', label: 'PPh 21', desc: 'Pajak penghasilan & SPT masa', href: '/hq/hris/payroll/pph21', icon: FileText, color: 'bg-yellow-600' },
+        { key: 'payroll-bpjs', label: 'BPJS Kesehatan & TK', desc: 'Iuran BPJS Kesehatan & Ketenagakerjaan', href: '/hq/hris/payroll/bpjs', icon: Shield, color: 'bg-red-500' },
+        { key: 'payroll-lembur', label: 'Lembur (Payroll)', desc: 'Rekap lembur untuk payroll', href: '/hq/hris/payroll/lembur', icon: Clock, color: 'bg-amber-600' },
+        { key: 'payroll-laporan', label: 'Laporan Gaji', desc: 'Laporan & analisis payroll', href: '/hq/hris/payroll/laporan', icon: BarChart3, color: 'bg-teal-600' },
         { key: 'travel-expense', label: t('hris.travelExpense'), desc: t('hris.travelExpenseDesc'), href: '/hq/hris/travel-expense', icon: Plane, color: 'bg-emerald-600' },
         { key: 'project-mgmt', label: t('hris.projectMgmt'), desc: t('hris.projectMgmtDesc'), href: '/hq/hris/project-management', icon: FolderOpen, color: 'bg-emerald-700' },
       ]
@@ -60,14 +72,18 @@ function getHrisModules(t: (key: string) => string) {
       modules: [
         { key: 'recruitment', label: t('hris.recruitment'), desc: t('hris.recruitmentDesc'), href: '/hq/hris/recruitment', icon: UserPlus, color: 'bg-orange-500' },
         { key: 'training', label: t('hris.training'), desc: t('hris.trainingDesc'), href: '/hq/hris/training', icon: GraduationCap, color: 'bg-orange-600' },
+        { key: 'training-dev', label: 'Learning & Development', desc: 'Kurikulum, batch, ujian, outsourcing', href: '/hq/hris/training-development', icon: BookOpen, color: 'bg-orange-700' },
+        { key: 'training-scoring', label: 'Skor & Penilaian Training', desc: 'Competency scoring & sertifikasi', href: '/hq/hris/training-scoring', icon: PenTool, color: 'bg-amber-700' },
       ]
     },
     {
       category: t('hris.catAnalyticsCompliance'),
       color: 'indigo',
       modules: [
-        { key: 'workforce-analytics', label: t('hris.workforceAnalytics'), desc: t('hris.workforceAnalyticsDesc'), href: '/hq/hris/workforce-analytics', icon: PieChart, color: 'bg-indigo-500' },
-        { key: 'industrial-relations', label: t('hris.industrialRelations'), desc: t('hris.industrialRelationsDesc'), href: '/hq/hris/industrial-relations', icon: Shield, color: 'bg-indigo-600' },
+        { key: 'calendar', label: 'Kalender HR', desc: 'Cuti, shift, gajian, event dalam satu kalender', href: '/hq/hris/calendar', icon: Calendar, color: 'bg-indigo-500' },
+        { key: 'announcements', label: 'Pengumuman', desc: 'Broadcast pengumuman ke karyawan', href: '/hq/hris/announcements', icon: Megaphone, color: 'bg-fuchsia-600' },
+        { key: 'workforce-analytics', label: t('hris.workforceAnalytics'), desc: t('hris.workforceAnalyticsDesc'), href: '/hq/hris/workforce-analytics', icon: PieChart, color: 'bg-indigo-600' },
+        { key: 'industrial-relations', label: t('hris.industrialRelations'), desc: t('hris.industrialRelationsDesc'), href: '/hq/hris/industrial-relations', icon: AlertTriangle, color: 'bg-indigo-700' },
       ]
     },
   ];
@@ -77,9 +93,11 @@ function getQuickActions(t: (key: string) => string) {
   return [
     { label: t('hris.addEmployee'), href: '/hq/hris/employees', icon: UserPlus, color: 'bg-blue-600' },
     { label: t('hris.inputAttendance'), href: '/hq/hris/attendance', icon: Clock, color: 'bg-green-600' },
-    { label: t('hris.processPayroll'), href: '/hq/hris/payroll', icon: DollarSign, color: 'bg-emerald-600' },
+    { label: t('hris.processPayroll'), href: '/hq/hris/payroll/main', icon: DollarSign, color: 'bg-emerald-600' },
     { label: t('hris.openVacancy'), href: '/hq/hris/recruitment', icon: UserPlus, color: 'bg-orange-600' },
     { label: t('hris.createKpi'), href: '/hq/hris/kpi', icon: Target, color: 'bg-purple-600' },
+    { label: 'Kirim Pengumuman', href: '/hq/hris/announcements', icon: Megaphone, color: 'bg-fuchsia-600' },
+    { label: 'Kalender HR', href: '/hq/hris/calendar', icon: Calendar, color: 'bg-indigo-600' },
     { label: t('hris.scheduleTraining'), href: '/hq/hris/training', icon: GraduationCap, color: 'bg-red-600' },
   ];
 }
@@ -294,7 +312,7 @@ export default function HRISDashboard() {
             </div>
             <Zap className="w-6 h-6 text-yellow-300" />
           </div>
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
             {QUICK_ACTIONS.map((a, i) => (
               <button key={i} onClick={() => router.push(a.href)}
                 className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all text-center group">

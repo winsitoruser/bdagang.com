@@ -9,7 +9,7 @@ import {
   Building2, Plus, MapPin, User, Edit, Trash2, Eye, Settings, TrendingUp, Package, Users,
   CheckCircle, XCircle, AlertTriangle, ExternalLink, Power, Download, Upload, RefreshCw,
   BarChart3, Heart, Activity, Wifi, WifiOff, DollarSign, Layers, ShoppingCart, Truck,
-  ClipboardList, LayoutDashboard, Warehouse, Award, Zap, Bell, X, Receipt, Gauge, UserCheck
+  ClipboardList, LayoutDashboard, Warehouse, Award, Zap, Bell, X, Receipt, Gauge, UserCheck, FileText
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
@@ -55,6 +55,60 @@ const INDUSTRY_OPTIONS = [
   { value: 'general', label: 'Umum / Multi-Industri' }, { value: 'fnb', label: 'Makanan & Minuman' },
   { value: 'retail', label: 'Ritel' }, { value: 'pharmacy', label: 'Farmasi & Kesehatan' },
 ];
+
+// ─── Import schema ───
+interface ImportFieldDef { key: string; label: string; required: boolean; example: string; description: string; allowed?: string[]; }
+const IMPORT_FIELDS: ImportFieldDef[] = [
+  { key: 'code', label: 'Kode', required: true, example: 'BR-001', description: 'Kode unik cabang (max 20 karakter). Jika sudah ada → update.' },
+  { key: 'name', label: 'Nama', required: true, example: 'Cabang Jakarta Pusat', description: 'Nama cabang yang tampil di aplikasi.' },
+  { key: 'type', label: 'Tipe', required: false, example: 'branch', description: 'Jenis cabang. Kosongkan untuk default "branch".', allowed: ['main','branch','warehouse','kiosk'] },
+  { key: 'address', label: 'Alamat', required: false, example: 'Jl. Sudirman No. 123', description: 'Alamat lengkap cabang.' },
+  { key: 'city', label: 'Kota', required: false, example: 'Jakarta Selatan', description: 'Kota / Kabupaten.' },
+  { key: 'province', label: 'Provinsi', required: false, example: 'DKI Jakarta', description: 'Provinsi.' },
+  { key: 'region', label: 'Region', required: false, example: 'Jabodetabek', description: 'Region / area regional (opsional).' },
+  { key: 'phone', label: 'Telepon', required: false, example: '021-5551234', description: 'Nomor telepon cabang.' },
+  { key: 'email', label: 'Email', required: false, example: 'jakarta@perusahaan.com', description: 'Email cabang; divalidasi formatnya.' },
+];
+
+// Robust CSV parser that handles quoted values (including commas inside quotes and "" escapes)
+function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[]; error?: string } {
+  const cleaned = text.replace(/^\uFEFF/, '');
+  const lines: string[][] = [];
+  let current: string[] = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (cleaned[i + 1] === '"') { field += '"'; i++; } else { inQuotes = false; }
+      } else { field += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { current.push(field); field = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && cleaned[i + 1] === '\n') i++;
+        current.push(field); field = '';
+        if (current.some(v => v.length > 0)) lines.push(current);
+        current = [];
+      } else { field += ch; }
+    }
+  }
+  if (field.length > 0 || current.length > 0) { current.push(field); if (current.some(v => v.length > 0)) lines.push(current); }
+  if (lines.length < 1) return { headers: [], rows: [], error: 'File kosong' };
+  const headers = lines[0].map(h => h.trim());
+  const rows = lines.slice(1).map(cols => {
+    const obj: Record<string, string> = {};
+    headers.forEach((h, i) => { obj[h] = (cols[i] ?? '').trim(); });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v && v.length > 0));
+  return { headers, rows };
+}
+
+function toCSVCell(v: any): string {
+  const s = (v ?? '').toString();
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
 const PIE_COLORS = ['#6366F1', '#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6'];
 
 // ─── Mock Data ───
@@ -84,16 +138,26 @@ export default function BranchManagement() {
   const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [branches, setBranches] = useState<Branch[]>(MOCK_BRANCHES);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1); const [pageSize, setPageSize] = useState(10); const [total, setTotal] = useState(MOCK_BRANCHES.length);
-  const [integrated, setIntegrated] = useState<IntegratedSummary>(MOCK_INTEGRATED);
-  const [ranking, setRanking] = useState<any[]>(MOCK_RANKING);
+  const [page, setPage] = useState(1); const [pageSize, setPageSize] = useState(10); const [total, setTotal] = useState(0);
+  const [integrated, setIntegrated] = useState<IntegratedSummary>({ totalBranches: 0, activeBranches: 0, onlineBranches: 0, totalTodaySales: 0, totalMonthSales: 0, totalTodayTx: 0, totalLowStock: 0, totalEmployees: 0, totalStockValue: 0 });
+  const [ranking, setRanking] = useState<any[]>([]);
+  const [usingMock, setUsingMock] = useState(false);
   const [industry, setIndustry] = useState('general');
   const [viewMode, setViewMode] = useState<'table'|'grid'|'health'>('table');
   const [typeFilter, setTypeFilter] = useState('all'); const [statusFilter, setStatusFilter] = useState('all');
   const [exporting, setExporting] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false); const [importData, setImportData] = useState<any[]>([]); const [importing, setImporting] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState<any[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importStep, setImportStep] = useState<'upload'|'preview'|'result'>('upload');
+  const [importFileName, setImportFileName] = useState<string>('');
+  const [importFormat, setImportFormat] = useState<'csv'|'json'>('csv');
+  const [importValidation, setImportValidation] = useState<{ total:number; valid:number; invalid:number; preview:Array<{row:number;data:any;valid:boolean;errors:string[]}> } | null>(null);
+  const [importResult, setImportResult] = useState<{ total:number; created:number; updated:number; errors:number; details:Array<{code:string;status:string;message?:string}> } | null>(null);
+  const [importDragOver, setImportDragOver] = useState(false);
+  const [importError, setImportError] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showCreateModal, setShowCreateModal] = useState(false); const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); const [showToggleConfirm, setShowToggleConfirm] = useState(false);
@@ -104,9 +168,9 @@ export default function BranchManagement() {
   const [formData, setFormData] = useState({ code:'',name:'',type:'branch' as Branch['type'],address:'',city:'',province:'',region:'',phone:'',email:'',managerId:'',priceTierId:'' });
 
   // ─── Fetching ───
-  const fetchBranches = useCallback(async()=>{setLoading(true);try{const p=new URLSearchParams({page:String(page),limit:String(pageSize)});if(typeFilter!=='all')p.set('type',typeFilter);if(statusFilter!=='all')p.set('status',statusFilter);const r=await fetch(`/api/hq/branches?${p}`);if(r.ok){const d=await r.json();const l=d.data?.branches||d.branches||[];if(l.length>0){setBranches(l);setTotal(d.data?.pagination?.total||l.length)}}}catch{}finally{setLoading(false)}},[page,pageSize,typeFilter,statusFilter]);
-  const fetchIntegrated = useCallback(async()=>{try{const r=await fetch('/api/hq/branches/integrated?action=dashboard-integrated');if(r.ok){const j=await r.json();if(j.success&&j.data){if(j.data.summary)setIntegrated(j.data.summary);if(j.data.branches?.length>0){setBranches(j.data.branches.map((b:any)=>({...b,id:b.id,code:b.code,name:b.name,type:b.type||'branch',address:b.address||'',city:b.city||'',province:b.province||'',isActive:b.is_active??true,status:b.sync_status==='synced'?'online':b.sync_status==='failed'?'offline':'warning',syncStatus:b.sync_status,lastSync:b.last_sync_at||new Date().toISOString(),manager:b.manager_name?{id:'',name:b.manager_name,email:b.manager_email||''}:null,priceTierId:null,priceTierName:null,stats:{todaySales:b.pos?.todaySales||0,monthSales:b.pos?.monthSales||0,employeeCount:b.hris?.totalEmployees||0,lowStockItems:b.inventory?.lowStock||0},pos:b.pos,inventory:b.inventory,hris:b.hris,healthScore:70+Math.random()*25,healthGrade:'B',createdAt:b.created_at||new Date().toISOString()})));setTotal(j.data.branches.length)}}}}catch{}},[]);
-  const fetchRanking = useCallback(async()=>{try{const r=await fetch('/api/hq/branches/integrated?action=cross-module-ranking');if(r.ok){const j=await r.json();if(j.success&&j.data?.ranking?.length>0)setRanking(j.data.ranking)}}catch{}},[]);
+  const fetchBranches = useCallback(async()=>{setLoading(true);try{const p=new URLSearchParams({page:String(page),limit:String(pageSize)});if(typeFilter!=='all')p.set('type',typeFilter);if(statusFilter!=='all')p.set('status',statusFilter);const r=await fetch(`/api/hq/branches?${p}`);if(r.ok){const d=await r.json();const l=d.data?.branches||d.branches||[];if(l.length>0){setBranches(l);setTotal(d.data?.pagination?.total||l.length);setUsingMock(false)}else{setBranches([]);setTotal(0);setUsingMock(false)}}else{setBranches(MOCK_BRANCHES);setTotal(MOCK_BRANCHES.length);setUsingMock(true)}}catch{setBranches(MOCK_BRANCHES);setTotal(MOCK_BRANCHES.length);setUsingMock(true)}finally{setLoading(false)}},[page,pageSize,typeFilter,statusFilter]);
+  const fetchIntegrated = useCallback(async()=>{try{const r=await fetch('/api/hq/branches/integrated?action=dashboard-integrated');if(r.ok){const j=await r.json();if(j.success&&j.data){if(j.data.summary)setIntegrated(j.data.summary);if(j.data.branches?.length>0){setBranches(j.data.branches.map((b:any)=>({...b,id:b.id,code:b.code,name:b.name,type:b.type||'branch',address:b.address||'',city:b.city||'',province:b.province||'',isActive:b.is_active??true,status:b.sync_status==='synced'?'online':b.sync_status==='failed'?'offline':'warning',syncStatus:b.sync_status,lastSync:b.last_sync_at||new Date().toISOString(),manager:b.manager_name?{id:'',name:b.manager_name,email:b.manager_email||''}:null,priceTierId:null,priceTierName:null,stats:{todaySales:b.pos?.todaySales||0,monthSales:b.pos?.monthSales||0,employeeCount:b.hris?.totalEmployees||0,lowStockItems:b.inventory?.lowStock||0},pos:b.pos,inventory:b.inventory,hris:b.hris,healthScore:70+Math.random()*25,healthGrade:'B',createdAt:b.created_at||new Date().toISOString()})));setTotal(j.data.branches.length);setUsingMock(false)}}}else{setIntegrated(MOCK_INTEGRATED);if(branches.length===0){setBranches(MOCK_BRANCHES);setTotal(MOCK_BRANCHES.length);setUsingMock(true)}}}catch{setIntegrated(MOCK_INTEGRATED);if(branches.length===0){setBranches(MOCK_BRANCHES);setTotal(MOCK_BRANCHES.length);setUsingMock(true)}}},[branches.length]);
+  const fetchRanking = useCallback(async()=>{try{const r=await fetch('/api/hq/branches/integrated?action=cross-module-ranking');if(r.ok){const j=await r.json();if(j.success&&j.data?.ranking?.length>0){setRanking(j.data.ranking);return}}setRanking(MOCK_RANKING)}catch{setRanking(MOCK_RANKING)}},[]);
   const fetchDetail = useCallback(async(bid:string)=>{setDetailLoading(true);try{const r=await fetch(`/api/hq/branches/integrated?action=branch-summary&branchId=${bid}`);if(r.ok){const j=await r.json();if(j.success&&j.data){setDetailData(j.data);setDetailLoading(false);return}}}catch{}const b=branches.find(x=>x.id===bid);setDetailData({branch:b,pos:{summary:{today_sales:b?.pos?.todaySales||0,month_sales:b?.pos?.monthSales||0},dailySales:[],paymentMethods:[],topProducts:[]},inventory:{summary:{total_products:b?.inventory?.totalProducts||0,low_stock:b?.inventory?.lowStock||0,stock_value:b?.inventory?.stockValue||0},lowStockItems:[],transfers:[]},hris:{employees:[],users:[],attendance:[],totalEmployees:b?.hris?.totalEmployees||0,totalUsers:0},finance:{monthlyRevenue:[]},modules:[]});setDetailLoading(false)},[branches]);
 
   useEffect(()=>{setMounted(true);fetchBranches();fetchIntegrated();fetchRanking()},[]);
@@ -115,15 +179,114 @@ export default function BranchManagement() {
 
   // ─── Handlers ───
   const resetForm=()=>setFormData({code:'',name:'',type:'branch',address:'',city:'',province:'',region:'',phone:'',email:'',managerId:'',priceTierId:''});
-  const handleCreate=async()=>{setActionLoading(true);try{const r=await fetch('/api/hq/branches',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(formData)});if(r.ok){setShowCreateModal(false);resetForm();fetchBranches();fetchIntegrated()}}catch{}finally{setActionLoading(false)}};
-  const handleUpdate=async()=>{if(!selectedBranch)return;setActionLoading(true);try{const r=await fetch(`/api/hq/branches/${selectedBranch.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(formData)});if(r.ok){setShowEditModal(false);resetForm();fetchBranches();fetchIntegrated()}}catch{}finally{setActionLoading(false)}};
-  const handleDelete=async()=>{if(!selectedBranch)return;setActionLoading(true);try{const r=await fetch(`/api/hq/branches/${selectedBranch.id}`,{method:'DELETE'});if(r.ok){setShowDeleteConfirm(false);setSelectedBranch(null);fetchBranches();fetchIntegrated()}}catch{}finally{setActionLoading(false)}};
-  const handleToggle=async()=>{if(!selectedBranch)return;setActionLoading(true);try{const r=await fetch(`/api/hq/branches/${selectedBranch.id}/toggle-active`,{method:'POST'});if(r.ok){setShowToggleConfirm(false);setSelectedBranch(null);fetchBranches()}}catch{}finally{setActionLoading(false)}};
+  const handleCreate=async()=>{setActionLoading(true);try{const r=await fetch('/api/hq/branches',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(formData)});if(r.ok){toast.success('Cabang berhasil ditambahkan');setShowCreateModal(false);resetForm();fetchBranches();fetchIntegrated()}else{const j=await r.json().catch(()=>({}));toast.error(j.error?.message||j.message||'Gagal menambah cabang')}}catch{toast.error('Gagal menambah cabang')}finally{setActionLoading(false)}};
+  const handleUpdate=async()=>{if(!selectedBranch)return;setActionLoading(true);try{const r=await fetch(`/api/hq/branches/${selectedBranch.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(formData)});if(r.ok){toast.success('Cabang diperbarui');setShowEditModal(false);resetForm();fetchBranches();fetchIntegrated()}else{const j=await r.json().catch(()=>({}));toast.error(j.error?.message||j.message||'Gagal memperbarui')}}catch{toast.error('Gagal memperbarui')}finally{setActionLoading(false)}};
+  const handleDelete=async()=>{if(!selectedBranch)return;setActionLoading(true);try{const r=await fetch(`/api/hq/branches/${selectedBranch.id}`,{method:'DELETE'});if(r.ok){toast.success('Cabang dihapus');setShowDeleteConfirm(false);setSelectedBranch(null);fetchBranches();fetchIntegrated()}else{const j=await r.json().catch(()=>({}));toast.error(j.error?.message||j.message||'Gagal menghapus')}}catch{toast.error('Gagal menghapus')}finally{setActionLoading(false)}};
+  const handleToggle=async()=>{if(!selectedBranch)return;setActionLoading(true);try{const r=await fetch(`/api/hq/branches/${selectedBranch.id}/toggle-active`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({isActive:!selectedBranch.isActive})});if(r.ok){const j=await r.json().catch(()=>({}));toast.success(j.message||(selectedBranch.isActive?'Cabang dinonaktifkan':'Cabang diaktifkan'));setShowToggleConfirm(false);setSelectedBranch(null);fetchBranches();fetchIntegrated()}else{const j=await r.json().catch(()=>({}));toast.error(j.error?.message||j.message||'Gagal mengubah status')}}catch{toast.error('Gagal mengubah status')}finally{setActionLoading(false)}};
   const openEdit=(b:Branch)=>{setSelectedBranch(b);setFormData({code:b.code,name:b.name,type:b.type,address:b.address,city:b.city,province:b.province,region:b.region||'',phone:b.phone,email:b.email,managerId:b.manager?.id||'',priceTierId:b.priceTierId||''});setShowEditModal(true)};
   const openDetail=(b:Branch)=>{setSelectedBranch(b);setDetailTab('overview');setDetailOpen(true);fetchDetail(b.id)};
   const handleExport=async()=>{setExporting(true);try{const r=await fetch('/api/hq/branches/enhanced?action=export');if(r.ok){const j=await r.json();const rows=j.data?.rows||[];if(!rows.length){toast.error('Tidak ada data');return}const h=Object.keys(rows[0]);const csv=[h.join(','),...rows.map((r:any)=>h.map(k=>`"${(r[k]||'').toString().replace(/"/g,'""')}"`).join(','))].join('\n');const blob=new Blob([csv],{type:'text/csv'});const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=`branches-${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(u);toast.success(`${rows.length} cabang diekspor`)}}catch{toast.error('Gagal')}finally{setExporting(false)}};
-  const handleImportFile=(e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const reader=new FileReader();reader.onload=(ev)=>{const text=ev.target?.result as string;const lines=text.split('\n').filter(l=>l.trim());if(lines.length<2)return;const headers=lines[0].split(',').map(h=>h.trim().replace(/"/g,''));const rows=lines.slice(1).map(line=>{const vals=line.split(',').map(v=>v.trim().replace(/^"|"$/g,''));const obj:any={};headers.forEach((h,i)=>{obj[h]=vals[i]||''});return obj});setImportData(rows);setShowImportModal(true)};reader.readAsText(f);e.target.value=''};
-  const handleImportExec=async()=>{if(!importData.length)return;setImporting(true);try{const r=await fetch('/api/hq/branches/enhanced?action=import-execute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows:importData})});if(r.ok){const j=await r.json();toast.success(`Import: ${j.data?.created||0} baru, ${j.data?.updated||0} update`);setShowImportModal(false);fetchBranches();fetchIntegrated()}}catch{toast.error('Import gagal')}finally{setImporting(false)}};
+  const resetImport = () => { setImportData([]); setImportValidation(null); setImportResult(null); setImportFileName(''); setImportError(''); setImportStep('upload'); };
+  const openImportModal = () => { resetImport(); setShowImportModal(true); };
+  const closeImportModal = () => { setShowImportModal(false); resetImport(); };
+
+  const handleDownloadTemplate = (format: 'csv'|'json' = 'csv') => {
+    const sample = [
+      { code: 'BR-001', name: 'Kantor Pusat Jakarta', type: 'main', address: 'Jl. Sudirman No. 123', city: 'Jakarta Selatan', province: 'DKI Jakarta', region: 'Jabodetabek', phone: '021-5551234', email: 'pusat@perusahaan.com' },
+      { code: 'BR-002', name: 'Cabang Bandung', type: 'branch', address: 'Jl. Braga No. 45', city: 'Bandung', province: 'Jawa Barat', region: 'Jabar', phone: '022-4201234', email: 'bandung@perusahaan.com' },
+      { code: 'WH-001', name: 'Gudang Cikarang', type: 'warehouse', address: 'Jababeka D-12', city: 'Bekasi', province: 'Jawa Barat', region: 'Jabodetabek', phone: '021-8981234', email: 'gudang@perusahaan.com' },
+    ];
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(sample, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'branches-template.json'; a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const headers = IMPORT_FIELDS.map(f => f.key);
+      const rows = sample.map(s => headers.map(h => toCSVCell((s as any)[h])).join(','));
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'branches-template.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+    toast.success(`Template ${format.toUpperCase()} diunduh`);
+  };
+
+  const processImportFile = async (file: File) => {
+    setImportError('');
+    setImportFileName(file.name);
+    const isJson = /\.json$/i.test(file.name);
+    setImportFormat(isJson ? 'json' : 'csv');
+    try {
+      const text = await file.text();
+      let rows: any[] = [];
+      if (isJson) {
+        const parsed = JSON.parse(text);
+        if (!Array.isArray(parsed)) { setImportError('File JSON harus berupa array objek'); return; }
+        rows = parsed;
+      } else {
+        const { rows: parsedRows, error } = parseCSV(text);
+        if (error) { setImportError(error); return; }
+        rows = parsedRows;
+      }
+      if (rows.length === 0) { setImportError('File tidak berisi data'); return; }
+      const unknownHeaders = Object.keys(rows[0] || {}).filter(h => !IMPORT_FIELDS.some(f => f.key === h));
+      setImportData(rows);
+      await validateImport(rows);
+      setImportStep('preview');
+      if (unknownHeaders.length > 0) toast(`${unknownHeaders.length} kolom tidak dikenal akan diabaikan: ${unknownHeaders.slice(0,4).join(', ')}`, { icon: 'ℹ️' });
+    } catch (e: any) {
+      setImportError(e?.message || 'Gagal membaca file');
+    }
+  };
+
+  const validateImport = async (rows: any[]) => {
+    // Client-side validation fallback
+    const clientResults = rows.map((row, idx) => {
+      const errors: string[] = [];
+      if (!row.code) errors.push('Kode cabang wajib diisi');
+      if (!row.name) errors.push('Nama cabang wajib diisi');
+      if (row.type && !['main','branch','warehouse','kiosk'].includes(String(row.type))) errors.push(`Tipe "${row.type}" tidak valid`);
+      if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) errors.push('Email tidak valid');
+      return { row: idx + 1, data: row, valid: errors.length === 0, errors };
+    });
+    try {
+      const r = await fetch('/api/hq/branches/enhanced?action=import-preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) });
+      if (r.ok) {
+        const j = await r.json();
+        const d = j.data || j;
+        if (d?.preview) {
+          setImportValidation({ total: d.total ?? rows.length, valid: d.valid ?? clientResults.filter(c=>c.valid).length, invalid: d.invalid ?? clientResults.filter(c=>!c.valid).length, preview: d.preview });
+          return;
+        }
+      }
+    } catch {}
+    setImportValidation({ total: rows.length, valid: clientResults.filter(c=>c.valid).length, invalid: clientResults.filter(c=>!c.valid).length, preview: clientResults.slice(0, 50) });
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (f) processImportFile(f); e.target.value = ''; };
+
+  const handleImportExec = async () => {
+    if (!importData.length) return;
+    if (importValidation && importValidation.invalid > 0 && importValidation.valid === 0) { toast.error('Tidak ada baris valid untuk diimpor'); return; }
+    setImporting(true);
+    try {
+      const r = await fetch('/api/hq/branches/enhanced?action=import-execute', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: importData }) });
+      if (r.ok) {
+        const j = await r.json();
+        const d = j.data || j;
+        setImportResult({ total: d.total ?? 0, created: d.created ?? 0, updated: d.updated ?? 0, errors: d.errors ?? 0, details: d.details ?? [] });
+        setImportStep('result');
+        toast.success(`Import selesai: ${d.created || 0} baru, ${d.updated || 0} diperbarui${d.errors ? `, ${d.errors} gagal` : ''}`);
+        fetchBranches(); fetchIntegrated();
+      } else {
+        const j = await r.json().catch(() => ({}));
+        toast.error(j.error?.message || j.message || 'Import gagal');
+      }
+    } catch { toast.error('Import gagal'); }
+    finally { setImporting(false); }
+  };
 
   // ─── Table Columns ───
   const columns: Column<Branch>[] = [
@@ -171,6 +334,14 @@ export default function BranchManagement() {
   return (
     <HQLayout>
       <div className="space-y-6">
+        {/* DEMO MODE BANNER */}
+        {usingMock && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600"/>
+            <span><strong>Mode Demo:</strong> menampilkan data sampel karena API cabang tidak tersedia. Aksi simpan tetap dikirim ke server.</span>
+          </div>
+        )}
+
         {/* HEADER */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
@@ -179,8 +350,8 @@ export default function BranchManagement() {
           </div>
           <div className="flex items-center gap-2">
             <select value={industry} onChange={e=>setIndustry(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">{INDUSTRY_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
-            <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImportFile} className="hidden"/>
-            <button onClick={()=>fileInputRef.current?.click()} className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-600"><Upload className="w-4 h-4"/> Import</button>
+            <input ref={fileInputRef} type="file" accept=".csv,.json,text/csv,application/json" onChange={handleImportFile} className="hidden"/>
+            <button onClick={openImportModal} className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-600"><Upload className="w-4 h-4"/> Import</button>
             <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-600"><Download className={`w-4 h-4 ${exporting?'animate-spin':''}`}/> Ekspor</button>
             <button onClick={()=>{resetForm();setShowCreateModal(true)}} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium shadow-sm"><Plus className="w-4 h-4"/> Tambah Cabang</button>
           </div>
@@ -267,8 +438,230 @@ export default function BranchManagement() {
       </Modal>
       <ConfirmDialog isOpen={showDeleteConfirm} onClose={()=>{setShowDeleteConfirm(false);setSelectedBranch(null)}} onConfirm={handleDelete} title="Hapus Cabang" message={`Yakin ingin menghapus ${selectedBranch?.name}?`} confirmText="Hapus" variant="danger" loading={actionLoading}/>
       <ConfirmDialog isOpen={showToggleConfirm} onClose={()=>{setShowToggleConfirm(false);setSelectedBranch(null)}} onConfirm={handleToggle} title={selectedBranch?.isActive?'Non-aktifkan Cabang':'Aktifkan Cabang'} message={selectedBranch?.isActive?`Non-aktifkan ${selectedBranch?.name}?`:`Aktifkan ${selectedBranch?.name}?`} confirmText={selectedBranch?.isActive?'Non-aktifkan':'Aktifkan'} variant={selectedBranch?.isActive?'warning':'info'} loading={actionLoading}/>
-      <Modal isOpen={showImportModal} onClose={()=>{setShowImportModal(false);setImportData([])}} title="Import Data Cabang" size="xl" footer={<div className="flex justify-between"><button onClick={()=>{setShowImportModal(false);setImportData([])}} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Batal</button><button onClick={handleImportExec} disabled={importing||!importData.length} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"><Upload className="w-4 h-4"/>{importing?'Mengimpor...':` Import ${importData.length} baris`}</button></div>}>
-        <div className="space-y-4"><div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700"><p className="font-medium">Format CSV didukung</p></div>{importData.length>0&&<div className="overflow-x-auto max-h-80 border rounded-lg"><table className="w-full text-sm"><thead className="bg-gray-50 sticky top-0"><tr><th className="px-3 py-2 text-left text-xs font-medium text-gray-500">#</th>{Object.keys(importData[0]).slice(0,6).map(k=><th key={k} className="px-3 py-2 text-left text-xs font-medium text-gray-500">{k}</th>)}</tr></thead><tbody className="divide-y divide-gray-100">{importData.slice(0,30).map((row,i)=><tr key={i} className="hover:bg-gray-50"><td className="px-3 py-2 text-gray-400">{i+1}</td>{Object.values(row).slice(0,6).map((val:any,j)=><td key={j} className="px-3 py-2 text-gray-700 max-w-[150px] truncate">{String(val||'')}</td>)}</tr>)}</tbody></table></div>}</div>
+      <Modal
+        isOpen={showImportModal}
+        onClose={closeImportModal}
+        title={importStep === 'upload' ? 'Import Data Cabang' : importStep === 'preview' ? `Pratinjau Import — ${importFileName || 'file'}` : 'Hasil Import'}
+        size="xl"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <div className="text-xs text-gray-500">
+              {importStep === 'upload' && 'Unduh template untuk panduan kolom yang didukung.'}
+              {importStep === 'preview' && importValidation && (
+                <span>
+                  Total: <b>{importValidation.total}</b> •
+                  <span className="text-green-600"> Valid: {importValidation.valid}</span> •
+                  {importValidation.invalid > 0 && <span className="text-red-600"> Invalid: {importValidation.invalid}</span>}
+                </span>
+              )}
+              {importStep === 'result' && importResult && (
+                <span>Dibuat: <b className="text-green-600">{importResult.created}</b> • Diperbarui: <b className="text-blue-600">{importResult.updated}</b> • Gagal: <b className="text-red-600">{importResult.errors}</b></span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {importStep === 'upload' && (
+                <button onClick={closeImportModal} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Tutup</button>
+              )}
+              {importStep === 'preview' && (<>
+                <button onClick={() => { resetImport(); }} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Ulangi</button>
+                <button onClick={handleImportExec} disabled={importing || !importData.length || (!!importValidation && importValidation.valid === 0)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                  <Upload className="w-4 h-4"/>
+                  {importing ? 'Mengimpor...' : `Proses Import ${importValidation?.valid ?? importData.length} Baris`}
+                </button>
+              </>)}
+              {importStep === 'result' && (<>
+                <button onClick={() => { resetImport(); }} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Import Lagi</button>
+                <button onClick={closeImportModal} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Selesai</button>
+              </>)}
+            </div>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {/* Stepper */}
+          <div className="flex items-center gap-2">
+            {[
+              { k: 'upload', l: '1. Unggah', icon: Upload },
+              { k: 'preview', l: '2. Validasi', icon: ClipboardList },
+              { k: 'result', l: '3. Hasil', icon: CheckCircle },
+            ].map((s, i, arr) => {
+              const active = importStep === s.k;
+              const done = ((importStep === 'preview' && s.k === 'upload') || (importStep === 'result' && s.k !== 'result'));
+              return (
+                <React.Fragment key={s.k}>
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${active ? 'bg-blue-100 text-blue-700' : done ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <s.icon className="w-3.5 h-3.5"/> {s.l}
+                  </div>
+                  {i < arr.length - 1 && <div className={`h-px flex-1 ${done ? 'bg-green-300' : 'bg-gray-200'}`}/>}
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          {/* STEP 1 — Upload */}
+          {importStep === 'upload' && (
+            <div className="space-y-4">
+              {/* Drop zone */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setImportDragOver(true); }}
+                onDragLeave={() => setImportDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault(); setImportDragOver(false);
+                  const f = e.dataTransfer.files?.[0]; if (f) processImportFile(f);
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                className={`cursor-pointer border-2 border-dashed rounded-xl p-8 text-center transition-colors ${importDragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-300 bg-gray-50'}`}
+              >
+                <Upload className="w-10 h-10 mx-auto text-blue-500 mb-2"/>
+                <p className="text-sm font-medium text-gray-800">Tarik & lepas file di sini atau <span className="text-blue-600 underline">pilih file</span></p>
+                <p className="text-xs text-gray-500 mt-1">Format didukung: <b>.csv</b> (UTF-8) atau <b>.json</b> (array objek) • Maksimum ±5.000 baris</p>
+                {importError && <p className="text-xs text-red-600 mt-2"><AlertTriangle className="inline w-3 h-3 mr-1"/>{importError}</p>}
+              </div>
+
+              {/* Template download */}
+              <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h4 className="font-semibold text-gray-900 text-sm flex items-center gap-2"><FileText className="w-4 h-4 text-blue-500"/> Template & Contoh</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">Unduh file contoh yang sudah berisi header & 3 baris data valid.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleDownloadTemplate('csv')} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-lg text-xs font-medium hover:bg-green-100"><Download className="w-3.5 h-3.5"/> Template CSV</button>
+                  <button onClick={() => handleDownloadTemplate('json')} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-medium hover:bg-indigo-100"><Download className="w-3.5 h-3.5"/> Template JSON</button>
+                </div>
+              </div>
+
+              {/* Field documentation */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+                  <ClipboardList className="w-4 h-4 text-gray-500"/>
+                  <h4 className="font-semibold text-gray-900 text-sm">Kolom yang Didukung</h4>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-[11px] uppercase text-gray-500 font-medium">Kolom</th>
+                        <th className="px-4 py-2 text-left text-[11px] uppercase text-gray-500 font-medium">Wajib</th>
+                        <th className="px-4 py-2 text-left text-[11px] uppercase text-gray-500 font-medium">Contoh</th>
+                        <th className="px-4 py-2 text-left text-[11px] uppercase text-gray-500 font-medium">Keterangan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {IMPORT_FIELDS.map(f => (
+                        <tr key={f.key} className="hover:bg-gray-50">
+                          <td className="px-4 py-2 font-mono text-xs text-gray-900">{f.key}</td>
+                          <td className="px-4 py-2">{f.required ? <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-semibold">Wajib</span> : <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-[10px]">Opsional</span>}</td>
+                          <td className="px-4 py-2 text-gray-600 font-mono text-xs">{f.example}</td>
+                          <td className="px-4 py-2 text-gray-600 text-xs">
+                            {f.description}
+                            {f.allowed && <span className="block mt-0.5 text-[11px] text-gray-400">Nilai: {f.allowed.map(a => <code key={a} className="mx-0.5 px-1 bg-gray-100 rounded">{a}</code>)}</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Rules */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 space-y-1.5">
+                <p className="font-semibold flex items-center gap-2"><Bell className="w-4 h-4"/> Aturan Import</p>
+                <ul className="list-disc pl-5 text-xs space-y-0.5 text-blue-900/80">
+                  <li>Baris dengan <b>kode</b> yang sudah ada akan <b>diperbarui</b> (upsert by code).</li>
+                  <li>Baris tanpa <b>code</b> atau <b>name</b> akan ditolak.</li>
+                  <li>File CSV harus UTF-8; gunakan tanda kutip ganda untuk nilai yang mengandung koma. Contoh: <code className="bg-white px-1 rounded">"Jl. Sudirman, Kav. 10"</code>.</li>
+                  <li>Kolom di luar daftar di atas akan diabaikan.</li>
+                  <li>Manager, price tier, dan konfigurasi detail lainnya tidak diimpor dari file ini — atur via halaman detail cabang.</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2 — Preview / Validation */}
+          {importStep === 'preview' && importValidation && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-200"><p className="text-xs text-gray-500">Total Baris</p><p className="text-xl font-bold text-gray-900">{importValidation.total}</p></div>
+                <div className="bg-green-50 rounded-xl p-3 border border-green-200"><p className="text-xs text-green-600">Valid (akan diimpor)</p><p className="text-xl font-bold text-green-800">{importValidation.valid}</p></div>
+                <div className="bg-red-50 rounded-xl p-3 border border-red-200"><p className="text-xs text-red-600">Invalid (dilewati)</p><p className="text-xl font-bold text-red-800">{importValidation.invalid}</p></div>
+              </div>
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <div className="overflow-x-auto max-h-96">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-[11px] uppercase text-gray-500 font-medium">#</th>
+                        <th className="px-3 py-2 text-left text-[11px] uppercase text-gray-500 font-medium">Status</th>
+                        {IMPORT_FIELDS.slice(0, 6).map(f => (
+                          <th key={f.key} className="px-3 py-2 text-left text-[11px] uppercase text-gray-500 font-medium">{f.label}</th>
+                        ))}
+                        <th className="px-3 py-2 text-left text-[11px] uppercase text-gray-500 font-medium">Catatan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {importValidation.preview.map((row) => (
+                        <tr key={row.row} className={row.valid ? 'hover:bg-gray-50' : 'bg-red-50/50 hover:bg-red-50'}>
+                          <td className="px-3 py-2 text-gray-400 text-xs">{row.row}</td>
+                          <td className="px-3 py-2">
+                            {row.valid
+                              ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold"><CheckCircle className="w-3 h-3"/>Valid</span>
+                              : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-semibold"><XCircle className="w-3 h-3"/>Invalid</span>}
+                          </td>
+                          {IMPORT_FIELDS.slice(0, 6).map(f => (
+                            <td key={f.key} className="px-3 py-2 text-xs text-gray-700 max-w-[160px] truncate">{String(row.data?.[f.key] || '')}</td>
+                          ))}
+                          <td className="px-3 py-2 text-[11px] text-red-600">{row.errors.join('; ')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {importValidation.total > importValidation.preview.length && (
+                  <div className="px-3 py-2 bg-gray-50 text-[11px] text-gray-500 border-t border-gray-200">Menampilkan {importValidation.preview.length} dari {importValidation.total} baris.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3 — Result */}
+          {importStep === 'result' && importResult && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-4 gap-3">
+                <div className="bg-gray-50 rounded-xl p-3 border border-gray-200"><p className="text-xs text-gray-500">Total</p><p className="text-xl font-bold text-gray-900">{importResult.total}</p></div>
+                <div className="bg-green-50 rounded-xl p-3 border border-green-200"><p className="text-xs text-green-600">Dibuat</p><p className="text-xl font-bold text-green-800">{importResult.created}</p></div>
+                <div className="bg-blue-50 rounded-xl p-3 border border-blue-200"><p className="text-xs text-blue-600">Diperbarui</p><p className="text-xl font-bold text-blue-800">{importResult.updated}</p></div>
+                <div className={`rounded-xl p-3 border ${importResult.errors > 0 ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}`}><p className={`text-xs ${importResult.errors > 0 ? 'text-red-600' : 'text-gray-500'}`}>Gagal</p><p className={`text-xl font-bold ${importResult.errors > 0 ? 'text-red-800' : 'text-gray-900'}`}>{importResult.errors}</p></div>
+              </div>
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-700">Detail per Baris</div>
+                <div className="overflow-x-auto max-h-80">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-[11px] uppercase text-gray-500 font-medium">Kode</th>
+                        <th className="px-3 py-2 text-left text-[11px] uppercase text-gray-500 font-medium">Status</th>
+                        <th className="px-3 py-2 text-left text-[11px] uppercase text-gray-500 font-medium">Pesan</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {importResult.details.map((d, i) => (
+                        <tr key={i} className={d.status === 'error' ? 'bg-red-50/50' : ''}>
+                          <td className="px-3 py-2 font-mono text-xs text-gray-900">{d.code || '-'}</td>
+                          <td className="px-3 py-2">
+                            {d.status === 'created' && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-semibold"><CheckCircle className="w-3 h-3"/>Baru</span>}
+                            {d.status === 'updated' && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-semibold"><RefreshCw className="w-3 h-3"/>Update</span>}
+                            {d.status === 'error'   && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-semibold"><XCircle className="w-3 h-3"/>Gagal</span>}
+                          </td>
+                          <td className="px-3 py-2 text-xs text-gray-600">{d.message || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </Modal>
     </HQLayout>
   );

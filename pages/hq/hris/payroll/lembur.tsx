@@ -66,7 +66,41 @@ export default function LemburPage() {
   const [toast, setToast] = useState<{ type: string; message: string } | null>(null);
   const showToast = (type: string, message: string) => { setToast({ type, message }); setTimeout(() => setToast(null), 3000); };
 
-  useEffect(() => { setMounted(true); setRecords(MOCK_OT); }, []);
+  useEffect(() => {
+    setMounted(true);
+    (async () => {
+      try {
+        const now = new Date();
+        const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const res = await fetch(`/api/hq/hris/payroll?action=lembur&period=${period}`);
+        const json = await res.json().catch(() => null);
+        if (res.ok && Array.isArray(json?.data) && json.data.length > 0) {
+          const mapped: OvertimeRecord[] = json.data.map((r: any) => ({
+            id: String(r.id),
+            employee_id: String(r.employee_id || r.id),
+            employee_name: r.employee_name,
+            position: r.position || '-',
+            department: r.department || '-',
+            date: `${r.period}-01`,
+            start_time: '17:00',
+            end_time: '-',
+            hours: Number(r.hours || 0),
+            type: 'workday',
+            multiplier: 1.5,
+            base_hourly: Number(r.hourly_rate || 0),
+            amount: Number(r.amount || 0),
+            reason: 'Rekap lembur dari absensi',
+            status: (r.status || 'approved') as OvertimeRecord['status'],
+          }));
+          setRecords(mapped);
+        } else {
+          setRecords(MOCK_OT);
+        }
+      } catch {
+        setRecords(MOCK_OT);
+      }
+    })();
+  }, []);
 
   const filtered = useMemo(() => {
     let data = records;

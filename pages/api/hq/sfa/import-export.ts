@@ -36,7 +36,7 @@ function generateNumber(prefix: string): string {
 // ════════════════════════════════════════════════════════════════
 // ENTITY DEFINITIONS — columns, validations, DB mapping
 // ════════════════════════════════════════════════════════════════
-interface EntityColumn {
+export interface EntityColumn {
   key: string;
   label: string;
   required?: boolean;
@@ -46,7 +46,7 @@ interface EntityColumn {
   dbColumn?: string; // if different from key
 }
 
-interface EntityDef {
+export interface EntityDef {
   id: string;
   label: string;
   table: string;
@@ -58,7 +58,7 @@ interface EntityDef {
   exportQuery?: string;
 }
 
-const ENTITIES: Record<string, EntityDef> = {
+export const ENTITIES: Record<string, EntityDef> = {
   // ── SFA Entities ──
   leads: {
     id: 'leads', label: 'Leads', table: 'sfa_leads', module: 'sfa', category: 'Sales',

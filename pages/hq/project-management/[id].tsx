@@ -9,7 +9,8 @@ import {
 import {
   Briefcase, ArrowLeft, Edit3, Trash2, Plus, Loader2, Calendar, Users, DollarSign,
   AlertTriangle, FileText, Flag, Timer, ListTodo, CheckCircle2, Clock, Target,
-  Layers, XCircle, TrendingUp, ChevronRight
+  Layers, XCircle, TrendingUp, ChevronRight, MessageSquare, Activity, Eye,
+  CheckCheck, GitBranch, Send, UserPlus, Bell, BellOff, Link as LinkIcon, X
 } from 'lucide-react';
 
 const SC: Record<string, string> = {
@@ -28,7 +29,7 @@ const fmt = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', c
 const fmtShort = (n: number) => { if (n >= 1e9) return `Rp ${(n / 1e9).toFixed(1)}M`; if (n >= 1e6) return `Rp ${(n / 1e6).toFixed(1)}Jt`; return fmt(n); };
 const fD = (d: string | null) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 
-type DetailTab = 'overview' | 'tasks' | 'milestones' | 'resources' | 'risks' | 'budget' | 'documents';
+type DetailTab = 'overview' | 'tasks' | 'milestones' | 'resources' | 'risks' | 'budget' | 'documents' | 'comments' | 'activity' | 'watchers' | 'approvals' | 'dependencies';
 
 const Badge = ({ value, colors }: { value: string; colors: Record<string, string> }) => (
   <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${colors[value] || 'bg-gray-100 text-gray-700'}`}>{value}</span>
@@ -50,6 +51,15 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
   const [taskViewMode, setTaskViewMode] = useState<'table' | 'kanban'>('kanban');
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
+  const [activityLog, setActivityLog] = useState<any[]>([]);
+  const [watchers, setWatchers] = useState<any[]>([]);
+  const [approvals, setApprovals] = useState<any[]>([]);
+  const [dependencies, setDependencies] = useState<any[]>([]);
+  const [isWatching, setIsWatching] = useState(false);
+  const [loadingSub, setLoadingSub] = useState(false);
 
   const fetchProject = useCallback(async () => {
     if (!id) return;
@@ -63,6 +73,78 @@ export default function ProjectDetailPage() {
   }, [id, router]);
 
   useEffect(() => { fetchProject(); }, [fetchProject]);
+
+  // Load data for collaboration tabs
+  const fetchCollab = useCallback(async (tab: DetailTab) => {
+    if (!id) return;
+    setLoadingSub(true);
+    try {
+      const actionMap: Record<string, string> = {
+        comments: 'comments', activity: 'activity-log', watchers: 'watchers',
+        approvals: 'approvals', dependencies: 'dependencies',
+      };
+      const action = actionMap[tab]; if (!action) return;
+      const r = await fetch(`/api/hq/project-management?action=${action}&projectId=${id}`);
+      const d = await r.json();
+      if (!d.success) return;
+      const rows = Array.isArray(d.data) ? d.data : (d.data?.rows || []);
+      switch (tab) {
+        case 'comments': setComments(rows); break;
+        case 'activity': setActivityLog(rows); break;
+        case 'watchers':
+          setWatchers(rows);
+          setIsWatching(rows.some((w: any) => w.is_current_user));
+          break;
+        case 'approvals': setApprovals(rows); break;
+        case 'dependencies': setDependencies(rows); break;
+      }
+    } catch (e: any) { console.error(e); } finally { setLoadingSub(false); }
+  }, [id]);
+
+  useEffect(() => {
+    if (['comments', 'activity', 'watchers', 'approvals', 'dependencies'].includes(activeTab)) {
+      fetchCollab(activeTab);
+    }
+  }, [activeTab, fetchCollab]);
+
+  const handlePostComment = async () => {
+    if (!newComment.trim() || !id) return;
+    setPostingComment(true);
+    try {
+      const r = await fetch('/api/hq/project-management?action=comments', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: id, content: newComment.trim() }),
+      });
+      const d = await r.json();
+      if (d.success) { toast.success('Komentar terkirim'); setNewComment(''); fetchCollab('comments'); }
+      else toast.error(d.error?.message || 'Gagal');
+    } catch (e: any) { toast.error(e.message); } finally { setPostingComment(false); }
+  };
+
+  const handleToggleWatch = async () => {
+    if (!id) return;
+    try {
+      const r = await fetch('/api/hq/project-management?action=watchers', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: id, toggle: true }),
+      });
+      const d = await r.json();
+      if (d.success) { toast.success(isWatching ? 'Unwatched' : 'Watching'); fetchCollab('watchers'); }
+      else toast.error(d.error?.message || 'Gagal');
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const handleApprovalDecision = async (approvalId: string, decision: 'approved' | 'rejected') => {
+    try {
+      const r = await fetch(`/api/hq/project-management?action=approvals&id=${approvalId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: decision, projectId: id }),
+      });
+      const d = await r.json();
+      if (d.success) { toast.success(decision === 'approved' ? 'Disetujui' : 'Ditolak'); fetchCollab('approvals'); }
+      else toast.error(d.error?.message || 'Gagal');
+    } catch (e: any) { toast.error(e.message); }
+  };
 
   const handleTaskStatusChange = async (taskId: string, newStatus: string) => {
     try {
@@ -138,10 +220,15 @@ export default function ProjectDetailPage() {
     { id: 'overview', name: 'Ringkasan', icon: Briefcase },
     { id: 'tasks', name: 'Tugas', icon: ListTodo, count: project.tasks?.length || 0 },
     { id: 'milestones', name: 'Milestone', icon: Flag, count: project.milestones?.length || 0 },
+    { id: 'dependencies', name: 'Dependencies', icon: GitBranch },
     { id: 'resources', name: 'Sumber Daya', icon: Users, count: project.resources?.length || 0 },
     { id: 'risks', name: 'Risiko', icon: AlertTriangle, count: project.risks?.length || 0 },
     { id: 'budget', name: 'Anggaran', icon: DollarSign, count: project.budgetItems?.length || 0 },
     { id: 'documents', name: 'Dokumen', icon: FileText, count: project.documents?.length || 0 },
+    { id: 'comments', name: 'Komentar', icon: MessageSquare },
+    { id: 'activity', name: 'Aktivitas', icon: Activity },
+    { id: 'watchers', name: 'Watchers', icon: Eye },
+    { id: 'approvals', name: 'Approval', icon: CheckCheck },
   ];
 
   return (
@@ -165,6 +252,12 @@ export default function ProjectDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <button onClick={handleToggleWatch}
+                className={`px-3 py-2 border rounded-lg text-sm flex items-center gap-1.5 transition ${isWatching ? 'bg-blue-50 border-blue-300 text-blue-700' : 'hover:bg-gray-50'}`}
+                title={isWatching ? 'Berhenti memantau' : 'Pantau proyek ini'}>
+                {isWatching ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                {isWatching ? 'Watching' : 'Watch'}
+              </button>
               <button onClick={() => router.push('/hq/project-management?tab=projects')} className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1.5"><Edit3 className="w-4 h-4" /> Edit</button>
             </div>
           </div>
@@ -578,6 +671,243 @@ export default function ProjectDetailPage() {
                 {(project.documents || []).length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Belum ada dokumen</td></tr>}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* ===== COMMENTS ===== */}
+        {activeTab === 'comments' && (
+          <div className="max-w-4xl space-y-4">
+            <div className="bg-white rounded-xl border p-5">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-blue-600" />Diskusi Proyek</h3>
+              <div className="flex gap-3 items-start">
+                <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold text-sm flex-shrink-0">U</div>
+                <div className="flex-1">
+                  <textarea
+                    className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    rows={3} placeholder="Tulis komentar atau update proyek..." value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                  />
+                  <div className="flex justify-end mt-2">
+                    <button onClick={handlePostComment} disabled={postingComment || !newComment.trim()}
+                      className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium flex items-center gap-1.5 hover:bg-blue-700 disabled:opacity-50">
+                      {postingComment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                      Kirim
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {loadingSub && <div className="text-center py-6"><Loader2 className="w-5 h-5 animate-spin mx-auto text-gray-400" /></div>}
+              {!loadingSub && comments.length === 0 && (
+                <div className="bg-white border-2 border-dashed rounded-xl p-12 text-center">
+                  <MessageSquare className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">Belum ada komentar. Jadilah yang pertama!</p>
+                </div>
+              )}
+              {comments.map((c: any) => (
+                <div key={c.id} className="bg-white rounded-xl border p-4 hover:shadow-sm transition">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                      {(c.author_name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm text-gray-900">{c.author_name || 'Unknown'}</span>
+                        <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                        {c.task_name && <span className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">pada {c.task_name}</span>}
+                      </div>
+                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.content}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ===== ACTIVITY LOG ===== */}
+        {activeTab === 'activity' && (
+          <div className="max-w-4xl">
+            <div className="bg-white rounded-xl border">
+              <div className="p-5 border-b flex items-center gap-2">
+                <Activity className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-semibold text-gray-900">Audit Trail & Activity</h3>
+              </div>
+              <div className="divide-y max-h-[600px] overflow-y-auto">
+                {loadingSub && <div className="text-center py-6"><Loader2 className="w-5 h-5 animate-spin mx-auto text-gray-400" /></div>}
+                {!loadingSub && activityLog.length === 0 && (
+                  <div className="p-12 text-center text-sm text-gray-400">Belum ada aktivitas tercatat</div>
+                )}
+                {activityLog.map((a: any) => {
+                  const actionColor = a.action === 'create' ? 'bg-emerald-100 text-emerald-700' :
+                    a.action === 'update' ? 'bg-blue-100 text-blue-700' :
+                    a.action === 'delete' ? 'bg-red-100 text-red-700' :
+                    a.action === 'approve' ? 'bg-purple-100 text-purple-700' :
+                    'bg-gray-100 text-gray-700';
+                  return (
+                    <div key={a.id} className="p-3 flex items-start gap-3 hover:bg-gray-50">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase ${actionColor}`}>{a.action}</span>
+                          <span className="text-xs font-medium text-gray-800">{a.actor_name || 'System'}</span>
+                          <span className="text-xs text-gray-500">· {a.entity_type}</span>
+                          {a.entity_name && <span className="text-xs text-gray-700 font-medium">{a.entity_name}</span>}
+                          <span className="text-xs text-gray-400 ml-auto">{new Date(a.created_at).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                        </div>
+                        {a.description && <p className="text-xs text-gray-500 mt-1">{a.description}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== WATCHERS ===== */}
+        {activeTab === 'watchers' && (
+          <div className="max-w-3xl">
+            <div className="bg-white rounded-xl border">
+              <div className="p-5 border-b flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-purple-600" />
+                  <h3 className="font-semibold text-gray-900">Watchers</h3>
+                  <span className="text-xs text-gray-500">({watchers.length})</span>
+                </div>
+                <button onClick={handleToggleWatch}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 ${isWatching ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
+                  {isWatching ? <><BellOff className="w-3.5 h-3.5" />Berhenti Pantau</> : <><Bell className="w-3.5 h-3.5" />Pantau Proyek</>}
+                </button>
+              </div>
+              <div className="divide-y">
+                {loadingSub && <div className="p-6 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-gray-400" /></div>}
+                {!loadingSub && watchers.length === 0 && (
+                  <div className="p-12 text-center text-sm text-gray-400">Belum ada watcher</div>
+                )}
+                {watchers.map((w: any) => (
+                  <div key={w.id || w.user_id} className="p-3 flex items-center gap-3 hover:bg-gray-50">
+                    <div className="w-9 h-9 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-semibold">
+                      {(w.user_name || w.name || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{w.user_name || w.name}</p>
+                      <p className="text-xs text-gray-500">{w.email || w.position || '-'}</p>
+                    </div>
+                    {w.is_current_user && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">Anda</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== APPROVALS ===== */}
+        {activeTab === 'approvals' && (
+          <div className="max-w-4xl">
+            <div className="bg-white rounded-xl border">
+              <div className="p-5 border-b flex items-center gap-2">
+                <CheckCheck className="w-5 h-5 text-amber-600" />
+                <h3 className="font-semibold text-gray-900">Approval Workflow</h3>
+              </div>
+              <div className="divide-y">
+                {loadingSub && <div className="p-6 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-gray-400" /></div>}
+                {!loadingSub && approvals.length === 0 && (
+                  <div className="p-12 text-center text-sm text-gray-400">Tidak ada permintaan persetujuan</div>
+                )}
+                {approvals.map((a: any) => (
+                  <div key={a.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge value={a.status} colors={SC} />
+                          <span className="text-xs text-gray-500">· {a.entity_type} · {a.approval_type || 'general'}</span>
+                        </div>
+                        <p className="font-semibold text-sm text-gray-900">{a.entity_name || a.title}</p>
+                        {a.description && <p className="text-xs text-gray-600 mt-1">{a.description}</p>}
+                      </div>
+                      {a.status === 'pending' && (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => handleApprovalDecision(a.id, 'rejected')}
+                            className="px-3 py-1.5 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 flex items-center gap-1">
+                            <X className="w-3 h-3" />Tolak
+                          </button>
+                          <button onClick={() => handleApprovalDecision(a.id, 'approved')}
+                            className="px-3 py-1.5 text-xs bg-emerald-500 text-white rounded hover:bg-emerald-600 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />Setujui
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                      <span>Diminta: {a.requester_name || '-'}</span>
+                      <span>· {new Date(a.created_at).toLocaleDateString('id-ID')}</span>
+                      {a.approver_name && <span>· Approver: {a.approver_name}</span>}
+                      {a.approved_at && <span>· Diputuskan: {new Date(a.approved_at).toLocaleDateString('id-ID')}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== DEPENDENCIES ===== */}
+        {activeTab === 'dependencies' && (
+          <div className="max-w-5xl">
+            <div className="bg-white rounded-xl border">
+              <div className="p-5 border-b flex items-center gap-2">
+                <GitBranch className="w-5 h-5 text-indigo-600" />
+                <h3 className="font-semibold text-gray-900">Task Dependencies</h3>
+                <span className="text-xs text-gray-500 ml-auto">Finish-to-Start (FS), Start-to-Start (SS), Finish-to-Finish (FF), Start-to-Finish (SF)</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-xs">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600">Predecessor</th>
+                      <th className="px-4 py-3 text-center font-medium text-gray-600">Type</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600">Successor</th>
+                      <th className="px-4 py-3 text-center font-medium text-gray-600">Lag</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {loadingSub && <tr><td colSpan={5} className="p-6 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-gray-400" /></td></tr>}
+                    {!loadingSub && dependencies.length === 0 && (
+                      <tr><td colSpan={5} className="px-4 py-12 text-center text-gray-400">Belum ada dependency antar task</td></tr>
+                    )}
+                    {dependencies.map((d: any) => (
+                      <tr key={d.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <LinkIcon className="w-3 h-3 text-gray-400" />
+                            <span className="font-medium">{d.predecessor_name}</span>
+                            {d.predecessor_status && <Badge value={d.predecessor_status} colors={SC} />}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-[10px] font-bold px-2 py-1 bg-indigo-100 text-indigo-700 rounded">{(d.dependency_type || 'FS').toUpperCase()}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <ChevronRight className="w-3 h-3 text-gray-400" />
+                            <span className="font-medium">{d.successor_name}</span>
+                            {d.successor_status && <Badge value={d.successor_status} colors={SC} />}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center text-xs text-gray-500">{d.lag_days || 0}d</td>
+                        <td className="px-4 py-3">
+                          {d.is_blocking ? <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Blocking</span> :
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">OK</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
       </div>

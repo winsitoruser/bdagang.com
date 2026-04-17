@@ -27,11 +27,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const tenantId = (session.user as any).tenantId;
-    if (!tenantId) {
-      return res.status(400).json({ success: false, error: 'Tenant ID not found in session' });
-    }
-
     const action = (req.query.action as string) || 'overview';
+
+    // Super admin / platform admin tanpa tenant dapat melihat demo data kosong
+    // agar halaman billing-info tetap tampil tanpa 400.
+    if (!tenantId) {
+      return res.status(200).json({
+        success: true,
+        data: buildEmptyBillingPayload(session.user as any),
+        _note: 'No tenantId in session; returning empty billing overview (demo mode)',
+      });
+    }
 
     switch (action) {
       case 'overview':
@@ -53,6 +59,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
+// ─── Empty payload builder (digunakan saat tenantId kosong) ─────────────────
+function buildEmptyBillingPayload(user: any) {
+  const now = new Date();
+  return {
+    tenant: {
+      id: '',
+      businessName: user?.businessName || user?.name || 'Platform Admin',
+      businessCode: '',
+      businessEmail: user?.email || '',
+      status: 'inactive',
+      kybStatus: 'not_applicable',
+      businessStructure: 'single',
+      isHq: false,
+    },
+    subscription: {
+      status: 'inactive',
+      plan: null,
+      currentPeriodStart: null,
+      currentPeriodEnd: null,
+      daysLeft: null,
+    },
+    usage: {
+      current: { users: 0, branches: 0, products: 0, transactions: 0, employees: 0, warehouses: 0 },
+      limits: { maxUsers: 0, maxBranches: 0, maxProducts: 0, maxTransactions: 0 },
+      percentages: { users: 0, branches: 0, products: 0, transactions: 0 },
+    },
+    modules: [],
+    recentInvoices: [],
+    billingHistory: [],
+    _emptyReason: 'no-tenant',
+    _generatedAt: now.toISOString(),
+  };
+}
+
 // ─── Overview ───────────────────────────────────────────────────────────────
 async function handleOverview(req: NextApiRequest, res: NextApiResponse, tenantId: string) {
   const db = getDb();
@@ -68,6 +108,9 @@ async function handleOverview(req: NextApiRequest, res: NextApiResponse, tenantI
   if (!tenant) {
     return res.status(404).json({ success: false, error: 'Tenant not found' });
   }
+
+  // 1a. Lazy overdue sweep (opportunistic, bounded, per-tenant)
+  await sweepOverdueInvoices(db, tenantId);
 
   // 2. Subscription
   let subscription = null;
@@ -100,6 +143,9 @@ async function handleOverview(req: NextApiRequest, res: NextApiResponse, tenantI
       limit: 5
     });
   } catch (e) { /* optional */ }
+
+  // 5a. Billing alerts — outstanding + next due
+  const alerts = await buildBillingAlerts(db, tenantId);
 
   // 6. Billing cycles summary
   let billingCycles: any[] = [];
@@ -213,8 +259,110 @@ async function handleOverview(req: NextApiRequest, res: NextApiResponse, tenantI
         status: bc.status,
         dueDate: bc.dueDate,
       })),
+      alerts,
     }
   });
+}
+
+// ─── Billing helpers ────────────────────────────────────────────────────────
+async function sweepOverdueInvoices(db: any, tenantId: string) {
+  try {
+    const gracePeriodDays = Number(process.env.BILLING_GRACE_PERIOD_DAYS || '0');
+    const threshold = new Date(Date.now() - gracePeriodDays * 24 * 60 * 60 * 1000);
+    const candidates = await db.Invoice.findAll({
+      where: {
+        tenantId,
+        status: ['sent', 'draft'],
+        dueDate: { [db.Sequelize.Op.lt]: threshold }
+      },
+      limit: 25
+    });
+    for (const inv of candidates) {
+      inv.status = 'overdue';
+      inv.metadata = {
+        ...(inv.metadata || {}),
+        markedOverdueAt: new Date().toISOString()
+      };
+      await inv.save();
+      if (inv.subscriptionId) {
+        const sub = await db.Subscription.findByPk(inv.subscriptionId);
+        if (sub && sub.status === 'active') {
+          sub.status = 'past_due';
+          await sub.save();
+        }
+      }
+    }
+  } catch (_) { /* best-effort, never fail overview */ }
+}
+
+async function buildBillingAlerts(db: any, tenantId: string) {
+  try {
+    const now = new Date();
+    const upcomingThreshold = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const outstanding = await db.Invoice.findAll({
+      where: {
+        tenantId,
+        status: ['sent', 'overdue', 'draft']
+      },
+      order: [['dueDate', 'ASC']],
+      limit: 10
+    });
+
+    const overdue = outstanding.filter((i: any) =>
+      i.status === 'overdue' ||
+      (i.dueDate && new Date(i.dueDate).getTime() < now.getTime())
+    );
+    const upcoming = outstanding.filter((i: any) =>
+      i.status !== 'overdue' &&
+      i.dueDate && new Date(i.dueDate).getTime() <= upcomingThreshold.getTime() &&
+      new Date(i.dueDate).getTime() >= now.getTime()
+    );
+
+    const outstandingTotal = outstanding.reduce(
+      (s: number, i: any) => s + parseFloat(i.totalAmount || '0'),
+      0
+    );
+    const overdueTotal = overdue.reduce(
+      (s: number, i: any) => s + parseFloat(i.totalAmount || '0'),
+      0
+    );
+
+    return {
+      outstandingCount: outstanding.length,
+      outstandingTotal,
+      overdueCount: overdue.length,
+      overdueTotal,
+      upcomingCount: upcoming.length,
+      nextDueInvoice: outstanding[0] ? {
+        id: outstanding[0].id,
+        invoiceNumber: outstanding[0].invoiceNumber,
+        dueDate: outstanding[0].dueDate,
+        totalAmount: parseFloat(outstanding[0].totalAmount || '0'),
+        status: outstanding[0].status
+      } : null,
+      overdueInvoices: overdue.slice(0, 5).map((inv: any) => ({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        dueDate: inv.dueDate,
+        totalAmount: parseFloat(inv.totalAmount || '0'),
+        daysOverdue: inv.dueDate
+          ? Math.ceil((now.getTime() - new Date(inv.dueDate).getTime()) / (1000 * 60 * 60 * 24))
+          : 0,
+        status: inv.status
+      }))
+    };
+  } catch (_) {
+    return {
+      outstandingCount: 0,
+      outstandingTotal: 0,
+      overdueCount: 0,
+      overdueTotal: 0,
+      upcomingCount: 0,
+      nextDueInvoice: null,
+      overdueInvoices: []
+    };
+  }
 }
 
 // ─── Subscription Details ───────────────────────────────────────────────────

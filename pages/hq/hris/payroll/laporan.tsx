@@ -25,13 +25,13 @@ interface DeptData {
   department: string; employees: number; gross: number; net: number; avg_salary: number;
 }
 
-const MOCK_MONTHLY: MonthlyData[] = [
+const DEFAULT_MONTHLY: MonthlyData[] = [
   { month: '2026-01', label: 'Jan', gross: 1790000000, deductions: 358000000, tax: 179000000, bpjs: 89500000, net: 1432000000, employees: 145 },
   { month: '2026-02', label: 'Feb', gross: 1850000000, deductions: 370000000, tax: 185000000, bpjs: 92500000, net: 1480000000, employees: 148 },
   { month: '2026-03', label: 'Mar', gross: 1860000000, deductions: 372000000, tax: 186000000, bpjs: 93000000, net: 1488000000, employees: 148 },
 ];
 
-const MOCK_DEPT: DeptData[] = [
+const DEFAULT_DEPT: DeptData[] = [
   { department: 'MANAGEMENT', employees: 5, gross: 110000000, net: 92000000, avg_salary: 22000000 },
   { department: 'OPERATIONS', employees: 42, gross: 420000000, net: 350000000, avg_salary: 10000000 },
   { department: 'SALES', employees: 30, gross: 270000000, net: 225000000, avg_salary: 9000000 },
@@ -42,7 +42,7 @@ const MOCK_DEPT: DeptData[] = [
   { department: 'HR', employees: 6, gross: 60000000, net: 50000000, avg_salary: 10000000 },
 ];
 
-const SALARY_DIST = [
+const DEFAULT_DISTRIBUTION = [
   { range: '< 5jt', count: 22, pct: 14.9 },
   { range: '5-10jt', count: 48, pct: 32.4 },
   { range: '10-15jt', count: 38, pct: 25.7 },
@@ -54,15 +54,53 @@ export default function LaporanPage() {
   const [mounted, setMounted] = useState(false);
   const [activeReport, setActiveReport] = useState<'monthly' | 'department' | 'distribution' | 'ytd'>('monthly');
   const [selectedYear, setSelectedYear] = useState('2026');
+  const [monthly, setMonthly] = useState<MonthlyData[]>(DEFAULT_MONTHLY);
+  const [byDept, setByDept] = useState<DeptData[]>(DEFAULT_DEPT);
+  const [distribution, setDistribution] = useState(DEFAULT_DISTRIBUTION);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/hq/hris/payroll?action=laporan');
+        const json = await res.json().catch(() => null);
+        if (res.ok && json) {
+          if (Array.isArray(json.monthly) && json.monthly.length > 0) {
+            setMonthly(json.monthly.map((m: any) => ({
+              month: m.month, label: m.month.split('-')[1],
+              gross: Number(m.gross || 0), net: Number(m.net || 0),
+              tax: Number(m.tax || 0), bpjs: Number(m.bpjs || 0),
+              deductions: Number(m.gross || 0) - Number(m.net || 0),
+              employees: 0,
+            })));
+          }
+          if (Array.isArray(json.byDepartment) && json.byDepartment.length > 0) {
+            setByDept(json.byDepartment.map((d: any) => ({
+              department: d.department || 'Lainnya',
+              employees: Number(d.employees || 0),
+              gross: Number(d.total_basic || 0),
+              net: Math.round(Number(d.total_basic || 0) * 0.83),
+              avg_salary: d.employees > 0 ? Math.round(Number(d.total_basic) / Number(d.employees)) : 0,
+            })));
+          }
+          if (Array.isArray(json.distribution) && json.distribution.length > 0) {
+            const total = json.distribution.reduce((s: number, d: any) => s + Number(d.c || 0), 0) || 1;
+            setDistribution(json.distribution.map((d: any) => ({
+              range: d.bucket, count: Number(d.c || 0),
+              pct: Math.round((Number(d.c || 0) / total) * 1000) / 10,
+            })));
+          }
+        }
+      } catch {}
+    })();
+  }, []);
 
-  const latestMonth = MOCK_MONTHLY[MOCK_MONTHLY.length - 1];
-  const ytdGross = MOCK_MONTHLY.reduce((s, m) => s + m.gross, 0);
-  const ytdNet = MOCK_MONTHLY.reduce((s, m) => s + m.net, 0);
-  const ytdTax = MOCK_MONTHLY.reduce((s, m) => s + m.tax, 0);
+  const latestMonth = monthly[monthly.length - 1];
+  const ytdGross = monthly.reduce((s, m) => s + m.gross, 0);
+  const ytdNet = monthly.reduce((s, m) => s + m.net, 0);
+  const ytdTax = monthly.reduce((s, m) => s + m.tax, 0);
 
-  const totalDeptGross = MOCK_DEPT.reduce((s, d) => s + d.gross, 0);
+  const totalDeptGross = byDept.reduce((s, d) => s + d.gross, 0);
 
   if (!mounted) return null;
 
@@ -102,11 +140,11 @@ export default function LaporanPage() {
           {activeReport === 'monthly' && (
             <div className="p-6 space-y-6">
               <div className="h-[350px]">
-                <Chart type="bar" height={350} options={{ chart: { id: 'payroll-trend', toolbar: { show: false } }, plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } }, dataLabels: { enabled: false }, xaxis: { categories: MOCK_MONTHLY.map(m => m.label) }, yaxis: { labels: { formatter: (v: number) => fmtShort(v) } }, colors: ['#3b82f6', '#ef4444', '#f59e0b', '#10b981'], legend: { position: 'top' }, tooltip: { y: { formatter: (v: number) => fmtCurrency(v) } } }} series={[
-                  { name: 'Gaji Kotor', data: MOCK_MONTHLY.map(m => m.gross) },
-                  { name: 'Potongan', data: MOCK_MONTHLY.map(m => m.deductions) },
-                  { name: 'Pajak', data: MOCK_MONTHLY.map(m => m.tax) },
-                  { name: 'Gaji Bersih', data: MOCK_MONTHLY.map(m => m.net) },
+                <Chart type="bar" height={350} options={{ chart: { id: 'payroll-trend', toolbar: { show: false } }, plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } }, dataLabels: { enabled: false }, xaxis: { categories: monthly.map(m => m.label) }, yaxis: { labels: { formatter: (v: number) => fmtShort(v) } }, colors: ['#3b82f6', '#ef4444', '#f59e0b', '#10b981'], legend: { position: 'top' }, tooltip: { y: { formatter: (v: number) => fmtCurrency(v) } } }} series={[
+                  { name: 'Gaji Kotor', data: monthly.map(m => m.gross) },
+                  { name: 'Potongan', data: monthly.map(m => m.deductions) },
+                  { name: 'Pajak', data: monthly.map(m => m.tax) },
+                  { name: 'Gaji Bersih', data: monthly.map(m => m.net) },
                 ]} />
               </div>
               <div className="overflow-x-auto">
@@ -119,7 +157,7 @@ export default function LaporanPage() {
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">BPJS</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Gaji Bersih</th>
                 </tr></thead>
-                <tbody className="divide-y">{MOCK_MONTHLY.map(m => (
+                <tbody className="divide-y">{monthly.map(m => (
                   <tr key={m.month} className="hover:bg-gray-50">
                     <td className="px-4 py-2 font-medium">{m.month}</td>
                     <td className="px-4 py-2 text-center">{m.employees}</td>
@@ -133,9 +171,9 @@ export default function LaporanPage() {
                 <tfoot className="bg-gray-50 font-bold"><tr>
                   <td className="px-4 py-2">Total YTD</td><td></td>
                   <td className="px-4 py-2 text-right">{fmtCurrency(ytdGross)}</td>
-                  <td className="px-4 py-2 text-right text-red-600">{fmtCurrency(MOCK_MONTHLY.reduce((s, m) => s + m.deductions, 0))}</td>
+                  <td className="px-4 py-2 text-right text-red-600">{fmtCurrency(monthly.reduce((s, m) => s + m.deductions, 0))}</td>
                   <td className="px-4 py-2 text-right text-amber-600">{fmtCurrency(ytdTax)}</td>
-                  <td className="px-4 py-2 text-right text-blue-600">{fmtCurrency(MOCK_MONTHLY.reduce((s, m) => s + m.bpjs, 0))}</td>
+                  <td className="px-4 py-2 text-right text-blue-600">{fmtCurrency(monthly.reduce((s, m) => s + m.bpjs, 0))}</td>
                   <td className="px-4 py-2 text-right text-green-600">{fmtCurrency(ytdNet)}</td>
                 </tr></tfoot></table>
               </div>
@@ -146,8 +184,8 @@ export default function LaporanPage() {
             <div className="p-6 space-y-6">
               <div className="h-[350px]">
                 <Chart type="bar" height={350} options={{ chart: { id: 'dept-payroll', toolbar: { show: false } }, plotOptions: { bar: { horizontal: true, borderRadius: 4 } }, dataLabels: { enabled: false }, xaxis: { labels: { formatter: (v: number) => fmtShort(v) } }, yaxis: { labels: { style: { fontSize: '11px' } } }, colors: ['#3b82f6', '#10b981'], legend: { position: 'top' }, tooltip: { y: { formatter: (v: number) => fmtCurrency(v) } } }} series={[
-                  { name: 'Gaji Kotor', data: MOCK_DEPT.map(d => ({ x: d.department, y: d.gross })) },
-                  { name: 'Gaji Bersih', data: MOCK_DEPT.map(d => ({ x: d.department, y: d.net })) },
+                  { name: 'Gaji Kotor', data: byDept.map(d => ({ x: d.department, y: d.gross })) },
+                  { name: 'Gaji Bersih', data: byDept.map(d => ({ x: d.department, y: d.net })) },
                 ]} />
               </div>
               <div className="overflow-x-auto">
@@ -159,7 +197,7 @@ export default function LaporanPage() {
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Rata-rata</th>
                   <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">% dari Total</th>
                 </tr></thead>
-                <tbody className="divide-y">{MOCK_DEPT.map(d => (
+                <tbody className="divide-y">{byDept.map(d => (
                   <tr key={d.department} className="hover:bg-gray-50">
                     <td className="px-4 py-2 font-medium">{d.department}</td>
                     <td className="px-4 py-2 text-center">{d.employees}</td>
@@ -171,10 +209,10 @@ export default function LaporanPage() {
                 ))}</tbody>
                 <tfoot className="bg-gray-50 font-bold"><tr>
                   <td className="px-4 py-2">Total</td>
-                  <td className="px-4 py-2 text-center">{MOCK_DEPT.reduce((s, d) => s + d.employees, 0)}</td>
+                  <td className="px-4 py-2 text-center">{byDept.reduce((s, d) => s + d.employees, 0)}</td>
                   <td className="px-4 py-2 text-right">{fmtCurrency(totalDeptGross)}</td>
-                  <td className="px-4 py-2 text-right text-green-600">{fmtCurrency(MOCK_DEPT.reduce((s, d) => s + d.net, 0))}</td>
-                  <td className="px-4 py-2 text-right">{fmtCurrency(Math.round(totalDeptGross / MOCK_DEPT.reduce((s, d) => s + d.employees, 0)))}</td>
+                  <td className="px-4 py-2 text-right text-green-600">{fmtCurrency(byDept.reduce((s, d) => s + d.net, 0))}</td>
+                  <td className="px-4 py-2 text-right">{fmtCurrency(Math.round(totalDeptGross / byDept.reduce((s, d) => s + d.employees, 0)))}</td>
                   <td className="px-4 py-2 text-right">100%</td>
                 </tr></tfoot></table>
               </div>
@@ -185,11 +223,11 @@ export default function LaporanPage() {
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="h-[300px]">
-                  <Chart type="donut" height={300} options={{ chart: { id: 'salary-dist' }, labels: SALARY_DIST.map(s => s.range), colors: ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981'], legend: { position: 'bottom' }, plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Total', formatter: () => `${SALARY_DIST.reduce((s, d) => s + d.count, 0)}` } } } } } }} series={SALARY_DIST.map(s => s.count)} />
+                  <Chart type="donut" height={300} options={{ chart: { id: 'salary-dist' }, labels: distribution.map(s => s.range), colors: ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981'], legend: { position: 'bottom' }, plotOptions: { pie: { donut: { labels: { show: true, total: { show: true, label: 'Total', formatter: () => `${distribution.reduce((s, d) => s + d.count, 0)}` } } } } } }} series={distribution.map(s => s.count)} />
                 </div>
                 <div className="space-y-3">
                   <h4 className="font-semibold">Distribusi Rentang Gaji</h4>
-                  {SALARY_DIST.map(s => (
+                  {distribution.map(s => (
                     <div key={s.range} className="flex items-center gap-3">
                       <div className="w-20 text-sm font-medium">{s.range}</div>
                       <div className="flex-1"><div className="w-full bg-gray-200 rounded-full h-4"><div className="bg-blue-500 h-4 rounded-full transition-all" style={{ width: `${s.pct}%` }} /></div></div>
@@ -209,9 +247,9 @@ export default function LaporanPage() {
                   { label: 'Total Gaji Bruto', value: ytdGross, color: 'text-blue-600', bg: 'bg-blue-50' },
                   { label: 'Total Gaji Bersih', value: ytdNet, color: 'text-green-600', bg: 'bg-green-50' },
                   { label: 'Total Pajak PPh 21', value: ytdTax, color: 'text-amber-600', bg: 'bg-amber-50' },
-                  { label: 'Total BPJS', value: MOCK_MONTHLY.reduce((s, m) => s + m.bpjs, 0), color: 'text-purple-600', bg: 'bg-purple-50' },
-                  { label: 'Total Potongan', value: MOCK_MONTHLY.reduce((s, m) => s + m.deductions, 0), color: 'text-red-600', bg: 'bg-red-50' },
-                  { label: 'Rata-rata per Bulan', value: Math.round(ytdGross / MOCK_MONTHLY.length), color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                  { label: 'Total BPJS', value: monthly.reduce((s, m) => s + m.bpjs, 0), color: 'text-purple-600', bg: 'bg-purple-50' },
+                  { label: 'Total Potongan', value: monthly.reduce((s, m) => s + m.deductions, 0), color: 'text-red-600', bg: 'bg-red-50' },
+                  { label: 'Rata-rata per Bulan', value: Math.round(ytdGross / monthly.length), color: 'text-indigo-600', bg: 'bg-indigo-50' },
                 ].map(item => (
                   <div key={item.label} className={`${item.bg} rounded-xl p-4`}>
                     <p className="text-xs text-gray-500">{item.label}</p>
@@ -225,8 +263,8 @@ export default function LaporanPage() {
                   {[
                     { label: 'Gaji Bersih (Net Pay)', value: ytdNet, total: ytdGross, color: 'bg-green-500' },
                     { label: 'PPh 21', value: ytdTax, total: ytdGross, color: 'bg-amber-500' },
-                    { label: 'BPJS', value: MOCK_MONTHLY.reduce((s, m) => s + m.bpjs, 0), total: ytdGross, color: 'bg-purple-500' },
-                    { label: 'Potongan Lain', value: MOCK_MONTHLY.reduce((s, m) => s + m.deductions, 0) - ytdTax - MOCK_MONTHLY.reduce((s, m) => s + m.bpjs, 0), total: ytdGross, color: 'bg-red-500' },
+                    { label: 'BPJS', value: monthly.reduce((s, m) => s + m.bpjs, 0), total: ytdGross, color: 'bg-purple-500' },
+                    { label: 'Potongan Lain', value: monthly.reduce((s, m) => s + m.deductions, 0) - ytdTax - monthly.reduce((s, m) => s + m.bpjs, 0), total: ytdGross, color: 'bg-red-500' },
                   ].map(item => (
                     <div key={item.label}>
                       <div className="flex justify-between text-sm mb-1"><span>{item.label}</span><span className="font-medium">{fmtCurrency(item.value)} ({((item.value / item.total) * 100).toFixed(1)}%)</span></div>

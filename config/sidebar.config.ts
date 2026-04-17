@@ -62,6 +62,8 @@ import {
   Send,
   Star,
   Timer,
+  GitBranch,
+  Rocket,
   Warehouse,
   Gauge,
   Factory,
@@ -241,82 +243,78 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'wh-receipts', name: 'Penerimaan Barang', href: '/hq/inventory/receipts', icon: FileText },
             { id: 'wh-stocktake', name: 'Stock Opname', href: '/hq/inventory/stocktake', icon: ClipboardList },
             { id: 'wh-alerts', name: 'Peringatan', href: '/hq/inventory/alerts', icon: AlertCircle },
+            { id: 'wh-fleet-link', name: 'Armada & Dispatch', href: '/hq/fleet?tab=inventory', icon: Truck },
+            { id: 'wh-supply-chain', name: 'Supply Chain Terpadu', href: '/hq/fleet?tab=supply-chain', icon: ArrowRightLeft },
           ]
         },
-        { 
-          id: 'fms',
-          name: 'Manajemen Armada', 
+        {
+          // ════════════════════════════════════════════════════════════════
+          // PUSAT KENDALI ARMADA & TRANSPORTASI (Unified Super Module)
+          // Menggabungkan Fleet Legacy + FMS + TMS menjadi satu modul
+          // dengan integrasi cross-module ke Driver App, HRIS, Finance,
+          // dan Inventory.
+          // ════════════════════════════════════════════════════════════════
+          id: 'fleet-command',
+          name: 'Pusat Kendali Armada',
           icon: Truck,
-          modules: ['fms'],
+          modules: ['fms', 'tms', 'fleet'],
           children: [
-            // Utama
-            { id: 'fms-dashboard', name: 'Dasbor FMS', href: '/hq/fms', icon: LayoutDashboard },
-            { id: 'fms-vehicles', name: 'Daftar Kendaraan', href: '/hq/fms?tab=vehicles', icon: Truck },
-            { id: 'fms-drivers', name: 'Pengemudi', href: '/hq/fms?tab=drivers', icon: Users },
-            // Operasional
-            { id: 'fms-maintenance', name: 'Pemeliharaan', href: '/hq/fms?tab=maintenance', icon: Wrench },
-            { id: 'fms-fuel', name: 'BBM', href: '/hq/fms?tab=fuel', icon: Fuel },
-            { id: 'fms-rentals', name: 'Penyewaan Kendaraan', href: '/hq/fms?tab=rentals', icon: KeyRound },
-            { id: 'fms-inspections', name: 'Inspeksi', href: '/hq/fms?tab=inspections', icon: ClipboardList },
-            { id: 'fms-incidents', name: 'Insiden', href: '/hq/fms?tab=incidents', icon: AlertTriangle },
-            // Tracking
-            { id: 'fms-gps', name: 'GPS Live', href: '/hq/fms?tab=gps', icon: Navigation },
-            { id: 'fms-geofences', name: 'Geofence', href: '/hq/fms?tab=geofences', icon: Crosshair },
-            { id: 'fms-violations', name: 'Pelanggaran', href: '/hq/fms?tab=violations', icon: Zap },
-            // Analitik
-            { id: 'fms-analytics', name: 'Analitik Armada', href: '/hq/fms?tab=analytics', icon: BarChart3 },
-            { id: 'fms-tires', name: 'Kelola Ban', href: '/hq/fms?tab=tires', icon: Disc },
-            { id: 'fms-costs', name: 'Biaya', href: '/hq/fms?tab=costs', icon: DollarSign },
-            // Admin
-            { id: 'fms-documents', name: 'Dokumen', href: '/hq/fms?tab=documents', icon: FileText },
-            { id: 'fms-reminders', name: 'Pengingat', href: '/hq/fms?tab=reminders', icon: Bell },
-          ]
-        },
-        { 
-          id: 'tms',
-          name: 'Manajemen Transportasi', 
-          icon: Send,
-          modules: ['tms'],
-          children: [
-            // Utama
-            { id: 'tms-dashboard', name: 'Dasbor TMS', href: '/hq/tms', icon: LayoutDashboard },
-            { id: 'tms-shipments', name: 'Pengiriman', href: '/hq/tms?tab=shipments', icon: Package },
-            { id: 'tms-trips', name: 'Perjalanan', href: '/hq/tms?tab=trips', icon: Navigation },
-            // Operasional
-            { id: 'tms-dispatch', name: 'Pengiriman Barang', href: '/hq/tms?tab=dispatch', icon: Send },
-            { id: 'tms-tracking', name: 'Pelacakan', href: '/hq/tms?tab=tracking', icon: Activity },
-            { id: 'tms-carriers', name: 'Pengangkut', href: '/hq/tms?tab=carriers', icon: Building2 },
-            { id: 'tms-routes', name: 'Rute', href: '/hq/tms?tab=routes', icon: MapPin },
-            // Analitik
-            { id: 'tms-kpi', name: 'KPI Logistik', href: '/hq/tms?tab=logistics-analytics', icon: BarChart3 },
-            { id: 'tms-carrier-scores', name: 'Skor Pengangkut', href: '/hq/tms?tab=carrier-scores', icon: Star },
-            { id: 'tms-sla', name: 'SLA Pengiriman', href: '/hq/tms?tab=delivery-sla', icon: Timer },
-            // Admin
-            { id: 'tms-billing', name: 'Penagihan', href: '/hq/tms?tab=billing', icon: Receipt },
-            { id: 'tms-zones', name: 'Zona', href: '/hq/tms?tab=zones', icon: Globe },
-            { id: 'tms-rate-cards', name: 'Daftar Tarif', href: '/hq/tms?tab=rate-cards', icon: CreditCard },
-            { id: 'tms-warehouses', name: 'Gudang', href: '/hq/tms?tab=warehouses', icon: Warehouse },
-          ]
-        },
-        { 
-          id: 'fleet',
-          name: 'Manajemen Armada (Legacy)', 
-          icon: Car,
-          modules: ['fleet'],
-          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'],
-          children: [
-            { id: 'fleet-dashboard', name: 'Dasbor Armada', href: '/hq/fleet', icon: LayoutDashboard },
-            { id: 'fleet-vehicles', name: 'Kendaraan', href: '/hq/fleet/vehicles', icon: Car },
-            { id: 'fleet-drivers', name: 'Pengemudi', href: '/hq/fleet/drivers', icon: Users },
-            { id: 'fleet-tracking', name: 'Pelacakan', href: '/hq/fleet/tracking', icon: Navigation },
-            { id: 'fleet-live', name: 'Live Tracking', href: '/hq/fleet/live', icon: Zap },
-            { id: 'fleet-maintenance', name: 'Pemeliharaan', href: '/hq/fleet/maintenance', icon: Wrench },
-            { id: 'fleet-fuel', name: 'BBM', href: '/hq/fleet/fuel', icon: Fuel },
-            { id: 'fleet-costs', name: 'Biaya', href: '/hq/fleet/costs', icon: DollarSign },
-            { id: 'fleet-expenses', name: 'Expense Driver', href: '/hq/fleet/expenses', icon: Wallet },
-            { id: 'fleet-routes', name: 'Rute', href: '/hq/fleet/routes', icon: MapPin },
-            { id: 'fleet-kpi', name: 'KPI Armada', href: '/hq/fleet/kpi', icon: Target },
-            { id: 'fleet-leaderboard', name: 'Leaderboard Driver', href: '/hq/fleet/leaderboard', icon: Award },
+            // — Entry utama Command Center —
+            { id: 'fc-command', name: 'Pusat Kendali (Unified)', href: '/hq/fleet', icon: LayoutDashboard },
+            { id: 'fc-fms-dashboard', name: 'Dasbor FMS', href: '/hq/fms', icon: Gauge },
+            { id: 'fc-tms-dashboard', name: 'Dasbor TMS', href: '/hq/tms', icon: Send },
+
+            // — Operasional (FMS) —
+            { id: 'fc-vehicles', name: 'Kendaraan', href: '/hq/fms?tab=vehicles', icon: Truck },
+            { id: 'fc-drivers', name: 'Pengemudi', href: '/hq/fms?tab=drivers', icon: Users },
+            { id: 'fc-maintenance', name: 'Pemeliharaan', href: '/hq/fms?tab=maintenance', icon: Wrench },
+            { id: 'fc-fuel', name: 'BBM / Bahan Bakar', href: '/hq/fms?tab=fuel', icon: Fuel },
+            { id: 'fc-rentals', name: 'Penyewaan Kendaraan', href: '/hq/fms?tab=rentals', icon: KeyRound },
+            { id: 'fc-inspections', name: 'Inspeksi Kendaraan', href: '/hq/fms?tab=inspections', icon: ClipboardList },
+            { id: 'fc-incidents', name: 'Insiden & Kecelakaan', href: '/hq/fms?tab=incidents', icon: AlertTriangle },
+            { id: 'fc-tires', name: 'Manajemen Ban', href: '/hq/fms?tab=tires', icon: Disc },
+
+            // — Pelacakan & GPS —
+            { id: 'fc-gps', name: 'GPS Live', href: '/hq/fms?tab=gps', icon: Navigation },
+            { id: 'fc-live-map', name: 'Peta Live', href: '/hq/fleet/live', icon: Zap },
+            { id: 'fc-geofences', name: 'Geofence', href: '/hq/fms?tab=geofences', icon: Crosshair },
+            { id: 'fc-violations', name: 'Pelanggaran', href: '/hq/fms?tab=violations', icon: Zap },
+
+            // — Transportasi (TMS) —
+            { id: 'fc-shipments', name: 'Pengiriman', href: '/hq/tms?tab=shipments', icon: Package },
+            { id: 'fc-trips', name: 'Perjalanan', href: '/hq/tms?tab=trips', icon: Navigation },
+            { id: 'fc-dispatch', name: 'Dispatch Barang', href: '/hq/tms?tab=dispatch', icon: Send },
+            { id: 'fc-tracking', name: 'Pelacakan Pengiriman', href: '/hq/tms?tab=tracking', icon: Activity },
+            { id: 'fc-carriers', name: 'Pengangkut / Vendor', href: '/hq/tms?tab=carriers', icon: Building2 },
+            { id: 'fc-routes', name: 'Rute & Perencanaan', href: '/hq/tms?tab=routes', icon: MapPin },
+            { id: 'fc-warehouses', name: 'Gudang Logistik', href: '/hq/tms?tab=warehouses', icon: Warehouse },
+
+            // — Analitik & KPI —
+            { id: 'fc-analytics', name: 'Analitik Armada', href: '/hq/fms?tab=analytics', icon: BarChart3 },
+            { id: 'fc-kpi-fleet', name: 'KPI Armada', href: '/hq/fleet/kpi', icon: Target },
+            { id: 'fc-leaderboard', name: 'Leaderboard Driver', href: '/hq/fleet/leaderboard', icon: Award },
+            { id: 'fc-logistics-kpi', name: 'KPI Logistik', href: '/hq/tms?tab=logistics-analytics', icon: BarChart3 },
+            { id: 'fc-carrier-scores', name: 'Skor Pengangkut', href: '/hq/tms?tab=carrier-scores', icon: Star },
+            { id: 'fc-sla', name: 'SLA Pengiriman', href: '/hq/tms?tab=delivery-sla', icon: Timer },
+
+            // — Keuangan Armada —
+            { id: 'fc-costs', name: 'Biaya Armada', href: '/hq/fms?tab=costs', icon: DollarSign },
+            { id: 'fc-expenses', name: 'Reimbursement Driver', href: '/hq/fleet/expenses', icon: Wallet },
+            { id: 'fc-billing', name: 'Freight Billing', href: '/hq/tms?tab=billing', icon: Receipt },
+            { id: 'fc-rate-cards', name: 'Daftar Tarif', href: '/hq/tms?tab=rate-cards', icon: CreditCard },
+            { id: 'fc-zones', name: 'Zona Pengiriman', href: '/hq/tms?tab=zones', icon: Globe },
+
+            // — Supply Chain: Inventory, Manufaktur & Procurement —
+            { id: 'fc-supply-chain', name: 'Supply Chain Command', href: '/hq/fleet?tab=supply-chain', icon: ArrowRightLeft },
+            { id: 'fc-manufacturing', name: 'Integrasi Manufaktur', href: '/hq/fleet?tab=manufacturing', icon: Factory },
+            { id: 'fc-inventory-link', name: 'Integrasi Inventory', href: '/hq/fleet?tab=inventory', icon: Warehouse },
+            { id: 'fc-transfers', name: 'Transfer Antar Gudang', href: '/hq/inventory/transfers', icon: ArrowRightLeft },
+            { id: 'fc-po-pickup', name: 'Pickup Pesanan Pembelian', href: '/hq/purchase-orders', icon: ShoppingCart },
+            { id: 'fc-production', name: 'Manufaktur', href: '/hq/manufacturing', icon: Factory },
+
+            // — Admin & Compliance —
+            { id: 'fc-documents', name: 'Dokumen Armada', href: '/hq/fms?tab=documents', icon: FileText },
+            { id: 'fc-reminders', name: 'Pengingat', href: '/hq/fms?tab=reminders', icon: Bell },
           ]
         },
         {
@@ -382,6 +380,8 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'mfg-cogm', name: 'COGM', href: '/hq/manufacturing?tab=cogm', icon: DollarSign },
             { id: 'mfg-subcontract', name: 'Subkontrak', href: '/hq/manufacturing?tab=subcontracting', icon: Truck },
             { id: 'mfg-waste', name: 'Limbah & Sisa', href: '/hq/manufacturing?tab=waste', icon: AlertTriangle },
+            { id: 'mfg-fleet-link', name: 'Armada & Distribusi', href: '/hq/fleet?tab=manufacturing', icon: Truck },
+            { id: 'mfg-supply-chain', name: 'Supply Chain Terpadu', href: '/hq/fleet?tab=supply-chain', icon: ArrowRightLeft },
             { id: 'mfg-settings', name: 'Pengaturan', href: '/hq/manufacturing?tab=settings', icon: Settings },
           ]
         }
@@ -401,11 +401,16 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'pjm-dashboard', name: 'Dasbor', href: '/hq/project-management', icon: LayoutDashboard },
             { id: 'pjm-projects', name: 'Proyek', href: '/hq/project-management?tab=projects', icon: Briefcase },
             { id: 'pjm-tasks', name: 'Tugas', href: '/hq/project-management?tab=tasks', icon: ClipboardList },
+            { id: 'pjm-gantt', name: 'Gantt Chart', href: '/hq/project-management/gantt', icon: GitBranch },
+            { id: 'pjm-calendar', name: 'Kalender', href: '/hq/project-management?tab=calendar', icon: Calendar },
+            { id: 'pjm-sprints', name: 'Sprint', href: '/hq/project-management?tab=sprints', icon: Rocket },
             { id: 'pjm-milestones', name: 'Milestone', href: '/hq/project-management?tab=milestones', icon: Target },
             { id: 'pjm-timesheets', name: 'Lembar Waktu', href: '/hq/project-management?tab=timesheets', icon: Timer },
-            { id: 'pjm-resources', name: 'Sumber Daya', href: '/hq/project-management?tab=resources', icon: Users },
+            { id: 'pjm-workload', name: 'Workload Tim', href: '/hq/project-management?tab=workload', icon: Users },
+            { id: 'pjm-resources', name: 'Sumber Daya', href: '/hq/project-management?tab=resources', icon: Layers },
             { id: 'pjm-risks', name: 'Risiko', href: '/hq/project-management?tab=risks', icon: AlertTriangle },
             { id: 'pjm-budgets', name: 'Anggaran', href: '/hq/project-management?tab=budgets', icon: DollarSign },
+            { id: 'pjm-evm', name: 'EVM Analytics', href: '/hq/project-management?tab=evm', icon: Activity },
             { id: 'pjm-documents', name: 'Dokumen', href: '/hq/project-management?tab=documents', icon: FileText },
           ]
         }
@@ -484,12 +489,25 @@ export const hqSidebarConfig: SidebarConfig = {
           roles: ['super_admin', 'owner', 'hq_admin', 'hr_staff'],
           children: [
             { id: 'hris-dashboard', name: 'Dasbor HRIS', href: '/hq/hris', icon: LayoutDashboard },
+            { id: 'hris-calendar', name: 'Kalender HR', href: '/hq/hris/calendar', icon: Calendar },
+            { id: 'hris-announcements', name: 'Pengumuman', href: '/hq/hris/announcements', icon: Megaphone },
+            // Database & struktur
+            { id: 'hris-employees', name: 'Database Karyawan', href: '/hq/hris/employees', icon: Users },
+            { id: 'hris-organization', name: 'Struktur Organisasi', href: '/hq/hris/organization', icon: Network },
+            { id: 'hris-onboarding', name: 'Onboarding', href: '/hq/hris/onboarding', icon: UserPlus },
+            { id: 'hris-offboarding', name: 'Offboarding / Exit', href: '/hq/hris/offboarding', icon: KeyRound },
+            { id: 'hris-contracts', name: 'Kontrak & Reminder', href: '/hq/hris/contracts', icon: FileText },
+            // Kehadiran & shift
+            { id: 'hris-attendance', name: 'Kehadiran & Absensi', href: '/hq/hris/attendance', icon: CalendarCheck },
+            { id: 'hris-attendance-mgmt', name: 'Jadwal & Shift', href: '/hq/hris/attendance-management', icon: Timer },
+            { id: 'hris-attendance-devices', name: 'Kelola Perangkat', href: '/hq/hris/attendance/devices', icon: Fingerprint },
+            { id: 'hris-leave', name: 'Manajemen Cuti', href: '/hq/hris/leave', icon: CalendarDays },
+            // Kinerja
             { id: 'hris-kpi', name: 'KPI Karyawan', href: '/hq/hris/kpi', icon: Target },
             { id: 'hris-kpi-settings', name: 'Pengaturan KPI', href: '/hq/hris/kpi-settings', icon: Settings },
-            { id: 'hris-attendance', name: 'Kehadiran & Absensi', href: '/hq/hris/attendance', icon: CalendarCheck },
-            { id: 'hris-attendance-devices', name: 'Kelola Perangkat', href: '/hq/hris/attendance/devices', icon: Fingerprint },
             { id: 'hris-performance', name: 'Penilaian Kinerja', href: '/hq/hris/performance', icon: Award },
-            { id: 'hris-leave', name: 'Manajemen Cuti', href: '/hq/hris/leave', icon: CalendarDays },
+            { id: 'hris-engagement', name: 'Keterlibatan & Budaya', href: '/hq/hris/engagement', icon: MessageCircle },
+            // Payroll
             { id: 'hris-payroll', name: 'Penggajian', href: '/hq/hris/payroll', icon: Banknote },
             { id: 'hris-payroll-main', name: 'Proses Gaji', href: '/hq/hris/payroll/main', icon: Calculator },
             { id: 'hris-payroll-slip', name: 'Slip Gaji', href: '/hq/hris/payroll/slip-gaji', icon: FileText },
@@ -498,19 +516,19 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'hris-payroll-bpjs', name: 'BPJS', href: '/hq/hris/payroll/bpjs', icon: Shield },
             { id: 'hris-payroll-lembur', name: 'Lembur', href: '/hq/hris/payroll/lembur', icon: Clock },
             { id: 'hris-payroll-laporan', name: 'Laporan Gaji', href: '/hq/hris/payroll/laporan', icon: BarChart3 },
-            { id: 'hris-employees', name: 'Database Karyawan', href: '/hq/hris/employees', icon: Users },
-            { id: 'hris-organization', name: 'Struktur Organisasi', href: '/hq/hris/organization', icon: Network },
-            { id: 'hris-workflow', name: 'Klaim & Mutasi', href: '/hq/hris/mss', icon: ArrowRightLeft },
+            // Self-service
             { id: 'hris-ess', name: 'Layanan Mandiri Karyawan', href: '/hq/hris/ess', icon: Heart },
             { id: 'hris-mss', name: 'Layanan Mandiri Manajer', href: '/hq/hris/mss', icon: Shield },
-            { id: 'hris-ir', name: 'Hubungan Industrial', href: '/hq/hris/industrial-relations', icon: Shield },
-            { id: 'hris-workforce', name: 'Analitik Tenaga Kerja', href: '/hq/hris/workforce-analytics', icon: BarChart3 },
-            { id: 'hris-engagement', name: 'Keterlibatan & Budaya', href: '/hq/hris/engagement', icon: MessageCircle },
+            // Rekrutmen & training
+            { id: 'hris-recruitment', name: 'Rekrutmen', href: '/hq/hris/recruitment', icon: UserPlus },
+            { id: 'hris-training', name: 'Program Training', href: '/hq/hris/training', icon: GraduationCap },
+            { id: 'hris-training-dev', name: 'Pelatihan & Pengembangan', href: '/hq/hris/training-development', icon: BookOpen },
+            { id: 'hris-training-scoring', name: 'Skor & Penilaian Training', href: '/hq/hris/training-scoring', icon: PenTool },
+            // Lainnya
             { id: 'hris-travel', name: 'Perjalanan & Biaya', href: '/hq/hris/travel-expense', icon: Plane },
             { id: 'hris-project', name: 'Manajemen Proyek', href: '/hq/hris/project-management', icon: Briefcase },
-            { id: 'hris-training-dev', name: 'Pelatihan & Pengembangan', href: '/hq/hris/training-development', icon: GraduationCap },
-            { id: 'hris-training-scoring', name: 'Skor & Penilaian', href: '/hq/hris/training-scoring', icon: PenTool },
-            { id: 'hris-recruitment', name: 'Rekrutmen', href: '/hq/hris/recruitment', icon: UserPlus },
+            { id: 'hris-ir', name: 'Hubungan Industrial', href: '/hq/hris/industrial-relations', icon: AlertTriangle },
+            { id: 'hris-workforce', name: 'Analitik Tenaga Kerja', href: '/hq/hris/workforce-analytics', icon: BarChart3 },
           ]
         }
       ]
@@ -537,6 +555,7 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'sfa-teams', name: 'Tim & Wilayah', href: '/hq/sfa', icon: Users, modules: ['sfa'] },
             { id: 'sfa-visits', name: 'Kunjungan & Cakupan', href: '/hq/sfa', icon: Navigation, modules: ['sfa'] },
             { id: 'sfa-orders', name: 'Pesanan & Penawaran', href: '/hq/sfa', icon: ShoppingCart, modules: ['sfa'] },
+            { id: 'sfa-sales-mgmt', name: 'Manajemen Penjualan', href: '/hq/sfa', icon: ShoppingCart, modules: ['sfa'] },
             { id: 'sfa-targets', name: 'Target & Pencapaian', href: '/hq/sfa', icon: Target, modules: ['sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
             { id: 'sfa-incentives', name: 'Insentif & Komisi', href: '/hq/sfa', icon: Award, modules: ['sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
             { id: 'sfa-intelligence', name: 'Merchandising & Kompetitor', href: '/hq/sfa', icon: ClipboardList, modules: ['sfa'] },
@@ -772,19 +791,22 @@ export const branchSidebarConfig: SidebarConfig = {
         { id: 'promo', name: 'Promo & Voucher', href: '/promo-voucher', icon: Ticket, modules: ['promo'] },
         {
           id: 'fleet',
-          name: 'Manajemen Armada',
+          name: 'Pusat Kendali Armada',
           icon: Truck,
-          modules: ['fms', 'fleet'],
+          modules: ['fms', 'tms', 'fleet'],
           roles: ['super_admin', 'owner', 'admin', 'manager'],
           children: [
-            { id: 'fleet-dashboard', name: 'Dasbor Armada', href: '/hq/fms', icon: LayoutDashboard },
+            { id: 'fleet-command', name: 'Pusat Kendali Unified', href: '/hq/fleet', icon: LayoutDashboard },
+            { id: 'fleet-fms', name: 'FMS Operasional', href: '/hq/fms', icon: Gauge },
+            { id: 'fleet-tms', name: 'TMS Transportasi', href: '/hq/tms', icon: Send },
             { id: 'fleet-vehicles', name: 'Kendaraan', href: '/hq/fms?tab=vehicles', icon: Truck },
             { id: 'fleet-drivers', name: 'Pengemudi', href: '/hq/fms?tab=drivers', icon: Users },
-            { id: 'fleet-routes', name: 'Rute', href: '/hq/fms?tab=routes', icon: MapPin },
-            { id: 'fleet-maintenance', name: 'Pemeliharaan', href: '/hq/fms?tab=maintenance', icon: Wrench },
-            { id: 'fleet-fuel', name: 'BBM', href: '/hq/fms?tab=fuel', icon: Fuel },
+            { id: 'fleet-shipments', name: 'Pengiriman', href: '/hq/tms?tab=shipments', icon: Package },
             { id: 'fleet-gps', name: 'GPS Live', href: '/hq/fms?tab=gps', icon: Navigation },
-            { id: 'fleet-costs', name: 'Biaya', href: '/hq/fms?tab=costs', icon: DollarSign },
+            { id: 'fleet-costs', name: 'Biaya & Billing', href: '/hq/fms?tab=costs', icon: DollarSign },
+            { id: 'fleet-supply-chain', name: 'Supply Chain Armada', href: '/hq/fleet?tab=supply-chain', icon: ArrowRightLeft },
+            { id: 'fleet-manufacturing', name: 'Integrasi Manufaktur', href: '/hq/fleet?tab=manufacturing', icon: Factory },
+            { id: 'fleet-inventory-link', name: 'Integrasi Inventory', href: '/hq/fleet?tab=inventory', icon: Warehouse },
           ]
         },
       ]

@@ -136,6 +136,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       fireAudit();
       switch (action) {
         case 'create-customer': return createCustomer(req, res, tenantId, userId);
+        case 'import-customers-csv':
+          if (!isManager) return res.status(403).json({ success: false, error: 'Hanya Manager/Admin yang dapat import bulk.' });
+          return importCustomersCsv(req, res, tenantId, userId);
         case 'create-contact': return createContact(req, res, tenantId, userId);
         case 'create-interaction': return createInteraction(req, res, tenantId, userId);
         case 'create-communication': return createCommunication(req, res, tenantId, userId);
@@ -445,6 +448,87 @@ async function getDocumentTemplates(_req: NextApiRequest, res: NextApiResponse, 
 // ════════════════════════════════════════════════════════════════
 // ██  CREATE OPERATIONS
 // ════════════════════════════════════════════════════════════════
+function parseCsvLineSimple(line: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (!inQ && ch === ',') {
+      out.push(cur.trim());
+      cur = '';
+    } else cur += ch;
+  }
+  out.push(cur.trim());
+  return out.map((s) => s.replace(/^"|"$/g, ''));
+}
+
+async function importCustomersCsv(req: NextApiRequest, res: NextApiResponse, tenantId: string, userId: number) {
+  const csv = String(req.body?.csv || '').trim();
+  if (!csv) return res.status(400).json({ success: false, error: 'Field csv wajib (teks CSV).' });
+  const lines = csv.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return res.status(400).json({ success: false, error: 'Minimal baris header + 1 data.' });
+  const header = parseCsvLineSimple(lines[0]).map((h) => h.toLowerCase().replace(/\s+/g, '_'));
+  const idx = (name: string) => header.indexOf(name);
+  let inserted = 0;
+  const errors: string[] = [];
+  for (let r = 1; r < lines.length; r++) {
+    const cells = parseCsvLineSimple(lines[r]);
+    const get = (aliases: string[]) => {
+      for (const a of aliases) {
+        const i = idx(a);
+        if (i >= 0 && cells[i] !== undefined && cells[i] !== '') return cells[i];
+      }
+      return '';
+    };
+    const display_name = get(['display_name', 'nama', 'name', 'nama_toko', 'outlet']);
+    const company_name = get(['company_name', 'perusahaan', 'pt']);
+    if (!display_name && !company_name) {
+      errors.push(`Baris ${r + 1}: isi display_name atau company_name`);
+      continue;
+    }
+    const num = generateNumber('CUS');
+    const row = {
+      tenantId,
+      num,
+      display_name: display_name || company_name,
+      company_name: company_name || null,
+      customer_type: get(['customer_type', 'tipe']) || 'company',
+      address: get(['address', 'alamat']) || null,
+      city: get(['city', 'kota']) || null,
+      province: get(['province', 'provinsi']) || null,
+      postal_code: get(['postal_code', 'kode_pos']) || null,
+      segment: get(['segment', 'tier', 'kelas']) || null,
+      lifecycle_stage: get(['lifecycle_stage', 'tahap']) || 'prospect',
+      customer_status: get(['customer_status', 'status']) || 'active',
+      notes: get(['notes', 'catatan']) || null,
+      userId,
+    };
+    const okIns = await qExec(
+      `INSERT INTO crm_customers (tenant_id, customer_number, display_name, company_name, customer_type, address, city, province, postal_code, lifecycle_stage, customer_status, segment, notes, tags, custom_fields, created_by)
+       VALUES (:tenantId, :num, :display_name, :company_name, :customer_type, :address, :city, :province, :postal_code, :lifecycle_stage, :customer_status, :segment, :notes, '[]', '{}', :userId)`,
+      {
+        ...row,
+        customer_type: row.customer_type || 'company',
+      },
+    );
+    if (okIns) {
+      errors.push(`Baris ${r + 1}: ${okIns}`);
+    } else {
+      inserted++;
+    }
+  }
+  return res.json({
+    success: true,
+    message: `${inserted} pelanggan diimpor`,
+    inserted,
+    errors: errors.slice(0, 50),
+  });
+}
+
 async function createCustomer(req: NextApiRequest, res: NextApiResponse, tenantId: string, userId: number) {
   const b = req.body;
   const num = generateNumber('CUS');

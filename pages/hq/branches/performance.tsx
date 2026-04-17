@@ -65,41 +65,53 @@ const MOCK_BRANCH_PERF: BranchPerformance[] = [
 export default function BranchPerformancePage() {
   const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
-  const [branches, setBranches] = useState<BranchPerformance[]>(MOCK_BRANCH_PERF);
+  const [branches, setBranches] = useState<BranchPerformance[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'month' | 'quarter' | 'year' | 'week'>('month');
   const [industry, setIndustry] = useState('general');
   const [selectedBranch, setSelectedBranch] = useState<BranchPerformance | null>(null);
   const [subTab, setSubTab] = useState<'overview' | 'kpi' | 'comparison'>('overview');
   const [exporting, setExporting] = useState(false);
+  const [usingMock, setUsingMock] = useState(false);
 
   const fetchPerformance = async () => {
     setLoading(true);
     try {
-      // Try enhanced API first
       const res = await fetch(`/api/hq/branches/enhanced?action=performance&period=${period}&industry=${industry}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data?.branches?.length > 0) {
           setBranches(json.data.branches);
+          setUsingMock(false);
           return;
         }
       }
-      // Fallback to original API
       const response = await fetch(`/api/hq/branches/performance?period=${period}`);
       if (response.ok) {
         const data = await response.json();
-        setBranches(data.data?.branches || data.branches || []);
+        const list = data.data?.branches || data.branches || [];
+        if (list.length > 0) {
+          setBranches(list);
+          setUsingMock(false);
+          return;
+        }
       }
+      setBranches(MOCK_BRANCH_PERF);
+      setUsingMock(true);
     } catch (error) {
       console.error('Error fetching performance:', error);
       setBranches(MOCK_BRANCH_PERF);
+      setUsingMock(true);
     } finally {
       setLoading(false);
     }
   };
 
   const handleExport = async () => {
+    if (branches.length === 0) {
+      toast.error(t('branchPerformance.noData') || 'Tidak ada data');
+      return;
+    }
     setExporting(true);
     try {
       const rows = branches.map(b => ({
@@ -194,6 +206,14 @@ export default function BranchPerformancePage() {
   return (
     <HQLayout title={t('branchPerformance.title')} subtitle={t('branchPerformance.subtitle')}>
       <div className="space-y-6">
+        {usingMock && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <strong>Mode Demo:</strong>
+            <span>menampilkan data sampel kinerja cabang. Sambungkan data transaksi untuk melihat metrik real.</span>
+          </div>
+        )}
+
         {/* Header with Period + Industry + Actions */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

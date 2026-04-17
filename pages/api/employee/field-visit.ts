@@ -14,6 +14,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
+import { ensureVisitLinkedTask, syncTaskStatusFromVisit } from '../../../lib/sfa/visitTaskSync';
 
 let sequelize: any;
 try { ({ sequelize } = require('../../../lib/sequelize')); } catch {}
@@ -151,18 +152,34 @@ async function createVisit(req: NextApiRequest, res: NextApiResponse, userId: st
     const [count] = await q(`SELECT COUNT(*) as c FROM sfa_visits WHERE tenant_id=:tid AND TO_CHAR(created_at,'YYYY-MM')=:m`, { tid: tenantId, m: vDate.slice(0, 7) });
     const num = `VIS-${vDate.replace(/-/g, '')}-${String(Number(count?.c || 0) + 1).padStart(3, '0')}`;
 
-    const [visit] = await sequelize.query(`
+    const [visitRows] = await sequelize.query(`
       INSERT INTO sfa_visits (id, tenant_id, salesperson_id, customer_id, customer_name, visit_type, purpose, visit_date, status, is_adhoc, lead_id, created_at, updated_at)
       VALUES (uuid_generate_v4(), :tid, :sid, :cid, :cname, :vtype, :purpose, :vdate, 'planned', :adhoc, :lid, NOW(), NOW())
       RETURNING *, :num as visit_number
     `, { replacements: { tid: tenantId, sid, cid: customer_id || null, cname: customer_name, vtype: visit_type, purpose: purpose || '', vdate: vDate, adhoc: is_adhoc, lid: lead_id || null, num } });
+
+    const row = Array.isArray(visitRows) ? visitRows[0] : visitRows;
+    if (row?.id) {
+      await ensureVisitLinkedTask({
+        tenantId,
+        visit: {
+          id: row.id,
+          customer_name: row.customer_name || customer_name,
+          purpose: row.purpose || purpose,
+          visit_date: row.visit_date || vDate,
+          salesperson_id: row.salesperson_id != null ? Number(row.salesperson_id) : null,
+        },
+        createdByUserId: Number(userId) || null,
+        assigneeUserId: Number(userId) || null,
+      });
+    }
 
     // Also record as CRM interaction if customer_id exists
     if (customer_id) {
       await q(`INSERT INTO crm_interactions (id, tenant_id, crm_customer_id, type, subject, content, created_by, created_at, updated_at) VALUES (uuid_generate_v4(), :tid, :cid, 'visit', :subj, :content, :uid, NOW(), NOW())`,
         { tid: tenantId, cid: customer_id, subj: `Kunjungan ${visit_type}`, content: purpose || '', uid: userId });
     }
-    return res.json({ success: true, message: 'Kunjungan berhasil dibuat', data: Array.isArray(visit) ? visit[0] : visit });
+    return res.json({ success: true, message: 'Kunjungan berhasil dibuat', data: row });
   } catch (e: any) {
     return res.status(500).json({ success: false, error: 'Gagal membuat kunjungan', details: e.message });
   }
@@ -183,6 +200,7 @@ async function checkIn(req: NextApiRequest, res: NextApiResponse, userId: string
     const photoUrl = photo_base64 ? `visits/checkin/${visit_id}_${Date.now()}.jpg` : null;
     await q(`UPDATE sfa_visits SET status='checked_in', check_in_time=NOW(), check_in_lat=:lat, check_in_lng=:lng, check_in_address=:addr, check_in_photo_url=:photo, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`,
       { lat: latitude, lng: longitude, addr: address || null, photo: photoUrl, id: visit_id, tid: tenantId });
+    await syncTaskStatusFromVisit(tenantId, visit_id);
     return res.json({ success: true, message: 'Check-in berhasil! Lokasi & waktu tercatat.', data: { visit_id, check_in_time: new Date().toISOString(), check_in_lat: latitude, check_in_lng: longitude, check_in_address: address } });
   } catch (e: any) {
     return res.status(500).json({ success: false, error: 'Gagal check-in', details: e.message });
@@ -203,6 +221,7 @@ async function checkOut(req: NextApiRequest, res: NextApiResponse, userId: strin
     await q(`UPDATE sfa_visits SET status='completed', check_out_time=NOW(), check_out_lat=:lat, check_out_lng=:lng, check_out_address=:addr, check_out_photo_url=:photo, outcome=:outcome, outcome_notes=:notes, order_taken=:ot, order_value=:ov, next_visit_date=:nvd, products_discussed=:pd::jsonb, duration_minutes=EXTRACT(EPOCH FROM (NOW()-check_in_time))/60, updated_at=NOW() WHERE id=:id AND tenant_id=:tid`,
       { lat: latitude || null, lng: longitude || null, addr: address || null, photo: photoUrl, outcome, notes: outcome_notes || null, ot: !!order_taken, ov: order_value || 0, nvd: next_visit_date || null, pd: JSON.stringify(products_discussed || []), id: visit_id, tid: tenantId });
 
+    await syncTaskStatusFromVisit(tenantId, visit_id);
     return res.json({ success: true, message: 'Check-out berhasil! Hasil kunjungan tersimpan.', data: { visit_id, check_out_time: new Date().toISOString(), outcome } });
   } catch (e: any) {
     return res.status(500).json({ success: false, error: 'Gagal check-out', details: e.message });
@@ -241,6 +260,7 @@ async function updateVisit(req: NextApiRequest, res: NextApiResponse, tenantId: 
     if (next_visit_date !== undefined) { sets.push('next_visit_date=:nvd'); params.nvd = next_visit_date; }
     if (status !== undefined) { sets.push('status=:status'); params.status = status; }
     await q(`UPDATE sfa_visits SET ${sets.join(',')} WHERE id=:id AND tenant_id=:tid`, params);
+    if (status !== undefined) await syncTaskStatusFromVisit(tenantId, visit_id);
     return res.json({ success: true, message: 'Kunjungan berhasil diperbarui' });
   } catch (e: any) {
     return res.status(500).json({ success: false, error: 'Gagal memperbarui kunjungan' });

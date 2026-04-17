@@ -55,7 +55,33 @@ export default function THRPage() {
   const [toast, setToast] = useState<{ type: string; message: string } | null>(null);
   const showToast = (type: string, message: string) => { setToast({ type, message }); setTimeout(() => setToast(null), 3000); };
 
-  useEffect(() => { setMounted(true); setItems(MOCK_THR); setLoading(false); }, []);
+  const fetchTHR = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        year: String(config.year),
+        minimumMonths: String(config.minimumMonths),
+        includeAllowances: String(config.includeAllowances),
+        refDate: config.payDate,
+      });
+      const res = await fetch(`/api/hq/hris/payroll?action=thr&${params.toString()}`);
+      const json = await res.json().catch(() => null);
+      if (res.ok && Array.isArray(json?.data) && json.data.length > 0) {
+        setItems(json.data);
+      } else {
+        setItems(MOCK_THR);
+      }
+    } catch {
+      setItems(MOCK_THR);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    fetchTHR();
+  }, []);
 
   const filtered = useMemo(() => {
     if (!searchQuery) return items;
@@ -68,16 +94,9 @@ export default function THRPage() {
   const notEligible = filtered.filter(i => i.status === 'not_eligible');
   const totalTHR = filtered.reduce((s, i) => s + i.thr_amount, 0);
 
-  const handleCalculate = () => {
-    const calculated = items.map(i => {
-      const fullAmount = config.includeAllowances ? i.base_salary + i.allowances : i.base_salary;
-      if (i.months_worked < config.minimumMonths) return { ...i, thr_amount: 0, status: 'not_eligible' as const, calculation: `Belum memenuhi syarat (<${config.minimumMonths} bulan)` };
-      if (i.months_worked >= 12) return { ...i, thr_amount: fullAmount, status: 'eligible' as const, calculation: '1 bulan gaji (>12 bulan)' };
-      const prorataAmt = Math.round(fullAmount * i.months_worked / 12);
-      return { ...i, thr_amount: prorataAmt, status: 'prorata' as const, calculation: `Prorata ${i.months_worked}/12 bulan` };
-    });
-    setItems(calculated);
-    showToast('success', `THR berhasil dihitung untuk ${calculated.filter(c => c.thr_amount > 0).length} karyawan`);
+  const handleCalculate = async () => {
+    await fetchTHR();
+    showToast('success', `THR berhasil dihitung ulang`);
   };
 
   if (!mounted) return null;

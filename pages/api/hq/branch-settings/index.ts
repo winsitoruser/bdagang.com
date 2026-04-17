@@ -1,11 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
 
 interface BranchSettingTemplate {
   id: string;
   name: string;
   description: string;
-  category: 'operations' | 'pricing' | 'notifications' | 'security';
+  category: string;
+  industry?: string;
   settings: Record<string, any>;
   appliedBranches: number;
   isDefault: boolean;
@@ -13,145 +15,156 @@ interface BranchSettingTemplate {
   updatedAt: string;
 }
 
-// Mock templates data
-const mockTemplates: BranchSettingTemplate[] = [
+const SETTINGS_KEY = 'branchSettingTemplates';
+
+const DEFAULT_TEMPLATES: BranchSettingTemplate[] = [
   {
-    id: '1',
+    id: 'tpl-operations-default',
     name: 'Template Standar Retail',
     description: 'Pengaturan default untuk cabang retail',
     category: 'operations',
+    industry: 'retail',
     settings: {
       openingTime: '08:00',
       closingTime: '21:00',
       maxCashInDrawer: 5000000,
       autoLogoutMinutes: 30,
-      requireManagerApproval: true
+      requireManagerApproval: true,
     },
-    appliedBranches: 5,
+    appliedBranches: 0,
     isDefault: true,
-    createdAt: '2024-01-01',
-    updatedAt: '2026-02-15'
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   {
-    id: '2',
-    name: 'Template Kiosk Mall',
-    description: 'Pengaturan untuk kiosk di mall',
-    category: 'operations',
-    settings: {
-      openingTime: '10:00',
-      closingTime: '22:00',
-      maxCashInDrawer: 3000000,
-      autoLogoutMinutes: 15,
-      requireManagerApproval: false
-    },
-    appliedBranches: 3,
-    isDefault: false,
-    createdAt: '2024-02-15',
-    updatedAt: '2026-02-10'
-  },
-  {
-    id: '3',
-    name: 'Harga Premium Jakarta',
-    description: 'Markup harga untuk area Jakarta',
-    category: 'pricing',
-    settings: {
-      priceMultiplier: 1.05,
-      roundingMethod: 'nearest_100',
-      minMargin: 15,
-      maxDiscount: 20
-    },
-    appliedBranches: 2,
-    isDefault: false,
-    createdAt: '2024-03-01',
-    updatedAt: '2026-02-01'
-  },
-  {
-    id: '4',
+    id: 'tpl-notifications-default',
     name: 'Notifikasi Default',
-    description: 'Pengaturan notifikasi standar',
+    description: 'Pengaturan notifikasi standar untuk semua cabang',
     category: 'notifications',
+    industry: 'general',
     settings: {
       lowStockAlert: true,
       lowStockThreshold: 10,
       dailyReportEmail: true,
       voidAlertToManager: true,
-      salesTargetAlert: true
+      salesTargetAlert: true,
     },
-    appliedBranches: 8,
+    appliedBranches: 0,
     isDefault: true,
-    createdAt: '2024-01-01',
-    updatedAt: '2026-02-20'
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
   {
-    id: '5',
-    name: 'Keamanan Tinggi',
-    description: 'Pengaturan keamanan untuk cabang high-value',
+    id: 'tpl-security-default',
+    name: 'Keamanan Standar',
+    description: 'Pengaturan keamanan default untuk semua cabang',
     category: 'security',
+    industry: 'general',
     settings: {
       requirePinForVoid: true,
       requirePinForDiscount: true,
-      maxVoidPerDay: 5,
-      maxDiscountPercent: 10,
-      auditLogRetentionDays: 365
+      maxLoginAttempts: 5,
+      sessionTimeout: 30,
+      twoFactorRequired: false,
     },
-    appliedBranches: 2,
-    isDefault: false,
-    createdAt: '2024-04-01',
-    updatedAt: '2026-01-15'
-  }
+    appliedBranches: 0,
+    isDefault: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
+
+async function loadTenant(tenantId: string) {
+  const { Tenant } = require('../../../../models');
+  const tenant = await Tenant.findByPk(tenantId);
+  return tenant;
+}
+
+export async function getTemplatesFromTenant(tenantId: string): Promise<BranchSettingTemplate[]> {
+  const tenant = await loadTenant(tenantId);
+  if (!tenant) return [];
+  const settings = (tenant.settings && typeof tenant.settings === 'object') ? tenant.settings : {};
+  const list = Array.isArray(settings[SETTINGS_KEY]) ? settings[SETTINGS_KEY] : null;
+  if (list && list.length) return list as BranchSettingTemplate[];
+  await tenant.update({ settings: { ...settings, [SETTINGS_KEY]: DEFAULT_TEMPLATES } });
+  return DEFAULT_TEMPLATES;
+}
+
+export async function saveTemplatesToTenant(tenantId: string, templates: BranchSettingTemplate[]) {
+  const tenant = await loadTenant(tenantId);
+  if (!tenant) throw new Error('Tenant not found');
+  const settings = (tenant.settings && typeof tenant.settings === 'object') ? tenant.settings : {};
+  await tenant.update({ settings: { ...settings, [SETTINGS_KEY]: templates } });
+}
+
+function resolveTenantId(req: NextApiRequest): string | null {
+  const session: any = (req as any).session;
+  return session?.user?.tenantId || null;
+}
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) {
+      return res.status(HttpStatus.FORBIDDEN).json(
+        errorResponse(ErrorCodes.FORBIDDEN, 'No tenant associated with this user')
+      );
+    }
+
     switch (req.method) {
-      case 'GET':
-        return getTemplates(req, res);
-      case 'POST':
-        return createTemplate(req, res);
+      case 'GET': {
+        const { category, industry, search } = req.query;
+        let templates = await getTemplatesFromTenant(tenantId);
+        if (category && category !== 'all') templates = templates.filter(t => t.category === category);
+        if (industry && industry !== 'all') templates = templates.filter(t => !t.industry || t.industry === industry || t.industry === 'general');
+        if (search && typeof search === 'string' && search.trim()) {
+          const q = search.toLowerCase();
+          templates = templates.filter(t => t.name.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q));
+        }
+        return res.status(HttpStatus.OK).json(
+          successResponse({ templates }, { total: templates.length })
+        );
+      }
+      case 'POST': {
+        const { name, description, category, industry, settings, isDefault } = req.body || {};
+        if (!name || !category) {
+          return res.status(HttpStatus.BAD_REQUEST).json(
+            errorResponse(ErrorCodes.VALIDATION_ERROR, 'Name and category are required')
+          );
+        }
+        const templates = await getTemplatesFromTenant(tenantId);
+        const now = new Date().toISOString();
+        const id = `tpl-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const newTemplate: BranchSettingTemplate = {
+          id,
+          name,
+          description: description || '',
+          category,
+          industry: industry || 'general',
+          settings: settings && typeof settings === 'object' ? settings : {},
+          appliedBranches: 0,
+          isDefault: !!isDefault,
+          createdAt: now,
+          updatedAt: now,
+        };
+        const updated = [...templates, newTemplate];
+        await saveTemplatesToTenant(tenantId, updated);
+        return res.status(HttpStatus.CREATED).json(
+          successResponse({ template: newTemplate }, undefined, 'Template created successfully')
+        );
+      }
       default:
         res.setHeader('Allow', ['GET', 'POST']);
-        return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
+        return res.status(HttpStatus.METHOD_NOT_ALLOWED).json(
+          errorResponse(ErrorCodes.METHOD_NOT_ALLOWED, `Method ${req.method} Not Allowed`)
+        );
     }
-  } catch (error) {
-    console.error('Branch Settings API Error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+  } catch (error: any) {
+    console.error('[branch-settings] error:', error?.message || error);
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(
+      errorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, error?.message || 'Internal server error')
+    );
   }
 }
 
 export default withHQAuth(handler, { module: 'branches' });
-
-function getTemplates(req: NextApiRequest, res: NextApiResponse) {
-  const { category } = req.query;
-
-  let templates = [...mockTemplates];
-  
-  if (category && category !== 'all') {
-    templates = templates.filter(t => t.category === category);
-  }
-
-  return res.status(200).json({ templates });
-}
-
-function createTemplate(req: NextApiRequest, res: NextApiResponse) {
-  const { name, description, category, settings, isDefault } = req.body;
-
-  if (!name || !category) {
-    return res.status(400).json({ error: 'Name and category are required' });
-  }
-
-  const newTemplate: BranchSettingTemplate = {
-    id: Date.now().toString(),
-    name,
-    description: description || '',
-    category,
-    settings: settings || {},
-    appliedBranches: 0,
-    isDefault: isDefault || false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-
-  mockTemplates.push(newTemplate);
-
-  return res.status(201).json({ template: newTemplate, message: 'Template created successfully' });
-}
