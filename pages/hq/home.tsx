@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast';
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Wallet, BarChart3,
   Building2, Truck, UserCheck, Settings, MessageCircle, Globe,
-  Briefcase, Megaphone, Layers, Send, Shield,
+  Briefcase, Megaphone, Layers, Send, Shield, Headphones,
   Clock, Bell, ChevronRight, RefreshCw, Activity, TrendingUp,
   CheckCircle, XCircle, Zap, Sparkles, Monitor, Search, Lock,
   ArrowRight, ExternalLink, Cpu, Server, AlertCircle, Hourglass
@@ -36,6 +36,7 @@ const MODULE_REGISTRY: ModuleInfo[] = [
   { code: 'hris', name: 'HRIS', description: 'SDM, payroll & KPI', icon: UserCheck, href: '/hq/hris', gradient: 'from-cyan-500 to-cyan-600', iconColor: 'text-cyan-600', category: 'hr' },
   { code: 'users', name: 'Pengguna', description: 'Akses & manajemen peran', icon: Users, href: '/hq/users', gradient: 'from-sky-500 to-sky-600', iconColor: 'text-sky-600', category: 'hr' },
   { code: 'crm', name: 'CRM & SFA', description: 'Pipeline & pelanggan 360', icon: Briefcase, href: '/hq/sfa', gradient: 'from-pink-500 to-pink-600', iconColor: 'text-pink-600', category: 'sales' },
+  { code: 'helpdesk', name: 'Layanan & Help Desk', description: 'Tiket, SLA & kepuasan pelanggan', icon: Headphones, href: '/hq/helpdesk', gradient: 'from-violet-500 to-violet-600', iconColor: 'text-violet-600', category: 'sales' },
   { code: 'marketing', name: 'Pemasaran', description: 'Kampanye & promosi', icon: Megaphone, href: '/hq/marketing', gradient: 'from-rose-500 to-rose-600', iconColor: 'text-rose-600', category: 'sales' },
   { code: 'fms', name: 'Armada', description: 'Kendaraan, pengemudi & GPS', icon: Truck, href: '/hq/fms', gradient: 'from-orange-500 to-orange-600', iconColor: 'text-orange-600', category: 'operations' },
   { code: 'tms', name: 'Transportasi', description: 'Pengiriman & logistik', icon: Send, href: '/hq/tms', gradient: 'from-lime-500 to-lime-600', iconColor: 'text-lime-600', category: 'operations' },

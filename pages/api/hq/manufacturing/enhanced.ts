@@ -11,15 +11,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     switch (action) {
-      case 'analytics': return getAnalytics(req, res);
-      case 'oee-dashboard': return getOEEDashboard(req, res);
-      case 'production-summary': return getProductionSummary(req, res);
-      case 'cost-analysis': return getCostAnalysis(req, res);
-      case 'quality-analytics': return getQualityAnalytics(req, res);
-      case 'machine-utilization': return getMachineUtilization(req, res);
-      case 'waste-analysis': return getWasteAnalysis(req, res);
-      case 'capacity-planning': return getCapacityPlanning(req, res);
-      case 'kpi-scorecard': return getKPIScorecard(req, res);
+      case 'analytics': return await getAnalytics(req, res);
+      case 'oee-dashboard': return await getOEEDashboard(req, res);
+      case 'production-summary': return await getProductionSummary(req, res);
+      case 'cost-analysis': return await getCostAnalysis(req, res);
+      case 'quality-analytics': return await getQualityAnalytics(req, res);
+      case 'machine-utilization': return await getMachineUtilization(req, res);
+      case 'waste-analysis': return await getWasteAnalysis(req, res);
+      case 'capacity-planning': return await getCapacityPlanning(req, res);
+      case 'kpi-scorecard': return await getKPIScorecard(req, res);
       default:
         return res.status(400).json(errorResponse('INVALID_ACTION', `Unknown action: ${action}`));
     }

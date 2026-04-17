@@ -19,33 +19,33 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     switch (action) {
       // Inventory Integration
       case 'check-material-availability':
-        return checkMaterialAvailability(req, res);
+        return await checkMaterialAvailability(req, res);
       case 'consume-materials':
-        return consumeMaterials(req, res);
+        return await consumeMaterials(req, res);
       case 'receive-finished-goods':
-        return receiveFinishedGoods(req, res);
+        return await receiveFinishedGoods(req, res);
 
       // Procurement Integration
       case 'generate-purchase-requisition':
-        return generatePurchaseRequisition(req, res);
+        return await generatePurchaseRequisition(req, res);
       case 'material-shortage':
-        return getMaterialShortage(req, res);
+        return await getMaterialShortage(req, res);
 
       // HRIS Integration
       case 'available-operators':
-        return getAvailableOperators(req, res);
+        return await getAvailableOperators(req, res);
       case 'operator-productivity':
-        return getOperatorProductivity(req, res);
+        return await getOperatorProductivity(req, res);
 
       // Finance Integration
       case 'production-cost-summary':
-        return getProductionCostSummary(req, res);
+        return await getProductionCostSummary(req, res);
       case 'cogs-calculation':
-        return getCOGSCalculation(req, res);
+        return await getCOGSCalculation(req, res);
 
       // Cross-module Dashboard
       case 'integrated-dashboard':
-        return getIntegratedDashboard(req, res);
+        return await getIntegratedDashboard(req, res);
 
       default:
         return res.status(400).json(errorResponse('INVALID_ACTION', `Unknown action: ${action}`));

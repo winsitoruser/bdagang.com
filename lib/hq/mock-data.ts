@@ -484,7 +484,7 @@ export const MOCK_SFA_CRM_FORECASTS = [
 
 /** Dipakai tab Peramalan: grafik batang + pie suhu deal saat API kosong. */
 export const MOCK_SFA_CRM_FORECAST_ANALYTICS = buildSfaCrmForecastAnalytics();
-export const MOCK_SFA_CRM_TICKETS = [{ id: 'tk1', subject: 'Komplain pengiriman', priority: 'high', status: 'open', sla_hours: 24 }];
+export const MOCK_SFA_CRM_TICKETS = [{ id: 'tk1', subject: 'Komplain pengiriman', priority: 'high', status: 'open', sla_hours: 24, field_task_count: 0, comment_count: 0 }];
 export const MOCK_SFA_CRM_AUTOMATION_RULES = [{ id: 'ar1', name: 'Auto task on new lead', trigger: 'lead.created', active: true }];
 export const MOCK_SFA_CRM_AUTOMATION_LOGS = [{ id: 'al1', rule: 'Auto task on new lead', at: '2026-03-18T09:01:00Z', result: 'ok' }];
 
@@ -750,7 +750,7 @@ export const MOCK_HQ_MODULE_STATUSES = [
   { code: 'branches', isEnabled: true, isCore: true }, { code: 'inventory', isEnabled: true, isCore: false },
   { code: 'products', isEnabled: true, isCore: false }, { code: 'finance', isEnabled: true, isCore: false },
   { code: 'hris', isEnabled: true, isCore: false }, { code: 'users', isEnabled: true, isCore: false },
-  { code: 'crm', isEnabled: true, isCore: false }, { code: 'marketing', isEnabled: true, isCore: false },
+  { code: 'crm', isEnabled: true, isCore: false }, { code: 'helpdesk', isEnabled: true, isCore: false }, { code: 'marketing', isEnabled: true, isCore: false },
   { code: 'fms', isEnabled: true, isCore: false }, { code: 'tms', isEnabled: true, isCore: false },
   { code: 'reports', isEnabled: true, isCore: false }, { code: 'audit', isEnabled: true, isCore: false },
   { code: 'whatsapp', isEnabled: true, isCore: false }, { code: 'marketplace', isEnabled: true, isCore: false },

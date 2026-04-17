@@ -11,13 +11,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     switch (method) {
       case 'GET':
-        return handleGet(req, res, action);
+        return await handleGet(req, res, action);
       case 'POST':
-        return handlePost(req, res, action);
+        return await handlePost(req, res, action);
       case 'PUT':
-        return handlePut(req, res, action);
+        return await handlePut(req, res, action);
       case 'DELETE':
-        return handleDelete(req, res, action);
+        return await handleDelete(req, res, action);
       default:
         return res.status(405).json(errorResponse('METHOD_NOT_ALLOWED', 'Method not allowed'));
     }
@@ -801,8 +801,19 @@ async function createQCInspection(req: NextApiRequest, res: NextApiResponse) {
   // Auto-populate results from template parameters
   if (template_id) {
     const [tmpl] = await sequelize.query(`SELECT parameters FROM mfg_qc_templates WHERE id = :id`, { replacements: { id: template_id } });
-    if (tmpl[0]?.parameters) {
-      const params = typeof tmpl[0].parameters === 'string' ? JSON.parse(tmpl[0].parameters) : tmpl[0].parameters;
+    if (tmpl[0]?.parameters != null && String(tmpl[0].parameters).trim() !== '') {
+      let params: unknown[] = [];
+      const raw = tmpl[0].parameters;
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw.trim());
+          params = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          params = [];
+        }
+      } else if (Array.isArray(raw)) {
+        params = raw;
+      }
       for (const p of params) {
         await sequelize.query(`
           INSERT INTO mfg_qc_results (inspection_id, parameter_name, parameter_type, expected_value, uom, min_value, max_value, severity)
@@ -1394,8 +1405,18 @@ async function generateCoA(req: NextApiRequest, res: NextApiResponse) {
       SELECT qt.parameters FROM mfg_qc_templates qt
       JOIN mfg_qc_inspections qi ON qi.template_id = qt.id WHERE qi.id = :id
     `, { replacements: { id: inspection_id } });
-    if (tmplData[0]?.parameters) {
-      specs = typeof tmplData[0].parameters === 'string' ? JSON.parse(tmplData[0].parameters) : tmplData[0].parameters;
+    if (tmplData[0]?.parameters != null && String(tmplData[0].parameters).trim() !== '') {
+      const raw = tmplData[0].parameters;
+      if (typeof raw === 'string') {
+        try {
+          const parsed = JSON.parse(raw.trim());
+          specs = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          specs = [];
+        }
+      } else {
+        specs = Array.isArray(raw) ? raw : [];
+      }
     }
   }
 

@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import { useTranslation } from '@/lib/i18n';
+import { mfgRequest, mfgRequestFull, mfgPut, mfgDelete, mfgIntegration } from '@/lib/manufacturing/mfg-client';
 import Modal from '../../../components/hq/ui/Modal';
 import { toast } from 'react-hot-toast';
 import {
@@ -53,6 +54,24 @@ const formatCurrency = (n: number) => new Intl.NumberFormat('id-ID', { style: 'c
 const formatNumber = (n: number) => new Intl.NumberFormat('id-ID').format(n);
 const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 const formatDateTime = (d: string | null) => d ? new Date(d).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+
+/** DB JSON columns may be "", whitespace, or invalid JSON — avoid JSON.parse on empty input. */
+function parseJsonLenient(raw: unknown): unknown {
+  if (raw == null || raw === '') return null;
+  if (typeof raw !== 'string') return raw;
+  const t = raw.trim();
+  if (!t) return null;
+  try {
+    return JSON.parse(t);
+  } catch {
+    return raw;
+  }
+}
+
+function qcTemplateParamCount(raw: unknown): number {
+  const p = parseJsonLenient(raw);
+  return Array.isArray(p) ? p.length : 0;
+}
 
 const MOCK_MFG_DASHBOARD = {
   totalWorkOrders: 45, activeWorkOrders: 12, completedThisMonth: 28, overdueOrders: 3,
@@ -116,6 +135,8 @@ export default function ManufacturingPage() {
   const [subcontracts, setSubcontracts] = useState<any[]>([]);
   const [controlPoints, setControlPoints] = useState<any[]>([]);
   const [coaList, setCoaList] = useState<any[]>([]);
+  const [integrationOverview, setIntegrationOverview] = useState<any>(null);
+  const [woDetailLoading, setWoDetailLoading] = useState(false);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -134,35 +155,45 @@ export default function ManufacturingPage() {
   // Products for dropdowns
   const [products, setProducts] = useState<any[]>([]);
 
-  const api = useCallback(async (action: string, method = 'GET', body?: any, apiType: 'base' | 'enhanced' | 'advanced' | 'integration' = 'base') => {
-    const baseMap = { base: '/api/hq/manufacturing', enhanced: '/api/hq/manufacturing/enhanced', advanced: '/api/hq/manufacturing/advanced', integration: '/api/hq/manufacturing/integration' };
-    const base = baseMap[apiType];
-    const url = `${base}?action=${action}`;
-    const opts: any = { method, headers: { 'Content-Type': 'application/json' } };
-    if (body) opts.body = JSON.stringify(body);
-    const res = await fetch(url, opts);
-    const contentType = res.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      throw new Error(`API ${action} returned non-JSON response (${res.status})`);
+  const api = useCallback(
+    async (
+      action: string,
+      method = 'GET',
+      body?: any,
+      apiType: 'base' | 'enhanced' | 'advanced' | 'integration' = 'base',
+      query?: Record<string, string>
+    ) => mfgRequest(action, { method, body, apiType, query }),
+    []
+  );
+
+  const workCentersLoaded = useRef(false);
+  const ensureWorkCenters = useCallback(async () => {
+    if (workCentersLoaded.current) return;
+    try {
+      const rows = await mfgRequest<any[]>('work-centers');
+      setWorkCenters(rows);
+      workCentersLoaded.current = true;
+    } catch {
+      /* ignore */
     }
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error?.message || 'API Error');
-    return json.data;
   }, []);
 
   const fetchDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      const [dash, anl] = await Promise.all([
+      const [dash, anl, integ] = await Promise.all([
         api('dashboard'),
-        api('analytics', 'GET', null, 'enhanced')
+        api('analytics', 'GET', undefined, 'enhanced'),
+        mfgIntegration.integratedDashboard().catch(() => null),
       ]);
       setDashboard(dash);
       setAnalytics(anl);
+      setIntegrationOverview(integ);
     } catch (e: any) {
       console.error('Dashboard fetch error:', e);
       setDashboard(MOCK_MFG_DASHBOARD);
       setAnalytics(MOCK_MFG_ANALYTICS);
+      setIntegrationOverview(null);
     }
     setLoading(false);
   }, [api]);
@@ -170,14 +201,18 @@ export default function ManufacturingPage() {
   const fetchWorkOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const params = `work-orders&page=${woPage}&limit=20${statusFilter !== 'all' ? `&status=${statusFilter}` : ''}${searchTerm ? `&search=${searchTerm}` : ''}`;
-      const res = await fetch(`/api/hq/manufacturing?action=${params}`);
-      const ct = res.headers.get('content-type') || '';
-      if (!ct.includes('application/json')) { console.warn('WO API returned non-JSON:', res.status); setLoading(false); return; }
-      const json = await res.json();
-      setWorkOrders(json.data || []);
-      setWoTotal(json.meta?.total || 0);
-    } catch (e: any) { console.error(e); }
+      const query: Record<string, string> = {
+        page: String(woPage),
+        limit: '20',
+      };
+      if (statusFilter !== 'all') query.status = statusFilter;
+      if (searchTerm.trim()) query.search = searchTerm.trim();
+      const { data, meta } = await mfgRequestFull<any[]>('work-orders', { query });
+      setWorkOrders(data || []);
+      setWoTotal(Number(meta?.total || 0));
+    } catch (e: any) {
+      console.error(e);
+    }
     setLoading(false);
   }, [woPage, statusFilter, searchTerm]);
 
@@ -186,7 +221,7 @@ export default function ManufacturingPage() {
     try {
       switch (tab) {
         case 'dashboard': await fetchDashboard(); break;
-        case 'work-orders': await fetchWorkOrders(); break;
+        case 'work-orders': break;
         case 'bom': setBoms(await api('bom')); break;
         case 'routings': setRoutings(await api('routings')); break;
         case 'work-centers': setWorkCenters(await api('work-centers')); break;
@@ -218,27 +253,77 @@ export default function ManufacturingPage() {
     setLoading(false);
   }, [api, fetchDashboard, fetchWorkOrders]);
 
-  useEffect(() => { setMounted(true); fetchDashboard(); fetchProducts(); }, []);
-  useEffect(() => { if (mounted) fetchTabData(activeTab); }, [activeTab]);
-  useEffect(() => { if (mounted && activeTab === 'work-orders') fetchWorkOrders(); }, [woPage, statusFilter]);
+  useEffect(() => {
+    setMounted(true);
+    fetchDashboard();
+    fetchProducts();
+  }, []);
+  useEffect(() => {
+    if (mounted) fetchTabData(activeTab);
+  }, [activeTab]);
+  useEffect(() => {
+    if (mounted && activeTab === 'work-orders') fetchWorkOrders();
+  }, [mounted, activeTab, woPage, statusFilter, searchTerm, fetchWorkOrders]);
+  useEffect(() => {
+    if (mounted && (activeTab === 'work-orders' || showCreateModal)) ensureWorkCenters();
+  }, [mounted, activeTab, showCreateModal, ensureWorkCenters]);
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/hq/products?limit=200');
+      const res = await fetch('/api/hq/products?limit=200', { credentials: 'include' });
       const ct = res.headers.get('content-type') || '';
       if (!ct.includes('application/json')) { console.warn('Products API returned non-JSON'); return; }
       const json = await res.json();
-      setProducts(json.data?.products || json.data || []);
+      // HQ products GET returns { products, total, ... } at root; some proxies wrap as { data: { products } }
+      const list = json?.data?.products ?? json?.products ?? (Array.isArray(json?.data) ? json.data : []);
+      setProducts(Array.isArray(list) ? list : []);
     } catch (e) { console.error(e); }
   };
 
   // Work Order Actions
-  const handleWOAction = async (action: string, id: string, extra?: any) => {
+  const handleWOAction = async (action: string, id: string | null, extra?: any) => {
     try {
-      await api(action, 'POST', { id, ...extra });
+      const body = id != null && id !== '' ? { id, ...extra } : { ...extra };
+      await api(action, 'POST', body);
       toast.success(t('mfgUi.toast.woActionOk').replace('{{a}}', action.replace('wo-', '')));
       fetchWorkOrders();
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const handleWOStatus = async (id: string, status: string) => {
+    try {
+      await mfgPut('work-order', { id, status });
+      toast.success(t('mfgUi.toast.updateOk'));
+      fetchWorkOrders();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const handleDeleteWO = async (id: string) => {
+    if (!confirm(t('mfgUi.wo.confirmDelete'))) return;
+    try {
+      await mfgDelete('work-order', id);
+      toast.success(t('mfgUi.toast.updateOk'));
+      fetchWorkOrders();
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const openWorkOrderDetail = async (wo: any) => {
+    setShowDetailModal(true);
+    setSelectedItem(wo);
+    setWoDetailLoading(true);
+    try {
+      const detail = await mfgRequest<any>('work-order-detail', { query: { id: String(wo.id) } });
+      setSelectedItem(detail);
+    } catch {
+      /* keep list row */
+    }
+    setWoDetailLoading(false);
   };
 
   // Create Work Order
@@ -254,6 +339,155 @@ export default function ManufacturingPage() {
       fetchWorkOrders();
     } catch (e: any) { toast.error(e.message); }
     setSaving(false);
+  };
+
+  const [bomForm, setBomForm] = useState({ product_id: '', bom_code: '', bom_name: '', base_quantity: '1' });
+  const [routingForm, setRoutingForm] = useState({ routing_code: '', routing_name: '', product_id: '' });
+  const [wcForm, setWcForm] = useState({ code: '', name: '', type: 'production', capacity_per_hour: '0' });
+  const [machineForm, setMachineForm] = useState({ machine_code: '', machine_name: '', work_center_id: '' });
+  const [qcForm, setQcForm] = useState({ template_code: '', template_name: '', inspection_type: 'in_process' });
+  const [planForm, setPlanForm] = useState({ plan_code: '', plan_name: '', plan_type: 'weekly', period_start: '', period_end: '' });
+
+  const handleCreateByTab = async () => {
+    setSaving(true);
+    try {
+      switch (activeTab) {
+        case 'bom': {
+          if (!bomForm.product_id || !bomForm.bom_code || !bomForm.bom_name) {
+            toast.error(t('mfgUi.toast.fillRequired'));
+            break;
+          }
+          await api('bom', 'POST', {
+            product_id: bomForm.product_id,
+            bom_code: bomForm.bom_code,
+            bom_name: bomForm.bom_name,
+            base_quantity: parseFloat(bomForm.base_quantity) || 1,
+            items: [],
+          });
+          toast.success(t('mfgUi.toast.createOk'));
+          setShowCreateModal(false);
+          fetchTabData('bom');
+          break;
+        }
+        case 'routings': {
+          if (!routingForm.routing_code || !routingForm.routing_name) {
+            toast.error(t('mfgUi.toast.fillRequired'));
+            break;
+          }
+          await api('routing', 'POST', {
+            routing_code: routingForm.routing_code,
+            routing_name: routingForm.routing_name,
+            product_id: routingForm.product_id || null,
+            operations: [],
+          });
+          toast.success(t('mfgUi.toast.createOk'));
+          setShowCreateModal(false);
+          fetchTabData('routings');
+          break;
+        }
+        case 'work-centers': {
+          if (!wcForm.code || !wcForm.name) {
+            toast.error(t('mfgUi.toast.fillRequired'));
+            break;
+          }
+          await api('work-center', 'POST', {
+            code: wcForm.code,
+            name: wcForm.name,
+            type: wcForm.type,
+            capacity_per_hour: parseFloat(wcForm.capacity_per_hour) || 0,
+          });
+          toast.success(t('mfgUi.toast.createOk'));
+          setShowCreateModal(false);
+          workCentersLoaded.current = false;
+          fetchTabData('work-centers');
+          break;
+        }
+        case 'machines': {
+          if (!machineForm.machine_code || !machineForm.machine_name) {
+            toast.error(t('mfgUi.toast.fillRequired'));
+            break;
+          }
+          await api('machine', 'POST', {
+            machine_code: machineForm.machine_code,
+            machine_name: machineForm.machine_name,
+            work_center_id: machineForm.work_center_id || null,
+          });
+          toast.success(t('mfgUi.toast.createOk'));
+          setShowCreateModal(false);
+          fetchTabData('machines');
+          break;
+        }
+        case 'quality': {
+          if (!qcForm.template_code || !qcForm.template_name) {
+            toast.error(t('mfgUi.toast.fillRequired'));
+            break;
+          }
+          await api('qc-template', 'POST', {
+            template_code: qcForm.template_code,
+            template_name: qcForm.template_name,
+            inspection_type: qcForm.inspection_type,
+          });
+          toast.success(t('mfgUi.toast.createOk'));
+          setShowCreateModal(false);
+          fetchTabData('quality');
+          break;
+        }
+        case 'planning': {
+          if (!planForm.plan_code || !planForm.plan_name || !planForm.period_start || !planForm.period_end) {
+            toast.error(t('mfgUi.toast.fillRequired'));
+            break;
+          }
+          await api('production-plan', 'POST', {
+            plan_code: planForm.plan_code,
+            plan_name: planForm.plan_name,
+            plan_type: planForm.plan_type,
+            period_start: planForm.period_start,
+            period_end: planForm.period_end,
+            items: [],
+          });
+          toast.success(t('mfgUi.toast.createOk'));
+          setShowCreateModal(false);
+          fetchTabData('planning');
+          break;
+        }
+        default:
+          break;
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+    setSaving(false);
+  };
+
+  const handleApproveBom = async (b: any) => {
+    try {
+      await mfgPut('bom', { id: b.id, status: 'active' });
+      toast.success(t('mfgUi.toast.updateOk'));
+      fetchTabData('bom');
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const handleDeleteBom = async (b: any) => {
+    if (!confirm(t('mfgUi.bom.confirmDelete'))) return;
+    try {
+      await mfgDelete('bom', b.id);
+      toast.success(t('mfgUi.toast.updateOk'));
+      fetchTabData('bom');
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const handleGeneratePlan = async (planId: string) => {
+    try {
+      await api('generate-wo-from-plan', 'POST', { plan_id: planId });
+      toast.success(t('mfgUi.planning.genOk'));
+      fetchTabData('planning');
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
   // Export CSV
@@ -297,10 +531,10 @@ export default function ManufacturingPage() {
         {/* Tab Navigation */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1">
           <div className="flex overflow-x-auto gap-1">
-            {tabs.map(t => (
-              <button key={t.key} onClick={() => setActiveTab(t.key)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${activeTab === t.key ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-                <t.icon className="w-4 h-4" /> {t.label}
+            {tabs.map((tab) => (
+              <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${activeTab === tab.key ? 'bg-purple-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+                <tab.icon className="w-4 h-4" /> {tab.label}
               </button>
             ))}
           </div>
@@ -327,14 +561,28 @@ export default function ManufacturingPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => fetchTabData(activeTab)} className="flex items-center gap-2 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50">
+            <button
+              type="button"
+              onClick={() => (activeTab === 'work-orders' ? fetchWorkOrders() : fetchTabData(activeTab))}
+              className="flex items-center gap-2 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
+            >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('mfgUi.toolbar.refresh')}
             </button>
-            <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50">
+            <button type="button" onClick={handleExport} className="flex items-center gap-2 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50">
               <Download className="w-4 h-4" /> {t('mfgUi.toolbar.export')}
             </button>
             {['work-orders', 'bom', 'routings', 'work-centers', 'machines', 'quality', 'planning'].includes(activeTab) && (
-              <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  void fetchProducts();
+                  void ensureWorkCenters();
+                  setShowCreateModal(true);
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700"
+              >
                 <Plus className="w-4 h-4" /> {t('mfgUi.toolbar.create')}
               </button>
             )}
@@ -348,14 +596,25 @@ export default function ManufacturingPage() {
           </div>
         ) : (
           <>
-            {activeTab === 'dashboard' && <DashboardTab dashboard={dashboard} analytics={analytics} />}
-            {activeTab === 'work-orders' && <WorkOrdersTab workOrders={workOrders} total={woTotal} page={woPage} setPage={setWoPage} onAction={handleWOAction} onView={(wo: any) => { setSelectedItem(wo); setShowDetailModal(true); }} />}
-            {activeTab === 'bom' && <BOMTab boms={boms} />}
+            {activeTab === 'dashboard' && <DashboardTab dashboard={dashboard} analytics={analytics} integration={integrationOverview} />}
+            {activeTab === 'work-orders' && (
+              <WorkOrdersTab
+                workOrders={workOrders}
+                total={woTotal}
+                page={woPage}
+                setPage={setWoPage}
+                onAction={handleWOAction}
+                onView={openWorkOrderDetail}
+                onStatusChange={handleWOStatus}
+                onDelete={handleDeleteWO}
+              />
+            )}
+            {activeTab === 'bom' && <BOMTab boms={boms} onApprove={handleApproveBom} onDelete={handleDeleteBom} />}
             {activeTab === 'routings' && <RoutingsTab routings={routings} />}
             {activeTab === 'work-centers' && <WorkCentersTab workCenters={workCenters} />}
             {activeTab === 'machines' && <MachinesTab machines={machines} />}
             {activeTab === 'quality' && <QualityTab inspections={qcInspections} templates={qcTemplates} />}
-            {activeTab === 'planning' && <PlanningTab plans={productionPlans} />}
+            {activeTab === 'planning' && <PlanningTab plans={productionPlans} onGenerate={handleGeneratePlan} />}
             {activeTab === 'oee' && <OEETab data={oeeData} />}
             {activeTab === 'costs' && <CostsTab data={costData} />}
             {activeTab === 'maintenance' && <MaintenanceTab data={maintenanceData} api={api} onRefresh={() => fetchTabData('maintenance')} />}
@@ -367,68 +626,366 @@ export default function ManufacturingPage() {
           </>
         )}
 
-        {/* Create Work Order Modal */}
-        <Modal isOpen={showCreateModal && activeTab === 'work-orders'} onClose={() => setShowCreateModal(false)} title={t('mfgUi.modal.createWo')} size="lg">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.product')} *</label>
-                <select value={woForm.product_id} onChange={e => setWoForm({ ...woForm, product_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
-                  <option value="">{t('mfgUi.modal.selectProduct')}</option>
-                  {products.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
-                </select>
+        {/* Create modal — work order, BOM, routing, work center, machine, QC template, production plan */}
+        <Modal
+          isOpen={showCreateModal && ['work-orders', 'bom', 'routings', 'work-centers', 'machines', 'quality', 'planning'].includes(activeTab)}
+          onClose={() => setShowCreateModal(false)}
+          title={`${t('mfgUi.toolbar.create')} — ${tabs.find((x) => x.key === activeTab)?.label || ''}`}
+          size="lg"
+        >
+          {activeTab === 'work-orders' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.product')} *</label>
+                  <select value={woForm.product_id} onChange={(e) => setWoForm({ ...woForm, product_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    <option value="">{t('mfgUi.modal.selectProduct')}</option>
+                    {products.map((p: any) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.sku})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.qty')} *</label>
+                  <input type="number" value={woForm.planned_quantity} onChange={(e) => setWoForm({ ...woForm, planned_quantity: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="0" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.priority')}</label>
+                  <select value={woForm.priority} onChange={(e) => setWoForm({ ...woForm, priority: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    <option value="low">{t('mfgUi.priority.low')}</option>
+                    <option value="normal">{t('mfgUi.priority.normal')}</option>
+                    <option value="high">{t('mfgUi.priority.high')}</option>
+                    <option value="urgent">{t('mfgUi.priority.urgent')}</option>
+                    <option value="critical">{t('mfgUi.priority.critical')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.workCenter')}</label>
+                  <select value={woForm.work_center_id} onChange={(e) => setWoForm({ ...woForm, work_center_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    <option value="">{t('mfgUi.modal.selectWc')}</option>
+                    {workCenters.map((wc: any) => (
+                      <option key={wc.id} value={wc.id}>
+                        {wc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.plannedStart')}</label>
+                  <input type="datetime-local" value={woForm.planned_start} onChange={(e) => setWoForm({ ...woForm, planned_start: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.plannedEnd')}</label>
+                  <input type="datetime-local" value={woForm.planned_end} onChange={(e) => setWoForm({ ...woForm, planned_end: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.qty')} *</label>
-                <input type="number" value={woForm.planned_quantity} onChange={e => setWoForm({ ...woForm, planned_quantity: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="0" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.notes')}</label>
+                <textarea value={woForm.notes} onChange={(e) => setWoForm({ ...woForm, notes: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" rows={2} />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.priority')}</label>
-                <select value={woForm.priority} onChange={e => setWoForm({ ...woForm, priority: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
-                  <option value="low">{t('mfgUi.priority.low')}</option><option value="normal">{t('mfgUi.priority.normal')}</option><option value="high">{t('mfgUi.priority.high')}</option><option value="urgent">{t('mfgUi.priority.urgent')}</option><option value="critical">{t('mfgUi.priority.critical')}</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.workCenter')}</label>
-                <select value={woForm.work_center_id} onChange={e => setWoForm({ ...woForm, work_center_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
-                  <option value="">{t('mfgUi.modal.selectWc')}</option>
-                  {workCenters.map((wc: any) => <option key={wc.id} value={wc.id}>{wc.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.plannedStart')}</label>
-                <input type="datetime-local" value={woForm.planned_start} onChange={e => setWoForm({ ...woForm, planned_start: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.plannedEnd')}</label>
-                <input type="datetime-local" value={woForm.planned_end} onChange={e => setWoForm({ ...woForm, planned_end: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg text-sm">
+                  {t('mfgUi.modal.cancel')}
+                </button>
+                <button type="button" onClick={handleCreateWO} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t('mfgUi.modal.save')}
+                </button>
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.modal.notes')}</label>
-              <textarea value={woForm.notes} onChange={e => setWoForm({ ...woForm, notes: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" rows={2} />
+          )}
+          {activeTab === 'bom' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.bom.product')} *</label>
+                  <select value={bomForm.product_id} onChange={(e) => setBomForm({ ...bomForm, product_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    <option value="">—</option>
+                    {products.map((p: any) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.bom.code')} *</label>
+                  <input value={bomForm.bom_code} onChange={(e) => setBomForm({ ...bomForm, bom_code: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.bom.name')} *</label>
+                  <input value={bomForm.bom_name} onChange={(e) => setBomForm({ ...bomForm, bom_name: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.wo.colPlanned')} (base)</label>
+                  <input type="number" value={bomForm.base_quantity} onChange={(e) => setBomForm({ ...bomForm, base_quantity: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg text-sm">
+                  {t('mfgUi.modal.cancel')}
+                </button>
+                <button type="button" onClick={handleCreateByTab} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t('mfgUi.modal.save')}
+                </button>
+              </div>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg text-sm">{t('mfgUi.modal.cancel')}</button>
-              <button onClick={handleCreateWO} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t('mfgUi.modal.save')}
-              </button>
+          )}
+          {activeTab === 'routings' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.routing.code')} *</label>
+                  <input value={routingForm.routing_code} onChange={(e) => setRoutingForm({ ...routingForm, routing_code: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.routing.name')} *</label>
+                  <input value={routingForm.routing_name} onChange={(e) => setRoutingForm({ ...routingForm, routing_name: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.routing.product')}</label>
+                  <select value={routingForm.product_id} onChange={(e) => setRoutingForm({ ...routingForm, product_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    <option value="">—</option>
+                    {products.map((p: any) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg text-sm">
+                  {t('mfgUi.modal.cancel')}
+                </button>
+                <button type="button" onClick={handleCreateByTab} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t('mfgUi.modal.save')}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+          {activeTab === 'work-centers' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+                  <input value={wcForm.code} onChange={(e) => setWcForm({ ...wcForm, code: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                  <input value={wcForm.name} onChange={(e) => setWcForm({ ...wcForm, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                  <select value={wcForm.type} onChange={(e) => setWcForm({ ...wcForm, type: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    <option value="production">production</option>
+                    <option value="assembly">assembly</option>
+                    <option value="packaging">packaging</option>
+                    <option value="quality">quality</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.wc.capPerH')}</label>
+                  <input type="number" value={wcForm.capacity_per_hour} onChange={(e) => setWcForm({ ...wcForm, capacity_per_hour: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg text-sm">
+                  {t('mfgUi.modal.cancel')}
+                </button>
+                <button type="button" onClick={handleCreateByTab} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t('mfgUi.modal.save')}
+                </button>
+              </div>
+            </div>
+          )}
+          {activeTab === 'machines' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Code *</label>
+                  <input value={machineForm.machine_code} onChange={(e) => setMachineForm({ ...machineForm, machine_code: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                  <input value={machineForm.machine_name} onChange={(e) => setMachineForm({ ...machineForm, machine_name: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.machines.workCenter')}</label>
+                  <select value={machineForm.work_center_id} onChange={(e) => setMachineForm({ ...machineForm, work_center_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    <option value="">—</option>
+                    {workCenters.map((wc: any) => (
+                      <option key={wc.id} value={wc.id}>
+                        {wc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg text-sm">
+                  {t('mfgUi.modal.cancel')}
+                </button>
+                <button type="button" onClick={handleCreateByTab} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t('mfgUi.modal.save')}
+                </button>
+              </div>
+            </div>
+          )}
+          {activeTab === 'quality' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Template code *</label>
+                  <input value={qcForm.template_code} onChange={(e) => setQcForm({ ...qcForm, template_code: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Template name *</label>
+                  <input value={qcForm.template_name} onChange={(e) => setQcForm({ ...qcForm, template_name: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.qc.colType')}</label>
+                  <select value={qcForm.inspection_type} onChange={(e) => setQcForm({ ...qcForm, inspection_type: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    <option value="in_process">in_process</option>
+                    <option value="incoming">incoming</option>
+                    <option value="final">final</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg text-sm">
+                  {t('mfgUi.modal.cancel')}
+                </button>
+                <button type="button" onClick={handleCreateByTab} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t('mfgUi.modal.save')}
+                </button>
+              </div>
+            </div>
+          )}
+          {activeTab === 'planning' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.planning.code')} *</label>
+                  <input value={planForm.plan_code} onChange={(e) => setPlanForm({ ...planForm, plan_code: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.planning.name')} *</label>
+                  <input value={planForm.plan_name} onChange={(e) => setPlanForm({ ...planForm, plan_name: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('mfgUi.planning.type')}</label>
+                  <select value={planForm.plan_type} onChange={(e) => setPlanForm({ ...planForm, plan_type: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm">
+                    <option value="weekly">weekly</option>
+                    <option value="monthly">monthly</option>
+                    <option value="daily">daily</option>
+                  </select>
+                </div>
+                <div />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Period start *</label>
+                  <input type="date" value={planForm.period_start} onChange={(e) => setPlanForm({ ...planForm, period_start: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Period end *</label>
+                  <input type="date" value={planForm.period_end} onChange={(e) => setPlanForm({ ...planForm, period_end: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 border rounded-lg text-sm">
+                  {t('mfgUi.modal.cancel')}
+                </button>
+                <button type="button" onClick={handleCreateByTab} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm disabled:opacity-50">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {t('mfgUi.modal.save')}
+                </button>
+              </div>
+            </div>
+          )}
         </Modal>
 
-        {/* Detail Modal */}
-        <Modal isOpen={showDetailModal} onClose={() => { setShowDetailModal(false); setSelectedItem(null); }} title={`${t('mfgUi.detail')}: ${selectedItem?.wo_number || selectedItem?.bom_code || ''}`} size="xl">
-          {selectedItem && (
+        {/* Detail Modal — work order with materials / operations */}
+        <Modal
+          isOpen={showDetailModal}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedItem(null);
+          }}
+          title={`${t('mfgUi.detail')}: ${selectedItem?.wo_number || selectedItem?.bom_code || ''}`}
+          size="xl"
+        >
+          {woDetailLoading && (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+            </div>
+          )}
+          {!woDetailLoading && selectedItem && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
-                {Object.entries(selectedItem).filter(([k]) => !k.includes('_id') && k !== 'id' && typeof selectedItem[k] !== 'object').slice(0, 12).map(([k, v]: [string, any]) => (
-                  <div key={k}>
-                    <p className="text-xs text-gray-500">{k.replace(/_/g, ' ').toUpperCase()}</p>
-                    <p className="text-sm font-medium">{typeof v === 'number' ? (v > 100000 ? formatCurrency(v) : formatNumber(v)) : v || '-'}</p>
-                  </div>
-                ))}
+                {Object.entries(selectedItem)
+                  .filter(([k]) => !['materials', 'operations', 'outputs', 'costs', 'waste'].includes(k) && !k.includes('_id') && k !== 'id' && typeof (selectedItem as any)[k] !== 'object')
+                  .slice(0, 12)
+                  .map(([k, v]: [string, any]) => (
+                    <div key={k}>
+                      <p className="text-xs text-gray-500">{k.replace(/_/g, ' ').toUpperCase()}</p>
+                      <p className="text-sm font-medium">{typeof v === 'number' ? (v > 100000 ? formatCurrency(v) : formatNumber(v)) : String(v ?? '-')}</p>
+                    </div>
+                  ))}
               </div>
+              {Array.isArray((selectedItem as any).materials) && (selectedItem as any).materials.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">{t('mfgUi.detailMat')}</h4>
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="text-left py-2 px-2">SKU / Product</th>
+                          <th className="text-right py-2 px-2">Planned</th>
+                          <th className="text-right py-2 px-2">Issued</th>
+                          <th className="text-left py-2 px-2">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(selectedItem as any).materials.map((m: any) => (
+                          <tr key={m.id} className="border-t">
+                            <td className="py-2 px-2">{m.product_sku || m.product_name}</td>
+                            <td className="py-2 px-2 text-right">{formatNumber(parseFloat(m.planned_quantity || 0))}</td>
+                            <td className="py-2 px-2 text-right">{formatNumber(parseFloat(m.issued_quantity || 0))}</td>
+                            <td className="py-2 px-2">{m.status}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              {Array.isArray((selectedItem as any).operations) && (selectedItem as any).operations.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">{t('mfgUi.detailOps')}</h4>
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="text-left py-2 px-2">#</th>
+                          <th className="text-left py-2 px-2">Name</th>
+                          <th className="text-left py-2 px-2">Work center</th>
+                          <th className="text-left py-2 px-2">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(selectedItem as any).operations.map((o: any) => (
+                          <tr key={o.id} className="border-t">
+                            <td className="py-2 px-2">{o.operation_number}</td>
+                            <td className="py-2 px-2">{o.operation_name}</td>
+                            <td className="py-2 px-2">{o.work_center_name || '-'}</td>
+                            <td className="py-2 px-2">{o.status}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </Modal>
@@ -440,13 +997,17 @@ export default function ManufacturingPage() {
 // ==========================================
 // DASHBOARD TAB
 // ==========================================
-function DashboardTab({ dashboard, analytics }: { dashboard: any; analytics: any }) {
+function DashboardTab({ dashboard, analytics, integration }: { dashboard: any; analytics: any; integration?: any }) {
   const { t } = useTranslation();
   if (!dashboard) return <div className="text-center text-gray-500 py-8">{t('mfgUi.dashboard.loading')}</div>;
 
   const wo = dashboard.workOrders || {};
   const mch = dashboard.machines || {};
   const qc = dashboard.quality || {};
+  const prod = integration?.production || {};
+  const inv = integration?.inventory || {};
+  const qx = integration?.quality || {};
+  const maint = integration?.maintenance || {};
 
   const stats = [
     { label: t('mfgUi.dashboard.wo30'), value: wo.total || 0, icon: ClipboardList, bg: 'bg-purple-50 border-purple-200', iconCls: 'text-purple-600', valCls: 'text-purple-700', sub: `${wo.in_progress || 0} ${t('mfgUi.dashboard.active')}` },
@@ -459,6 +1020,29 @@ function DashboardTab({ dashboard, analytics }: { dashboard: any; analytics: any
 
   return (
     <div className="space-y-6">
+      {integration && (
+        <div className="bg-gradient-to-r from-slate-50 to-purple-50 border border-purple-100 rounded-xl p-4">
+          <p className="text-xs font-semibold text-purple-800 mb-2">{t('mfgUi.dashboard.integrationTitle')}</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div className="bg-white/80 rounded-lg p-3 border border-white">
+              <p className="text-xs text-gray-500">{t('mfgUi.dashboard.integWo')}</p>
+              <p className="font-semibold text-gray-900">{prod.active_wo ?? 0} / {prod.pending_wo ?? 0}</p>
+            </div>
+            <div className="bg-white/80 rounded-lg p-3 border border-white">
+              <p className="text-xs text-gray-500">{t('mfgUi.dashboard.integMat')}</p>
+              <p className="font-semibold text-amber-700">{inv.pending_material_issues ?? 0}</p>
+            </div>
+            <div className="bg-white/80 rounded-lg p-3 border border-white">
+              <p className="text-xs text-gray-500">{t('mfgUi.dashboard.integQc')}</p>
+              <p className="font-semibold text-blue-700">{qx.pending_inspections ?? 0}</p>
+            </div>
+            <div className="bg-white/80 rounded-lg p-3 border border-white">
+              <p className="text-xs text-gray-500">{t('mfgUi.dashboard.integMaint')}</p>
+              <p className="font-semibold text-red-700">{maint.overdue_maintenance ?? 0} / {maint.upcoming_maintenance ?? 0}</p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {stats.map((s, i) => (
@@ -575,7 +1159,25 @@ function DashboardTab({ dashboard, analytics }: { dashboard: any; analytics: any
 // ==========================================
 // WORK ORDERS TAB
 // ==========================================
-function WorkOrdersTab({ workOrders, total, page, setPage, onAction, onView }: any) {
+function WorkOrdersTab({
+  workOrders,
+  total,
+  page,
+  setPage,
+  onAction,
+  onView,
+  onStatusChange,
+  onDelete,
+}: {
+  workOrders: any[];
+  total: number;
+  page: number;
+  setPage: (n: number) => void;
+  onAction: (action: string, id: string | null, extra?: any) => void;
+  onView: (wo: any) => void;
+  onStatusChange: (id: string, status: string) => void;
+  onDelete: (id: string) => void;
+}) {
   const { t } = useTranslation();
   return (
     <div className="bg-white rounded-xl border border-gray-200">
@@ -600,20 +1202,30 @@ function WorkOrdersTab({ workOrders, total, page, setPage, onAction, onView }: a
                 <td className="py-3 px-4">{wo.work_center_name || '-'}</td>
                 <td className="py-3 px-4 text-gray-500 text-xs">{formatDate(wo.planned_start)}</td>
                 <td className="py-3 px-4">
-                  <div className="flex items-center justify-center gap-1">
-                    <button onClick={() => onView(wo)} className="p-1 hover:bg-gray-100 rounded" title={t('mfgUi.wo.titleDetail')}><Eye className="w-4 h-4" /></button>
+                  <div className="flex items-center justify-center gap-1 flex-wrap">
+                    <button type="button" onClick={() => onView(wo)} className="p-1 hover:bg-gray-100 rounded" title={t('mfgUi.wo.titleDetail')}><Eye className="w-4 h-4" /></button>
+                    {wo.status === 'draft' && (
+                      <button type="button" onClick={() => onStatusChange(wo.id, 'planned')} className="p-1 hover:bg-indigo-100 rounded text-indigo-600" title={t('mfgUi.wo.titleSubmit')}><FileText className="w-4 h-4" /></button>
+                    )}
+                    {wo.status === 'planned' && (
+                      <button type="button" onClick={() => onStatusChange(wo.id, 'released')} className="p-1 hover:bg-blue-100 rounded text-blue-600" title={t('mfgUi.wo.titleRelease')}><ArrowUpRight className="w-4 h-4" /></button>
+                    )}
                     {(wo.status === 'planned' || wo.status === 'released') && (
-                      <button onClick={() => onAction('wo-start', wo.id)} className="p-1 hover:bg-green-100 rounded text-green-600" title={t('mfgUi.wo.titleStart')}><Play className="w-4 h-4" /></button>
+                      <button type="button" onClick={() => onAction('wo-start', wo.id)} className="p-1 hover:bg-green-100 rounded text-green-600" title={t('mfgUi.wo.titleStart')}><Play className="w-4 h-4" /></button>
                     )}
                     {wo.status === 'in_progress' && (
                       <>
-                        <button onClick={() => onAction('wo-pause', wo.id)} className="p-1 hover:bg-yellow-100 rounded text-yellow-600" title={t('mfgUi.wo.titlePause')}><Pause className="w-4 h-4" /></button>
-                        <button onClick={() => onAction('wo-auto-issue', null, { work_order_id: wo.id })} className="p-1 hover:bg-purple-100 rounded text-purple-600" title={t('mfgUi.wo.titleAuto')}><Package className="w-4 h-4" /></button>
-                        <button onClick={() => onAction('wo-complete', wo.id, { actual_quantity: wo.planned_quantity })} className="p-1 hover:bg-blue-100 rounded text-blue-600" title={t('mfgUi.wo.titleComplete')}><CheckCircle className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => onAction('wo-pause', wo.id)} className="p-1 hover:bg-yellow-100 rounded text-yellow-600" title={t('mfgUi.wo.titlePause')}><Pause className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => onAction('wo-auto-issue', null, { work_order_id: wo.id })} className="p-1 hover:bg-purple-100 rounded text-purple-600" title={t('mfgUi.wo.titleAuto')}><Package className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => onAction('wo-backflush', null, { work_order_id: wo.id, actual_quantity: wo.planned_quantity })} className="p-1 hover:bg-orange-100 rounded text-orange-600" title={t('mfgUi.wo.titleBackflush')}><Archive className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => onAction('wo-complete', wo.id, { actual_quantity: wo.planned_quantity })} className="p-1 hover:bg-blue-100 rounded text-blue-600" title={t('mfgUi.wo.titleComplete')}><CheckCircle className="w-4 h-4" /></button>
                       </>
                     )}
                     {wo.status === 'on_hold' && (
-                      <button onClick={() => onAction('wo-resume', wo.id)} className="p-1 hover:bg-green-100 rounded text-green-600" title={t('mfgUi.wo.titleResume')}><Play className="w-4 h-4" /></button>
+                      <button type="button" onClick={() => onAction('wo-resume', wo.id)} className="p-1 hover:bg-green-100 rounded text-green-600" title={t('mfgUi.wo.titleResume')}><Play className="w-4 h-4" /></button>
+                    )}
+                    {wo.status !== 'completed' && wo.status !== 'cancelled' && (
+                      <button type="button" onClick={() => onDelete(wo.id)} className="p-1 hover:bg-red-100 rounded text-red-600" title={t('mfgUi.wo.titleDelete')}><Trash2 className="w-4 h-4" /></button>
                     )}
                   </div>
                 </td>
@@ -640,7 +1252,7 @@ function WorkOrdersTab({ workOrders, total, page, setPage, onAction, onView }: a
 // ==========================================
 // BOM TAB
 // ==========================================
-function BOMTab({ boms }: { boms: any[] }) {
+function BOMTab({ boms, onApprove, onDelete }: { boms: any[]; onApprove: (b: any) => void; onDelete: (b: any) => void }) {
   const { t } = useTranslation();
   return (
     <div className="bg-white rounded-xl border border-gray-200">
@@ -651,6 +1263,7 @@ function BOMTab({ boms }: { boms: any[] }) {
             <th className="text-left py-3 px-4">{t('mfgUi.bom.product')}</th><th className="text-left py-3 px-4">{t('mfgUi.bom.status')}</th>
             <th className="text-left py-3 px-4">{t('mfgUi.bom.type')}</th><th className="text-right py-3 px-4">{t('mfgUi.bom.items')}</th>
             <th className="text-right py-3 px-4">{t('mfgUi.bom.matCost')}</th><th className="text-left py-3 px-4">{t('mfgUi.bom.version')}</th>
+            <th className="text-center py-3 px-4">{t('mfgUi.wo.colAction')}</th>
           </tr></thead>
           <tbody>
             {boms.map((b: any) => (
@@ -663,9 +1276,17 @@ function BOMTab({ boms }: { boms: any[] }) {
                 <td className="py-3 px-4 text-right">{b.item_count}</td>
                 <td className="py-3 px-4 text-right">{formatCurrency(parseFloat(b.total_material_cost || 0))}</td>
                 <td className="py-3 px-4">v{b.version}</td>
+                <td className="py-3 px-4">
+                  <div className="flex items-center justify-center gap-1">
+                    {b.status === 'draft' && (
+                      <button type="button" onClick={() => onApprove(b)} className="p-1 hover:bg-green-100 rounded text-green-600" title={t('mfgUi.bom.titleApprove')}><CheckCircle className="w-4 h-4" /></button>
+                    )}
+                    <button type="button" onClick={() => onDelete(b)} className="p-1 hover:bg-red-100 rounded text-red-600" title={t('mfgUi.bom.titleDelete')}><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </td>
               </tr>
             ))}
-            {boms.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">{t('mfgUi.bom.empty')}</td></tr>}
+            {boms.length === 0 && <tr><td colSpan={9} className="py-12 text-center text-gray-400">{t('mfgUi.bom.empty')}</td></tr>}
           </tbody>
         </table>
       </div>
@@ -825,7 +1446,7 @@ function QualityTab({ inspections, templates }: { inspections: any[]; templates:
               <p className="text-xs text-gray-500 mb-2">{tm.template_code} · {tm.inspection_type?.replace('_', ' ')}</p>
               <p className="text-sm text-gray-600">{tm.description || t('mfgUi.qc.noDesc')}</p>
               <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-                <span>{(typeof tm.parameters === 'string' ? JSON.parse(tm.parameters) : tm.parameters || []).length} {t('mfgUi.qc.params')}</span>
+                <span>{qcTemplateParamCount(tm.parameters)} {t('mfgUi.qc.params')}</span>
                 <span>{tm.usage_count || 0}x {t('mfgUi.qc.used')}</span>
               </div>
             </div>
@@ -840,7 +1461,7 @@ function QualityTab({ inspections, templates }: { inspections: any[]; templates:
 // ==========================================
 // PLANNING TAB
 // ==========================================
-function PlanningTab({ plans }: { plans: any[] }) {
+function PlanningTab({ plans, onGenerate }: { plans: any[]; onGenerate: (planId: string) => void }) {
   const { t } = useTranslation();
   return (
     <div className="bg-white rounded-xl border border-gray-200">
@@ -850,6 +1471,7 @@ function PlanningTab({ plans }: { plans: any[] }) {
           <th className="text-left py-3 px-4">{t('mfgUi.planning.type')}</th><th className="text-left py-3 px-4">{t('mfgUi.planning.period')}</th>
           <th className="text-left py-3 px-4">{t('mfgUi.planning.status')}</th><th className="text-right py-3 px-4">{t('mfgUi.planning.items')}</th>
           <th className="text-right py-3 px-4">{t('mfgUi.planning.woGen')}</th>
+          <th className="text-center py-3 px-4">{t('mfgUi.wo.colAction')}</th>
         </tr></thead>
         <tbody>
           {plans.map((p: any) => (
@@ -861,9 +1483,19 @@ function PlanningTab({ plans }: { plans: any[] }) {
               <td className="py-3 px-4"><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status]}`}>{p.status}</span></td>
               <td className="py-3 px-4 text-right">{p.item_count || 0}</td>
               <td className="py-3 px-4 text-right">{p.generated_wo_count || 0}</td>
+              <td className="py-3 px-4 text-center">
+                <button
+                  type="button"
+                  onClick={() => onGenerate(p.id)}
+                  className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-lg hover:bg-purple-200"
+                  title={t('mfgUi.planning.titleGen')}
+                >
+                  {t('mfgUi.planning.titleGen')}
+                </button>
+              </td>
             </tr>
           ))}
-          {plans.length === 0 && <tr><td colSpan={7} className="py-12 text-center text-gray-400">{t('mfgUi.planning.empty')}</td></tr>}
+          {plans.length === 0 && <tr><td colSpan={8} className="py-12 text-center text-gray-400">{t('mfgUi.planning.empty')}</td></tr>}
         </tbody>
       </table>
     </div>
@@ -1054,7 +1686,7 @@ function SettingsTab({ settings }: { settings: any[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {settings.map((s: any) => {
-        const val = typeof s.setting_value === 'string' ? JSON.parse(s.setting_value) : s.setting_value;
+        const val = parseJsonLenient(s.setting_value);
         return (
           <div key={s.id} className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold text-gray-900 capitalize">{s.setting_key.replace(/_/g, ' ')}</h3>

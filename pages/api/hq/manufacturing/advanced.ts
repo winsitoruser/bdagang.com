@@ -14,10 +14,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     switch (method) {
-      case 'GET': return handleGet(req, res, action);
-      case 'POST': return handlePost(req, res, action);
-      case 'PUT': return handlePut(req, res, action);
-      case 'DELETE': return handleDelete(req, res, action);
+      case 'GET': return await handleGet(req, res, action);
+      case 'POST': return await handlePost(req, res, action);
+      case 'PUT': return await handlePut(req, res, action);
+      case 'DELETE': return await handleDelete(req, res, action);
       default:
         return res.status(405).json(errorResponse('METHOD_NOT_ALLOWED', 'Method not allowed'));
     }

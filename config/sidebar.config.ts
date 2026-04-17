@@ -42,6 +42,9 @@ import {
   Calendar,
   ChefHat,
   Ticket,
+  Headphones,
+  Inbox,
+  Link2,
   CalendarDays,
   MessageCircle,
   ShoppingBag,
@@ -139,7 +142,8 @@ export type ModuleCode =
   | 'knowledge_base'
   | 'requisitions'
   | 'billing'
-  | 'website_builder';
+  | 'website_builder'
+  | 'helpdesk';
 
 export type LayoutType = 'hq' | 'branch' | 'admin';
 
@@ -550,7 +554,6 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'crm-communications', name: 'Komunikasi', href: '/hq/sfa', icon: MessageCircle, modules: ['crm'] },
             { id: 'crm-tasks', name: 'Tugas & Kalender', href: '/hq/sfa', icon: CalendarCheck, modules: ['crm'] },
             { id: 'crm-forecasting', name: 'Peramalan', href: '/hq/sfa', icon: TrendingUp, modules: ['crm'] },
-            { id: 'crm-tickets', name: 'Tiket & SLA', href: '/hq/sfa', icon: Ticket, modules: ['crm'] },
             { id: 'crm-automation', name: 'Otomasi', href: '/hq/sfa', icon: Network, modules: ['crm'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
             { id: 'sfa-teams', name: 'Tim & Wilayah', href: '/hq/sfa', icon: Users, modules: ['sfa'] },
             { id: 'sfa-visits', name: 'Kunjungan & Cakupan', href: '/hq/sfa', icon: Navigation, modules: ['sfa'] },
@@ -562,6 +565,19 @@ export const hqSidebarConfig: SidebarConfig = {
             { id: 'sfa-approval', name: 'Survei & Persetujuan', href: '/hq/sfa', icon: Shield, modules: ['sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
             { id: 'sfa-settings', name: 'Pengaturan', href: '/hq/sfa', icon: Settings, modules: ['crm', 'sfa'], roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager'] },
             { id: 'sfa-import-export', name: 'Impor / Ekspor', href: '/hq/sfa', icon: FileSpreadsheet, modules: ['crm', 'sfa'] },
+          ]
+        },
+        {
+          id: 'helpdesk',
+          name: 'Layanan & Help Desk',
+          icon: Headphones,
+          modules: ['helpdesk', 'crm'],
+          roles: ['super_admin', 'owner', 'hq_admin', 'admin', 'manager', 'staff'],
+          children: [
+            { id: 'helpdesk-dash', name: 'Dasbor Layanan', href: '/hq/helpdesk', icon: LayoutDashboard, modules: ['helpdesk', 'crm'] },
+            { id: 'helpdesk-queue', name: 'Antrian Tiket', href: '/hq/helpdesk?tab=queue', icon: Inbox, modules: ['helpdesk', 'crm'] },
+            { id: 'helpdesk-sla', name: 'SLA & Kepuasan', href: '/hq/helpdesk?tab=sla', icon: Clock, modules: ['helpdesk', 'crm'] },
+            { id: 'helpdesk-integ', name: 'Integrasi Modul', href: '/hq/helpdesk?tab=integrasi', icon: Link2, modules: ['helpdesk', 'crm'] },
           ]
         },
         {

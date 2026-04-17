@@ -23,9 +23,11 @@ export const mfgUiTranslations: Record<Language, Record<string, any>> = {
       },
       toast: {
         woOk: 'Perintah kerja berhasil', fillRequired: 'Produk dan jumlah wajib diisi', createOk: 'Perintah kerja berhasil dibuat',
-        noExport: 'Tidak ada data untuk diekspor', exportOk: 'Ekspor berhasil', woActionOk: 'Perintah kerja {{a}} berhasil',
+        noExport: 'Tidak ada data untuk diekspor', exportOk: 'Ekspor berhasil',         woActionOk: 'Perintah kerja {{a}} berhasil',
+        updateOk: 'Pembaruan berhasil disimpan',
       },
       detail: 'Detail',
+      detailMat: 'Material WO', detailOps: 'Operasi routing',
       dashboard: {
         loading: 'Memuat data dasbor...', wo30: 'Total perintah kerja (30 hari)', active: 'aktif', totalProd: 'Total produksi',
         reject: 'Reject', machines: 'Mesin operasional', maint: 'pemeliharaan', qcPass: 'Tingkat lolos QC', failed: 'gagal',
@@ -34,16 +36,22 @@ export const mfgUiTranslations: Record<Language, Record<string, any>> = {
         topProducts: 'Produk terproduksi teratas', yield: 'Yield', wcLoad: 'Beban pusat kerja', queue: 'Antrian', output: 'Output',
         recentWo: 'Perintah kerja terbaru', colWo: 'No. PK', colProduct: 'Produk', colStatus: 'Status', colQty: 'Qty',
         colWc: 'Pusat kerja', colCreated: 'Dibuat', emptyWo: 'Belum ada perintah kerja',
+        integrationTitle: 'Integrasi modul (stok / QC / pemeliharaan)',
+        integWo: 'PK aktif / antrian', integMat: 'Isu material tertunda', integQc: 'Inspeksi tertunda', integMaint: 'PM terlambat / 7 hari',
       },
       wo: {
         colWo: 'No. PK', colProduct: 'Produk', colStatus: 'Status', colPri: 'Prioritas', colPlanned: 'Rencana', colActual: 'Aktual',
         colWc: 'Pusat kerja', colStart: 'Mulai', colAction: 'Aksi', empty: 'Belum ada perintah kerja',
         total: 'Total: {{n}} perintah kerja', prev: 'Sebelum', next: 'Berikut', page: 'Halaman',
         titleDetail: 'Detail', titleStart: 'Mulai', titlePause: 'Jeda', titleAuto: 'Terbitkan material otomatis', titleComplete: 'Selesai', titleResume: 'Lanjut',
+        titleSubmit: 'Ajukan', titleRelease: 'Rilis', titleDelete: 'Hapus', titleBackflush: 'Backflush',
+        confirmDelete: 'Hapus perintah kerja ini? Tindakan tidak dapat dibatalkan.',
       },
       bom: {
         code: 'Kode BOM', name: 'Nama', product: 'Produk', status: 'Status', type: 'Tipe', items: 'Item', matCost: 'Biaya material',
         version: 'Versi', empty: 'Belum ada BOM',
+        confirmDelete: 'Hapus BOM ini? Item terkait akan ikut terhapus.',
+        titleApprove: 'Setujui (aktifkan)', titleDelete: 'Hapus',
       },
       routing: { code: 'Kode', name: 'Nama', product: 'Produk', status: 'Status', ops: 'Operasi', time: 'Total waktu', cost: 'Total biaya', empty: 'Belum ada routing' },
       wc: {
@@ -60,6 +68,7 @@ export const mfgUiTranslations: Record<Language, Record<string, any>> = {
       },
       planning: {
         code: 'Kode rencana', name: 'Nama', type: 'Tipe', period: 'Periode', status: 'Status', items: 'Item', woGen: 'PK dibuat', empty: 'Belum ada rencana produksi',
+        genOk: 'Perintah kerja dibuat dari rencana', titleGen: 'Generate PK',
       },
       oee: { loading: 'Memuat data OEE...', overall: 'OEE keseluruhan', availability: 'Ketersediaan', performance: 'Kinerja', quality: 'Mutu', target: 'Target', perWc: 'OEE per pusat kerja', wc: 'Pusat kerja', downtime: 'Downtime' },
       costs: {
@@ -128,8 +137,10 @@ export const mfgUiTranslations: Record<Language, Record<string, any>> = {
       toast: {
         woOk: 'Work order succeeded', fillRequired: 'Product and quantity are required', createOk: 'Work order created',
         noExport: 'No data to export', exportOk: 'Export successful', woActionOk: 'Work order {{a}} succeeded',
+        updateOk: 'Updated successfully',
       },
       detail: 'Detail',
+      detailMat: 'WO materials', detailOps: 'Routing operations',
       dashboard: {
         loading: 'Loading dashboard...', wo30: 'Total work orders (30d)', active: 'active', totalProd: 'Total production',
         reject: 'Reject', machines: 'Machines operational', maint: 'in maintenance', qcPass: 'QC pass rate', failed: 'failed',
@@ -138,16 +149,22 @@ export const mfgUiTranslations: Record<Language, Record<string, any>> = {
         topProducts: 'Top produced products', yield: 'Yield', wcLoad: 'Work center load', queue: 'Queue', output: 'Output',
         recentWo: 'Recent work orders', colWo: 'WO no.', colProduct: 'Product', colStatus: 'Status', colQty: 'Qty',
         colWc: 'Work center', colCreated: 'Created', emptyWo: 'No work orders yet',
+        integrationTitle: 'Cross-module snapshot (stock / QC / maintenance)',
+        integWo: 'Active / queued WOs', integMat: 'Pending material issues', integQc: 'Pending inspections', integMaint: 'PM overdue / 7d',
       },
       wo: {
         colWo: 'WO no.', colProduct: 'Product', colStatus: 'Status', colPri: 'Priority', colPlanned: 'Planned', colActual: 'Actual',
         colWc: 'Work center', colStart: 'Start', colAction: 'Actions', empty: 'No work orders yet',
         total: 'Total: {{n}} work orders', prev: 'Prev', next: 'Next', page: 'Page',
         titleDetail: 'Details', titleStart: 'Start', titlePause: 'Pause', titleAuto: 'Auto issue material', titleComplete: 'Complete', titleResume: 'Resume',
+        titleSubmit: 'Submit', titleRelease: 'Release', titleDelete: 'Delete', titleBackflush: 'Backflush',
+        confirmDelete: 'Delete this work order? This cannot be undone.',
       },
       bom: {
         code: 'BOM code', name: 'Name', product: 'Product', status: 'Status', type: 'Type', items: 'Items', matCost: 'Material cost',
         version: 'Version', empty: 'No BOMs yet',
+        confirmDelete: 'Delete this BOM? Related lines will be removed.',
+        titleApprove: 'Approve (activate)', titleDelete: 'Delete',
       },
       routing: { code: 'Code', name: 'Name', product: 'Product', status: 'Status', ops: 'Operations', time: 'Total time', cost: 'Total cost', empty: 'No routings yet' },
       wc: {
@@ -164,6 +181,7 @@ export const mfgUiTranslations: Record<Language, Record<string, any>> = {
       },
       planning: {
         code: 'Plan code', name: 'Name', type: 'Type', period: 'Period', status: 'Status', items: 'Items', woGen: 'WOs generated', empty: 'No production plans yet',
+        genOk: 'Work orders generated from plan', titleGen: 'Generate WOs',
       },
       oee: { loading: 'Loading OEE data...', overall: 'OEE overall', availability: 'Availability', performance: 'Performance', quality: 'Quality', target: 'Target', perWc: 'OEE by work center', wc: 'Work center', downtime: 'Downtime' },
       costs: {
@@ -232,6 +250,7 @@ export const mfgUiTranslations: Record<Language, Record<string, any>> = {
       toast: {
         woOk: '作業指示が成功しました', fillRequired: '製品と数量は必須です', createOk: '作業指示を作成しました',
         noExport: 'エクスポートするデータがありません', exportOk: 'エクスポート成功', woActionOk: '作業指示 {{a}} が成功しました',
+        updateOk: '更新しました',
       },
       detail: '詳細',
       dashboard: {
@@ -336,6 +355,7 @@ export const mfgUiTranslations: Record<Language, Record<string, any>> = {
       toast: {
         woOk: '工单操作成功', fillRequired: '请填写产品和数量', createOk: '工单已创建',
         noExport: '没有可导出数据', exportOk: '导出成功', woActionOk: '工单 {{a}} 操作成功',
+        updateOk: '已保存',
       },
       detail: '详情',
       dashboard: {

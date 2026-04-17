@@ -28,6 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         enabledModules: [
           { code: 'crm', name: 'CRM' },
           { code: 'sfa', name: 'SFA' },
+          { code: 'helpdesk', name: 'Help Desk' },
           { code: 'marketing', name: 'Marketing' },
         ],
         allEnabled: true
@@ -41,6 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         enabledModules: [
           { code: 'crm', name: 'CRM' },
           { code: 'sfa', name: 'SFA' },
+          { code: 'helpdesk', name: 'Help Desk' },
           { code: 'marketing', name: 'Marketing' },
         ],
         allEnabled: true
@@ -60,6 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         enabledModules: [
           { code: 'crm', name: 'CRM' },
           { code: 'sfa', name: 'SFA' },
+          { code: 'helpdesk', name: 'Help Desk' },
           { code: 'marketing', name: 'Marketing' },
         ],
         allEnabled: true
@@ -72,6 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         enabledModules: [
           { code: 'crm', name: 'CRM' },
           { code: 'sfa', name: 'SFA' },
+          { code: 'helpdesk', name: 'Help Desk' },
           { code: 'marketing', name: 'Marketing' },
         ],
         allEnabled: true

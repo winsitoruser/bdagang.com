@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/router';
 import { useTranslation, formatCurrencyValue, formatDateValue, localeMap, Language, Currency } from '@/lib/i18n';
 import HQLayout from '@/components/hq/HQLayout';
 import dynamic from 'next/dynamic';
@@ -63,7 +64,6 @@ import {
   MOCK_SFA_CRM_CALENDAR,
   MOCK_SFA_CRM_FORECASTS,
   MOCK_SFA_CRM_FORECAST_ANALYTICS,
-  MOCK_SFA_CRM_TICKETS,
   MOCK_SFA_CRM_AUTOMATION_RULES,
   MOCK_SFA_CRM_AUTOMATION_LOGS,
   MOCK_SFA_INT_LEADS,
@@ -82,7 +82,7 @@ import {
 // ══════════════════════════════════════════════════════
 // Types & Constants
 // ══════════════════════════════════════════════════════
-type Tab = 'dashboard' | 'leads' | 'pipeline' | 'teams' | 'visits' | 'field-tasks' | 'orders' | 'sales-mgmt' | 'targets' | 'incentives' | 'merchandising' | 'competitor' | 'survey' | 'approval' | 'settings' | 'customers' | 'communications' | 'tasks' | 'forecasting' | 'tickets' | 'automation' | 'import-export' | 'integration' | 'audit-trail' | 'ai-workflow';
+type Tab = 'dashboard' | 'leads' | 'pipeline' | 'teams' | 'visits' | 'field-tasks' | 'orders' | 'sales-mgmt' | 'targets' | 'incentives' | 'merchandising' | 'competitor' | 'survey' | 'approval' | 'settings' | 'customers' | 'communications' | 'tasks' | 'forecasting' | 'automation' | 'import-export' | 'integration' | 'audit-trail' | 'ai-workflow';
 
 const TAB_GROUPS: { tKey: string; tabs: { id: Tab; tKey: string; icon: any; modules?: ('crm' | 'sfa')[] }[] }[] = [
   { tKey: 'groupMain', tabs: [
@@ -97,9 +97,6 @@ const TAB_GROUPS: { tKey: string; tabs: { id: Tab; tKey: string; icon: any; modu
   { tKey: 'groupProductivity', tabs: [
     { id: 'tasks', tKey: 'tabTasksCalendar', icon: LayoutList, modules: ['crm'] },
     { id: 'forecasting', tKey: 'tabForecasting', icon: TrendingUp, modules: ['crm'] },
-  ]},
-  { tKey: 'groupService', tabs: [
-    { id: 'tickets', tKey: 'tabTicketsSla', icon: Headphones, modules: ['crm'] },
     { id: 'automation', tKey: 'tabAutomation', icon: Zap, modules: ['crm'] },
   ]},
   { tKey: 'groupFieldForce', tabs: [
@@ -279,6 +276,7 @@ const apiIE = async (action: string, method = 'GET', body?: any, query = '') => 
 // Main Component
 // ══════════════════════════════════════════════════════
 export default function SFAUnifiedPage() {
+  const router = useRouter();
   const { data: session } = useSession();
   const { t, language, currency } = useTranslation();
   const fmtCur = useMemo(() => makeFmtCur(currency), [currency]);
@@ -426,9 +424,6 @@ export default function SFAUnifiedPage() {
   const [crmCalendar, setCrmCalendar] = useState<any[]>(MOCK_SFA_CRM_CALENDAR);
   const [crmForecasts, setCrmForecasts] = useState<any[]>(MOCK_SFA_CRM_FORECASTS);
   const [crmForecastAnalytics, setCrmForecastAnalytics] = useState<any>(MOCK_SFA_CRM_FORECAST_ANALYTICS);
-  const [crmTickets, setCrmTickets] = useState<any[]>(MOCK_SFA_CRM_TICKETS);
-  const [crmServiceAnalytics, setCrmServiceAnalytics] = useState<any>(null);
-  const [crmSatisfaction, setCrmSatisfaction] = useState<any>(null);
   const [crmAutomationRules, setCrmAutomationRules] = useState<any[]>(MOCK_SFA_CRM_AUTOMATION_RULES);
   const [crmAutomationLogs, setCrmAutomationLogs] = useState<any[]>(MOCK_SFA_CRM_AUTOMATION_LOGS);
   // Import/Export
@@ -641,13 +636,6 @@ export default function SFAUnifiedPage() {
           } else {
             setCrmForecastAnalytics(MOCK_SFA_CRM_FORECAST_ANALYTICS);
           }
-          break;
-        }
-        case 'tickets': {
-          const [r1, r2, r3] = await Promise.all([apiCrm('tickets'), apiCrm('service-analytics'), apiCrm('satisfaction')]);
-          if (r1.success) setCrmTickets(rowsOr(r1.data, MOCK_SFA_CRM_TICKETS));
-          if (r2.success) setCrmServiceAnalytics(r2.data);
-          if (r3.success) setCrmSatisfaction(r3.data);
           break;
         }
         case 'automation': {
@@ -1090,7 +1078,7 @@ export default function SFAUnifiedPage() {
       {(() => {
         const activeGroupIdx = visibleTabGroups.findIndex(g => g.tabs.some(t => t.id === tab));
         const activeGroup = visibleTabGroups[activeGroupIdx] || visibleTabGroups[0];
-        const groupIcons = [BarChart3, Heart, LayoutList, Headphones, Users, Target, Eye, Settings];
+        const groupIcons = [BarChart3, Heart, LayoutList, Users, Target, Eye, Settings];
         return (
           <div className="mb-6 space-y-3">
             {/* Row 1: Group selector — scrollable on mobile, centered on desktop */}
@@ -1233,12 +1221,15 @@ export default function SFAUnifiedPage() {
                       { label: t('sfa.actionViewApproval'), tab: 'approval' as Tab, icon: CheckCircle, color: 'bg-amber-50 text-amber-700 hover:bg-amber-100' },
                       { label: t('sfa.actionMonitorVisits'), tab: 'visits' as Tab, icon: Navigation, color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
                       { label: t('sfa.actionCheckTargets'), tab: 'targets' as Tab, icon: Target, color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' },
-                      { label: t('sfa.actionManageTickets'), tab: 'tickets' as Tab, icon: Headphones, color: 'bg-red-50 text-red-700 hover:bg-red-100' },
+                      { label: t('sfa.actionManageTickets'), action: () => router.push('/hq/helpdesk'), icon: Headphones, color: 'bg-red-50 text-red-700 hover:bg-red-100' },
                       { label: t('sfa.actionViewForecast'), tab: 'forecasting' as Tab, icon: TrendingUp, color: 'bg-violet-50 text-violet-700 hover:bg-violet-100' },
                       { label: t('sfa.actionManageAutomation'), tab: 'automation' as Tab, icon: Bot, color: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' },
                       { label: t('sfa.actionImportExport'), tab: 'import-export' as Tab, icon: ArrowDownToLine, color: 'bg-gray-50 text-gray-700 hover:bg-gray-100' },
                     ].map(a => (
-                      <button key={a.label} onClick={() => { setTab(a.tab); setSearch(''); setSelectedItem(null); }}
+                      <button key={a.label} onClick={() => {
+                        if ('action' in a && a.action) { a.action(); return; }
+                        setTab((a as { tab: Tab }).tab); setSearch(''); setSelectedItem(null);
+                      }}
                         className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${a.color}`}>
                         <a.icon className="w-4 h-4 shrink-0" />{a.label}<ArrowRight className="w-3 h-3 ml-auto opacity-40" />
                       </button>
@@ -1264,7 +1255,7 @@ export default function SFAUnifiedPage() {
                     { label: t('sfa.actionAddCustomer'), action: () => { setForm({}); setModal('customer'); }, icon: Heart, color: 'bg-violet-50 text-violet-700 hover:bg-violet-100' },
                     { label: t('sfa.actionLogComm'), action: () => { setForm({}); setModal('communication'); }, icon: MessageCircle, color: 'bg-sky-50 text-sky-700 hover:bg-sky-100' },
                     { label: t('sfa.actionCreateTask'), action: () => { setForm({}); setModal('task'); }, icon: LayoutList, color: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' },
-                    { label: t('sfa.actionCreateTicket'), action: () => { setForm({}); setModal('ticket'); }, icon: Headphones, color: 'bg-red-50 text-red-700 hover:bg-red-100' },
+                    { label: t('sfa.actionCreateTicket'), action: () => router.push('/hq/helpdesk?open=ticket'), icon: Headphones, color: 'bg-red-50 text-red-700 hover:bg-red-100' },
                     { label: t('sfa.actionImportData'), action: () => { setTab('import-export' as Tab); }, icon: Upload, color: 'bg-gray-50 text-gray-700 hover:bg-gray-100' },
                   ].map(a => (
                     <button key={a.label} onClick={a.action}
@@ -3326,96 +3317,6 @@ export default function SFAUnifiedPage() {
           </>)}
 
           {/* ═══════════════════════════════════════════ */}
-          {/* CRM: TICKETS & SLA */}
-          {/* ═══════════════════════════════════════════ */}
-          {tab === 'tickets' && (<>
-            <SectionHeader title={t('sfa.ticketSla')} subtitle={`${crmTickets.length} ${t('sfa.tickets')}`}
-              action={<PrimaryBtn onClick={() => { setModal('crm-ticket'); setForm({ priority: 'medium', severity: 'minor', category: 'request', source_channel: 'email' }); }} icon={Plus}>{t('sfa.createTicket')}</PrimaryBtn>} />
-
-            {/* Service Analytics */}
-            {crmServiceAnalytics && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Card className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('sfa.ticketStatus')}</h3>
-                  {(crmServiceAnalytics.byStatus || []).length > 0 ? (() => {
-                    const tsColors: Record<string,string> = { open: '#ef4444', in_progress: '#3b82f6', waiting: '#f59e0b', resolved: '#10b981', closed: '#6b7280', reopened: '#dc2626' };
-                    const data = (crmServiceAnalytics.byStatus||[]).map((d:any) => ({...d, count: parseInt(d.count), fill: tsColors[d.status]||'#94a3b8'}));
-                    return (
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-32 h-32"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="count" nameKey="status" cx="50%" cy="50%" innerRadius={28} outerRadius={50} paddingAngle={3} strokeWidth={0}>{data.map((d:any,i:number) => <Cell key={i} fill={d.fill} />)}</Pie><Tooltip content={<ChartTooltip />} /></PieChart></ResponsiveContainer></div>
-                        <div className="space-y-1.5 w-full">{data.map((d:any,i:number) => (<div key={i} className="flex items-center justify-between text-xs"><div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full" style={{background:d.fill}} /><span className="text-gray-600 capitalize">{(d.status||'').replace('_',' ')}</span></div><span className="font-bold">{d.count}</span></div>))}</div>
-                      </div>
-                    );
-                  })() : <div className="text-center py-8 text-gray-300 text-sm">{t('sfa.noTickets')}</div>}
-                </Card>
-                <Card className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('sfa.categoryLabel')}</h3>
-                  {(crmServiceAnalytics.byCategory || []).length > 0 ? (
-                    <ResponsiveContainer width="100%" height={160}>
-                      <BarChart data={(crmServiceAnalytics.byCategory||[]).map((d:any) => ({name:d.category,count:parseInt(d.count)}))} layout="vertical" margin={{top:5,right:5,bottom:5,left:60}}>
-                        <XAxis type="number" tick={{fontSize:10,fill:'#94a3b8'}} axisLine={false} tickLine={false} allowDecimals={false} />
-                        <YAxis type="category" dataKey="name" tick={{fontSize:10,fill:'#94a3b8'}} axisLine={false} tickLine={false} />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Bar dataKey="count" name="Tiket" radius={[0,6,6,0]} maxBarSize={20} fill="#f59e0b" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : <div className="text-center py-8 text-gray-300 text-sm">{t('sfa.noData')}</div>}
-                </Card>
-                <Card className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('sfa.slaPerformance')}</h3>
-                  <div className="space-y-4">
-                    <div className="text-center p-3 bg-gray-50 rounded-xl"><p className="text-xl font-bold text-gray-900">{crmServiceAnalytics.avgResolutionHours?.toFixed(1) || '0'}h</p><p className="text-[10px] text-gray-500 mt-1">{t('sfa.avgResolution')}</p></div>
-                    {crmServiceAnalytics.sla && crmServiceAnalytics.sla.total > 0 && (
-                      <div>
-                        <div className="flex justify-between text-xs mb-1"><span className="text-gray-500">SLA Met</span><span className="font-bold text-emerald-600">{Math.round((crmServiceAnalytics.sla.met/crmServiceAnalytics.sla.total)*100)}%</span></div>
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{width:`${(crmServiceAnalytics.sla.met/crmServiceAnalytics.sla.total)*100}%`}} /></div>
-                        <div className="flex justify-between text-[10px] text-gray-400 mt-1"><span>Met: {crmServiceAnalytics.sla.met}</span><span>Breached: {crmServiceAnalytics.sla.breached}</span></div>
-                      </div>
-                    )}
-                    {crmSatisfaction && crmSatisfaction.totalResponses > 0 && (
-                      <div className="pt-2 border-t border-gray-100"><div className="flex justify-between text-xs"><span className="text-gray-500">CSAT</span><span className="font-bold text-amber-600">{crmSatisfaction.avgCsat?.toFixed(1)}/5</span></div><div className="flex justify-between text-xs mt-1"><span className="text-gray-500">NPS</span><span className="font-bold text-blue-600">{crmSatisfaction.avgNps?.toFixed(0)}</span></div></div>
-                    )}
-                  </div>
-                </Card>
-              </div>
-            )}
-
-            {/* Ticket Table */}
-            <TableWrap>
-              <table className="w-full text-sm">
-                <thead><tr className="border-b border-gray-100">
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tiket</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Customer</th>
-                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
-                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">SLA</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Tanggal</th>
-                  {canDelete && <th className="px-5 py-3.5 w-12"></th>}
-                </tr></thead>
-                <tbody className="divide-y divide-gray-50">
-                  {crmTickets.length === 0 ? <tr><td colSpan={6}><EmptyState icon={Headphones} title={t('sfa.noTickets')} /></td></tr> :
-                    crmTickets.map((tk: any) => (
-                      <tr key={tk.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-5 py-4"><div className="font-semibold text-gray-900">{tk.subject}</div><div className="text-xs text-gray-400 mt-0.5">{tk.ticket_number} · {tk.category || '-'}</div></td>
-                        <td className="px-5 py-4 text-gray-600 hidden sm:table-cell">{tk.customer_name || '-'}</td>
-                        <td className="px-5 py-4 text-center"><Badge color={tk.priority==='critical'||tk.priority==='high'?'red':tk.priority==='medium'?'yellow':'green'}>{tk.priority}</Badge></td>
-                        <td className="px-5 py-4 text-center"><button onClick={() => {
-                          const next: Record<string,string> = { open: 'in_progress', in_progress: 'resolved', resolved: 'closed', closed: 'open', waiting: 'in_progress', reopened: 'in_progress' };
-                          const ns = next[tk.status] || 'in_progress';
-                          handleCrmUpdate('update-ticket', { id: tk.id, status: ns }, `${t('sfa.tickets')} → ${ns.replace('_',' ')}`);
-                        }} title={t('sfa.changeStatus')}><Badge color={tk.status==='open'?'red':tk.status==='in_progress'?'blue':tk.status==='resolved'||tk.status==='closed'?'green':'yellow'}>{(tk.status||'').replace('_',' ')}</Badge></button></td>
-                        <td className="px-5 py-4 text-center hidden md:table-cell">{tk.sla_breached ? <Badge color="red">Breached</Badge> : <Badge color="green">OK</Badge>}</td>
-                        <td className="px-5 py-4 text-gray-500 hidden lg:table-cell">{fmtDate(tk.created_at)}</td>
-                        {canDelete && <td className="px-5 py-4"><button onClick={() => handleCrmDelete('delete-ticket', tk.id, 'Tiket')} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" /></button></td>}
-                      </tr>
-                    ))
-                  }
-                </tbody>
-              </table>
-            </TableWrap>
-          </>)}
-
-          {/* ═══════════════════════════════════════════ */}
           {/* CRM: AUTOMATION */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'automation' && (<>
@@ -4387,7 +4288,6 @@ export default function SFAUnifiedPage() {
                   {modal === 'crm-comm' && t('sfa.logComm')}
                   {modal === 'crm-task' && t('sfa.modalCreateTask')}
                   {modal === 'crm-forecast' && t('sfa.createForecast')}
-                  {modal === 'crm-ticket' && t('sfa.createTicket')}
                   {modal === 'crm-automation' && t('sfa.createRule')}
                   {modal === 'create-team' && t('sfa.modalCreateTeam')}
                   {modal === 'add-member' && t('sfa.modalAddMember', { name: form.team_name || 'Tim' })}
@@ -4416,7 +4316,6 @@ export default function SFAUnifiedPage() {
               modal === 'crm-comm' ? (e: React.FormEvent) => handleCrmCreate('create-communication', e, t('sfa.commRecorded')) :
               modal === 'crm-task' ? (e: React.FormEvent) => handleCrmCreate('create-task', e, t('sfa.taskCreated')) :
               modal === 'crm-forecast' ? (e: React.FormEvent) => handleCrmCreate('create-forecast', e, t('sfa.forecastCreated')) :
-              modal === 'crm-ticket' ? (e: React.FormEvent) => handleCrmCreate('create-ticket', e, t('sfa.ticketCreated')) :
               modal === 'crm-automation' ? (e: React.FormEvent) => handleCrmCreate('create-automation-rule', e, t('sfa.ruleCreated')) :
               modal === 'create-team' ? async (e: React.FormEvent) => {
                 e.preventDefault(); setSaving(true);
@@ -4709,15 +4608,6 @@ export default function SFAUnifiedPage() {
                 <FI label="Best Case"><input type="number" className={inputCls} value={form.best_case || ''} onChange={e => setForm({ ...form, best_case: Number(e.target.value) })} /></FI>
                 <FI label="Most Likely"><input type="number" className={inputCls} value={form.most_likely || ''} onChange={e => setForm({ ...form, most_likely: Number(e.target.value) })} /></FI>
                 <FI label="Catatan" span={2}><textarea className={`${inputCls} resize-none`} rows={2} value={form.notes || ''} onChange={e => setForm({ ...form, notes: e.target.value })} /></FI>
-              </div>}
-
-              {modal === 'crm-ticket' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FI label="Subject" required span={2}><input required className={inputCls} value={form.subject || ''} onChange={e => setForm({ ...form, subject: e.target.value })} placeholder="Masalah yang dialami" /></FI>
-                <FI label="Kategori"><select className={inputCls} value={form.category || 'request'} onChange={e => setForm({ ...form, category: e.target.value })}>{getLookupOpts('ticket_category', [{value:'billing',label:'Billing'},{value:'technical',label:'Teknis'},{value:'product',label:'Produk'},{value:'complaint',label:'Komplain'},{value:'request',label:'Permintaan'},{value:'feedback',label:'Feedback'}]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></FI>
-                <FI label="Prioritas"><select className={inputCls} value={form.priority || 'medium'} onChange={e => setForm({ ...form, priority: e.target.value })}>{getLookupOpts('ticket_priority', [{value:'critical',label:'Critical'},{value:'high',label:'High'},{value:'medium',label:'Medium'},{value:'low',label:'Low'}]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></FI>
-                <FI label="Severity"><select className={inputCls} value={form.severity || 'minor'} onChange={e => setForm({ ...form, severity: e.target.value })}>{getLookupOpts('ticket_severity', [{value:'critical',label:'Critical'},{value:'major',label:'Major'},{value:'minor',label:'Minor'},{value:'cosmetic',label:'Cosmetic'}]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></FI>
-                <FI label="Channel"><select className={inputCls} value={form.source_channel || 'email'} onChange={e => setForm({ ...form, source_channel: e.target.value })}>{getLookupOpts('ticket_channel', [{value:'email',label:'Email'},{value:'phone',label:'Telepon'},{value:'chat',label:'Chat'},{value:'whatsapp',label:'WhatsApp'},{value:'social',label:'Social Media'}]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></FI>
-                <FI label="Deskripsi" span={2}><textarea className={`${inputCls} resize-none`} rows={3} value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Detail masalah..." /></FI>
               </div>}
 
               {modal === 'crm-automation' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
