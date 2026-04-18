@@ -2,6 +2,22 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const tables = await queryInterface.showAllTables();
+    const hasRoles = tables.map((t) => String(t).toLowerCase()).includes('roles');
+
+    // roles is created in a later migration (20260228000006); ensure it exists for FK + seeds
+    if (!hasRoles) {
+      await queryInterface.createTable('roles', {
+        id: { type: Sequelize.UUID, defaultValue: Sequelize.literal('gen_random_uuid()'), primaryKey: true },
+        name: { type: Sequelize.STRING(100), allowNull: false, unique: true },
+        description: { type: Sequelize.TEXT },
+        permissions: { type: Sequelize.JSON, defaultValue: {} },
+        created_at: { type: Sequelize.DATE, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') },
+        updated_at: { type: Sequelize.DATE, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }
+      });
+      await queryInterface.addIndex('roles', ['name'], { name: 'idx_roles_name' }).catch(() => {});
+    }
+
     // 1. Add role_id column to users table
     const usersDesc = await queryInterface.describeTable('users');
     if (!usersDesc.role_id) {

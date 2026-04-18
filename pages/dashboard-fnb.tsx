@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import type { NextPage } from "next";
 import Head from "next/head";
 import { useRouter } from "next/router";
@@ -21,6 +21,8 @@ const FnBDashboard: NextPage = () => {
   const { data: session, status } = useSession();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [kitchenOrders, setKitchenOrders] = useState<any[]>([]);
   const [tables, setTables] = useState<any[]>([]);
   const [reservations, setReservations] = useState<any[]>([]);
@@ -37,24 +39,15 @@ const FnBDashboard: NextPage = () => {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (session) {
-      fetchFnBData();
-      // Auto-refresh every 30 seconds
-      const interval = setInterval(fetchFnBData, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [session]);
-
-  const fetchFnBData = async () => {
-    setLoading(true);
+  const fetchFnBData = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) setLoading(true);
     try {
-      // Fetch all data in parallel with better error handling
       const [ordersRes, tablesRes, reservationsRes, statsRes] = await Promise.all([
-        fetch('/api/kitchen/orders?status=pending&limit=10').catch(e => ({ ok: false, error: 'Orders API failed', url: '/api/kitchen/orders' })),
-        fetch('/api/tables/status').catch(e => ({ ok: false, error: 'Tables API failed', url: '/api/tables/status' })),
-        fetch('/api/reservations/today').catch(e => ({ ok: false, error: 'Reservations API failed', url: '/api/reservations/today' })),
-        fetch('/api/dashboard/fnb-stats').catch(e => ({ ok: false, error: 'Stats API failed', url: '/api/dashboard/fnb-stats' }))
+        fetch('/api/kitchen/orders?status=active&limit=12'),
+        fetch('/api/tables/status'),
+        fetch('/api/reservations/today'),
+        fetch('/api/dashboard/fnb-stats'),
       ]);
 
       // Check each response individually
@@ -184,19 +177,20 @@ const FnBDashboard: NextPage = () => {
           completedOrders: 0,
           salesChange: 0,
           totalGuests: 0,
-          lowStockItems: 0
+          lowStockItems: 0,
+          transactionCount: 0,
         });
       }
 
-      // Show error message if any API failed
-      if (hasError) {
+      if (hasError && !silent) {
         console.error('API Errors:', errors);
         toast.error(`Beberapa data gagal dimuat: ${errors.join(', ')}`);
       }
 
+      setLastRefreshed(new Date());
     } catch (error) {
       console.error('Error fetching F&B data:', error);
-      toast.error('Gagal memuat data dashboard');
+      if (!silent) toast.error('Gagal memuat data dashboard');
       
       // Set empty defaults on error
       setKitchenOrders([]);
@@ -212,12 +206,21 @@ const FnBDashboard: NextPage = () => {
         completedOrders: 0,
         salesChange: 0,
         totalGuests: 0,
-        lowStockItems: 0
+        lowStockItems: 0,
+        transactionCount: 0,
       });
     } finally {
       setLoading(false);
+      setInitialLoad(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    fetchFnBData();
+    const interval = setInterval(() => fetchFnBData({ silent: true }), 30000);
+    return () => clearInterval(interval);
+  }, [session, fetchFnBData]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -227,18 +230,36 @@ const FnBDashboard: NextPage = () => {
     }).format(amount);
   };
 
-  if (status === "loading" || loading) {
+  if (status === "loading") {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center h-screen">
+        <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center">
-            <div className="animate-spin h-12 w-12 mx-auto border-4 border-orange-600 border-t-transparent rounded-full"></div>
-            <p className="mt-4 text-gray-700">Memuat dashboard F&B...</p>
+            <div className="animate-spin h-12 w-12 mx-auto border-4 border-orange-600 border-t-transparent rounded-full" />
+            <p className="mt-4 text-gray-700">Memuat sesi…</p>
           </div>
         </div>
       </DashboardLayout>
     );
   }
+
+  const userLabel = (session?.user as { name?: string; email?: string })?.name
+    || (session?.user as { email?: string })?.email
+    || '';
+
+  const orderTypeLabel = (t: string) => {
+    if (t === 'dine-in' || t === 'dine_in') return 'Dine-in';
+    if (t === 'takeaway') return 'Takeaway';
+    if (t === 'delivery') return 'Delivery';
+    return t || '—';
+  };
+
+  const statusBadge = (s: string) => {
+    if (s === 'new') return { label: 'BARU', className: 'bg-red-500' };
+    if (s === 'preparing') return { label: 'DIMASAK', className: 'bg-amber-500' };
+    if (s === 'ready') return { label: 'SIAP', className: 'bg-emerald-600' };
+    return { label: String(s || '').toUpperCase(), className: 'bg-slate-500' };
+  };
 
   return (
     <DashboardLayout>
@@ -247,8 +268,14 @@ const FnBDashboard: NextPage = () => {
       </Head>
 
       <div className="space-y-6">
+        {initialLoad && loading && (
+          <div className="rounded-xl border border-orange-100 bg-orange-50/80 px-4 py-3 text-sm text-orange-900 flex items-center gap-3">
+            <div className="h-5 w-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin shrink-0" />
+            Memuat data operasional…
+          </div>
+        )}
         {/* F&B Header - Restaurant Style */}
-        <div className="bg-gradient-to-r from-orange-500 via-red-500 to-red-600 rounded-2xl p-8 text-white shadow-2xl relative overflow-hidden">
+        <div className="bg-gradient-to-r from-orange-500 via-red-500 to-red-600 rounded-2xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-48"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full -ml-32 -mb-32"></div>
           
@@ -263,7 +290,7 @@ const FnBDashboard: NextPage = () => {
                     Dashboard Restoran
                   </h1>
                   <p className="text-orange-100 text-lg">
-                    Operasional Dapur & Pelayanan Real-time
+                    Operasional dapur, meja & reservasi — {userLabel || 'Outlet'}
                   </p>
                 </div>
               </div>
@@ -274,11 +301,16 @@ const FnBDashboard: NextPage = () => {
                 <div className="text-orange-100">
                   {currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </div>
+                {lastRefreshed && (
+                  <p className="text-xs text-orange-200/90 mt-2">
+                    Data: {lastRefreshed.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Quick Stats Bar */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                 <div className="flex items-center justify-between mb-2">
                   <Flame className="w-6 h-6" />
@@ -305,7 +337,7 @@ const FnBDashboard: NextPage = () => {
                   <Clock className="w-6 h-6" />
                   <span className="text-2xl font-bold">{stats?.avgPrepTime || 0}m</span>
                 </div>
-                <p className="text-sm text-orange-100">Avg. Prep Time</p>
+                <p className="text-sm text-orange-100">Rata-rata prep (mnt)</p>
               </div>
             </div>
           </div>
@@ -339,7 +371,9 @@ const FnBDashboard: NextPage = () => {
               </div>
               <h3 className="text-gray-500 text-sm font-medium mb-2">Pesanan Selesai</h3>
               <p className="text-3xl font-bold text-gray-900">{stats?.completedOrders || 0}</p>
-              <p className="text-xs text-blue-600 mt-1">Target: 50 pesanan</p>
+              <p className="text-xs text-blue-600 mt-1">
+                Transaksi POS hari ini: {stats?.transactionCount ?? 0}
+              </p>
             </CardContent>
           </Card>
 
@@ -384,13 +418,13 @@ const FnBDashboard: NextPage = () => {
                   </div>
                   <div>
                     <CardTitle className="text-xl">Pesanan Dapur Aktif</CardTitle>
-                    <CardDescription>Real-time kitchen operations</CardDescription>
+                    <CardDescription>Antrian new + preparing</CardDescription>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm" onClick={fetchFnBData}>
-                    <RefreshCw className="w-4 h-4 mr-1" />
-                    Refresh
+                  <Button variant="outline" size="sm" onClick={() => fetchFnBData()} disabled={loading}>
+                    <RefreshCw className={`w-4 h-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+                    Segarkan
                   </Button>
                   <Link href="/kitchen/display">
                     <Button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700">
@@ -412,24 +446,25 @@ const FnBDashboard: NextPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {kitchenOrders.slice(0, 6).map((order: any) => (
                     <div key={order.id} className={`border-2 rounded-lg p-4 transition-all ${
-                      order.status === 'new' ? 'border-red-300 bg-red-50' : 'border-blue-300 bg-blue-50'
+                      order.status === 'new' ? 'border-red-300 bg-red-50' : order.status === 'preparing' ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-slate-50'
                     }`}>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2">
                           <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                            order.status === 'new' ? 'bg-red-500' : 'bg-blue-500'
+                            order.status === 'new' ? 'bg-red-500' : order.status === 'preparing' ? 'bg-amber-500' : 'bg-slate-500'
                           }`}>
                             <UtensilsCrossed className="w-4 h-4 text-white" />
                           </div>
                           <div>
                             <p className="font-bold text-gray-900">{order.order_number}</p>
                             <p className="text-xs text-gray-500">
-                              {order.table_number ? `Meja ${order.table_number}` : 'Takeaway'}
+                              {orderTypeLabel(order.order_type)}
+                              {order.table_number ? ` · Meja ${order.table_number}` : ''}
                             </p>
                           </div>
                         </div>
-                        <Badge className={order.status === 'new' ? 'bg-red-500' : 'bg-blue-500'}>
-                          {order.status === 'new' ? 'BARU' : 'DIMASAK'}
+                        <Badge className={statusBadge(order.status).className}>
+                          {statusBadge(order.status).label}
                         </Badge>
                       </div>
                       
@@ -448,10 +483,10 @@ const FnBDashboard: NextPage = () => {
                       <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                         <div className="flex items-center text-sm text-gray-600">
                           <Clock className="w-4 h-4 mr-1" />
-                          {order.estimated_time || 15} menit
+                          {order.estimated_time ?? 15} menit
                         </div>
-                        {order.priority === 'urgent' && (
-                          <Badge className="bg-red-600">URGENT</Badge>
+                        {(order.priority === 'urgent' || order.priority === 'high') && (
+                          <Badge className="bg-red-600">PRIORITAS</Badge>
                         )}
                       </div>
                     </div>
@@ -471,7 +506,7 @@ const FnBDashboard: NextPage = () => {
                   </div>
                   <div>
                     <CardTitle>Status Meja</CardTitle>
-                    <CardDescription>Live table status</CardDescription>
+                    <CardDescription>Ringkasan meja aktif</CardDescription>
                   </div>
                 </div>
                 <Link href="/tables">

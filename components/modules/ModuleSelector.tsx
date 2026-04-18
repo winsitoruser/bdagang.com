@@ -70,10 +70,10 @@ export default function ModuleSelector({
   };
   
   const toggleModule = (moduleCode: string) => {
-    const module = modules.find(m => m.code === moduleCode);
-    if (!module) return;
+    const catalogMod = modules.find(m => m.code === moduleCode);
+    if (!catalogMod) return;
     
-    const config = module.businessTypeConfig[businessType];
+    const config = catalogMod.businessTypeConfig[businessType];
     
     // Cannot deselect required modules
     if (config?.isRequired) {

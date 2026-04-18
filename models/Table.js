@@ -10,7 +10,6 @@ const Table = sequelize.define('Table', {
   tableNumber: {
     type: DataTypes.STRING(20),
     allowNull: false,
-    unique: true,
     field: 'table_number'
   },
   capacity: {
@@ -51,6 +50,24 @@ const Table = sequelize.define('Table', {
   },
   notes: {
     type: DataTypes.TEXT
+  },
+  tenantId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'tenant_id',
+    references: {
+      model: 'tenants',
+      key: 'id'
+    }
+  },
+  branchId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'branch_id',
+    references: {
+      model: 'branches',
+      key: 'id'
+    }
   }
 }, {
   tableName: 'tables',
@@ -62,13 +79,17 @@ const Table = sequelize.define('Table', {
 
 // Class methods
 Table.getAvailableTables = async function(options = {}) {
-  const { area, floor, minCapacity } = options;
-  
+  const { area, floor, minCapacity, tenantId } = options;
+
   const where = {
     status: 'available',
     isActive: true
   };
-  
+
+  if (tenantId) {
+    where.tenantId = tenantId;
+  }
+
   if (area) where.area = area;
   if (floor) where.floor = floor;
   if (minCapacity) {
@@ -76,23 +97,31 @@ Table.getAvailableTables = async function(options = {}) {
       [sequelize.Sequelize.Op.gte]: minCapacity
     };
   }
-  
+
   return await this.findAll({
     where,
     order: [['tableNumber', 'ASC']]
   });
 };
 
-Table.getTablesByStatus = async function(status) {
+Table.getTablesByStatus = async function(status, tenantId = null) {
+  const where = { status, isActive: true };
+  if (tenantId) {
+    where.tenantId = tenantId;
+  }
   return await this.findAll({
-    where: { status, isActive: true },
+    where,
     order: [['tableNumber', 'ASC']]
   });
 };
 
-Table.getTableLayout = async function(floor = 1) {
+Table.getTableLayout = async function(floor = 1, tenantId = null) {
+  const where = { floor, isActive: true };
+  if (tenantId) {
+    where.tenantId = tenantId;
+  }
   return await this.findAll({
-    where: { floor, isActive: true },
+    where,
     order: [['positionX', 'ASC'], ['positionY', 'ASC']]
   });
 };

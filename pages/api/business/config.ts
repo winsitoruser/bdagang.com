@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
+import { userWhereFromSession } from '@/lib/session-user';
 
 const db = require('../../../models');
 
@@ -17,10 +18,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { User, Tenant, BusinessType, TenantModule, Module } = db;
+
+    const whereUser = userWhereFromSession(session);
+    if (!whereUser) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
     
-    // Get user with tenant and business type
     const user = await User.findOne({
-      where: { email: session.user.email },
+      where: whereUser,
       include: [{
         model: Tenant,
         as: 'tenant',

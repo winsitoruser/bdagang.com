@@ -1,6 +1,7 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
+import { Op } from 'sequelize';
 
 // Use dynamic import for CommonJS module
 const getDb = () => require('../../../models');
@@ -14,16 +15,18 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        const emailRaw = String(credentials?.email ?? '').trim();
+        const password = credentials?.password ?? '';
+        if (!emailRaw || !password) {
           throw new Error('Email dan password harus diisi');
         }
 
         try {
           const db = getDb();
           
-          // Find user by email with related data
+          // Find user by email (case-insensitive; avoids "wrong password" on casing / spaces)
           const user = await db.User.findOne({
-            where: { email: credentials.email },
+            where: { email: { [Op.iLike]: emailRaw } },
             include: [
               {
                 model: db.Branch,
@@ -48,10 +51,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           // Verify password
-          const isPasswordValid = await bcrypt.compare(
-            credentials.password,
-            user.password
-          );
+          const isPasswordValid = await bcrypt.compare(password, user.password);
 
           if (!isPasswordValid) {
             throw new Error('Email atau password salah');
@@ -67,7 +67,9 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role,
             businessName: user.businessName,
-            tenantId: user.tenant_id,
+            tenantId: (user.tenantId ?? user.tenant_id) != null
+              ? String(user.tenantId ?? user.tenant_id)
+              : null,
             branchId: user.assignedBranch?.id || null,
             branchName: user.assignedBranch?.name || null,
             branchCode: user.assignedBranch?.code || null,
@@ -98,7 +100,10 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user, trigger }: any) {
       if (user) {
+        token.sub = user.id != null ? String(user.id) : token.sub;
         token.id = user.id;
+        token.email = user.email ?? token.email;
+        token.name = user.name ?? token.name;
         token.role = user.role;
         token.businessName = user.businessName;
         token.tenantId = user.tenantId;
@@ -135,6 +140,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
         session.user.role = token.role as string;
         session.user.businessName = token.businessName as string;
         session.user.tenantId = token.tenantId as string;

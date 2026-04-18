@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { signIn } from 'next-auth/react';
+import { signIn, getSession } from 'next-auth/react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -150,7 +150,12 @@ const Register: React.FC = () => {
           redirect: false,
         });
         if (loginResult?.ok) {
-          router.push('/onboarding');
+          await getSession();
+          const nextPath =
+            typeof data.redirectTo === 'string' && data.redirectTo.startsWith('/')
+              ? data.redirectTo
+              : '/onboarding';
+          router.replace(nextPath);
         } else {
           router.push('/auth/login');
         }

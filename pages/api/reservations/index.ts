@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
+import { getTenantId, getBranchId, tableReservationWhere } from '@/lib/api/tenantScope';
 const db = require('../../../models');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     switch (req.method) {
       case 'GET':
-        return await getReservations(req, res, Reservation);
+        return await getReservations(req, res, Reservation, session);
       case 'POST':
         return await createReservation(req, res, Reservation, session);
       default:
@@ -31,12 +32,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function getReservations(req: NextApiRequest, res: NextApiResponse, Reservation: any) {
+async function getReservations(req: NextApiRequest, res: NextApiResponse, Reservation: any, session: any) {
   try {
+    const tenantId = getTenantId(session);
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant context required' });
+    }
+
     const { date, status, customerId, tableId, startDate, endDate } = req.query;
 
-    const where: any = {};
-    
+    const where: any = {
+      ...tableReservationWhere(tenantId, getBranchId(session))
+    };
+
     if (date) {
       where.reservationDate = date;
     }
@@ -80,6 +88,12 @@ async function getReservations(req: NextApiRequest, res: NextApiResponse, Reserv
 }
 
 async function createReservation(req: NextApiRequest, res: NextApiResponse, Reservation: any, session: any) {
+  const tenantId = getTenantId(session);
+  if (!tenantId) {
+    return res.status(400).json({ success: false, error: 'Tenant context required' });
+  }
+  const branchId = getBranchId(session) || null;
+
   const {
     customerName,
     customerPhone,
@@ -109,14 +123,19 @@ async function createReservation(req: NextApiRequest, res: NextApiResponse, Rese
     });
   }
 
-  // Check table availability if tableId provided
+  let resolvedTableNumber: string | null = null;
+
   if (tableId) {
     const { Table } = db;
-    const table = await Table.findByPk(tableId);
-    
+    const table = await Table.findOne({
+      where: { id: tableId, tenantId }
+    });
+
     if (!table) {
       return res.status(404).json({ success: false, error: 'Table not found' });
     }
+
+    resolvedTableNumber = table.tableNumber;
 
     if (!table.canAccommodate(guestCount)) {
       return res.status(400).json({
@@ -125,11 +144,11 @@ async function createReservation(req: NextApiRequest, res: NextApiResponse, Rese
       });
     }
 
-    // Check if table is already reserved for this date/time
     const existingReservation = await Reservation.findOne({
       where: {
         tableId,
         reservationDate,
+        tenantId,
         status: {
           [db.Sequelize.Op.in]: ['confirmed', 'seated']
         }
@@ -153,13 +172,15 @@ async function createReservation(req: NextApiRequest, res: NextApiResponse, Rese
     reservationTime,
     guestCount,
     tableId,
-    tableNumber: tableId ? (await db.Table.findByPk(tableId))?.tableNumber : null,
+    tableNumber: resolvedTableNumber,
     specialRequests,
     depositAmount: depositAmount || 0,
     depositPaid: false,
     durationMinutes: durationMinutes || 120,
     status: 'pending',
-    createdBy: session.user?.id
+    createdBy: session.user?.id,
+    tenantId,
+    branchId
   });
 
   return res.status(201).json({

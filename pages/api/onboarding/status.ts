@@ -16,8 +16,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const db = getDb();
-    const userId = parseInt(session.user.id);
-    const tenantId = session.user.tenantId;
+    const userId = parseInt(session.user.id, 10);
+    let tenantId = session.user.tenantId as string | undefined;
+
+    if (!tenantId) {
+      const u = await db.User.findByPk(userId, { attributes: ['tenantId'] });
+      if (u?.tenantId) {
+        tenantId = String(u.tenantId);
+      }
+    }
 
     // Get tenant info (with safe include)
     let tenant = null;

@@ -1,142 +1,169 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Star, Quote } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Star, Quote, ChevronLeft, ChevronRight } from 'lucide-react';
+import { COMPANY_LEGAL_NAME, PRODUCT_LINE } from './brand';
+
+const AUTO_MS = 5200;
 
 const Testimonials: React.FC = () => {
   const testimonials = [
     {
       name: 'Budi Santoso',
-      role: 'Owner, Kopi Kenangan Senja',
+      role: 'Pemilik · Kopi Kenangan Senja',
       image: '👨‍💼',
       rating: 5,
-      text: 'BEDAGANG mengubah cara kami mengelola kedai kopi. Sistem POS-nya sangat cepat dan mudah digunakan. Loyalty program-nya juga membantu meningkatkan repeat customer hingga 40%!',
+      text: 'POS stabil di jam sibuk, split bill jelas, laporan harian siap tanpa tunggu closing manual.',
       business: 'F&B',
     },
     {
       name: 'Siti Nurhaliza',
-      role: 'Manager, Fashion Store Elegan',
+      role: 'Store Manager · Fashion Elegan',
       image: '👩‍💼',
       rating: 5,
-      text: 'Inventory management-nya luar biasa! Kami bisa tracking stok real-time di 3 cabang sekaligus. Laporan penjualan yang detail juga membantu kami membuat keputusan bisnis yang lebih baik.',
-      business: 'Retail Fashion',
+      text: 'Stok antar cabang konsisten; promosi member terukur setelah pakai satu platform cloud.',
+      business: 'Retail',
     },
     {
       name: 'Ahmad Rizki',
-      role: 'Owner, Minimarket Berkah',
+      role: 'Pemilik · Minimarket Berkah',
       image: '👨‍💻',
       rating: 5,
-      text: 'Dari manual ke BEDAGANG, efisiensi operasional kami meningkat drastis. Kasir lebih cepat, stok terkontrol, dan customer support-nya responsif. Highly recommended!',
+      text: 'Kasir dan stok dalam satu SaaS; dukungan teknis menjawab dengan konteks ritel nyata.',
       business: 'Minimarket',
-    },
-    {
-      name: 'Linda Wijaya',
-      role: 'Founder, Beauty Salon Cantika',
-      image: '👩‍🦰',
-      rating: 5,
-      text: 'Employee management dan appointment scheduling-nya sangat membantu salon kami. Sekarang kami bisa fokus ke customer experience tanpa pusing urusan administrasi.',
-      business: 'Beauty & Wellness',
-    },
-    {
-      name: 'Rudi Hartono',
-      role: 'Owner, Restoran Nusantara',
-      image: '👨‍🍳',
-      rating: 5,
-      text: 'Multi-payment integration-nya lengkap banget! Customer bisa bayar pakai apa aja. Plus, analytics dashboard-nya membantu kami optimize menu dan pricing strategy.',
-      business: 'Restaurant',
-    },
-    {
-      name: 'Dewi Lestari',
-      role: 'Manager, Toko Buku Literasi',
-      image: '👩‍🏫',
-      rating: 5,
-      text: 'Cloud-based system-nya bikin kami bisa monitor bisnis dari mana aja. Data aman, backup otomatis, dan yang paling penting - harganya sangat affordable untuk UMKM seperti kami.',
-      business: 'Bookstore',
     },
   ];
 
+  const [index, setIndex] = useState(0);
+
+  const go = useCallback(
+    (dir: -1 | 1) => {
+      setIndex((i) => (i + dir + testimonials.length) % testimonials.length);
+    },
+    [testimonials.length]
+  );
+
+  useEffect(() => {
+    const t = setInterval(() => go(1), AUTO_MS);
+    return () => clearInterval(t);
+  }, [go]);
+
+  const t = testimonials[index];
+
   return (
-    <section className="relative py-20 bg-gradient-to-b from-gray-50 to-white overflow-hidden">
-      <div className="relative z-10 max-w-7xl mx-auto px-6">
-        {/* Section Header */}
+    <section
+      id="testimoni"
+      className="relative scroll-mt-24 py-20 md:py-24 bg-gradient-to-b from-white via-slate-50/80 to-white overflow-hidden"
+    >
+      <div
+        className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-64 bg-gradient-to-r from-sky-100/20 via-transparent to-blue-100/20 blur-3xl"
+        aria-hidden
+      />
+      <div className="relative z-10 max-w-3xl mx-auto px-6">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-16"
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.45 }}
+          className="text-center mb-10"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Dipercaya oleh
+          <span className="inline-flex items-center rounded-full border border-sky-200/70 bg-sky-50/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-sky-800">
+            Testimoni
+          </span>
+          <h2 className="mt-4 text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
+            Suara pengguna{' '}
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-600 to-blue-600">
-              {' '}10,000+ Bisnis
+              ringkas
             </span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Dengar langsung dari para pemilik bisnis yang telah berkembang bersama BEDAGANG
+          <p className="mt-3 text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
+            Tiga cerita singkat — ilustrasi tipikal {PRODUCT_LINE} dari {COMPANY_LEGAL_NAME}.
           </p>
         </motion.div>
 
-        {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {testimonials.map((testimonial, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              {/* Quote Icon */}
-              <div className="mb-4">
-                <Quote className="w-8 h-8 text-sky-500 opacity-50" />
-              </div>
+        <div className="relative">
+          <div className="flex justify-center gap-2 mb-6">
+            {testimonials.map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setIndex(i)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  i === index ? 'w-8 bg-sky-600' : 'w-2 bg-slate-300 hover:bg-slate-400'
+                }`}
+                aria-label={`Testimoni ${i + 1}`}
+                aria-current={i === index}
+              />
+            ))}
+          </div>
 
-              {/* Rating */}
-              <div className="flex space-x-1 mb-4">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                ))}
-              </div>
-
-              {/* Testimonial Text */}
-              <p className="text-gray-700 mb-6 leading-relaxed">
-                "{testimonial.text}"
-              </p>
-
-              {/* Author Info */}
-              <div className="flex items-center space-x-3 pt-4 border-t border-gray-100">
-                <div className="text-4xl">{testimonial.image}</div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
-                  <p className="text-sm text-gray-600">{testimonial.role}</p>
-                  <p className="text-xs text-sky-600 font-medium mt-1">{testimonial.business}</p>
+          <div className="min-h-[200px] md:min-h-[190px]">
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: 14 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                className="rounded-2xl border border-slate-200/90 bg-white/95 px-6 py-7 md:px-8 shadow-md shadow-slate-900/[0.04]"
+              >
+                <div className="flex justify-between items-start gap-4 mb-3">
+                  <Quote className="w-7 h-7 text-sky-500/70 shrink-0" aria-hidden />
+                  <div className="flex gap-0.5" aria-label={`${t.rating} dari 5 bintang`}>
+                    {[...Array(t.rating)].map((_, i) => (
+                      <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
 
-        {/* Trust Badges */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto"
-        >
-          {[
-            { number: '10,000+', label: 'Bisnis Aktif' },
-            { number: '1M+', label: 'Transaksi/Bulan' },
-            { number: '4.9/5', label: 'Rating Pengguna' },
-            { number: '99.9%', label: 'Uptime' },
-          ].map((stat, index) => (
-            <div key={index} className="text-center">
-              <div className="text-3xl font-bold text-sky-600 mb-1">{stat.number}</div>
-              <div className="text-sm text-gray-600">{stat.label}</div>
-            </div>
-          ))}
-        </motion.div>
+                <p className="text-slate-700 text-base md:text-lg leading-relaxed">
+                  &ldquo;{t.text.replace('{COMPANY_LEGAL_NAME}', COMPANY_LEGAL_NAME)}&rdquo;
+                </p>
+
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.28 }}
+                  className="mt-5 flex items-center gap-3 pt-4 border-t border-slate-100"
+                >
+                  <div
+                    className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-50 text-lg border border-slate-200/80"
+                    aria-hidden
+                  >
+                    {t.image}
+                  </div>
+                  <div className="text-left">
+                    <h4 className="font-semibold text-slate-900">{t.name}</h4>
+                    <p className="text-sm text-slate-600">{t.role}</p>
+                    <p className="text-xs text-sky-700 font-medium mt-0.5">{t.business}</p>
+                  </div>
+                </motion.div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <div className="flex justify-center items-center gap-3 mt-5">
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 transition-colors"
+              aria-label="Testimoni sebelumnya"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => go(1)}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 transition-colors"
+              aria-label="Testimoni berikutnya"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <p className="text-center text-xs text-slate-400 mt-4">
+            Ganti otomatis · tap titik atau panah
+          </p>
+        </div>
       </div>
     </section>
   );

@@ -2,150 +2,166 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const addIfMissing = async (column, options) => {
+      const d = await queryInterface.describeTable('products');
+      if (d[column]) return;
+      await queryInterface.addColumn('products', column, options);
+    };
+
     // Add detailed product information fields
-    await queryInterface.addColumn('products', 'long_description', {
+    await addIfMissing('long_description', {
       type: Sequelize.TEXT,
       allowNull: true,
       comment: 'Deskripsi lengkap produk'
     });
 
-    await queryInterface.addColumn('products', 'specifications', {
+    await addIfMissing('specifications', {
       type: Sequelize.JSON,
       allowNull: true,
       comment: 'Spesifikasi teknis produk (JSON format)'
     });
 
-    await queryInterface.addColumn('products', 'features', {
+    await addIfMissing('features', {
       type: Sequelize.JSON,
       allowNull: true,
       comment: 'Fitur-fitur produk (array)'
     });
 
-    await queryInterface.addColumn('products', 'ingredients', {
+    await addIfMissing('ingredients', {
       type: Sequelize.TEXT,
       allowNull: true,
       comment: 'Komposisi/bahan-bahan produk'
     });
 
-    await queryInterface.addColumn('products', 'usage_instructions', {
+    await addIfMissing('usage_instructions', {
       type: Sequelize.TEXT,
       allowNull: true,
       comment: 'Cara penggunaan produk'
     });
 
-    await queryInterface.addColumn('products', 'warnings', {
+    await addIfMissing('warnings', {
       type: Sequelize.TEXT,
       allowNull: true,
       comment: 'Peringatan dan perhatian khusus'
     });
 
-    await queryInterface.addColumn('products', 'internal_notes', {
+    await addIfMissing('internal_notes', {
       type: Sequelize.TEXT,
       allowNull: true,
       comment: 'Catatan internal (tidak tampil ke customer)'
     });
 
     // Dimensions and physical properties
-    await queryInterface.addColumn('products', 'weight', {
+    await addIfMissing('weight', {
       type: Sequelize.DECIMAL(10, 3),
       allowNull: true,
       comment: 'Berat produk (kg)'
     });
 
-    await queryInterface.addColumn('products', 'weight_unit', {
+    await addIfMissing('weight_unit', {
       type: Sequelize.STRING(10),
       defaultValue: 'kg',
       comment: 'Unit berat (kg, gram, lb)'
     });
 
-    await queryInterface.addColumn('products', 'length', {
+    await addIfMissing('length', {
       type: Sequelize.DECIMAL(10, 2),
       allowNull: true,
       comment: 'Panjang (cm)'
     });
 
-    await queryInterface.addColumn('products', 'width', {
+    await addIfMissing('width', {
       type: Sequelize.DECIMAL(10, 2),
       allowNull: true,
       comment: 'Lebar (cm)'
     });
 
-    await queryInterface.addColumn('products', 'height', {
+    await addIfMissing('height', {
       type: Sequelize.DECIMAL(10, 2),
       allowNull: true,
       comment: 'Tinggi (cm)'
     });
 
-    await queryInterface.addColumn('products', 'dimension_unit', {
+    await addIfMissing('dimension_unit', {
       type: Sequelize.STRING(10),
       defaultValue: 'cm',
       comment: 'Unit dimensi (cm, m, inch)'
     });
 
-    await queryInterface.addColumn('products', 'volume', {
+    await addIfMissing('volume', {
       type: Sequelize.DECIMAL(10, 3),
       allowNull: true,
       comment: 'Volume (liter)'
     });
 
-    await queryInterface.addColumn('products', 'volume_unit', {
+    await addIfMissing('volume_unit', {
       type: Sequelize.STRING(10),
       defaultValue: 'liter',
       comment: 'Unit volume (liter, ml, gallon)'
     });
 
     // Media fields
-    await queryInterface.addColumn('products', 'images', {
+    await addIfMissing('images', {
       type: Sequelize.JSON,
       allowNull: true,
       comment: 'Array of image URLs'
     });
 
-    await queryInterface.addColumn('products', 'thumbnail', {
+    await addIfMissing('thumbnail', {
       type: Sequelize.STRING(500),
       allowNull: true,
       comment: 'URL thumbnail utama'
     });
 
-    await queryInterface.addColumn('products', 'videos', {
+    await addIfMissing('videos', {
       type: Sequelize.JSON,
       allowNull: true,
       comment: 'Array of video URLs'
     });
 
-    await queryInterface.addColumn('products', 'documents', {
+    await addIfMissing('documents', {
       type: Sequelize.JSON,
       allowNull: true,
       comment: 'Array of document URLs (PDF, etc)'
     });
 
     // Tags and categorization
-    await queryInterface.addColumn('products', 'tags', {
+    await addIfMissing('tags', {
       type: Sequelize.JSON,
       allowNull: true,
       comment: 'Tags untuk search dan filter'
     });
 
-    await queryInterface.addColumn('products', 'brand', {
+    await addIfMissing('brand', {
       type: Sequelize.STRING(100),
       allowNull: true,
       comment: 'Brand/merek produk'
     });
 
-    await queryInterface.addColumn('products', 'manufacturer', {
+    await addIfMissing('manufacturer', {
       type: Sequelize.STRING(100),
       allowNull: true,
       comment: 'Nama produsen'
     });
 
-    await queryInterface.addColumn('products', 'country_of_origin', {
+    await addIfMissing('country_of_origin', {
       type: Sequelize.STRING(100),
       allowNull: true,
       comment: 'Negara asal produk'
     });
 
     // Create product_variants table
-    await queryInterface.createTable('product_variants', {
+    const seq = queryInterface.sequelize;
+    const tables = await queryInterface.showAllTables();
+    const tableNames = tables.map((t) =>
+      typeof t === 'string' ? t : String(Object.values(t)[0] ?? '')
+    );
+    const hasProductVariants = tableNames.some(
+      (n) => String(n).toLowerCase() === 'product_variants'
+    );
+
+    if (!hasProductVariants) {
+      await queryInterface.createTable('product_variants', {
       id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -237,12 +253,22 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
+    }
 
-    // Add indexes
-    await queryInterface.addIndex('product_variants', ['product_id']);
-    await queryInterface.addIndex('product_variants', ['variant_type']);
-    await queryInterface.addIndex('product_variants', ['sku']);
-    await queryInterface.addIndex('product_variants', ['is_active']);
+    const pvDesc = await queryInterface.describeTable('product_variants');
+    const indexSpecs = [
+      ['product_variants_product_id_idx', 'product_id'],
+      ['product_variants_variant_type_idx', 'variant_type'],
+      ['product_variants_sku_idx', 'sku'],
+      ['product_variants_is_active_idx', 'is_active'],
+    ];
+    for (const [idxName, col] of indexSpecs) {
+      if (pvDesc[col]) {
+        await seq.query(
+          `CREATE INDEX IF NOT EXISTS "${idxName}" ON product_variants ("${col}");`
+        );
+      }
+    }
   },
 
   down: async (queryInterface, Sequelize) => {

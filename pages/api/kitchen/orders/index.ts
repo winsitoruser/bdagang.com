@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import { sequelize } from '@/lib/sequelizeClient';
 import { QueryTypes } from 'sequelize';
+import { getTenantId } from '@/lib/api/tenantScope';
 
 const KitchenOrder = require('@/models/KitchenOrder');
 const KitchenOrderItem = require('@/models/KitchenOrderItem');
@@ -211,20 +212,27 @@ export default async function handler(
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const tenantId = session.user.tenantId || 'default';
+    const tenantId = getTenantId(session);
+    if (!tenantId) {
+      return res.status(400).json({ success: false, message: 'Tenant context required' });
+    }
 
     if (req.method === 'GET') {
       const { status, orderType, search, limit = 50, offset = 0 } = req.query;
 
       try {
-        let whereClause = 'WHERE 1=1';
-        const replacements: any = {};
+        let whereClause = 'WHERE ko.tenant_id = :tenantId';
+        const replacements: any = { tenantId };
 
         if (status && status !== 'all') {
-          // Map 'pending' to 'new' to match DB enum (new, preparing, ready, served, cancelled)
-          const mappedStatus = status === 'pending' ? 'new' : status;
-          whereClause += ' AND ko.status = :status';
-          replacements.status = mappedStatus;
+          if (status === 'active' || status === 'queue') {
+            whereClause += ` AND ko.status IN ('new', 'preparing')`;
+          } else if (status === 'pending') {
+            whereClause += ` AND ko.status = 'new'`;
+          } else {
+            whereClause += ' AND ko.status = :status';
+            replacements.status = status;
+          }
         }
 
         if (orderType && orderType !== 'all') {
@@ -268,18 +276,24 @@ export default async function handler(
           }
         }));
 
-        // If no orders from database, return realistic mock data
-        if (ordersWithItems.length === 0) {
-          const mockOrders = generateMockKitchenOrders(status as string);
+        if (ordersWithItems.length === 0 && req.query.demo === '1') {
+          const mockOrders = generateMockKitchenOrders('all');
           return res.status(200).json({ success: true, data: mockOrders, source: 'mock' });
         }
 
-        return res.status(200).json({ success: true, data: ordersWithItems });
+        return res.status(200).json({
+          success: true,
+          data: ordersWithItems,
+          source: ordersWithItems.length ? 'database' : 'empty',
+        });
       } catch (queryError: any) {
         console.error('Kitchen orders query error:', queryError);
-        // Return mock data on error
-        const mockOrders = generateMockKitchenOrders(status as string);
-        return res.status(200).json({ success: true, data: mockOrders, source: 'mock' });
+        return res.status(500).json({
+          success: false,
+          message: 'Gagal memuat pesanan dapur',
+          error: queryError?.message,
+          data: [],
+        });
       }
 
     } else if (req.method === 'POST') {

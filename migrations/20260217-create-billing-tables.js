@@ -2,8 +2,45 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const sequelize = queryInterface.sequelize;
+
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+
+    const fkTypeOrDefault = async (tableName, columnName = 'id', fallback = Sequelize.UUID) => {
+      const tableList = await queryInterface.showAllTables();
+      if (!tableList.includes(tableName)) return fallback;
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+
+    const ensureTableMerge = async (tableName, tableDef) => {
+      const tableList = await queryInterface.showAllTables();
+      if (!tableList.includes(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [col, def] of Object.entries(tableDef)) {
+        if (d[col]) continue;
+        const { comment: _c, ...rest } = def;
+        await queryInterface.addColumn(tableName, col, rest);
+        d[col] = true;
+      }
+    };
+
+    const tenantFkType = await fkTypeOrDefault('tenants', 'id');
+
     // Create plans table
-    await queryInterface.createTable('plans', {
+    const plansDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -77,17 +114,20 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('plans', plansDef);
+
+    const planFkType = await fkTypeOrDefault('plans', 'id');
 
     // Create plan_limits table
-    await queryInterface.createTable('plan_limits', {
+    const planLimitsDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       plan_id: {
-        type: Sequelize.UUID,
+        type: planFkType,
         allowNull: false,
         references: {
           model: 'plans',
@@ -126,17 +166,18 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('plan_limits', planLimitsDef);
 
     // Create subscriptions table
-    await queryInterface.createTable('subscriptions', {
+    const subscriptionsDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       tenant_id: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         references: {
           model: 'tenants',
@@ -146,7 +187,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       plan_id: {
-        type: Sequelize.UUID,
+        type: planFkType,
         allowNull: false,
         references: {
           model: 'plans',
@@ -199,17 +240,20 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('subscriptions', subscriptionsDef);
+
+    const subscriptionFkType = await fkTypeOrDefault('subscriptions', 'id');
 
     // Create billing_cycles table
-    await queryInterface.createTable('billing_cycles', {
+    const billingCyclesDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       subscription_id: {
-        type: Sequelize.UUID,
+        type: subscriptionFkType,
         allowNull: false,
         references: {
           model: 'subscriptions',
@@ -283,17 +327,22 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('billing_cycles', billingCyclesDef);
+
+    const tenantIdTypeForInvoices = await fkTypeOrDefault('tenants', 'id');
+    const billingCycleIdType = await fkTypeOrDefault('billing_cycles', 'id');
+    const subscriptionIdTypeForInvoices = await fkTypeOrDefault('subscriptions', 'id');
 
     // Create invoices table
-    await queryInterface.createTable('invoices', {
+    const invoicesDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       tenant_id: {
-        type: Sequelize.UUID,
+        type: tenantIdTypeForInvoices,
         allowNull: false,
         references: {
           model: 'tenants',
@@ -303,7 +352,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       billing_cycle_id: {
-        type: Sequelize.UUID,
+        type: billingCycleIdType,
         allowNull: true,
         references: {
           model: 'billing_cycles',
@@ -313,7 +362,7 @@ module.exports = {
         onDelete: 'SET NULL'
       },
       subscription_id: {
-        type: Sequelize.UUID,
+        type: subscriptionIdTypeForInvoices,
         allowNull: true,
         references: {
           model: 'subscriptions',
@@ -421,17 +470,20 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('invoices', invoicesDef);
+
+    const invoiceIdType = await fkTypeOrDefault('invoices', 'id');
 
     // Create invoice_items table
-    await queryInterface.createTable('invoice_items', {
+    const invoiceItemsDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       invoice_id: {
-        type: Sequelize.UUID,
+        type: invoiceIdType,
         allowNull: false,
         references: {
           model: 'invoices',
@@ -474,17 +526,20 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('invoice_items', invoiceItemsDef);
+
+    const tenantIdTypeUsage = await fkTypeOrDefault('tenants', 'id');
 
     // Create usage_metrics table
-    await queryInterface.createTable('usage_metrics', {
+    const usageMetricsDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       tenant_id: {
-        type: Sequelize.UUID,
+        type: tenantIdTypeUsage,
         allowNull: false,
         references: {
           model: 'tenants',
@@ -522,17 +577,21 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('usage_metrics', usageMetricsDef);
+
+    const invoiceIdTypePay = await fkTypeOrDefault('invoices', 'id');
+    const billingCycleIdTypePay = await fkTypeOrDefault('billing_cycles', 'id');
 
     // Create payment_transactions table
-    await queryInterface.createTable('payment_transactions', {
+    const paymentTransactionsDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       invoice_id: {
-        type: Sequelize.UUID,
+        type: invoiceIdTypePay,
         allowNull: false,
         references: {
           model: 'invoices',
@@ -542,7 +601,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       billing_cycle_id: {
-        type: Sequelize.UUID,
+        type: billingCycleIdTypePay,
         allowNull: true,
         references: {
           model: 'billing_cycles',
@@ -595,45 +654,110 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('payment_transactions', paymentTransactionsDef);
 
-    // Create indexes
-    await queryInterface.addIndex('plans', ['is_active']);
-    await queryInterface.addIndex('plans', ['billing_interval']);
-    await queryInterface.addIndex('plans', ['sort_order']);
-    
-    await queryInterface.addIndex('plan_limits', ['plan_id']);
-    await queryInterface.addIndex('plan_limits', ['metric_name']);
-    await queryInterface.addIndex('plan_limits', ['plan_id', 'metric_name'], { unique: true });
-    
-    await queryInterface.addIndex('subscriptions', ['tenant_id'], { unique: true });
-    await queryInterface.addIndex('subscriptions', ['status']);
-    await queryInterface.addIndex('subscriptions', ['current_period_end']);
-    await queryInterface.addIndex('subscriptions', ['plan_id']);
-    
-    await queryInterface.addIndex('billing_cycles', ['subscription_id']);
-    await queryInterface.addIndex('billing_cycles', ['status']);
-    await queryInterface.addIndex('billing_cycles', ['due_date']);
-    await queryInterface.addIndex('billing_cycles', ['period_start', 'period_end']);
-    
-    await queryInterface.addIndex('invoices', ['invoice_number'], { unique: true });
-    await queryInterface.addIndex('invoices', ['tenant_id']);
-    await queryInterface.addIndex('invoices', ['status']);
-    await queryInterface.addIndex('invoices', ['due_date']);
-    await queryInterface.addIndex('invoices', ['billing_cycle_id']);
-    await queryInterface.addIndex('invoices', ['subscription_id']);
-    
-    await queryInterface.addIndex('invoice_items', ['invoice_id']);
-    await queryInterface.addIndex('invoice_items', ['type']);
-    
-    await queryInterface.addIndex('usage_metrics', ['tenant_id']);
-    await queryInterface.addIndex('usage_metrics', ['metric_name']);
-    await queryInterface.addIndex('usage_metrics', ['period_start', 'period_end']);
-    await queryInterface.addIndex('usage_metrics', ['tenant_id', 'metric_name', 'period_start'], { unique: true });
-    
-    await queryInterface.addIndex('payment_transactions', ['invoice_id']);
-    await queryInterface.addIndex('payment_transactions', ['status']);
-    await queryInterface.addIndex('payment_transactions', ['provider']);
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS plans_is_active ON "plans" ("is_active")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS plans_billing_interval ON "plans" ("billing_interval")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS plans_sort_order ON "plans" ("sort_order")'
+    );
+
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS plan_limits_plan_id ON "plan_limits" ("plan_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS plan_limits_metric_name ON "plan_limits" ("metric_name")'
+    );
+    await sequelize.query(
+      'CREATE UNIQUE INDEX IF NOT EXISTS plan_limits_plan_id_metric_name ON "plan_limits" ("plan_id", "metric_name")'
+    );
+
+    await sequelize.query(
+      'CREATE UNIQUE INDEX IF NOT EXISTS subscriptions_tenant_id ON "subscriptions" ("tenant_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS subscriptions_status ON "subscriptions" ("status")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS subscriptions_current_period_end ON "subscriptions" ("current_period_end")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS subscriptions_plan_id ON "subscriptions" ("plan_id")'
+    );
+
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS billing_cycles_subscription_id ON "billing_cycles" ("subscription_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS billing_cycles_status ON "billing_cycles" ("status")'
+    );
+    await sequelize.query(`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'billing_cycles' AND column_name = 'due_date'
+        ) THEN
+          CREATE INDEX IF NOT EXISTS billing_cycles_due_date ON "billing_cycles" ("due_date");
+        END IF;
+      END $$;
+    `);
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS billing_cycles_period_start_period_end ON "billing_cycles" ("period_start", "period_end")'
+    );
+
+    await sequelize.query(
+      'CREATE UNIQUE INDEX IF NOT EXISTS invoices_invoice_number ON "invoices" ("invoice_number")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS invoices_tenant_id ON "invoices" ("tenant_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS invoices_status ON "invoices" ("status")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS invoices_due_date ON "invoices" ("due_date")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS invoices_billing_cycle_id ON "invoices" ("billing_cycle_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS invoices_subscription_id ON "invoices" ("subscription_id")'
+    );
+
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS invoice_items_invoice_id ON "invoice_items" ("invoice_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS invoice_items_type ON "invoice_items" ("type")'
+    );
+
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS usage_metrics_tenant_id ON "usage_metrics" ("tenant_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS usage_metrics_metric_name ON "usage_metrics" ("metric_name")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS usage_metrics_period ON "usage_metrics" ("period_start", "period_end")'
+    );
+    await sequelize.query(
+      'CREATE UNIQUE INDEX IF NOT EXISTS usage_metrics_tenant_metric_period ON "usage_metrics" ("tenant_id", "metric_name", "period_start")'
+    );
+
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS payment_transactions_invoice_id ON "payment_transactions" ("invoice_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS payment_transactions_status ON "payment_transactions" ("status")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS payment_transactions_provider ON "payment_transactions" ("provider")'
+    );
   },
 
   down: async (queryInterface, Sequelize) => {

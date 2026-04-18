@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
+import { getSessionTenantId } from '@/lib/session-scope';
 
 const Customer = require('../../../models/Customer');
 const PosTransaction = require('../../../models/PosTransaction');
@@ -13,16 +14,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const tenantId = getSessionTenantId(session);
+  if (!tenantId) {
+    return res.status(400).json({
+      error: 'tenant_required',
+      message: 'Tenant tidak ditemukan pada sesi. Silakan login ulang.'
+    });
+  }
+
   try {
     switch (req.method) {
       case 'GET':
-        return await getCustomers(req, res);
+        return await getCustomers(req, res, tenantId);
       case 'POST':
-        return await createCustomer(req, res);
+        return await createCustomer(req, res, tenantId);
       case 'PUT':
-        return await updateCustomer(req, res);
+        return await updateCustomer(req, res, tenantId);
       case 'DELETE':
-        return await deleteCustomer(req, res);
+        return await deleteCustomer(req, res, tenantId);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -36,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 // GET /api/customers/crud
-async function getCustomers(req: NextApiRequest, res: NextApiResponse) {
+async function getCustomers(req: NextApiRequest, res: NextApiResponse, tenantId: string) {
   const { 
     page = '1', 
     limit = '10', 
@@ -50,7 +59,7 @@ async function getCustomers(req: NextApiRequest, res: NextApiResponse) {
   const limitNum = parseInt(limit as string);
   const offset = (pageNum - 1) * limitNum;
 
-  const whereClause: any = {};
+  const whereClause: any = { tenantId };
 
   // Search filter
   if (search) {
@@ -88,6 +97,7 @@ async function getCustomers(req: NextApiRequest, res: NextApiResponse) {
 
   // Calculate statistics
   const stats = await Customer.findAll({
+    where: { tenantId },
     attributes: [
       [Customer.sequelize.fn('COUNT', Customer.sequelize.col('id')), 'totalCustomers'],
       [Customer.sequelize.fn('SUM', Customer.sequelize.literal('CASE WHEN status = "active" THEN 1 ELSE 0 END')), 'activeCustomers'],
@@ -118,7 +128,7 @@ async function getCustomers(req: NextApiRequest, res: NextApiResponse) {
 }
 
 // POST /api/customers/crud
-async function createCustomer(req: NextApiRequest, res: NextApiResponse) {
+async function createCustomer(req: NextApiRequest, res: NextApiResponse, tenantId: string) {
   const {
     name,
     phone,
@@ -140,17 +150,17 @@ async function createCustomer(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Name is required' });
   }
 
-  // Check if phone already exists
+  // Check if phone already exists (per tenant)
   if (phone) {
-    const existingCustomer = await Customer.findOne({ where: { phone } });
+    const existingCustomer = await Customer.findOne({ where: { phone, tenantId } });
     if (existingCustomer) {
       return res.status(400).json({ error: 'Phone number already exists' });
     }
   }
 
-  // Check if email already exists
+  // Check if email already exists (per tenant)
   if (email) {
-    const existingCustomer = await Customer.findOne({ where: { email } });
+    const existingCustomer = await Customer.findOne({ where: { email, tenantId } });
     if (existingCustomer) {
       return res.status(400).json({ error: 'Email already exists' });
     }
@@ -159,6 +169,7 @@ async function createCustomer(req: NextApiRequest, res: NextApiResponse) {
   const customer = await Customer.create({
     name,
     phone,
+    tenantId,
     email,
     address,
     city,
@@ -185,14 +196,14 @@ async function createCustomer(req: NextApiRequest, res: NextApiResponse) {
 }
 
 // PUT /api/customers/crud?id=xxx
-async function updateCustomer(req: NextApiRequest, res: NextApiResponse) {
+async function updateCustomer(req: NextApiRequest, res: NextApiResponse, tenantId: string) {
   const { id } = req.query;
 
   if (!id) {
     return res.status(400).json({ error: 'Customer ID is required' });
   }
 
-  const customer = await Customer.findByPk(id);
+  const customer = await Customer.findOne({ where: { id, tenantId } });
 
   if (!customer) {
     return res.status(404).json({ error: 'Customer not found' });
@@ -220,6 +231,7 @@ async function updateCustomer(req: NextApiRequest, res: NextApiResponse) {
     const existingCustomer = await Customer.findOne({ 
       where: { 
         phone,
+        tenantId,
         id: { [Op.ne]: id }
       } 
     });
@@ -233,6 +245,7 @@ async function updateCustomer(req: NextApiRequest, res: NextApiResponse) {
     const existingCustomer = await Customer.findOne({ 
       where: { 
         email,
+        tenantId,
         id: { [Op.ne]: id }
       } 
     });
@@ -266,14 +279,14 @@ async function updateCustomer(req: NextApiRequest, res: NextApiResponse) {
 }
 
 // DELETE /api/customers/crud?id=xxx
-async function deleteCustomer(req: NextApiRequest, res: NextApiResponse) {
+async function deleteCustomer(req: NextApiRequest, res: NextApiResponse, tenantId: string) {
   const { id } = req.query;
 
   if (!id) {
     return res.status(400).json({ error: 'Customer ID is required' });
   }
 
-  const customer = await Customer.findByPk(id);
+  const customer = await Customer.findOne({ where: { id, tenantId } });
 
   if (!customer) {
     return res.status(404).json({ error: 'Customer not found' });

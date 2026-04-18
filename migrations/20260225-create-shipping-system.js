@@ -2,6 +2,28 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const sequelize = queryInterface.sequelize;
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+    const fkTypeFor = async (tableName, columnName = 'id') => {
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+
+    const irPkType = await fkTypeFor('internal_requisitions', 'id');
+    const irItemPkType = await fkTypeFor('internal_requisition_items', 'id');
+    const branchFkType = await fkTypeFor('branches', 'id');
+    const userFkType = await fkTypeFor('users', 'id');
+    const productFkType = await fkTypeFor('products', 'id');
+
     // 1. Create requisition_shipments table
     await queryInterface.createTable('requisition_shipments', {
       id: {
@@ -10,7 +32,7 @@ module.exports = {
         primaryKey: true
       },
       requisition_id: {
-        type: Sequelize.UUID,
+        type: irPkType,
         allowNull: false,
         references: {
           model: 'internal_requisitions',
@@ -46,7 +68,7 @@ module.exports = {
         allowNull: true
       },
       shipped_from_branch_id: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: true,
         references: {
           model: 'branches',
@@ -54,7 +76,7 @@ module.exports = {
         }
       },
       shipped_to_branch_id: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: true,
         references: {
           model: 'branches',
@@ -62,7 +84,7 @@ module.exports = {
         }
       },
       shipped_by: {
-        type: Sequelize.INTEGER,
+        type: userFkType,
         allowNull: true,
         references: {
           model: 'users',
@@ -192,7 +214,7 @@ module.exports = {
         allowNull: true
       },
       updated_by: {
-        type: Sequelize.INTEGER,
+        type: userFkType,
         allowNull: true,
         references: {
           model: 'users',
@@ -232,7 +254,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       requisition_id: {
-        type: Sequelize.UUID,
+        type: irPkType,
         allowNull: false,
         references: {
           model: 'internal_requisitions',
@@ -246,7 +268,7 @@ module.exports = {
         allowNull: false
       },
       received_by_user_id: {
-        type: Sequelize.INTEGER,
+        type: userFkType,
         allowNull: true,
         references: {
           model: 'users',
@@ -335,7 +357,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       requisition_item_id: {
-        type: Sequelize.UUID,
+        type: irItemPkType,
         allowNull: true,
         references: {
           model: 'internal_requisition_items',
@@ -343,7 +365,7 @@ module.exports = {
         }
       },
       product_id: {
-        type: Sequelize.INTEGER,
+        type: productFkType,
         allowNull: false
       },
       product_name: {

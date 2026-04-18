@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { defaultPostLoginPath } from '@/lib/singleBranch';
 
 const Login: React.FC = () => {
   const router = useRouter();
@@ -42,13 +43,17 @@ const Login: React.FC = () => {
       });
 
       if (result?.error) {
-        toast.error('Email atau password salah');
+        toast.error(
+          typeof result.error === 'string' && result.error.length > 0
+            ? result.error
+            : 'Email atau password salah'
+        );
       } else if (result?.ok) {
         toast.success('Login berhasil!');
         const callbackUrl = router.query.callbackUrl as string;
         const target = (callbackUrl && !callbackUrl.includes('/auth/'))
           ? callbackUrl
-          : '/hq/dashboard';
+          : defaultPostLoginPath();
         window.location.href = target;
       }
     } catch (error) {

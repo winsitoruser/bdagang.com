@@ -11,7 +11,7 @@ module.exports = {
         allowNull: false
       },
       product_id: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'products',
@@ -57,18 +57,12 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('price_history', ['product_id'], {
-      name: 'idx_price_history_product_id'
-    });
-
-    await queryInterface.addIndex('price_history', ['change_date'], {
-      name: 'idx_price_history_change_date'
-    });
-
-    await queryInterface.addIndex('price_history', ['changed_by'], {
-      name: 'idx_price_history_changed_by'
-    });
+    const seq = queryInterface.sequelize;
+    await seq.query(`
+      CREATE INDEX IF NOT EXISTS idx_price_history_product_id ON price_history (product_id);
+      CREATE INDEX IF NOT EXISTS idx_price_history_change_date ON price_history (change_date);
+      CREATE INDEX IF NOT EXISTS idx_price_history_changed_by ON price_history (changed_by);
+    `);
 
     // Create pricing_suggestions table
     await queryInterface.createTable('pricing_suggestions', {
@@ -79,7 +73,7 @@ module.exports = {
         allowNull: false
       },
       product_id: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'products',
@@ -147,18 +141,11 @@ module.exports = {
       }
     });
 
-    // Add indexes for pricing_suggestions
-    await queryInterface.addIndex('pricing_suggestions', ['product_id'], {
-      name: 'idx_pricing_suggestions_product_id'
-    });
-
-    await queryInterface.addIndex('pricing_suggestions', ['status'], {
-      name: 'idx_pricing_suggestions_status'
-    });
-
-    await queryInterface.addIndex('pricing_suggestions', ['created_at'], {
-      name: 'idx_pricing_suggestions_created_at'
-    });
+    await seq.query(`
+      CREATE INDEX IF NOT EXISTS idx_pricing_suggestions_product_id ON pricing_suggestions (product_id);
+      CREATE INDEX IF NOT EXISTS idx_pricing_suggestions_status ON pricing_suggestions (status);
+      CREATE INDEX IF NOT EXISTS idx_pricing_suggestions_created_at ON pricing_suggestions (created_at);
+    `);
   },
 
   down: async (queryInterface, Sequelize) => {

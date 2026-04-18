@@ -2,6 +2,11 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const existing = await queryInterface.showAllTables();
+    if (existing.includes('stocks')) {
+      return;
+    }
+
     // Create stocks table
     await queryInterface.createTable('stocks', {
       id: {
@@ -10,18 +15,20 @@ module.exports = {
         primaryKey: true
       },
       productId: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'Products',
+          model: 'products',
           key: 'id'
-        }
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT'
       },
       branchId: {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Branches',
+          model: 'branches',
           key: 'id'
         }
       },
@@ -86,18 +93,20 @@ module.exports = {
         primaryKey: true
       },
       productId: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'Products',
+          model: 'products',
           key: 'id'
-        }
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT'
       },
       branchId: {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Branches',
+          model: 'branches',
           key: 'id'
         }
       },
@@ -133,7 +142,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Branches',
+          model: 'branches',
           key: 'id'
         }
       },
@@ -141,7 +150,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Branches',
+          model: 'branches',
           key: 'id'
         }
       },
@@ -161,7 +170,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Employees',
+          model: 'employees',
           key: 'id'
         }
       },
@@ -169,7 +178,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Employees',
+          model: 'employees',
           key: 'id'
         }
       },
@@ -220,7 +229,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Branches',
+          model: 'branches',
           key: 'id'
         }
       },
@@ -284,7 +293,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Employees',
+          model: 'employees',
           key: 'id'
         }
       },
@@ -292,7 +301,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Employees',
+          model: 'employees',
           key: 'id'
         }
       },
@@ -304,7 +313,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Employees',
+          model: 'employees',
           key: 'id'
         }
       },
@@ -343,12 +352,14 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       productId: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'Products',
+          model: 'products',
           key: 'id'
-        }
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT'
       },
       quantity: {
         type: Sequelize.DECIMAL(15, 2),
@@ -434,7 +445,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: 'Employees',
+          model: 'employees',
           key: 'id'
         }
       },
@@ -490,12 +501,14 @@ module.exports = {
         }
       },
       productId: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'Products',
+          model: 'products',
           key: 'id'
-        }
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT'
       },
       orderedQuantity: {
         type: Sequelize.DECIMAL(15, 2),
@@ -569,7 +582,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: 'Customers',
+          model: 'customers',
           key: 'id'
         }
       },
@@ -577,7 +590,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Branches',
+          model: 'branches',
           key: 'id'
         }
       },
@@ -649,7 +662,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Employees',
+          model: 'employees',
           key: 'id'
         }
       },
@@ -657,7 +670,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Employees',
+          model: 'employees',
           key: 'id'
         }
       },
@@ -669,7 +682,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Employees',
+          model: 'employees',
           key: 'id'
         }
       },
@@ -708,12 +721,14 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       productId: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'Products',
+          model: 'products',
           key: 'id'
-        }
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT'
       },
       quantity: {
         type: Sequelize.DECIMAL(15, 2),
@@ -786,7 +801,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Branches',
+          model: 'branches',
           key: 'id'
         }
       },
@@ -816,7 +831,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: 'Employees',
+          model: 'employees',
           key: 'id'
         }
       },
@@ -824,7 +839,7 @@ module.exports = {
         type: Sequelize.UUID,
         allowNull: true,
         references: {
-          model: 'Employees',
+          model: 'employees',
           key: 'id'
         }
       },
@@ -859,12 +874,14 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       productId: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'Products',
+          model: 'products',
           key: 'id'
-        }
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT'
       },
       systemQuantity: {
         type: Sequelize.DECIMAL(15, 2),

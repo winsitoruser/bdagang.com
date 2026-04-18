@@ -35,10 +35,71 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const sequelize = queryInterface.sequelize;
+    let tablesNow = await queryInterface.showAllTables();
+    const hasTable = (name) =>
+      tablesNow.some((t) => String(t).toLowerCase() === String(name).toLowerCase());
+
+    const defaultLiteralForType = (colType) => {
+      if (!colType) return null;
+      const key = colType.key || colType.constructor?.key;
+      if (key === 'STRING' || key === 'TEXT' || key === 'CHAR') return `''`;
+      if (key === 'INTEGER' || key === 'BIGINT') return '0';
+      if (key === 'BOOLEAN') return 'false';
+      if (key === 'DATE' || key === 'DATEONLY') return `'1970-01-01'::date`;
+      if (key === 'UUID') return 'gen_random_uuid()';
+      if (key === 'ENUM' && colType.values?.length) {
+        const v = String(colType.values[0]).replace(/'/g, "''");
+        return `'${v}'`;
+      }
+      if (key === 'DECIMAL' || key === 'FLOAT' || key === 'DOUBLE') return '0';
+      if (key === 'JSON' || key === 'JSONB') return `'{}'::jsonb`;
+      return null;
+    };
+
+    const ensureTableMerge = async (tableName, tableDef) => {
+      if (!hasTable(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        tablesNow = await queryInterface.showAllTables();
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [attrName, def] of Object.entries(tableDef)) {
+        if (!def || typeof def !== 'object') continue;
+        const colName = def.field !== undefined ? def.field : attrName;
+        if (d[colName]) continue;
+        const { field: _f, comment: _c, ...rest } = def;
+        const strict = rest.allowNull === false && !rest.primaryKey;
+        const addOpts = strict ? { ...rest, allowNull: true } : rest;
+        await queryInterface.addColumn(tableName, colName, addOpts);
+        if (strict) {
+          if (rest.references?.model) {
+            const pt = rest.references.model;
+            const pk = rest.references.key || 'id';
+            await sequelize.query(
+              `UPDATE "${tableName}" AS t SET "${colName}" = (SELECT "${pk}" FROM "${pt}" ORDER BY "${pk}" LIMIT 1) WHERE t."${colName}" IS NULL`
+            );
+          } else {
+            const lit = defaultLiteralForType(rest.type);
+            if (lit) {
+              await sequelize.query(
+                `UPDATE "${tableName}" SET "${colName}" = ${lit} WHERE "${colName}" IS NULL`
+              );
+            }
+          }
+          await queryInterface.changeColumn(tableName, colName, rest).catch(() => {});
+        }
+        d[colName] = true;
+      }
+    };
+
+    const addIdx = (table, cols, opts) =>
+      queryInterface.addIndex(table, cols, opts).catch(() => {});
+
     // ────────────────────────────────────────────────────────────
     // 1. hris_job_openings - Lowongan pekerjaan
     // ────────────────────────────────────────────────────────────
-    await queryInterface.createTable('hris_job_openings', {
+    await ensureTableMerge('hris_job_openings', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -188,18 +249,18 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('hris_job_openings', ['tenant_id'], { name: 'idx_job_openings_tenant' });
-    await queryInterface.addIndex('hris_job_openings', ['branch_id'], { name: 'idx_job_openings_branch' });
-    await queryInterface.addIndex('hris_job_openings', ['status'], { name: 'idx_job_openings_status' });
-    await queryInterface.addIndex('hris_job_openings', ['department'], { name: 'idx_job_openings_department' });
-    await queryInterface.addIndex('hris_job_openings', ['priority'], { name: 'idx_job_openings_priority' });
-    await queryInterface.addIndex('hris_job_openings', ['posted_date'], { name: 'idx_job_openings_posted' });
-    await queryInterface.addIndex('hris_job_openings', ['closing_date'], { name: 'idx_job_openings_closing' });
+    await addIdx('hris_job_openings', ['tenant_id'], { name: 'idx_job_openings_tenant' });
+    await addIdx('hris_job_openings', ['branch_id'], { name: 'idx_job_openings_branch' });
+    await addIdx('hris_job_openings', ['status'], { name: 'idx_job_openings_status' });
+    await addIdx('hris_job_openings', ['department'], { name: 'idx_job_openings_department' });
+    await addIdx('hris_job_openings', ['priority'], { name: 'idx_job_openings_priority' });
+    await addIdx('hris_job_openings', ['posted_date'], { name: 'idx_job_openings_posted' });
+    await addIdx('hris_job_openings', ['closing_date'], { name: 'idx_job_openings_closing' });
 
     // ────────────────────────────────────────────────────────────
     // 2. hris_candidates - Data pelamar
     // ────────────────────────────────────────────────────────────
-    await queryInterface.createTable('hris_candidates', {
+    await ensureTableMerge('hris_candidates', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -357,19 +418,19 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('hris_candidates', ['tenant_id'], { name: 'idx_candidates_tenant' });
-    await queryInterface.addIndex('hris_candidates', ['job_opening_id'], { name: 'idx_candidates_job' });
-    await queryInterface.addIndex('hris_candidates', ['email'], { name: 'idx_candidates_email' });
-    await queryInterface.addIndex('hris_candidates', ['stage'], { name: 'idx_candidates_stage' });
-    await queryInterface.addIndex('hris_candidates', ['status'], { name: 'idx_candidates_status' });
-    await queryInterface.addIndex('hris_candidates', ['source'], { name: 'idx_candidates_source' });
-    await queryInterface.addIndex('hris_candidates', ['applied_date'], { name: 'idx_candidates_applied_date' });
-    await queryInterface.addIndex('hris_candidates', ['rating'], { name: 'idx_candidates_rating' });
+    await addIdx('hris_candidates', ['tenant_id'], { name: 'idx_candidates_tenant' });
+    await addIdx('hris_candidates', ['job_opening_id'], { name: 'idx_candidates_job' });
+    await addIdx('hris_candidates', ['email'], { name: 'idx_candidates_email' });
+    await addIdx('hris_candidates', ['stage'], { name: 'idx_candidates_stage' });
+    await addIdx('hris_candidates', ['status'], { name: 'idx_candidates_status' });
+    await addIdx('hris_candidates', ['source'], { name: 'idx_candidates_source' });
+    await addIdx('hris_candidates', ['applied_date'], { name: 'idx_candidates_applied_date' });
+    await addIdx('hris_candidates', ['rating'], { name: 'idx_candidates_rating' });
 
     // ────────────────────────────────────────────────────────────
     // 3. hris_candidate_stages - Riwayat perpindahan stage
     // ────────────────────────────────────────────────────────────
-    await queryInterface.createTable('hris_candidate_stages', {
+    await ensureTableMerge('hris_candidate_stages', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -412,13 +473,13 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('hris_candidate_stages', ['candidate_id'], { name: 'idx_cand_stages_candidate' });
-    await queryInterface.addIndex('hris_candidate_stages', ['changed_at'], { name: 'idx_cand_stages_date' });
+    await addIdx('hris_candidate_stages', ['candidate_id'], { name: 'idx_cand_stages_candidate' });
+    await addIdx('hris_candidate_stages', ['changed_at'], { name: 'idx_cand_stages_date' });
 
     // ────────────────────────────────────────────────────────────
     // 4. hris_training_programs - Program pelatihan
     // ────────────────────────────────────────────────────────────
-    await queryInterface.createTable('hris_training_programs', {
+    await ensureTableMerge('hris_training_programs', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -550,16 +611,16 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('hris_training_programs', ['tenant_id'], { name: 'idx_training_programs_tenant' });
-    await queryInterface.addIndex('hris_training_programs', ['category'], { name: 'idx_training_programs_category' });
-    await queryInterface.addIndex('hris_training_programs', ['status'], { name: 'idx_training_programs_status' });
-    await queryInterface.addIndex('hris_training_programs', ['start_date'], { name: 'idx_training_programs_start' });
-    await queryInterface.addIndex('hris_training_programs', ['end_date'], { name: 'idx_training_programs_end' });
+    await addIdx('hris_training_programs', ['tenant_id'], { name: 'idx_training_programs_tenant' });
+    await addIdx('hris_training_programs', ['category'], { name: 'idx_training_programs_category' });
+    await addIdx('hris_training_programs', ['status'], { name: 'idx_training_programs_status' });
+    await addIdx('hris_training_programs', ['start_date'], { name: 'idx_training_programs_start' });
+    await addIdx('hris_training_programs', ['end_date'], { name: 'idx_training_programs_end' });
 
     // ────────────────────────────────────────────────────────────
     // 5. hris_training_enrollments - Pendaftaran peserta pelatihan
     // ────────────────────────────────────────────────────────────
-    await queryInterface.createTable('hris_training_enrollments', {
+    await ensureTableMerge('hris_training_enrollments', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -636,15 +697,15 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('hris_training_enrollments', ['program_id'], { name: 'idx_enrollments_program' });
-    await queryInterface.addIndex('hris_training_enrollments', ['employee_id'], { name: 'idx_enrollments_employee' });
-    await queryInterface.addIndex('hris_training_enrollments', ['status'], { name: 'idx_enrollments_status' });
-    await queryInterface.addIndex('hris_training_enrollments', ['program_id', 'employee_id'], { unique: true, name: 'idx_enrollments_unique' });
+    await addIdx('hris_training_enrollments', ['program_id'], { name: 'idx_enrollments_program' });
+    await addIdx('hris_training_enrollments', ['employee_id'], { name: 'idx_enrollments_employee' });
+    await addIdx('hris_training_enrollments', ['status'], { name: 'idx_enrollments_status' });
+    await addIdx('hris_training_enrollments', ['program_id', 'employee_id'], { unique: true, name: 'idx_enrollments_unique' });
 
     // ────────────────────────────────────────────────────────────
     // 6. hris_certifications - Sertifikasi karyawan
     // ────────────────────────────────────────────────────────────
-    await queryInterface.createTable('hris_certifications', {
+    await ensureTableMerge('hris_certifications', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -751,13 +812,13 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('hris_certifications', ['tenant_id'], { name: 'idx_certs_tenant' });
-    await queryInterface.addIndex('hris_certifications', ['employee_id'], { name: 'idx_certs_employee' });
-    await queryInterface.addIndex('hris_certifications', ['status'], { name: 'idx_certs_status' });
-    await queryInterface.addIndex('hris_certifications', ['expiry_date'], { name: 'idx_certs_expiry' });
-    await queryInterface.addIndex('hris_certifications', ['category'], { name: 'idx_certs_category' });
-    await queryInterface.addIndex('hris_certifications', ['training_program_id'], { name: 'idx_certs_training' });
-    await queryInterface.addIndex('hris_certifications', ['employee_id', 'cert_name', 'issuer'], { name: 'idx_certs_unique_per_employee' });
+    await addIdx('hris_certifications', ['tenant_id'], { name: 'idx_certs_tenant' });
+    await addIdx('hris_certifications', ['employee_id'], { name: 'idx_certs_employee' });
+    await addIdx('hris_certifications', ['status'], { name: 'idx_certs_status' });
+    await addIdx('hris_certifications', ['expiry_date'], { name: 'idx_certs_expiry' });
+    await addIdx('hris_certifications', ['category'], { name: 'idx_certs_category' });
+    await addIdx('hris_certifications', ['training_program_id'], { name: 'idx_certs_training' });
+    await addIdx('hris_certifications', ['employee_id', 'cert_name', 'issuer'], { name: 'idx_certs_unique_per_employee' });
   },
 
   async down(queryInterface) {

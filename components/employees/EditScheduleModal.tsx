@@ -166,7 +166,7 @@ const EditScheduleModal: React.FC<EditScheduleModalProps> = ({
               <div>
                 <p className="font-semibold text-gray-900">{schedule.employee?.name}</p>
                 <p className="text-sm text-gray-600">
-                  {schedule.employee?.position} - {schedule.employee?.employeeNumber}
+                  {schedule.employee?.position} - {schedule.employee?.employeeId}
                 </p>
               </div>
             </div>

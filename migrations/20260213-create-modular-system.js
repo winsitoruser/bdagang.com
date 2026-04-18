@@ -2,8 +2,24 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // 1. Create business_types table
-    await queryInterface.createTable('business_types', {
+    const sequelize = queryInterface.sequelize;
+
+    const ensureTableMerge = async (tableName, tableDef) => {
+      const tableList = await queryInterface.showAllTables();
+      if (!tableList.includes(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [col, def] of Object.entries(tableDef)) {
+        if (d[col]) continue;
+        const { comment: _c, ...rest } = def;
+        await queryInterface.addColumn(tableName, col, rest);
+        d[col] = true;
+      }
+    };
+
+    await ensureTableMerge('business_types', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -18,8 +34,8 @@ module.exports = {
         type: Sequelize.STRING(100),
         allowNull: false
       },
-      description: Sequelize.TEXT,
-      icon: Sequelize.STRING(50),
+      description: { type: Sequelize.TEXT },
+      icon: { type: Sequelize.STRING(50), allowNull: true },
       is_active: {
         type: Sequelize.BOOLEAN,
         defaultValue: true
@@ -34,8 +50,7 @@ module.exports = {
       }
     });
 
-    // 2. Create modules table
-    await queryInterface.createTable('modules', {
+    await ensureTableMerge('modules', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -50,9 +65,9 @@ module.exports = {
         type: Sequelize.STRING(100),
         allowNull: false
       },
-      description: Sequelize.TEXT,
-      icon: Sequelize.STRING(50),
-      route: Sequelize.STRING(100),
+      description: { type: Sequelize.TEXT },
+      icon: { type: Sequelize.STRING(50), allowNull: true },
+      route: { type: Sequelize.STRING(100), allowNull: true },
       parent_module_id: {
         type: Sequelize.UUID,
         references: {
@@ -83,8 +98,7 @@ module.exports = {
       }
     });
 
-    // 3. Create business_type_modules junction table
-    await queryInterface.createTable('business_type_modules', {
+    await ensureTableMerge('business_type_modules', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -122,8 +136,7 @@ module.exports = {
       }
     });
 
-    // 4. Create tenant_modules table
-    await queryInterface.createTable('tenant_modules', {
+    await ensureTableMerge('tenant_modules', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -155,37 +168,52 @@ module.exports = {
         type: Sequelize.DATE,
         defaultValue: Sequelize.NOW
       },
-      disabled_at: Sequelize.DATE,
+      disabled_at: { type: Sequelize.DATE, allowNull: true },
       created_at: {
         type: Sequelize.DATE,
         defaultValue: Sequelize.NOW
       }
     });
 
-    // 5. Add indexes
-    await queryInterface.addIndex('tenant_modules', ['tenant_id'], {
-      name: 'idx_tenant_modules_tenant'
-    });
-    
-    await queryInterface.addIndex('tenant_modules', ['tenant_id', 'is_enabled'], {
-      name: 'idx_tenant_modules_enabled'
-    });
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_tenant_modules_tenant ON "tenant_modules" ("tenant_id")'
+    );
 
-    // 6. Add unique constraints
-    await queryInterface.addConstraint('business_type_modules', {
-      fields: ['business_type_id', 'module_id'],
-      type: 'unique',
-      name: 'unique_business_type_module'
-    });
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_tenant_modules_enabled ON "tenant_modules" ("tenant_id", "is_enabled")'
+    );
 
-    await queryInterface.addConstraint('tenant_modules', {
-      fields: ['tenant_id', 'module_id'],
-      type: 'unique',
-      name: 'unique_tenant_module'
-    });
+    await sequelize.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'unique_business_type_module'
+        ) THEN
+          ALTER TABLE "business_type_modules" ADD CONSTRAINT "unique_business_type_module"
+            UNIQUE ("business_type_id", "module_id");
+        END IF;
+      END $$;
+    `);
 
-    // 7. Update tenants table - add business type fields
-    await queryInterface.addColumn('tenants', 'business_type_id', {
+    await sequelize.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'unique_tenant_module'
+        ) THEN
+          ALTER TABLE "tenant_modules" ADD CONSTRAINT "unique_tenant_module"
+            UNIQUE ("tenant_id", "module_id");
+        END IF;
+      END $$;
+    `);
+
+    const tenantsD = await queryInterface.describeTable('tenants');
+    const addTenantCol = async (col, def) => {
+      if (tenantsD[col]) return;
+      const { comment: _c, ...rest } = def;
+      await queryInterface.addColumn('tenants', col, rest);
+      tenantsD[col] = true;
+    };
+
+    await addTenantCol('business_type_id', {
       type: Sequelize.UUID,
       references: {
         model: 'business_types',
@@ -194,59 +222,60 @@ module.exports = {
       onDelete: 'SET NULL'
     });
 
-    await queryInterface.addColumn('tenants', 'business_name', {
+    await addTenantCol('business_name', {
       type: Sequelize.STRING(255)
     });
 
-    await queryInterface.addColumn('tenants', 'business_address', {
+    await addTenantCol('business_address', {
       type: Sequelize.TEXT
     });
 
-    await queryInterface.addColumn('tenants', 'business_phone', {
+    await addTenantCol('business_phone', {
       type: Sequelize.STRING(50)
     });
 
-    await queryInterface.addColumn('tenants', 'business_email', {
+    await addTenantCol('business_email', {
       type: Sequelize.STRING(255)
     });
 
-    await queryInterface.addColumn('tenants', 'setup_completed', {
+    await addTenantCol('setup_completed', {
       type: Sequelize.BOOLEAN,
       defaultValue: false
     });
 
-    await queryInterface.addColumn('tenants', 'onboarding_step', {
+    await addTenantCol('onboarding_step', {
       type: Sequelize.INTEGER,
       defaultValue: 0
     });
 
-    // 8. Update users table - add tenant and role
-    await queryInterface.addColumn('users', 'tenant_id', {
-      type: Sequelize.UUID,
-      references: {
-        model: 'tenants',
-        key: 'id'
-      },
-      onDelete: 'SET NULL'
-    });
+    const usersD = await queryInterface.describeTable('users');
+    if (!usersD.tenant_id) {
+      await queryInterface.addColumn('users', 'tenant_id', {
+        type: Sequelize.UUID,
+        references: {
+          model: 'tenants',
+          key: 'id'
+        },
+        onDelete: 'SET NULL'
+      });
+    }
+    if (!usersD.role) {
+      await queryInterface.addColumn('users', 'role', {
+        type: Sequelize.STRING(50),
+        defaultValue: 'staff'
+      });
+    }
 
-    await queryInterface.addColumn('users', 'role', {
-      type: Sequelize.STRING(50),
-      defaultValue: 'staff'
-    });
-
-    // 9. Add index for users.tenant_id
-    await queryInterface.addIndex('users', ['tenant_id'], {
-      name: 'idx_users_tenant'
-    });
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_users_tenant ON "users" ("tenant_id")'
+    );
   },
 
   down: async (queryInterface, Sequelize) => {
-    // Remove in reverse order
     await queryInterface.removeIndex('users', 'idx_users_tenant');
     await queryInterface.removeColumn('users', 'role');
     await queryInterface.removeColumn('users', 'tenant_id');
-    
+
     await queryInterface.removeColumn('tenants', 'onboarding_step');
     await queryInterface.removeColumn('tenants', 'setup_completed');
     await queryInterface.removeColumn('tenants', 'business_email');
@@ -254,13 +283,13 @@ module.exports = {
     await queryInterface.removeColumn('tenants', 'business_address');
     await queryInterface.removeColumn('tenants', 'business_name');
     await queryInterface.removeColumn('tenants', 'business_type_id');
-    
+
     await queryInterface.removeConstraint('tenant_modules', 'unique_tenant_module');
     await queryInterface.removeConstraint('business_type_modules', 'unique_business_type_module');
-    
+
     await queryInterface.removeIndex('tenant_modules', 'idx_tenant_modules_enabled');
     await queryInterface.removeIndex('tenant_modules', 'idx_tenant_modules_tenant');
-    
+
     await queryInterface.dropTable('tenant_modules');
     await queryInterface.dropTable('business_type_modules');
     await queryInterface.dropTable('modules');

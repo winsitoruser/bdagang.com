@@ -71,7 +71,7 @@ export default async function handler(
           COUNT(koi.id) as times_prepared,
           AVG(koi.quantity) as avg_quantity
         FROM kitchen_order_items koi
-        JOIN kitchen_orders ko ON koi.order_id = ko.id
+        JOIN kitchen_orders ko ON koi.kitchen_order_id = ko.id
         JOIN products p ON koi.product_id = p.id
         WHERE ko.assigned_chef_id = :id
           AND ko.status = 'served'

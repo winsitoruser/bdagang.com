@@ -2,15 +2,53 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const sequelize = queryInterface.sequelize;
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+    const fkTypeFor = async (tableName, columnName = 'id') => {
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+
+    const employeeFkType = await fkTypeFor('employees', 'id');
+    const branchFkType = await fkTypeFor('branches', 'id');
+    const userFkType = await fkTypeFor('users', 'id');
+    const tenantFkType = await fkTypeFor('tenants', 'id');
+
+    const ensureTableMerge = async (tableName, tableDef) => {
+      const tableList = await queryInterface.showAllTables();
+      if (!tableList.includes(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [attrName, def] of Object.entries(tableDef)) {
+        const colName =
+          def && typeof def === 'object' && def.field ? def.field : attrName;
+        if (d[colName]) continue;
+        const { field: _f, comment: _c, ...rest } = def;
+        await queryInterface.addColumn(tableName, colName, rest);
+        d[colName] = true;
+      }
+    };
+
     // Create payroll_allocations table
-    await queryInterface.createTable('payroll_allocations', {
+    await ensureTableMerge('payroll_allocations', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       employeeId: {
-        type: Sequelize.UUID,
+        type: employeeFkType,
         allowNull: false,
         field: 'employee_id',
         references: {
@@ -21,7 +59,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       branchId: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: false,
         field: 'branch_id',
         references: {
@@ -74,7 +112,7 @@ module.exports = {
         allowNull: true
       },
       requestedBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: false,
         field: 'requested_by',
         references: {
@@ -83,7 +121,7 @@ module.exports = {
         }
       },
       approvedBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: true,
         field: 'approved_by',
         references: {
@@ -111,7 +149,7 @@ module.exports = {
         allowNull: true
       },
       tenantId: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         field: 'tenant_id',
         references: {
@@ -135,16 +173,18 @@ module.exports = {
       }
     });
 
-    // Add base_salary to employees table
-    await queryInterface.addColumn('employees', 'base_salary', {
-      type: Sequelize.DECIMAL(12, 2),
-      allowNull: true,
-      field: 'base_salary',
-      comment: 'Base monthly salary'
-    });
+    const empDesc = await queryInterface.describeTable('employees');
+    if (!empDesc.base_salary) {
+      await queryInterface.addColumn('employees', 'base_salary', {
+        type: Sequelize.DECIMAL(12, 2),
+        allowNull: true,
+        field: 'base_salary',
+        comment: 'Base monthly salary'
+      });
+    }
 
     // Create finance_journal_entries table if not exists
-    await queryInterface.createTable('finance_journal_entries', {
+    await ensureTableMerge('finance_journal_entries', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -157,7 +197,7 @@ module.exports = {
         field: 'entry_number'
       },
       branchId: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: false,
         field: 'branch_id',
         references: {
@@ -210,7 +250,7 @@ module.exports = {
         defaultValue: 'draft'
       },
       postedBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: true,
         field: 'posted_by',
         references: {
@@ -224,7 +264,7 @@ module.exports = {
         field: 'posted_at'
       },
       createdBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: false,
         field: 'created_by',
         references: {
@@ -233,7 +273,7 @@ module.exports = {
         }
       },
       tenantId: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         field: 'tenant_id',
         references: {
@@ -258,7 +298,7 @@ module.exports = {
     });
 
     // Create finance_journal_entry_lines table
-    await queryInterface.createTable('finance_journal_entry_lines', {
+    await ensureTableMerge('finance_journal_entry_lines', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -315,23 +355,22 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('payroll_allocations', ['employee_id', 'period']);
-    await queryInterface.addIndex('payroll_allocations', ['branch_id']);
-    await queryInterface.addIndex('payroll_allocations', ['status']);
-    await queryInterface.addIndex('payroll_allocations', ['allocation_type']);
-    await queryInterface.addIndex('payroll_allocations', ['tenant_id']);
-
-    await queryInterface.addIndex('finance_journal_entries', ['entry_number'], { unique: true });
-    await queryInterface.addIndex('finance_journal_entries', ['branch_id']);
-    await queryInterface.addIndex('finance_journal_entries', ['entry_date']);
-    await queryInterface.addIndex('finance_journal_entries', ['entry_type']);
-    await queryInterface.addIndex('finance_journal_entries', ['reference_type', 'reference_id']);
-    await queryInterface.addIndex('finance_journal_entries', ['status']);
-    await queryInterface.addIndex('finance_journal_entries', ['tenant_id']);
-
-    await queryInterface.addIndex('finance_journal_entry_lines', ['journal_entry_id']);
-    await queryInterface.addIndex('finance_journal_entry_lines', ['account_code']);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS payroll_allocations_employee_id_period ON payroll_allocations (employee_id, period);
+      CREATE INDEX IF NOT EXISTS payroll_allocations_branch_id ON payroll_allocations (branch_id);
+      CREATE INDEX IF NOT EXISTS payroll_allocations_status ON payroll_allocations (status);
+      CREATE INDEX IF NOT EXISTS payroll_allocations_allocation_type ON payroll_allocations (allocation_type);
+      CREATE INDEX IF NOT EXISTS payroll_allocations_tenant_id ON payroll_allocations (tenant_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS finance_journal_entries_entry_number ON finance_journal_entries (entry_number);
+      CREATE INDEX IF NOT EXISTS finance_journal_entries_branch_id ON finance_journal_entries (branch_id);
+      CREATE INDEX IF NOT EXISTS finance_journal_entries_entry_date ON finance_journal_entries (entry_date);
+      CREATE INDEX IF NOT EXISTS finance_journal_entries_entry_type ON finance_journal_entries (entry_type);
+      CREATE INDEX IF NOT EXISTS finance_journal_entries_ref ON finance_journal_entries (reference_type, reference_id);
+      CREATE INDEX IF NOT EXISTS finance_journal_entries_status ON finance_journal_entries (status);
+      CREATE INDEX IF NOT EXISTS finance_journal_entries_tenant_id ON finance_journal_entries (tenant_id);
+      CREATE INDEX IF NOT EXISTS finance_journal_entry_lines_journal_entry_id ON finance_journal_entry_lines (journal_entry_id);
+      CREATE INDEX IF NOT EXISTS finance_journal_entry_lines_account_code ON finance_journal_entry_lines (account_code);
+    `);
 
     // Create trigger to update journal entry totals
     await queryInterface.sequelize.query(`
@@ -358,13 +397,16 @@ module.exports = {
     `);
 
     await queryInterface.sequelize.query(`
+      DROP TRIGGER IF EXISTS trigger_update_journal_entry_totals ON finance_journal_entry_lines;
       CREATE TRIGGER trigger_update_journal_entry_totals
         AFTER INSERT OR UPDATE ON finance_journal_entry_lines
         FOR EACH ROW
         EXECUTE FUNCTION update_journal_entry_totals();
     `);
 
-    // Insert default chart of accounts if not exists
+    // Insert default chart of accounts if table exists (optional module)
+    const tablesCoa = await queryInterface.showAllTables();
+    if (tablesCoa.includes('chart_of_accounts')) {
     await queryInterface.sequelize.query(`
       INSERT INTO chart_of_accounts (id, code, name, type, parent_id, level, is_active, tenant_id, created_at, updated_at)
       SELECT 
@@ -447,30 +489,32 @@ module.exports = {
         SELECT 1 FROM chart_of_accounts WHERE code = '5' AND tenant_id = t.id
       )
     `);
+    }
   },
 
   down: async (queryInterface, Sequelize) => {
     // Drop triggers
-    await queryInterface.sequelize.query('DROP TRIGGER IF EXISTS trigger_update_journal_entry_totals');
+    await queryInterface.sequelize.query(
+      'DROP TRIGGER IF EXISTS trigger_update_journal_entry_totals ON finance_journal_entry_lines'
+    );
     await queryInterface.sequelize.query('DROP FUNCTION IF EXISTS update_journal_entry_totals()');
 
-    // Remove indexes
-    await queryInterface.removeIndex('finance_journal_entry_lines', ['account_code']);
-    await queryInterface.removeIndex('finance_journal_entry_lines', ['journal_entry_id']);
-    
-    await queryInterface.removeIndex('finance_journal_entries', ['tenant_id']);
-    await queryInterface.removeIndex('finance_journal_entries', ['status']);
-    await queryInterface.removeIndex('finance_journal_entries', ['reference_type', 'reference_id']);
-    await queryInterface.removeIndex('finance_journal_entries', ['entry_type']);
-    await queryInterface.removeIndex('finance_journal_entries', ['entry_date']);
-    await queryInterface.removeIndex('finance_journal_entries', ['branch_id']);
-    await queryInterface.removeIndex('finance_journal_entries', ['entry_number']);
-    
-    await queryInterface.removeIndex('payroll_allocations', ['tenant_id']);
-    await queryInterface.removeIndex('payroll_allocations', ['allocation_type']);
-    await queryInterface.removeIndex('payroll_allocations', ['status']);
-    await queryInterface.removeIndex('payroll_allocations', ['branch_id']);
-    await queryInterface.removeIndex('payroll_allocations', ['employee_id', 'period']);
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS finance_journal_entry_lines_account_code;
+      DROP INDEX IF EXISTS finance_journal_entry_lines_journal_entry_id;
+      DROP INDEX IF EXISTS finance_journal_entries_tenant_id;
+      DROP INDEX IF EXISTS finance_journal_entries_status;
+      DROP INDEX IF EXISTS finance_journal_entries_ref;
+      DROP INDEX IF EXISTS finance_journal_entries_entry_type;
+      DROP INDEX IF EXISTS finance_journal_entries_entry_date;
+      DROP INDEX IF EXISTS finance_journal_entries_branch_id;
+      DROP INDEX IF EXISTS finance_journal_entries_entry_number;
+      DROP INDEX IF EXISTS payroll_allocations_tenant_id;
+      DROP INDEX IF EXISTS payroll_allocations_allocation_type;
+      DROP INDEX IF EXISTS payroll_allocations_status;
+      DROP INDEX IF EXISTS payroll_allocations_branch_id;
+      DROP INDEX IF EXISTS payroll_allocations_employee_id_period;
+    `);
 
     // Drop tables
     await queryInterface.dropTable('finance_journal_entry_lines');

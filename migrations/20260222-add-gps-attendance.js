@@ -2,27 +2,40 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const sequelize = queryInterface.sequelize;
+    const tableList = await queryInterface.showAllTables();
+
+    const addBranchCol = async (name, def) => {
+      const d = await queryInterface.describeTable('branches');
+      if (d[name]) return;
+      const { comment: _c, ...rest } = def;
+      await queryInterface.addColumn('branches', name, rest);
+    };
+
     // Add location fields to branches table
-    await queryInterface.addColumn('branches', 'latitude', {
+    await addBranchCol('latitude', {
       type: Sequelize.DECIMAL(10, 8),
       allowNull: true,
       comment: 'Branch latitude for GPS attendance'
     });
 
-    await queryInterface.addColumn('branches', 'longitude', {
+    await addBranchCol('longitude', {
       type: Sequelize.DECIMAL(11, 8),
       allowNull: true,
       comment: 'Branch longitude for GPS attendance'
     });
 
-    await queryInterface.addColumn('branches', 'geo_fence_radius', {
+    await addBranchCol('geo_fence_radius', {
       type: Sequelize.INTEGER,
       allowNull: true,
       defaultValue: 100,
       comment: 'Geofence radius in meters for GPS attendance'
     });
 
-    // Add location fields to employee_attendances table
+    const hasAttendanceTable = tableList.includes('employee_attendances');
+
+    // Add location fields to employee_attendances table (skip if HR module tables not created)
+    if (hasAttendanceTable) {
     await queryInterface.addColumn('employee_attendances', 'check_in_location', {
       type: Sequelize.GEOMETRY('POINT'),
       allowNull: true,
@@ -194,8 +207,11 @@ module.exports = {
     await queryInterface.addIndex('employee_attendances', ['is_within_geofence']);
     await queryInterface.addIndex('employee_attendances', ['is_within_geofence_checkout']);
 
-    // Add indexes for branches location fields
-    await queryInterface.addIndex('branches', ['latitude', 'longitude']);
+    }
+
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS branches_lat_lng ON "branches" ("latitude", "longitude")'
+    );
   },
 
   down: async (queryInterface, Sequelize) => {

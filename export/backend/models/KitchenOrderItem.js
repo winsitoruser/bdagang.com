@@ -17,7 +17,7 @@ const KitchenOrderItem = sequelize.define('KitchenOrderItem', {
     }
   },
   productId: {
-    type: DataTypes.UUID,
+    type: DataTypes.INTEGER,
     allowNull: false,
     field: 'product_id',
     references: {

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { sequelize } from '@/lib/sequelizeClient';
 import { QueryTypes } from 'sequelize';
+import { getTenantId } from '@/lib/api/tenantScope';
 
 /**
  * Today's Reservations API
@@ -23,9 +24,11 @@ export default async function handler(
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const tenantId = session.user.tenantId;
+    const tenantId = getTenantId(session);
+    if (!tenantId) {
+      return res.status(400).json({ success: false, message: 'Tenant context required' });
+    }
 
-    // Get today's reservations
     const reservations = await sequelize.query(`
       SELECT 
         r.id,
@@ -43,8 +46,10 @@ export default async function handler(
       FROM reservations r
       LEFT JOIN tables t ON r.table_id = t.id
       WHERE r.reservation_date = CURRENT_DATE
+        AND r.tenant_id = :tenantId
       ORDER BY r.reservation_time ASC
     `, {
+      replacements: { tenantId },
       type: QueryTypes.SELECT
     });
 

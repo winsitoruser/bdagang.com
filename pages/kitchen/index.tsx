@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { ModuleGuard } from '@/components/guards/ModuleGuard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -439,4 +440,10 @@ const KitchenManagementPage: React.FC = () => {
   );
 };
 
-export default KitchenManagementPage;
+export default function KitchenPageWithModuleGuard() {
+  return (
+    <ModuleGuard moduleCode="kitchen">
+      <KitchenManagementPage />
+    </ModuleGuard>
+  );
+}

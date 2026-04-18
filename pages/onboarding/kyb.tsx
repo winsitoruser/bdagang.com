@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getProvinces, getCities, getDistricts } from '../../data/regions';
+import { defaultAppHomePath } from '@/lib/singleBranch';
 
 interface KybFormData {
   // Step 1
@@ -424,7 +425,7 @@ export default function KybForm() {
         toast.success('KYB berhasil disubmit! Tim kami akan mereview data Anda.');
         // Refresh session token so middleware sees updated kybStatus
         await updateSession();
-        router.push('/hq/home');
+        router.push(defaultAppHomePath());
       } else {
         toast.error(json.message || 'Gagal submit KYB');
       }

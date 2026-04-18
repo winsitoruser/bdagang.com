@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
+import { getTenantId, getBranchId, tableReservationWhere } from '@/lib/api/tenantScope';
 const db = require('../../../models');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,9 +20,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     switch (req.method) {
       case 'GET':
-        return await getTables(req, res, Table);
+        return await getTables(req, res, Table, session);
       case 'POST':
-        return await createTable(req, res, Table);
+        return await createTable(req, res, Table, session);
       default:
         return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
@@ -31,12 +32,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function getTables(req: NextApiRequest, res: NextApiResponse, Table: any) {
+async function getTables(req: NextApiRequest, res: NextApiResponse, Table: any, session: any) {
   try {
+    const tenantId = getTenantId(session);
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant context required' });
+    }
+
     const { status, area, floor, isActive, minCapacity } = req.query;
 
-    const where: any = {};
-    
+    const where: any = {
+      ...tableReservationWhere(tenantId, getBranchId(session))
+    };
+
     if (status) where.status = status;
     if (area) where.area = area;
     if (floor) where.floor = parseInt(floor as string);
@@ -78,6 +86,7 @@ async function getTables(req: NextApiRequest, res: NextApiResponse, Table: any) 
               const currentOrder = await KitchenOrder.findOne({
                 where: {
                   tableNumber: table.tableNumber,
+                  tenantId,
                   status: { [db.Sequelize.Op.in]: ['new', 'preparing', 'ready'] }
                 },
                 order: [['receivedAt', 'DESC']]
@@ -114,7 +123,13 @@ async function getTables(req: NextApiRequest, res: NextApiResponse, Table: any) 
   }
 }
 
-async function createTable(req: NextApiRequest, res: NextApiResponse, Table: any) {
+async function createTable(req: NextApiRequest, res: NextApiResponse, Table: any, session: any) {
+  const tenantId = getTenantId(session);
+  if (!tenantId) {
+    return res.status(400).json({ success: false, error: 'Tenant context required' });
+  }
+  const branchId = getBranchId(session) || undefined;
+
   const {
     tableNumber,
     capacity,
@@ -140,9 +155,8 @@ async function createTable(req: NextApiRequest, res: NextApiResponse, Table: any
     });
   }
 
-  // Check if table number already exists
   const existing = await Table.findOne({
-    where: { tableNumber }
+    where: { tableNumber, tenantId }
   });
 
   if (existing) {
@@ -161,7 +175,9 @@ async function createTable(req: NextApiRequest, res: NextApiResponse, Table: any
     positionY,
     notes,
     status: 'available',
-    isActive: true
+    isActive: true,
+    tenantId,
+    branchId: branchId || null
   });
 
   return res.status(201).json({

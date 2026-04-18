@@ -78,15 +78,15 @@ async function getCategories(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function createCategory(req: NextApiRequest, res: NextApiResponse, session: any) {
-  const { name, description, parent_id, icon, color, sort_order } = req.body;
+  const { name, description, parent_id, icon, color, sort_order, is_active } = req.body;
 
   if (!name) {
     return res.status(400).json({ success: false, error: 'Name is required' });
   }
 
   const query = `
-    INSERT INTO categories (name, description, parent_id, icon, color, sort_order, created_by, updated_by)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+    INSERT INTO categories (name, description, parent_id, icon, color, sort_order, is_active, created_by, updated_by)
+    VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, true), $8, $8)
     RETURNING *
   `;
 
@@ -97,6 +97,7 @@ async function createCategory(req: NextApiRequest, res: NextApiResponse, session
     icon || null,
     color || null,
     sort_order || 0,
+    is_active,
     session.user.id
   ]);
 

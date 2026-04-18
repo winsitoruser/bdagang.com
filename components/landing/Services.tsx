@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/router';
 import {
   ShoppingCart,
   Package,
@@ -10,55 +11,65 @@ import {
   Clock,
   Shield,
 } from 'lucide-react';
+import { COMPANY_LEGAL_NAME } from './brand';
 
 const Services: React.FC = () => {
+  const router = useRouter();
   const services = [
     {
       icon: ShoppingCart,
-      title: 'Cloud-Based POS',
-      description: 'Sistem kasir modern yang bisa diakses dari mana saja. Proses transaksi lebih cepat dengan interface yang intuitif.',
+      title: 'Cloud POS & kasir',
+      description:
+        'Antrian transaksi yang stabil untuk restoran sibuk maupun toko ritel. UI ringkas, training singkat, dan sinkronisasi antar perangkat secara real time.',
       color: 'from-blue-500 to-blue-600',
     },
     {
       icon: Package,
-      title: 'Inventory Management',
-      description: 'Kelola stok real-time, tracking produk, dan notifikasi otomatis saat stok menipis. Terintegrasi dengan POS.',
+      title: 'Inventori & SKU',
+      description:
+        'Peta stok per outlet atau gudang, peringatan minimum stok, dan mutasi barang yang jejaknya jelas — cocok untuk retail multi-SKU dan bahan baku F&B.',
       color: 'from-green-500 to-green-600',
     },
     {
       icon: Users,
-      title: 'Customer Loyalty Program',
-      description: 'Program loyalitas pelanggan dengan poin reward, member tier, dan promosi khusus untuk meningkatkan repeat purchase.',
+      title: 'Pelanggan & loyalitas',
+      description:
+        'Database pelanggan, tier member, dan promo terarah untuk meningkatkan kunjungan ulang — dari kafe neighborhood hingga jaringan ritel.',
       color: 'from-purple-500 to-purple-600',
     },
     {
       icon: BarChart3,
-      title: 'Sales Analytics',
-      description: 'Dashboard analytics real-time dengan insights penjualan, produk terlaris, dan performa bisnis yang actionable.',
+      title: 'Laporan & analitik',
+      description:
+        'Dashboard ringkas untuk owner: penjualan per kanal, jam sibuk, performa menu/produk, dan KPI yang bisa dijadikan dasar keputusan harian.',
       color: 'from-orange-500 to-orange-600',
     },
     {
       icon: TrendingUp,
-      title: 'Multi-Outlet Management',
-      description: 'Kelola beberapa cabang dalam satu platform. Monitor performa setiap outlet dan sinkronisasi data otomatis.',
+      title: 'Multi-outlet & pusat data',
+      description:
+        'Satu tenant SaaS untuk banyak lokasi: standar harga, stok, dan user role terpusat, dengan visibilitas per cabang agar ekspansi terkontrol.',
       color: 'from-red-500 to-red-600',
     },
     {
       icon: FileText,
-      title: 'Payment Integration',
-      description: 'Terima berbagai metode pembayaran: cash, debit, credit, e-wallet, dan QRIS. Semua terintegrasi dalam satu sistem.',
+      title: 'Pembayaran & keuangan',
+      description:
+        'Menerima tunai, kartu, QRIS, dan dompet digital dalam satu alur closing. Mendukung rekonsiliasi harian untuk tim finance profesional.',
       color: 'from-indigo-500 to-indigo-600',
     },
     {
       icon: Clock,
-      title: 'Employee Management',
-      description: 'Kelola shift karyawan, tracking performa, dan kontrol akses berdasarkan role untuk keamanan maksimal.',
+      title: 'Tim, shift & hak akses',
+      description:
+        'Shift kasir, izin per modul, dan audit aktivitas — membantu restoran dengan rotasi staf tinggi maupun retail dengan banyak kasir.',
       color: 'from-teal-500 to-teal-600',
     },
     {
       icon: Shield,
-      title: 'Cloud Backup & Security',
-      description: 'Data Anda aman dengan cloud backup otomatis, enkripsi end-to-end, dan uptime 99.9%.',
+      title: 'Keamanan & backup cloud',
+      description:
+        'Infrastruktur cloud dengan praktik keamanan modern, cadangan data, dan ketersediaan layanan yang kami kelola sebagai penyedia SaaS.',
       color: 'from-pink-500 to-pink-600',
     },
   ];
@@ -85,36 +96,47 @@ const Services: React.FC = () => {
   };
 
   return (
-    <section className="relative py-20 bg-gradient-to-b from-gray-50 to-white overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0" style={{
-          backgroundImage: 'radial-gradient(circle at 1px 1px, rgb(14 165 233) 1px, transparent 0)',
-          backgroundSize: '40px 40px',
-        }} />
+    <section
+      id="fitur"
+      className="relative scroll-mt-24 py-24 bg-gradient-to-b from-slate-50 via-white to-slate-50/80 overflow-hidden"
+    >
+      <div className="absolute inset-0 opacity-[0.35]">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 1px 1px, rgb(148 163 184 / 0.45) 1px, transparent 0)',
+            backgroundSize: '44px 44px',
+          }}
+        />
       </div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-sky-50/60 to-transparent" aria-hidden />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
-        {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-16"
+          className="text-center mb-16 max-w-3xl mx-auto"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Semua Fitur yang
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-600 to-blue-600">
-              {' '}Bisnis Anda Butuhkan
+          <span className="inline-flex items-center rounded-full border border-sky-200/80 bg-sky-50/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-800">
+            Modul produk SaaS
+          </span>
+          <h2 className="mt-5 text-4xl md:text-5xl font-bold text-slate-900 tracking-tight">
+            Dirancang untuk
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-600 to-blue-700">
+              {' '}
+              operasional nyata
             </span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Platform all-in-one untuk retail, F&B, dan bisnis jasa. Tingkatkan efisiensi operasional dan revenue Anda.
+          <p className="mt-4 text-lg md:text-xl text-slate-600 leading-relaxed">
+            Tim produk dan layanan <strong className="font-semibold text-slate-800">{COMPANY_LEGAL_NAME}</strong>{' '}
+            membangun BEDAGANG agar tim di lapangan — dari dapur restoran hingga gudang retail — punya
+            alur kerja yang konsisten dan terukur.
           </p>
         </motion.div>
 
-        {/* Services Grid */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -129,29 +151,27 @@ const Services: React.FC = () => {
                 key={index}
                 variants={itemVariants}
                 whileHover={{ y: -8, transition: { duration: 0.2 } }}
-                className="group relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300"
+                className="group relative bg-white/90 rounded-2xl p-6 border border-slate-200/80 shadow-sm shadow-slate-900/5 hover:shadow-xl hover:border-sky-200/60 hover:-translate-y-1 transition-all duration-300"
               >
-                {/* Icon Container */}
-                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                <div
+                  className={`w-14 h-14 rounded-xl bg-gradient-to-br ${service.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}
+                >
                   <Icon className="w-7 h-7 text-white" />
                 </div>
 
-                {/* Content */}
-                <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-sky-600 transition-colors">
+                <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-sky-600 transition-colors">
                   {service.title}
                 </h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  {service.description}
-                </p>
+                <p className="text-slate-600 text-sm leading-relaxed">{service.description}</p>
 
-                {/* Hover Border Effect */}
-                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${service.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+                <div
+                  className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${service.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}
+                />
               </motion.div>
             );
           })}
         </motion.div>
 
-        {/* CTA Section */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -159,19 +179,24 @@ const Services: React.FC = () => {
           transition={{ duration: 0.8, delay: 0.3 }}
           className="mt-20 text-center"
         >
-          <div className="bg-gradient-to-br from-sky-500 to-blue-600 rounded-3xl p-12 shadow-2xl">
-            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Mulai Gratis Hari Ini!
+          <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-gradient-to-br from-slate-900 via-blue-900 to-sky-700 p-10 md:p-12 shadow-2xl shadow-slate-900/25">
+            <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-sky-400/20 blur-3xl" aria-hidden />
+            <h3 className="relative text-3xl md:text-4xl font-bold text-white mb-4 tracking-tight">
+              Siap go-live dengan tim kami
             </h3>
-            <p className="text-xl text-sky-100 mb-8 max-w-2xl mx-auto">
-              Bergabunglah dengan 10,000+ bisnis yang telah berkembang bersama BEDAGANG. Tanpa biaya setup, tanpa kontrak jangka panjang.
+            <p className="relative text-lg md:text-xl text-slate-200 mb-8 max-w-2xl mx-auto leading-relaxed">
+              Mulai dari trial mandiri hingga pendampingan onboarding: kami membantu Anda menerapkan
+              SaaS POS BEDAGANG sesuai alur F&amp;B atau retail Anda — tanpa biaya setup tersembunyi
+              untuk paket standar.
             </p>
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="bg-white text-sky-600 px-10 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition-all"
+              type="button"
+              onClick={() => router.push('/auth/register')}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="relative bg-white text-slate-900 px-10 py-4 rounded-full font-bold text-lg shadow-lg hover:shadow-xl transition-shadow"
             >
-              Coba Gratis 14 Hari
+              Mulai trial 14 hari
             </motion.button>
           </div>
         </motion.div>

@@ -1,9 +1,5 @@
 import { createSecureHeaders } from "next-secure-headers";
 
-// API server configuration - disable proxy for local development
-const API_SERVER = process.env.BACKEND_URL || 'https://api.farmanesia.id';
-const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
-
 const hostnames = [
   "avatars.githubusercontent.com",
   "lh3.googleusercontent.com",
@@ -30,18 +26,12 @@ const nextConfig = {
   // Enable standalone output for Docker deployment (only in production)
   ...(process.env.NODE_ENV === 'production' ? { output: 'standalone' } : {}),
   reactStrictMode: false,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   
   // Performance optimizations
   compiler: {
     // Remove console.log in production
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
-  
-  // Enable SWC minification for faster builds
-  swcMinify: true,
 
   // Webpack config to fix EMFILE (too many open files) on large projects
   webpack: (config, { dev }) => {
@@ -123,7 +113,9 @@ const nextConfig = {
    * So you can use `pnpm bv` to check all type warns and errors at once.
    */
   typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;

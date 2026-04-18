@@ -2,8 +2,59 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Create webhooks table
-    await queryInterface.createTable('webhooks', {
+    const sequelize = queryInterface.sequelize;
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+    const fkTypeFor = async (tableName, columnName = 'id') => {
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+
+    const branchFkType = await fkTypeFor('branches', 'id');
+    const userFkType = await fkTypeFor('users', 'id');
+    const tenantFkType = await fkTypeFor('tenants', 'id');
+
+    const ensureTableMerge = async (tableName, tableDef) => {
+      const tableList = await queryInterface.showAllTables();
+      if (!tableList.includes(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [attrName, def] of Object.entries(tableDef)) {
+        const colName =
+          def && typeof def === 'object' && def.field ? def.field : attrName;
+        if (d[colName]) continue;
+        const { field: _f, comment: _c, ...rest } = def;
+        await queryInterface.addColumn(tableName, colName, rest);
+        d[colName] = true;
+      }
+    };
+
+    /** Legacy drift: table created with physical column `event`; current model uses `wh_event`. */
+    await sequelize.query(`
+      DO $r$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'webhooks' AND column_name = 'event'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'webhooks' AND column_name = 'wh_event'
+        ) THEN
+          ALTER TABLE webhooks RENAME COLUMN event TO wh_event;
+        END IF;
+      END $r$;
+    `);
+
+    await ensureTableMerge('webhooks', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -24,7 +75,7 @@ module.exports = {
           isUrl: true
         }
       },
-      event: {
+      webhookEventType: {
         type: Sequelize.ENUM(
           'low_stock_alert',
           'daily_sales_summary',
@@ -37,7 +88,8 @@ module.exports = {
           'employee_shift_start',
           'employee_shift_end'
         ),
-        allowNull: false
+        allowNull: false,
+        field: 'wh_event'
       },
       isActive: {
         type: Sequelize.BOOLEAN,
@@ -70,7 +122,7 @@ module.exports = {
         comment: 'Custom headers to send with webhook'
       },
       branchId: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: true,
         field: 'branch_id',
         references: {
@@ -78,11 +130,10 @@ module.exports = {
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
-        comment: 'Branch specific webhook (null for global)'
+        onDelete: 'CASCADE'
       },
       tenantId: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         field: 'tenant_id',
         references: {
@@ -93,7 +144,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       createdBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: false,
         field: 'created_by',
         references: {
@@ -115,14 +166,14 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('webhooks', ['event']);
-    await queryInterface.addIndex('webhooks', ['is_active']);
-    await queryInterface.addIndex('webhooks', ['branch_id']);
-    await queryInterface.addIndex('webhooks', ['tenant_id']);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS webhooks_wh_event ON webhooks (wh_event);
+      CREATE INDEX IF NOT EXISTS webhooks_is_active ON webhooks (is_active);
+      CREATE INDEX IF NOT EXISTS webhooks_branch_id ON webhooks (branch_id);
+      CREATE INDEX IF NOT EXISTS webhooks_tenant_id ON webhooks (tenant_id);
+    `);
 
-    // Create webhook_logs table
-    await queryInterface.createTable('webhook_logs', {
+    await ensureTableMerge('webhook_logs', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -141,7 +192,8 @@ module.exports = {
       },
       event: {
         type: Sequelize.STRING(50),
-        allowNull: false
+        allowNull: false,
+        field: 'log_event'
       },
       payload: {
         type: Sequelize.JSON,
@@ -195,7 +247,7 @@ module.exports = {
         comment: 'User or system that triggered the webhook'
       },
       tenantId: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         field: 'tenant_id',
         references: {
@@ -219,16 +271,16 @@ module.exports = {
       }
     });
 
-    // Add indexes for webhook_logs
-    await queryInterface.addIndex('webhook_logs', ['webhook_id']);
-    await queryInterface.addIndex('webhook_logs', ['event']);
-    await queryInterface.addIndex('webhook_logs', ['status']);
-    await queryInterface.addIndex('webhook_logs', ['created_at']);
-    await queryInterface.addIndex('webhook_logs', ['next_retry_at']);
-    await queryInterface.addIndex('webhook_logs', ['tenant_id']);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS webhook_logs_webhook_id ON webhook_logs (webhook_id);
+      CREATE INDEX IF NOT EXISTS webhook_logs_log_event ON webhook_logs (log_event);
+      CREATE INDEX IF NOT EXISTS webhook_logs_status ON webhook_logs (status);
+      CREATE INDEX IF NOT EXISTS webhook_logs_created_at ON webhook_logs (created_at);
+      CREATE INDEX IF NOT EXISTS webhook_logs_next_retry_at ON webhook_logs (next_retry_at);
+      CREATE INDEX IF NOT EXISTS webhook_logs_tenant_id ON webhook_logs (tenant_id);
+    `);
 
-    // Create webhook_subscriptions table for specific entity subscriptions
-    await queryInterface.createTable('webhook_subscriptions', {
+    await ensureTableMerge('webhook_subscriptions', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -262,7 +314,7 @@ module.exports = {
         field: 'is_active'
       },
       tenantId: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         field: 'tenant_id',
         references: {
@@ -286,21 +338,21 @@ module.exports = {
       }
     });
 
-    // Add indexes for webhook_subscriptions
-    await queryInterface.addIndex('webhook_subscriptions', ['webhook_id']);
-    await queryInterface.addIndex('webhook_subscriptions', ['entity_type', 'entity_id']);
-    await queryInterface.addIndex('webhook_subscriptions', ['is_active']);
-    await queryInterface.addIndex('webhook_subscriptions', ['tenant_id']);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS webhook_subscriptions_webhook_id ON webhook_subscriptions (webhook_id);
+      CREATE INDEX IF NOT EXISTS webhook_subscriptions_entity_type_entity_id ON webhook_subscriptions (entity_type, entity_id);
+      CREATE INDEX IF NOT EXISTS webhook_subscriptions_is_active ON webhook_subscriptions (is_active);
+      CREATE INDEX IF NOT EXISTS webhook_subscriptions_tenant_id ON webhook_subscriptions (tenant_id);
+    `);
 
-    // Insert default low stock alert webhook for all tenants
-    await queryInterface.sequelize.query(`
-      INSERT INTO webhooks (id, name, description, url, event, is_active, tenant_id, created_by, created_at, updated_at)
-      SELECT 
-        UUID(),
+    await sequelize.query(`
+      INSERT INTO webhooks (id, name, description, url, wh_event, is_active, tenant_id, created_by, created_at, updated_at)
+      SELECT
+        gen_random_uuid(),
         'Low Stock Alert',
         'Automatically sends alert when product stock falls below minimum level',
         'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK',
-        'low_stock_alert',
+        'low_stock_alert'::text::"enum_webhooks_wh_event",
         true,
         t.id,
         (SELECT id FROM users WHERE role = 'super_admin' LIMIT 1),
@@ -308,32 +360,36 @@ module.exports = {
         NOW()
       FROM tenants t
       WHERE NOT EXISTS (
-        SELECT 1 FROM webhooks w 
-        WHERE w.tenant_id = t.id AND w.event = 'low_stock_alert'
+        SELECT 1 FROM webhooks w
+        WHERE w.tenant_id = t.id AND w.wh_event::text = 'low_stock_alert'
       )
     `);
   },
 
   down: async (queryInterface, Sequelize) => {
-    // Remove indexes first
-    await queryInterface.removeIndex('webhook_subscriptions', ['tenant_id']);
-    await queryInterface.removeIndex('webhook_subscriptions', ['is_active']);
-    await queryInterface.removeIndex('webhook_subscriptions', ['entity_type', 'entity_id']);
-    await queryInterface.removeIndex('webhook_subscriptions', ['webhook_id']);
-    
-    await queryInterface.removeIndex('webhook_logs', ['tenant_id']);
-    await queryInterface.removeIndex('webhook_logs', ['next_retry_at']);
-    await queryInterface.removeIndex('webhook_logs', ['created_at']);
-    await queryInterface.removeIndex('webhook_logs', ['status']);
-    await queryInterface.removeIndex('webhook_logs', ['event']);
-    await queryInterface.removeIndex('webhook_logs', ['webhook_id']);
-    
-    await queryInterface.removeIndex('webhooks', ['tenant_id']);
-    await queryInterface.removeIndex('webhooks', ['branch_id']);
-    await queryInterface.removeIndex('webhooks', ['is_active']);
-    await queryInterface.removeIndex('webhooks', ['event']);
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS webhook_subscriptions_tenant_id;
+      DROP INDEX IF EXISTS webhook_subscriptions_is_active;
+      DROP INDEX IF EXISTS webhook_subscriptions_entity_type_entity_id;
+      DROP INDEX IF EXISTS webhook_subscriptions_webhook_id;
+    `);
 
-    // Drop tables
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS webhook_logs_tenant_id;
+      DROP INDEX IF EXISTS webhook_logs_next_retry_at;
+      DROP INDEX IF EXISTS webhook_logs_created_at;
+      DROP INDEX IF EXISTS webhook_logs_status;
+      DROP INDEX IF EXISTS webhook_logs_log_event;
+      DROP INDEX IF EXISTS webhook_logs_webhook_id;
+    `);
+
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS webhooks_tenant_id;
+      DROP INDEX IF EXISTS webhooks_branch_id;
+      DROP INDEX IF EXISTS webhooks_is_active;
+      DROP INDEX IF EXISTS webhooks_wh_event;
+    `);
+
     await queryInterface.dropTable('webhook_subscriptions');
     await queryInterface.dropTable('webhook_logs');
     await queryInterface.dropTable('webhooks');

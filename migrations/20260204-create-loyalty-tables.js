@@ -36,6 +36,25 @@ module.exports = {
       }
     });
 
+    const { loyaltyProgramFkType, seedProgramId } = await (async () => {
+      try {
+        const d = await queryInterface.describeTable('loyalty_programs');
+        const ty = String(d.id?.type || '').toLowerCase();
+        if (/int|serial|bigint|smallint/.test(ty)) {
+          return {
+            loyaltyProgramFkType: Sequelize.INTEGER,
+            seedProgramId: 1
+          };
+        }
+      } catch (_) {
+        /* table missing */
+      }
+      return {
+        loyaltyProgramFkType: Sequelize.UUID,
+        seedProgramId: '00000000-0000-0000-0000-000000000001'
+      };
+    })();
+
     // Create loyalty_tiers table
     await queryInterface.createTable('loyalty_tiers', {
       id: {
@@ -44,7 +63,7 @@ module.exports = {
         primaryKey: true
       },
       programId: {
-        type: Sequelize.UUID,
+        type: loyaltyProgramFkType,
         allowNull: false,
         references: {
           model: 'loyalty_programs',
@@ -105,7 +124,7 @@ module.exports = {
         primaryKey: true
       },
       programId: {
-        type: Sequelize.UUID,
+        type: loyaltyProgramFkType,
         allowNull: false,
         references: {
           model: 'loyalty_programs',
@@ -159,29 +178,48 @@ module.exports = {
       }
     });
 
-    // Create indexes
-    await queryInterface.addIndex('loyalty_tiers', ['programId', 'tierLevel']);
-    await queryInterface.addIndex('loyalty_tiers', ['minSpending']);
-    await queryInterface.addIndex('loyalty_rewards', ['programId']);
-    await queryInterface.addIndex('loyalty_rewards', ['pointsCost']);
-    await queryInterface.addIndex('loyalty_rewards', ['rewardType']);
+    const seq = queryInterface.sequelize;
+    await seq.query(`
+      CREATE INDEX IF NOT EXISTS loyalty_tiers_program_id_tier_level ON loyalty_tiers ("programId", "tierLevel");
+      CREATE INDEX IF NOT EXISTS loyalty_tiers_min_spending ON loyalty_tiers ("minSpending");
+      CREATE INDEX IF NOT EXISTS loyalty_rewards_program_id ON loyalty_rewards ("programId");
+      CREATE INDEX IF NOT EXISTS loyalty_rewards_points_cost ON loyalty_rewards ("pointsCost");
+      CREATE INDEX IF NOT EXISTS loyalty_rewards_reward_type ON loyalty_rewards ("rewardType");
+    `);
 
-    // Insert default program
-    await queryInterface.bulkInsert('loyalty_programs', [{
-      id: '00000000-0000-0000-0000-000000000001',
+    const lpCols = await queryInterface.describeTable('loyalty_programs').catch(() => ({}));
+    const seedCamelLp =
+      lpCols.programName &&
+      lpCols.pointsPerCurrency !== undefined;
+    const [[{ progCnt }]] = await seq.query(
+      'SELECT COUNT(*)::int AS "progCnt" FROM loyalty_programs'
+    );
+
+    // Insert default program (only if schema matches this migration's camelCase columns)
+    if (seedCamelLp && Number(progCnt) === 0) {
+      await queryInterface.bulkInsert('loyalty_programs', [{
+      id: seedProgramId,
       programName: 'BEDAGANG Loyalty Program',
       description: 'Program loyalitas untuk pelanggan setia BEDAGANG',
       pointsPerCurrency: 1.0,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date()
-    }]);
+      }]);
+    }
+
+    const ltCols = await queryInterface.describeTable('loyalty_tiers').catch(() => ({}));
+    const seedCamelLt = ltCols.tierName && ltCols.programId !== undefined;
+    const [[{ tierCnt }]] = await seq.query(
+      'SELECT COUNT(*)::int AS "tierCnt" FROM loyalty_tiers'
+    );
 
     // Insert default tiers
-    await queryInterface.bulkInsert('loyalty_tiers', [
+    if (seedCamelLt && Number(tierCnt) === 0 && seedCamelLp) {
+      await queryInterface.bulkInsert('loyalty_tiers', [
       {
         id: Sequelize.literal('UUID()'),
-        programId: '00000000-0000-0000-0000-000000000001',
+        programId: seedProgramId,
         tierName: 'Bronze',
         tierLevel: 1,
         minSpending: 0,
@@ -195,7 +233,7 @@ module.exports = {
       },
       {
         id: Sequelize.literal('UUID()'),
-        programId: '00000000-0000-0000-0000-000000000001',
+        programId: seedProgramId,
         tierName: 'Silver',
         tierLevel: 2,
         minSpending: 1000000,
@@ -209,7 +247,7 @@ module.exports = {
       },
       {
         id: Sequelize.literal('UUID()'),
-        programId: '00000000-0000-0000-0000-000000000001',
+        programId: seedProgramId,
         tierName: 'Gold',
         tierLevel: 3,
         minSpending: 5000000,
@@ -223,7 +261,7 @@ module.exports = {
       },
       {
         id: Sequelize.literal('UUID()'),
-        programId: '00000000-0000-0000-0000-000000000001',
+        programId: seedProgramId,
         tierName: 'Platinum',
         tierLevel: 4,
         minSpending: 10000000,
@@ -235,13 +273,22 @@ module.exports = {
         createdAt: new Date(),
         updatedAt: new Date()
       }
-    ]);
+      ]);
+    }
+
+    const lrCols = await queryInterface.describeTable('loyalty_rewards').catch(() => ({}));
+    const seedCamelLr =
+      lrCols.rewardName && lrCols.programId !== undefined;
+    const [[{ rewCnt }]] = await seq.query(
+      'SELECT COUNT(*)::int AS "rewCnt" FROM loyalty_rewards'
+    );
 
     // Insert default rewards
-    await queryInterface.bulkInsert('loyalty_rewards', [
+    if (seedCamelLr && Number(rewCnt) === 0 && seedCamelLp) {
+      await queryInterface.bulkInsert('loyalty_rewards', [
       {
         id: Sequelize.literal('UUID()'),
-        programId: '00000000-0000-0000-0000-000000000001',
+        programId: seedProgramId,
         rewardName: 'Voucher Rp 50.000',
         description: 'Voucher belanja senilai Rp 50.000',
         pointsCost: 500,
@@ -255,7 +302,7 @@ module.exports = {
       },
       {
         id: Sequelize.literal('UUID()'),
-        programId: '00000000-0000-0000-0000-000000000001',
+        programId: seedProgramId,
         rewardName: 'Voucher Rp 100.000',
         description: 'Voucher belanja senilai Rp 100.000',
         pointsCost: 1000,
@@ -269,7 +316,7 @@ module.exports = {
       },
       {
         id: Sequelize.literal('UUID()'),
-        programId: '00000000-0000-0000-0000-000000000001',
+        programId: seedProgramId,
         rewardName: 'Free Product Sample',
         description: 'Sample produk gratis pilihan',
         pointsCost: 250,
@@ -282,7 +329,7 @@ module.exports = {
       },
       {
         id: Sequelize.literal('UUID()'),
-        programId: '00000000-0000-0000-0000-000000000001',
+        programId: seedProgramId,
         rewardName: 'Exclusive Merchandise',
         description: 'Merchandise eksklusif BEDAGANG',
         pointsCost: 2000,
@@ -293,7 +340,8 @@ module.exports = {
         createdAt: new Date(),
         updatedAt: new Date()
       }
-    ]);
+      ]);
+    }
   },
 
   down: async (queryInterface, Sequelize) => {

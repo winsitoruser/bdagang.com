@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
-import { sequelize } from '@/lib/sequelizeClient';
-import { QueryTypes } from 'sequelize';
+import { getTenantId, getBranchId, tableReservationWhere } from '@/lib/api/tenantScope';
+const db = require('../../../models');
 
 /**
  * Tables Status API
@@ -23,30 +23,32 @@ export default async function handler(
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const tenantId = session.user.tenantId;
+    const tenantId = getTenantId(session);
+    if (!tenantId) {
+      return res.status(400).json({ message: 'Tenant context required' });
+    }
 
-    // Get all tables with current status
     let tables: any[] = [];
     try {
-      tables = await sequelize.query(`
-        SELECT 
-          t.id,
-          t.table_number as number,
-          t.status,
-          t.capacity,
-          t.current_guest_count as guests,
-          t.location,
-          r.id as reservation_id,
-          r.customer_name,
-          r.reservation_time
-        FROM tables t
-        LEFT JOIN reservations r ON t.current_reservation_id = r.id
-        WHERE t.tenant_id = :tenantId
-        ORDER BY t.table_number ASC
-      `, {
-        replacements: { tenantId },
-        type: QueryTypes.SELECT
+      const { Table } = db;
+      const rows = await Table.findAll({
+        where: {
+          isActive: true,
+          ...tableReservationWhere(tenantId, getBranchId(session))
+        },
+        order: [['tableNumber', 'ASC']]
       });
+      tables = rows.map((t: any) => ({
+        id: t.id,
+        number: t.tableNumber,
+        status: t.status,
+        capacity: t.capacity,
+        guests: 0,
+        location: t.area || null,
+        reservation_id: null,
+        customer_name: null,
+        reservation_time: null
+      }));
     } catch (queryError) {
       console.error('Table query error:', queryError);
     }

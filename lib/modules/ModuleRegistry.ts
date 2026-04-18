@@ -167,8 +167,8 @@ export class ModuleRegistry {
   ): ModuleDefinition[] {
     const modules = Array.from(this.modules.values());
     
-    return modules.filter(module => {
-      const config = module.businessTypeConfig[businessType];
+    return modules.filter((modDef) => {
+      const config = modDef.businessTypeConfig[businessType];
       if (!config) return false;
       
       if (config.isRequired) return true;
@@ -189,9 +189,9 @@ export class ModuleRegistry {
       
       resolved.add(moduleId);
       
-      const module = this.modules.get(moduleId);
-      if (module?.dependencies) {
-        queue.push(...module.dependencies);
+      const modDef = this.modules.get(moduleId);
+      if (modDef?.dependencies) {
+        queue.push(...modDef.dependencies);
       }
     }
     
@@ -206,13 +206,13 @@ export class ModuleRegistry {
     const invalid: string[] = [];
     
     for (const moduleId of moduleIds) {
-      const module = this.modules.get(moduleId);
-      if (!module) {
+      const modDef = this.modules.get(moduleId);
+      if (!modDef) {
         invalid.push(moduleId);
         continue;
       }
       
-      const config = module.businessTypeConfig[businessType];
+      const config = modDef.businessTypeConfig[businessType];
       if (config) {
         valid.push(moduleId);
       } else {
@@ -453,6 +453,108 @@ export class ModuleRegistry {
       features: [],
       routes: [],
       models: ['OnlineOrder'],
+      components: []
+    });
+
+    // Delivery Management (optional; seeded for cloud_kitchen)
+    this.registerModule({
+      id: 'delivery-management',
+      code: 'DELIVERY_MANAGEMENT',
+      name: 'Delivery Management',
+      description: 'Delivery tracking and driver management',
+      category: 'optional',
+      version: '1.0.0',
+      dependencies: ['ONLINE_ORDERING'],
+      optionalDependencies: [],
+      businessTypeConfig: {
+        cloud_kitchen: {
+          isRequired: true,
+          isRecommended: true,
+          isOptional: false,
+          features: ['driver_tracking', 'delivery_status'],
+          defaultConfig: {}
+        }
+      },
+      integrationPoints: {
+        provides: [
+          { name: 'delivery.completed', type: 'event', description: 'Fired when delivery is completed', schema: {} }
+        ],
+        consumes: [
+          { name: 'online.order.created', type: 'event', description: 'Listen to online orders', schema: {} }
+        ]
+      },
+      features: [],
+      routes: [],
+      models: [],
+      components: []
+    });
+
+    // Loyalty Program (optional; aligns with DB seed + FlowOrchestrator payment-to-loyalty)
+    this.registerModule({
+      id: 'loyalty-program',
+      code: 'LOYALTY_PROGRAM',
+      name: 'Loyalty Program',
+      description: 'Customer loyalty and rewards program',
+      category: 'optional',
+      version: '1.0.0',
+      dependencies: ['POS_CORE'],
+      optionalDependencies: [],
+      businessTypeConfig: {
+        qsr: {
+          isRequired: false,
+          isRecommended: true,
+          isOptional: true,
+          features: ['points', 'rewards', 'tiers'],
+          defaultConfig: {}
+        },
+        cafe: {
+          isRequired: false,
+          isRecommended: true,
+          isOptional: true,
+          features: ['points', 'rewards'],
+          defaultConfig: {}
+        }
+      },
+      integrationPoints: {
+        provides: [
+          { name: 'loyalty.points.awarded', type: 'event', description: 'Fired when loyalty points are awarded', schema: {} }
+        ],
+        consumes: [
+          { name: 'payment.completed', type: 'event', description: 'Listen to POS payments', schema: {} }
+        ]
+      },
+      features: [],
+      routes: [{ path: '/api/loyalty', method: 'ALL', handler: 'loyaltyHandler' }],
+      models: ['LoyaltyAccount', 'LoyaltyTransaction'],
+      components: []
+    });
+
+    // Waiter App (addon; seeded for fine_dining)
+    this.registerModule({
+      id: 'waiter-app',
+      code: 'WAITER_APP',
+      name: 'Waiter App',
+      description: 'Mobile app for waiters to take orders',
+      category: 'addon',
+      version: '1.0.0',
+      dependencies: ['TABLE_MANAGEMENT'],
+      optionalDependencies: [],
+      businessTypeConfig: {
+        fine_dining: {
+          isRequired: false,
+          isRecommended: false,
+          isOptional: true,
+          features: ['mobile_ordering', 'table_service'],
+          defaultConfig: {}
+        }
+      },
+      integrationPoints: {
+        provides: [],
+        consumes: [{ name: 'table.occupied', type: 'event', description: 'Table context for orders', schema: {} }]
+      },
+      features: [],
+      routes: [],
+      models: [],
       components: []
     });
 

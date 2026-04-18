@@ -2,6 +2,11 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const tables = await queryInterface.showAllTables();
+    if (tables.includes('users')) {
+      return;
+    }
+
     await queryInterface.createTable('users', {
       id: {
         type: Sequelize.INTEGER,
@@ -52,11 +57,6 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
-
-    await queryInterface.addIndex('users', ['email'], {
-      unique: true,
-      name: 'users_email_unique'
     });
   },
 

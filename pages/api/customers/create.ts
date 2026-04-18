@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
+import { getSessionTenantId } from '@/lib/session-scope';
 
 const db = require('../../../models');
 const Customer = db.Customer;
@@ -10,6 +11,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!session) {
     return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const tenantId = getSessionTenantId(session);
+  if (!tenantId) {
+    return res.status(400).json({
+      success: false,
+      error: 'Tenant tidak ditemukan pada sesi. Silakan login ulang.'
+    });
   }
 
   if (req.method !== 'POST') {
@@ -76,9 +85,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Check if phone already exists
+    // Check if phone already exists for this tenant
     const existingCustomer = await Customer.findOne({
-      where: { phone: phoneValue }
+      where: { phone: phoneValue, tenantId }
     });
 
     if (existingCustomer) {
@@ -92,6 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const customer = await Customer.create({
       name,
       phone: phoneValue,
+      tenantId,
       email,
       address,
       city,

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
+import { getTenantId, getBranchId, tableReservationWhere } from '@/lib/api/tenantScope';
 const db = require('../../../../models');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -15,6 +16,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
 
+    const tenantId = getTenantId(session);
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant context required' });
+    }
+
     const { Table } = db;
     const { floor } = req.query;
 
@@ -27,7 +33,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const tables = await Table.findAll({
       where: {
         floor: floorNumber,
-        isActive: true
+        isActive: true,
+        ...tableReservationWhere(tenantId, getBranchId(session))
       },
       include: [
         {

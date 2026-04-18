@@ -2,6 +2,11 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const tables = await queryInterface.showAllTables();
+    if (tables.includes('loyalty_programs') || tables.includes('loyalty_tiers')) {
+      return;
+    }
+
     // Create loyalty_programs table
     await queryInterface.createTable('loyalty_programs', {
       id: {

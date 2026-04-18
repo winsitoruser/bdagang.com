@@ -31,6 +31,36 @@
  */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    const sequelize = queryInterface.sequelize;
+    const idxDyn = async (table, indexName, candidates) => {
+      const [rows] = await sequelize.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = '${table}'
+      `);
+      const set = new Set((rows || []).map((r) => r.column_name));
+      const col = candidates.find((c) => set.has(c));
+      if (!col) return;
+      const q = /[A-Z]/.test(col) ? `"${col}"` : col;
+      await sequelize.query(
+        `CREATE INDEX IF NOT EXISTS ${indexName} ON ${table} (${q})`
+      );
+    };
+    const idxDynUnique = async (table, indexName, candidateLists) => {
+      const [rows] = await sequelize.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = '${table}'
+      `);
+      const set = new Set((rows || []).map((r) => r.column_name));
+      const cols = candidateLists
+        .map((alts) => alts.find((c) => set.has(c)))
+        .filter(Boolean);
+      if (cols.length !== candidateLists.length) return;
+      const qs = cols.map((c) => (/[A-Z]/.test(c) ? `"${c}"` : c));
+      await sequelize.query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS ${indexName} ON ${table} (${qs.join(', ')})`
+      );
+    };
+
     // ──────────────────────────────────────────────────
     // 1. employee_kpis - KPI per karyawan per periode
     // ──────────────────────────────────────────────────
@@ -126,13 +156,20 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('employee_kpis', ['employeeId'], { name: 'idx_emp_kpis_employee' });
-    await queryInterface.addIndex('employee_kpis', ['branchId'], { name: 'idx_emp_kpis_branch' });
-    await queryInterface.addIndex('employee_kpis', ['period'], { name: 'idx_emp_kpis_period' });
-    await queryInterface.addIndex('employee_kpis', ['category'], { name: 'idx_emp_kpis_category' });
-    await queryInterface.addIndex('employee_kpis', ['status'], { name: 'idx_emp_kpis_status' });
-    await queryInterface.addIndex('employee_kpis', ['tenantId'], { name: 'idx_emp_kpis_tenant' });
-    await queryInterface.addIndex('employee_kpis', ['employeeId', 'metricName', 'period'], { unique: true, name: 'idx_emp_kpis_unique_metric' });
+    await idxDyn('employee_kpis', 'idx_emp_kpis_employee', [
+      'employeeId',
+      'employee_id'
+    ]);
+    await idxDyn('employee_kpis', 'idx_emp_kpis_branch', ['branchId', 'branch_id']);
+    await idxDyn('employee_kpis', 'idx_emp_kpis_period', ['period']);
+    await idxDyn('employee_kpis', 'idx_emp_kpis_category', ['category']);
+    await idxDyn('employee_kpis', 'idx_emp_kpis_status', ['status']);
+    await idxDyn('employee_kpis', 'idx_emp_kpis_tenant', ['tenantId', 'tenant_id']);
+    await idxDynUnique('employee_kpis', 'idx_emp_kpis_unique_metric', [
+      ['employeeId', 'employee_id'],
+      ['metricName', 'metric_name'],
+      ['period']
+    ]);
 
     // ──────────────────────────────────────────────────
     // 2. kpi_templates - Template definisi KPI
@@ -234,10 +271,10 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('kpi_templates', ['code'], { unique: true, name: 'idx_kpi_tpl_code_unique' });
-    await queryInterface.addIndex('kpi_templates', ['category'], { name: 'idx_kpi_tpl_category' });
-    await queryInterface.addIndex('kpi_templates', ['is_active'], { name: 'idx_kpi_tpl_active' });
-    await queryInterface.addIndex('kpi_templates', ['tenant_id'], { name: 'idx_kpi_tpl_tenant' });
+    await idxDynUnique('kpi_templates', 'idx_kpi_tpl_code_unique', [['code']]);
+    await idxDyn('kpi_templates', 'idx_kpi_tpl_category', ['category']);
+    await idxDyn('kpi_templates', 'idx_kpi_tpl_active', ['is_active']);
+    await idxDyn('kpi_templates', 'idx_kpi_tpl_tenant', ['tenant_id']);
 
     // ──────────────────────────────────────────────────
     // 3. kpi_scoring - Rubrik penilaian KPI
@@ -302,9 +339,9 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('kpi_scoring', ['scoring_type'], { name: 'idx_kpi_scoring_type' });
-    await queryInterface.addIndex('kpi_scoring', ['is_default'], { name: 'idx_kpi_scoring_default' });
-    await queryInterface.addIndex('kpi_scoring', ['tenant_id'], { name: 'idx_kpi_scoring_tenant' });
+    await idxDyn('kpi_scoring', 'idx_kpi_scoring_type', ['scoring_type']);
+    await idxDyn('kpi_scoring', 'idx_kpi_scoring_default', ['is_default']);
+    await idxDyn('kpi_scoring', 'idx_kpi_scoring_tenant', ['tenant_id']);
 
     // ──────────────────────────────────────────────────
     // 4. performance_reviews - Review kinerja berkala
@@ -441,13 +478,31 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('performance_reviews', ['employeeId'], { name: 'idx_perf_reviews_employee' });
-    await queryInterface.addIndex('performance_reviews', ['branchId'], { name: 'idx_perf_reviews_branch' });
-    await queryInterface.addIndex('performance_reviews', ['reviewerId'], { name: 'idx_perf_reviews_reviewer' });
-    await queryInterface.addIndex('performance_reviews', ['reviewPeriod'], { name: 'idx_perf_reviews_period' });
-    await queryInterface.addIndex('performance_reviews', ['status'], { name: 'idx_perf_reviews_status' });
-    await queryInterface.addIndex('performance_reviews', ['tenantId'], { name: 'idx_perf_reviews_tenant' });
-    await queryInterface.addIndex('performance_reviews', ['employeeId', 'reviewPeriod'], { unique: true, name: 'idx_perf_reviews_emp_period_unique' });
+    await idxDyn('performance_reviews', 'idx_perf_reviews_employee', [
+      'employeeId',
+      'employee_id'
+    ]);
+    await idxDyn('performance_reviews', 'idx_perf_reviews_branch', [
+      'branchId',
+      'branch_id'
+    ]);
+    await idxDyn('performance_reviews', 'idx_perf_reviews_reviewer', [
+      'reviewerId',
+      'reviewer_id'
+    ]);
+    await idxDyn('performance_reviews', 'idx_perf_reviews_period', [
+      'reviewPeriod',
+      'review_period'
+    ]);
+    await idxDyn('performance_reviews', 'idx_perf_reviews_status', ['status']);
+    await idxDyn('performance_reviews', 'idx_perf_reviews_tenant', [
+      'tenantId',
+      'tenant_id'
+    ]);
+    await idxDynUnique('performance_reviews', 'idx_perf_reviews_emp_period_unique', [
+      ['employeeId', 'employee_id'],
+      ['reviewPeriod', 'review_period']
+    ]);
 
     // ──────────────────────────────────────────────────
     // 5. leave_requests - Pengajuan cuti karyawan
@@ -551,13 +606,16 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('leave_requests', ['employeeId'], { name: 'idx_leave_req_employee' });
-    await queryInterface.addIndex('leave_requests', ['branchId'], { name: 'idx_leave_req_branch' });
-    await queryInterface.addIndex('leave_requests', ['leaveType'], { name: 'idx_leave_req_type' });
-    await queryInterface.addIndex('leave_requests', ['status'], { name: 'idx_leave_req_status' });
-    await queryInterface.addIndex('leave_requests', ['startDate'], { name: 'idx_leave_req_start' });
-    await queryInterface.addIndex('leave_requests', ['tenantId'], { name: 'idx_leave_req_tenant' });
-    await queryInterface.addIndex('leave_requests', ['approvedBy'], { name: 'idx_leave_req_approver' });
+    await idxDyn('leave_requests', 'idx_leave_req_employee', [
+      'employeeId',
+      'employee_id'
+    ]);
+    await idxDyn('leave_requests', 'idx_leave_req_branch', ['branchId', 'branch_id']);
+    await idxDyn('leave_requests', 'idx_leave_req_type', ['leaveType', 'leave_type']);
+    await idxDyn('leave_requests', 'idx_leave_req_status', ['status']);
+    await idxDyn('leave_requests', 'idx_leave_req_start', ['startDate', 'start_date']);
+    await idxDyn('leave_requests', 'idx_leave_req_tenant', ['tenantId', 'tenant_id']);
+    await idxDyn('leave_requests', 'idx_leave_req_approver', ['approvedBy', 'approved_by']);
 
     // ──────────────────────────────────────────────────
     // 6. hris_webhook_logs - Audit trail webhook events
@@ -625,12 +683,27 @@ module.exports = {
       }
     });
 
-    await queryInterface.addIndex('hris_webhook_logs', ['eventType'], { name: 'idx_webhook_logs_event' });
-    await queryInterface.addIndex('hris_webhook_logs', ['employeeId'], { name: 'idx_webhook_logs_employee' });
-    await queryInterface.addIndex('hris_webhook_logs', ['branchId'], { name: 'idx_webhook_logs_branch' });
-    await queryInterface.addIndex('hris_webhook_logs', ['status'], { name: 'idx_webhook_logs_status' });
-    await queryInterface.addIndex('hris_webhook_logs', ['tenantId'], { name: 'idx_webhook_logs_tenant' });
-    await queryInterface.addIndex('hris_webhook_logs', ['createdAt'], { name: 'idx_webhook_logs_created' });
+    await idxDyn('hris_webhook_logs', 'idx_webhook_logs_event', [
+      'eventType',
+      'event_type'
+    ]);
+    await idxDyn('hris_webhook_logs', 'idx_webhook_logs_employee', [
+      'employeeId',
+      'employee_id'
+    ]);
+    await idxDyn('hris_webhook_logs', 'idx_webhook_logs_branch', [
+      'branchId',
+      'branch_id'
+    ]);
+    await idxDyn('hris_webhook_logs', 'idx_webhook_logs_status', ['status']);
+    await idxDyn('hris_webhook_logs', 'idx_webhook_logs_tenant', [
+      'tenantId',
+      'tenant_id'
+    ]);
+    await idxDyn('hris_webhook_logs', 'idx_webhook_logs_created', [
+      'createdAt',
+      'created_at'
+    ]);
   },
 
   async down(queryInterface) {

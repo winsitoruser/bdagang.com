@@ -88,24 +88,28 @@ module.exports = {
         allowNull: true
       },
       resolved_by: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: true,
         references: {
           model: 'users',
           key: 'id'
-        }
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
       },
       resolution_notes: {
         type: Sequelize.TEXT,
         allowNull: true
       },
       assigned_to: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: true,
         references: {
           model: 'users',
           key: 'id'
         },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE',
         comment: 'User assigned to handle this alert'
       },
       expires_at: {
@@ -149,13 +153,14 @@ module.exports = {
         primaryKey: true
       },
       user_id: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'users',
           key: 'id'
         },
-        onDelete: 'CASCADE'
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
       },
       alert_type: {
         type: Sequelize.STRING(50),
@@ -217,12 +222,14 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       user_id: {
-        type: Sequelize.UUID,
+        type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'users',
           key: 'id'
-        }
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
       },
       action_type: {
         type: Sequelize.STRING(50),

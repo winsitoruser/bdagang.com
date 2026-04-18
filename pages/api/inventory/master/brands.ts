@@ -14,18 +14,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'GET':
         const { search, is_active } = req.query;
         let sql = 'SELECT * FROM brands WHERE 1=1';
-        const params: any[] = [];
-        
+        const params: unknown[] = [];
+        let i = 1;
+
         if (search) {
-          sql += ` AND (name ILIKE '%${search}%' OR code ILIKE '%${search}%')`;
+          sql += ` AND (name ILIKE $${i} OR code ILIKE $${i})`;
+          params.push(`%${search}%`);
+          i++;
         }
-        if (is_active) {
-          sql += ` AND is_active = ${is_active === 'true'}`;
+        if (is_active !== undefined) {
+          sql += ` AND is_active = $${i}`;
+          params.push(is_active === 'true');
+          i++;
         }
-        
+
         sql += ' ORDER BY name ASC';
-        const result = await pool.query(sql);
-        
+        const result = await pool.query(sql, params);
+
         return res.status(200).json({ success: true, data: result.rows, count: result.rows.length });
 
       case 'POST':

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]';
+import { getSessionBranchId } from '@/lib/session-scope';
 
 const Shift = require('../../../../models/Shift');
 const Employee = require('../../../../models/Employee');
@@ -16,9 +17,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     switch (req.method) {
       case 'GET':
-        return await getShifts(req, res);
+        return await getShifts(req, res, session);
       case 'POST':
-        return await createShift(req, res);
+        return await createShift(req, res, session);
       default:
         return res.status(405).json({ error: 'Method not allowed' });
     }
@@ -29,10 +30,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 // GET /api/pos/shifts - Get all shifts with filters
-async function getShifts(req: NextApiRequest, res: NextApiResponse) {
+async function getShifts(req: NextApiRequest, res: NextApiResponse, session: { user?: unknown }) {
   const { status, date, employeeId, limit = '50', offset = '0' } = req.query;
 
   const whereClause: any = {};
+
+  const branchId = getSessionBranchId(session);
+  if (branchId) {
+    whereClause.branchId = branchId;
+  }
 
   if (status) {
     whereClause.status = status;
@@ -92,7 +98,7 @@ async function getShifts(req: NextApiRequest, res: NextApiResponse) {
 }
 
 // POST /api/pos/shifts - Create/Open new shift
-async function createShift(req: NextApiRequest, res: NextApiResponse) {
+async function createShift(req: NextApiRequest, res: NextApiResponse, session: { user?: unknown }) {
   const { shiftName, startTime, endTime, initialCashAmount, notes, employeeId } = req.body;
 
   // Validate required fields
@@ -100,14 +106,20 @@ async function createShift(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
+  const branchId = getSessionBranchId(session);
+
   // Check if there's already an open shift for today
   const today = new Date().toISOString().split('T')[0];
+  const openWhere: Record<string, unknown> = {
+    shiftDate: today,
+    status: 'open',
+    shiftName: shiftName
+  };
+  if (branchId) {
+    openWhere.branchId = branchId;
+  }
   const existingOpenShift = await Shift.findOne({
-    where: {
-      shiftDate: today,
-      status: 'open',
-      shiftName: shiftName
-    }
+    where: openWhere
   });
 
   if (existingOpenShift) {
@@ -127,7 +139,8 @@ async function createShift(req: NextApiRequest, res: NextApiResponse) {
     openedAt: new Date(),
     initialCashAmount,
     status: 'open',
-    notes
+    notes,
+    branchId: branchId || null
   });
 
   // Fetch the created shift with employee details

@@ -91,8 +91,12 @@ export const useBrands = (search?: string, isActive?: boolean) => {
 };
 
 // Hook for Warehouses
-export const useWarehouses = () => {
-  const { data, error, mutate } = useSWR('/api/inventory/master/warehouses', fetcher);
+export const useWarehouses = (search?: string, isActive?: boolean) => {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (isActive !== undefined) params.append('is_active', String(isActive));
+  const url = `/api/inventory/master/warehouses${params.toString() ? '?' + params.toString() : ''}`;
+  const { data, error, mutate } = useSWR(url, fetcher);
 
   return {
     warehouses: data?.data || [],
@@ -104,11 +108,55 @@ export const useWarehouses = () => {
 };
 
 // Hook for Tags
-export const useTags = () => {
-  const { data, error, mutate } = useSWR('/api/inventory/master/tags', fetcher);
+export const useTags = (search?: string, isActive?: boolean) => {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (isActive !== undefined) params.append('is_active', String(isActive));
+  const url = `/api/inventory/master/tags${params.toString() ? '?' + params.toString() : ''}`;
+  const { data, error, mutate } = useSWR(url, fetcher);
 
   return {
     tags: data?.data || [],
+    count: data?.count || 0,
+    isLoading: !error && !data,
+    isError: error,
+    refresh: mutate
+  };
+};
+
+/** Lokasi rak / storage_locations */
+export const useStorageLocations = (
+  search?: string,
+  isActive?: boolean,
+  warehouseId?: number | string
+) => {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (isActive !== undefined) params.append('is_active', String(isActive));
+  if (warehouseId !== undefined && warehouseId !== '' && warehouseId !== 'all') {
+    params.append('warehouse_id', String(warehouseId));
+  }
+  const url = `/api/inventory/master/locations${params.toString() ? '?' + params.toString() : ''}`;
+  const { data, error, mutate } = useSWR(url, fetcher);
+
+  return {
+    locations: data?.data || [],
+    count: data?.count || 0,
+    isLoading: !error && !data,
+    isError: error,
+    refresh: mutate
+  };
+};
+
+export const useManufacturers = (search?: string, isActive?: boolean) => {
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (isActive !== undefined) params.append('is_active', String(isActive));
+  const url = `/api/inventory/master/manufacturers${params.toString() ? '?' + params.toString() : ''}`;
+  const { data, error, mutate } = useSWR(url, fetcher);
+
+  return {
+    manufacturers: data?.data || [],
     count: data?.count || 0,
     isLoading: !error && !data,
     isError: error,

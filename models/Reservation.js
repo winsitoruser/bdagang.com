@@ -10,7 +10,6 @@ const Reservation = sequelize.define('Reservation', {
   reservationNumber: {
     type: DataTypes.STRING(50),
     allowNull: false,
-    unique: true,
     field: 'reservation_number'
   },
   
@@ -133,6 +132,24 @@ const Reservation = sequelize.define('Reservation', {
   cancelledAt: {
     type: DataTypes.DATE,
     field: 'cancelled_at'
+  },
+  tenantId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'tenant_id',
+    references: {
+      model: 'tenants',
+      key: 'id'
+    }
+  },
+  branchId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+    field: 'branch_id',
+    references: {
+      model: 'branches',
+      key: 'id'
+    }
   }
 }, {
   tableName: 'reservations',
@@ -143,36 +160,48 @@ const Reservation = sequelize.define('Reservation', {
 });
 
 // Class methods
-Reservation.generateReservationNumber = async function() {
+Reservation.generateReservationNumber = async function(tenantId = null) {
   const today = new Date();
   const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-  
+  const Op = sequelize.Sequelize.Op;
+
+  const where = {
+    reservationNumber: {
+      [Op.like]: `RSV-${dateStr}-%`
+    }
+  };
+  if (tenantId) {
+    where.tenantId = tenantId;
+  }
+
   const lastReservation = await this.findOne({
-    where: {
-      reservationNumber: {
-        [sequelize.Sequelize.Op.like]: `RSV-${dateStr}-%`
-      }
-    },
+    where,
     order: [['reservationNumber', 'DESC']]
   });
-  
+
   let sequence = 1;
   if (lastReservation) {
     const lastNumber = lastReservation.reservationNumber.split('-')[2];
-    sequence = parseInt(lastNumber) + 1;
+    sequence = parseInt(lastNumber, 10) + 1;
   }
-  
+
   return `RSV-${dateStr}-${sequence.toString().padStart(3, '0')}`;
 };
 
-Reservation.getByDate = async function(date) {
+Reservation.getByDate = async function(date, options = {}) {
+  const { tenantId } = options;
+  const Op = sequelize.Sequelize.Op;
+  const where = {
+    reservationDate: date,
+    status: {
+      [Op.notIn]: ['cancelled', 'no-show']
+    }
+  };
+  if (tenantId) {
+    where.tenantId = tenantId;
+  }
   return await this.findAll({
-    where: {
-      reservationDate: date,
-      status: {
-        [sequelize.Sequelize.Op.notIn]: ['cancelled', 'no-show']
-      }
-    },
+    where,
     include: [
       { association: 'table' },
       { association: 'customer' }
@@ -181,20 +210,27 @@ Reservation.getByDate = async function(date) {
   });
 };
 
-Reservation.getUpcoming = async function(days = 7) {
+Reservation.getUpcoming = async function(days = 7, options = {}) {
+  const { tenantId } = options;
+  const Op = sequelize.Sequelize.Op;
   const today = new Date();
   const futureDate = new Date();
   futureDate.setDate(today.getDate() + days);
-  
-  return await this.findAll({
-    where: {
-      reservationDate: {
-        [sequelize.Sequelize.Op.between]: [today, futureDate]
-      },
-      status: {
-        [sequelize.Sequelize.Op.in]: ['pending', 'confirmed']
-      }
+
+  const where = {
+    reservationDate: {
+      [Op.between]: [today, futureDate]
     },
+    status: {
+      [Op.in]: ['pending', 'confirmed']
+    }
+  };
+  if (tenantId) {
+    where.tenantId = tenantId;
+  }
+
+  return await this.findAll({
+    where,
     include: [
       { association: 'table' },
       { association: 'customer' }
@@ -203,34 +239,44 @@ Reservation.getUpcoming = async function(days = 7) {
   });
 };
 
-Reservation.checkAvailability = async function(date, time, guestCount, excludeId = null) {
+Reservation.checkAvailability = async function(date, time, guestCount, excludeId = null, options = {}) {
+  const { tenantId } = options;
+  const Op = sequelize.Sequelize.Op;
   const where = {
     reservationDate: date,
     status: {
-      [sequelize.Sequelize.Op.in]: ['confirmed', 'seated']
+      [Op.in]: ['confirmed', 'seated']
     }
   };
-  
+
+  if (tenantId) {
+    where.tenantId = tenantId;
+  }
+
   if (excludeId) {
     where.id = {
-      [sequelize.Sequelize.Op.ne]: excludeId
+      [Op.ne]: excludeId
     };
   }
-  
+
   const existingReservations = await this.findAll({
     where,
     include: [{ association: 'table' }]
   });
-  
-  // Get all tables
+
   const Table = sequelize.models.Table;
-  const allTables = await Table.findAll({
-    where: {
-      isActive: true,
-      capacity: {
-        [sequelize.Sequelize.Op.gte]: guestCount
-      }
+  const tableWhere = {
+    isActive: true,
+    capacity: {
+      [Op.gte]: guestCount
     }
+  };
+  if (tenantId) {
+    tableWhere.tenantId = tenantId;
+  }
+
+  const allTables = await Table.findAll({
+    where: tableWhere
   });
   
   // Filter out occupied tables
@@ -241,21 +287,28 @@ Reservation.checkAvailability = async function(date, time, guestCount, excludeId
 };
 
 // Instance methods
+function tableWhereForReservation(reservation, tableId) {
+  const w = { id: tableId };
+  if (reservation.tenantId) {
+    w.tenantId = reservation.tenantId;
+  }
+  return w;
+}
+
 Reservation.prototype.confirm = async function(confirmedBy) {
   this.status = 'confirmed';
   this.confirmedBy = confirmedBy;
   this.confirmedAt = new Date();
   await this.save();
-  
-  // Update table status if assigned
+
   if (this.tableId) {
     const Table = sequelize.models.Table;
-    const table = await Table.findByPk(this.tableId);
+    const table = await Table.findOne({ where: tableWhereForReservation(this, this.tableId) });
     if (table) {
       await table.markAsReserved();
     }
   }
-  
+
   return this;
 };
 
@@ -263,11 +316,11 @@ Reservation.prototype.seat = async function(seatedBy, tableId = null) {
   this.status = 'seated';
   this.seatedBy = seatedBy;
   this.seatedAt = new Date();
-  
+
   if (tableId) {
     this.tableId = tableId;
     const Table = sequelize.models.Table;
-    const table = await Table.findByPk(tableId);
+    const table = await Table.findOne({ where: tableWhereForReservation(this, tableId) });
     if (table) {
       this.tableNumber = table.tableNumber;
       await table.markAsOccupied();
@@ -286,12 +339,12 @@ Reservation.prototype.complete = async function() {
   // Update table status
   if (this.tableId) {
     const Table = sequelize.models.Table;
-    const table = await Table.findByPk(this.tableId);
+    const table = await Table.findOne({ where: tableWhereForReservation(this, this.tableId) });
     if (table) {
       await table.markAsAvailable();
     }
   }
-  
+
   return this;
 };
 
@@ -304,34 +357,33 @@ Reservation.prototype.cancel = async function(reason) {
   // Update table status
   if (this.tableId) {
     const Table = sequelize.models.Table;
-    const table = await Table.findByPk(this.tableId);
+    const table = await Table.findOne({ where: tableWhereForReservation(this, this.tableId) });
     if (table && table.status === 'reserved') {
       await table.markAsAvailable();
     }
   }
-  
+
   return this;
 };
 
 Reservation.prototype.markNoShow = async function() {
   this.status = 'no-show';
   await this.save();
-  
-  // Update table status
+
   if (this.tableId) {
     const Table = sequelize.models.Table;
-    const table = await Table.findByPk(this.tableId);
+    const table = await Table.findOne({ where: tableWhereForReservation(this, this.tableId) });
     if (table && table.status === 'reserved') {
       await table.markAsAvailable();
     }
   }
-  
+
   return this;
 };
 
 Reservation.prototype.assignTable = async function(tableId) {
   const Table = sequelize.models.Table;
-  const table = await Table.findByPk(tableId);
+  const table = await Table.findOne({ where: tableWhereForReservation(this, tableId) });
   
   if (!table) {
     throw new Error('Table not found');
@@ -422,7 +474,7 @@ Reservation.associate = function(models) {
 // Hooks
 Reservation.beforeCreate(async (reservation) => {
   if (!reservation.reservationNumber) {
-    reservation.reservationNumber = await Reservation.generateReservationNumber();
+    reservation.reservationNumber = await Reservation.generateReservationNumber(reservation.tenantId);
   }
 });
 

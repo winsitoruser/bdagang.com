@@ -245,20 +245,20 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('inventory_transfers', ['transfer_number'], { name: 'idx_transfers_number' });
-    await queryInterface.addIndex('inventory_transfers', ['from_location_id'], { name: 'idx_transfers_from_location' });
-    await queryInterface.addIndex('inventory_transfers', ['to_location_id'], { name: 'idx_transfers_to_location' });
-    await queryInterface.addIndex('inventory_transfers', ['status'], { name: 'idx_transfers_status' });
-    await queryInterface.addIndex('inventory_transfers', ['request_date'], { name: 'idx_transfers_request_date' });
-    await queryInterface.addIndex('inventory_transfers', ['priority'], { name: 'idx_transfers_priority' });
-    await queryInterface.addIndex('inventory_transfers', ['requested_by'], { name: 'idx_transfers_requested_by' });
-
-    await queryInterface.addIndex('inventory_transfer_items', ['transfer_id'], { name: 'idx_transfer_items_transfer' });
-    await queryInterface.addIndex('inventory_transfer_items', ['product_id'], { name: 'idx_transfer_items_product' });
-
-    await queryInterface.addIndex('inventory_transfer_history', ['transfer_id'], { name: 'idx_transfer_history_transfer' });
-    await queryInterface.addIndex('inventory_transfer_history', ['changed_at'], { name: 'idx_transfer_history_date' });
+    const seq = queryInterface.sequelize;
+    await seq.query(`
+      CREATE INDEX IF NOT EXISTS idx_transfers_number ON inventory_transfers (transfer_number);
+      CREATE INDEX IF NOT EXISTS idx_transfers_from_location ON inventory_transfers (from_location_id);
+      CREATE INDEX IF NOT EXISTS idx_transfers_to_location ON inventory_transfers (to_location_id);
+      CREATE INDEX IF NOT EXISTS idx_transfers_status ON inventory_transfers (status);
+      CREATE INDEX IF NOT EXISTS idx_transfers_request_date ON inventory_transfers (request_date);
+      CREATE INDEX IF NOT EXISTS idx_transfers_priority ON inventory_transfers (priority);
+      CREATE INDEX IF NOT EXISTS idx_transfers_requested_by ON inventory_transfers (requested_by);
+      CREATE INDEX IF NOT EXISTS idx_transfer_items_transfer ON inventory_transfer_items (transfer_id);
+      CREATE INDEX IF NOT EXISTS idx_transfer_items_product ON inventory_transfer_items (product_id);
+      CREATE INDEX IF NOT EXISTS idx_transfer_history_transfer ON inventory_transfer_history (transfer_id);
+      CREATE INDEX IF NOT EXISTS idx_transfer_history_date ON inventory_transfer_history (changed_at);
+    `);
 
     console.log('✅ Created inventory transfers tables');
   },

@@ -28,7 +28,7 @@ interface Schedule {
   employee: {
     id: string;
     name: string;
-    employeeNumber: string;
+    employeeId: string;
     position: string;
   };
   location?: {
@@ -104,7 +104,7 @@ const EmployeeSchedules: NextPage = () => {
 
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('/api/employees?limit=1000');
+      const response = await fetch('/api/employees?limit=1000&status=all');
       
       if (!response.ok) {
         console.error('Failed to fetch employees:', response.status);

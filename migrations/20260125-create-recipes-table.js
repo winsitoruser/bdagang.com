@@ -218,18 +218,24 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('recipes', ['code']);
-    await queryInterface.addIndex('recipes', ['product_id']);
-    await queryInterface.addIndex('recipes', ['status']);
-    await queryInterface.addIndex('recipes', ['category']);
-    
-    await queryInterface.addIndex('recipe_ingredients', ['recipe_id']);
-    await queryInterface.addIndex('recipe_ingredients', ['product_id']);
-    await queryInterface.addIndex('recipe_ingredients', ['recipe_id', 'product_id'], {
-      unique: true,
-      name: 'recipe_ingredient_unique'
-    });
+    const seq = queryInterface.sequelize;
+    await seq.query(`
+      DELETE FROM recipe_ingredients a
+      USING recipe_ingredients b
+      WHERE a.id > b.id
+        AND a.recipe_id = b.recipe_id
+        AND a.product_id = b.product_id;
+    `);
+
+    await seq.query(`
+      CREATE INDEX IF NOT EXISTS recipes_code ON recipes (code);
+      CREATE INDEX IF NOT EXISTS recipes_product_id ON recipes (product_id);
+      CREATE INDEX IF NOT EXISTS recipes_status ON recipes (status);
+      CREATE INDEX IF NOT EXISTS recipes_category ON recipes (category);
+      CREATE INDEX IF NOT EXISTS recipe_ingredients_recipe_id ON recipe_ingredients (recipe_id);
+      CREATE INDEX IF NOT EXISTS recipe_ingredients_product_id ON recipe_ingredients (product_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS recipe_ingredient_unique ON recipe_ingredients (recipe_id, product_id);
+    `);
   },
 
   down: async (queryInterface, Sequelize) => {

@@ -3,20 +3,22 @@ import React, { useEffect, useState } from 'react';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
 
 // Import custom components
 import BurgerMenu from '../components/landing/BurgerMenu';
+import LandingHeader from '../components/landing/LandingHeader';
+import LandingFooter from '../components/landing/LandingFooter';
 import Hero from '../components/landing/Hero';
 import Services from '../components/landing/Services';
 import Pricing from '../components/landing/Pricing';
 import Testimonials from '../components/landing/Testimonials';
+import SegmentsShowcase from '../components/landing/SegmentsShowcase';
+import { COMPANY_LEGAL_NAME, PRODUCT_LINE } from '../components/landing/brand';
 
 const Home: NextPage = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const { data: session, status } = useSession();
   const router = useRouter();
 
   // Remove auto-redirect to allow users to see homepage with proper buttons
@@ -56,46 +58,53 @@ const Home: NextPage = () => {
   return (
     <>
       <Head>
-        <title>BEDAGANG - Cloud POS System untuk Bisnis Modern | Free Trial 14 Hari</title>
-        <meta name="description" content="Sistem kasir cloud terlengkap untuk retail, F&B, dan bisnis jasa. Fitur POS, Inventory, CRM, Loyalty Program, Multi-outlet, dan Analytics. Coba gratis 14 hari tanpa kartu kredit!" />
-        <meta name="keywords" content="pos system, cloud pos, sistem kasir, inventory management, loyalty program, retail software, moka pos alternative" />
+        <title>
+          BEDAGANG — SaaS Business POS untuk F&amp;B &amp; Retail | {COMPANY_LEGAL_NAME}
+        </title>
+        <meta
+          name="description"
+          content={`BEDAGANG adalah platform SaaS dan layanan POS bisnis dari ${COMPANY_LEGAL_NAME} untuk restoran, kafe, F&B, hingga ritel modern. ${PRODUCT_LINE}. Trial 14 hari.`}
+        />
+        <meta
+          name="keywords"
+          content="BEDAGANG, PT Naincode Inti Technology, SaaS POS, Business POS, sistem kasir restoran, POS retail, cloud POS Indonesia, inventory retail, POS F&B"
+        />
       </Head>
 
       {/* Loading screen with animation */}
       <AnimatePresence>
         {isLoading && (
           <motion.div 
-            className="fixed inset-0 bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center z-50"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-slate-950 via-blue-950 to-sky-700"
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6 }}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.92 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-white text-4xl font-bold"
+              className="flex flex-col items-center gap-2 text-center px-4"
             >
-              BEDAGANG
+              <span className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-white via-sky-100 to-cyan-200 bg-clip-text text-transparent">
+                BEDAGANG
+              </span>
+              <span className="text-xs sm:text-sm font-medium text-sky-200/80 max-w-sm">
+                {COMPANY_LEGAL_NAME}
+              </span>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Main content */}
-      <div className="min-h-screen w-full flex flex-col overflow-hidden">
-        {/* Burger Menu */}
+      <div className="min-h-screen w-full flex flex-col overflow-x-hidden font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] antialiased text-slate-900">
+        <LandingHeader />
         <BurgerMenu />
-        
-        {/* Hero Section with Full-height */}
         <Hero />
-        
-        {/* Services Section */}
+        <SegmentsShowcase />
         <Services />
-        
-        {/* Pricing Section */}
         <Pricing />
-        
-        {/* Testimonials Section */}
         <Testimonials />
+        <LandingFooter />
       </div>
     </>
   );

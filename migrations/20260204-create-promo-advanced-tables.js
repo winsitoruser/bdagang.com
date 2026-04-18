@@ -2,6 +2,33 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const promoFkType = await (async () => {
+      try {
+        const d = await queryInterface.describeTable('promos');
+        const ty = String(d.id?.type || '').toLowerCase();
+        if (/int|serial|bigint|smallint/.test(ty)) return Sequelize.INTEGER;
+      } catch (_) {}
+      return Sequelize.UUID;
+    })();
+
+    const productFkType = await (async () => {
+      try {
+        const d = await queryInterface.describeTable('products');
+        const ty = String(d.id?.type || '').toLowerCase();
+        if (/int|serial|bigint|smallint/.test(ty)) return Sequelize.INTEGER;
+      } catch (_) {}
+      return Sequelize.UUID;
+    })();
+
+    const categoryFkType = await (async () => {
+      try {
+        const d = await queryInterface.describeTable('categories');
+        const ty = String(d.id?.type || '').toLowerCase();
+        if (/int|serial|bigint|smallint/.test(ty)) return Sequelize.INTEGER;
+      } catch (_) {}
+      return Sequelize.UUID;
+    })();
+
     // Create promo_products table
     await queryInterface.createTable('promo_products', {
       id: {
@@ -10,7 +37,7 @@ module.exports = {
         primaryKey: true
       },
       promoId: {
-        type: Sequelize.UUID,
+        type: promoFkType,
         allowNull: false,
         references: {
           model: 'promos',
@@ -21,7 +48,7 @@ module.exports = {
         comment: 'Reference to promo'
       },
       productId: {
-        type: Sequelize.UUID,
+        type: productFkType,
         allowNull: false,
         comment: 'Product ID from inventory'
       },
@@ -98,7 +125,7 @@ module.exports = {
         primaryKey: true
       },
       promoId: {
-        type: Sequelize.UUID,
+        type: promoFkType,
         allowNull: false,
         references: {
           model: 'promos',
@@ -191,7 +218,7 @@ module.exports = {
         primaryKey: true
       },
       promoId: {
-        type: Sequelize.UUID,
+        type: promoFkType,
         allowNull: false,
         references: {
           model: 'promos',
@@ -202,7 +229,7 @@ module.exports = {
         comment: 'Reference to promo'
       },
       categoryId: {
-        type: Sequelize.UUID,
+        type: categoryFkType,
         allowNull: false,
         comment: 'Category ID from inventory'
       },
@@ -255,57 +282,47 @@ module.exports = {
       }
     });
 
-    // Add indexes for promo_products
-    await queryInterface.addIndex('promo_products', ['promoId'], {
-      name: 'promo_products_promo_id_index'
-    });
-    await queryInterface.addIndex('promo_products', ['productId'], {
-      name: 'promo_products_product_id_index'
-    });
-    await queryInterface.addIndex('promo_products', ['promoId', 'productId'], {
-      unique: true,
-      name: 'promo_products_promo_product_unique'
-    });
+    const seq = queryInterface.sequelize;
+    await seq.query(`
+      CREATE INDEX IF NOT EXISTS promo_products_promo_id_index ON promo_products ("promoId");
+      CREATE INDEX IF NOT EXISTS promo_products_product_id_index ON promo_products ("productId");
+      CREATE UNIQUE INDEX IF NOT EXISTS promo_products_promo_product_unique ON promo_products ("promoId", "productId");
+      CREATE INDEX IF NOT EXISTS promo_bundles_promo_id_index ON promo_bundles ("promoId");
+      CREATE INDEX IF NOT EXISTS promo_bundles_type_index ON promo_bundles ("bundleType");
+      CREATE INDEX IF NOT EXISTS promo_categories_promo_id_index ON promo_categories ("promoId");
+      CREATE INDEX IF NOT EXISTS promo_categories_category_id_index ON promo_categories ("categoryId");
+    `);
 
-    // Add indexes for promo_bundles
-    await queryInterface.addIndex('promo_bundles', ['promoId'], {
-      name: 'promo_bundles_promo_id_index'
-    });
-    await queryInterface.addIndex('promo_bundles', ['bundleType'], {
-      name: 'promo_bundles_type_index'
-    });
-
-    // Add indexes for promo_categories
-    await queryInterface.addIndex('promo_categories', ['promoId'], {
-      name: 'promo_categories_promo_id_index'
-    });
-    await queryInterface.addIndex('promo_categories', ['categoryId'], {
-      name: 'promo_categories_category_id_index'
-    });
+    const pd = await queryInterface.describeTable('promos');
+    const addCol = async (col, opts) => {
+      if (pd[col]) return;
+      await queryInterface.addColumn('promos', col, opts);
+      pd[col] = true;
+    };
 
     // Update promos table - add new fields
-    await queryInterface.addColumn('promos', 'promoScope', {
+    await addCol('promoScope', {
       type: Sequelize.ENUM('general', 'product_specific', 'category', 'bundle'),
       allowNull: false,
       defaultValue: 'general',
       comment: 'Scope of promo application'
     });
 
-    await queryInterface.addColumn('promos', 'autoApply', {
+    await addCol('autoApply', {
       type: Sequelize.BOOLEAN,
       allowNull: false,
       defaultValue: false,
       comment: 'Auto-apply promo at checkout'
     });
 
-    await queryInterface.addColumn('promos', 'stackable', {
+    await addCol('stackable', {
       type: Sequelize.BOOLEAN,
       allowNull: false,
       defaultValue: false,
       comment: 'Can be combined with other promos'
     });
 
-    await queryInterface.addColumn('promos', 'priority', {
+    await addCol('priority', {
       type: Sequelize.INTEGER,
       allowNull: false,
       defaultValue: 0,

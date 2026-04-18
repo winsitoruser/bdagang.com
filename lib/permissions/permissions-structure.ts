@@ -564,8 +564,8 @@ export function getModulePermissions(module: string): string[] {
 
 // Helper function to get permission label
 export function getPermissionLabel(permission: string): string {
-  for (const module of Object.values(PERMISSIONS_STRUCTURE)) {
-    const permissions = module.permissions as Record<string, string>;
+  for (const modSection of Object.values(PERMISSIONS_STRUCTURE)) {
+    const permissions = modSection.permissions as Record<string, string>;
     if (permissions[permission]) {
       return permissions[permission];
     }

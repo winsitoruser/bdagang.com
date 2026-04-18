@@ -101,11 +101,37 @@ module.exports = {
       },
     });
 
-    // Create indexes for finance_accounts
-    await queryInterface.addIndex('finance_accounts', ['tenantId']);
-    await queryInterface.addIndex('finance_accounts', ['branchId']);
-    await queryInterface.addIndex('finance_accounts', ['accountType']);
-    await queryInterface.addIndex('finance_accounts', ['isActive']);
+    // Indexes (column names vary: camelCase vs snake_case drift across environments)
+    const sequelize = queryInterface.sequelize;
+    const idxDyn = async (table, indexName, candidates) => {
+      const [rows] = await sequelize.query(`
+        SELECT column_name FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = '${table}'
+      `);
+      const set = new Set((rows || []).map((r) => r.column_name));
+      const col = candidates.find((c) => set.has(c));
+      if (!col) return;
+      const q = /[A-Z]/.test(col) ? `"${col}"` : col;
+      await sequelize.query(
+        `CREATE INDEX IF NOT EXISTS ${indexName} ON ${table} (${q})`
+      );
+    };
+    await idxDyn('finance_accounts', 'finance_accounts_tenant_idx', [
+      'tenantId',
+      'tenant_id'
+    ]);
+    await idxDyn('finance_accounts', 'finance_accounts_branch_idx', [
+      'branchId',
+      'branch_id'
+    ]);
+    await idxDyn('finance_accounts', 'finance_accounts_account_type_idx', [
+      'accountType',
+      'account_type'
+    ]);
+    await idxDyn('finance_accounts', 'finance_accounts_is_active_idx', [
+      'isActive',
+      'is_active'
+    ]);
 
     // Create finance_transactions table
     await queryInterface.createTable('finance_transactions', {
@@ -246,13 +272,29 @@ module.exports = {
       },
     });
 
-    // Create indexes for finance_transactions
-    await queryInterface.addIndex('finance_transactions', ['tenantId']);
-    await queryInterface.addIndex('finance_transactions', ['branchId']);
-    await queryInterface.addIndex('finance_transactions', ['transactionDate']);
-    await queryInterface.addIndex('finance_transactions', ['type']);
-    await queryInterface.addIndex('finance_transactions', ['status']);
-    await queryInterface.addIndex('finance_transactions', ['accountId']);
+    await idxDyn('finance_transactions', 'finance_transactions_tenant_idx', [
+      'tenantId',
+      'tenant_id'
+    ]);
+    await idxDyn('finance_transactions', 'finance_transactions_branch_idx', [
+      'branchId',
+      'branch_id'
+    ]);
+    await idxDyn(
+      'finance_transactions',
+      'finance_transactions_transaction_date_idx',
+      ['transactionDate', 'transaction_date']
+    );
+    await idxDyn('finance_transactions', 'finance_transactions_type_idx', [
+      'type'
+    ]);
+    await idxDyn('finance_transactions', 'finance_transactions_status_idx', [
+      'status'
+    ]);
+    await idxDyn('finance_transactions', 'finance_transactions_account_idx', [
+      'accountId',
+      'account_id'
+    ]);
 
     // Create finance_invoices table
     await queryInterface.createTable('finance_invoices', {
@@ -391,13 +433,24 @@ module.exports = {
       },
     });
 
-    // Create indexes for finance_invoices
-    await queryInterface.addIndex('finance_invoices', ['tenantId']);
-    await queryInterface.addIndex('finance_invoices', ['branchId']);
-    await queryInterface.addIndex('finance_invoices', ['invoiceDate']);
-    await queryInterface.addIndex('finance_invoices', ['dueDate']);
-    await queryInterface.addIndex('finance_invoices', ['type']);
-    await queryInterface.addIndex('finance_invoices', ['status']);
+    await idxDyn('finance_invoices', 'finance_invoices_tenant_idx', [
+      'tenantId',
+      'tenant_id'
+    ]);
+    await idxDyn('finance_invoices', 'finance_invoices_branch_idx', [
+      'branchId',
+      'branch_id'
+    ]);
+    await idxDyn('finance_invoices', 'finance_invoices_invoice_date_idx', [
+      'invoiceDate',
+      'invoice_date'
+    ]);
+    await idxDyn('finance_invoices', 'finance_invoices_due_date_idx', [
+      'dueDate',
+      'due_date'
+    ]);
+    await idxDyn('finance_invoices', 'finance_invoices_type_idx', ['type']);
+    await idxDyn('finance_invoices', 'finance_invoices_status_idx', ['status']);
 
     // Create finance_budgets table
     await queryInterface.createTable('finance_budgets', {
@@ -515,12 +568,20 @@ module.exports = {
       },
     });
 
-    // Create indexes for finance_budgets
-    await queryInterface.addIndex('finance_budgets', ['tenantId']);
-    await queryInterface.addIndex('finance_budgets', ['branchId']);
-    await queryInterface.addIndex('finance_budgets', ['fiscalYear']);
-    await queryInterface.addIndex('finance_budgets', ['period']);
-    await queryInterface.addIndex('finance_budgets', ['status']);
+    await idxDyn('finance_budgets', 'finance_budgets_tenant_idx', [
+      'tenantId',
+      'tenant_id'
+    ]);
+    await idxDyn('finance_budgets', 'finance_budgets_branch_idx', [
+      'branchId',
+      'branch_id'
+    ]);
+    await idxDyn('finance_budgets', 'finance_budgets_fiscal_year_idx', [
+      'fiscalYear',
+      'fiscal_year'
+    ]);
+    await idxDyn('finance_budgets', 'finance_budgets_period_idx', ['period']);
+    await idxDyn('finance_budgets', 'finance_budgets_status_idx', ['status']);
   },
 
   down: async (queryInterface, Sequelize) => {

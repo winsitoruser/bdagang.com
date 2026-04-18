@@ -2,15 +2,51 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Create partner_integrations table
-    await queryInterface.createTable('partner_integrations', {
+    const sequelize = queryInterface.sequelize;
+
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+
+    const fkTypeFor = async (tableName, columnName = 'id') => {
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+
+    const ensureTableMerge = async (tableName, tableDef) => {
+      const tableList = await queryInterface.showAllTables();
+      if (!tableList.includes(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [col, def] of Object.entries(tableDef)) {
+        if (d[col]) continue;
+        const { comment: _c, ...rest } = def;
+        await queryInterface.addColumn(tableName, col, rest);
+        d[col] = true;
+      }
+    };
+
+    const partnerPkType = await fkTypeFor('partners', 'id');
+    const outletPkType = await fkTypeFor('partner_outlets', 'id');
+    const userPkType = await fkTypeFor('users', 'id');
+
+    const partnerIntegrationsDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       partner_id: {
-        type: Sequelize.UUID,
+        type: partnerPkType,
         allowNull: false,
         references: {
           model: 'partners',
@@ -50,10 +86,10 @@ module.exports = {
         type: Sequelize.TEXT
       },
       created_by: {
-        type: Sequelize.UUID
+        type: userPkType
       },
       updated_by: {
-        type: Sequelize.UUID
+        type: userPkType
       },
       created_at: {
         type: Sequelize.DATE,
@@ -63,17 +99,17 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false
       }
-    });
+    };
+    await ensureTableMerge('partner_integrations', partnerIntegrationsDef);
 
-    // Create outlet_integrations table
-    await queryInterface.createTable('outlet_integrations', {
+    const outletIntegrationsDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       outlet_id: {
-        type: Sequelize.UUID,
+        type: outletPkType,
         allowNull: false,
         references: {
           model: 'partner_outlets',
@@ -117,10 +153,10 @@ module.exports = {
         type: Sequelize.TEXT
       },
       created_by: {
-        type: Sequelize.UUID
+        type: userPkType
       },
       updated_by: {
-        type: Sequelize.UUID
+        type: userPkType
       },
       created_at: {
         type: Sequelize.DATE,
@@ -130,22 +166,28 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: false
       }
-    });
+    };
+    await ensureTableMerge('outlet_integrations', outletIntegrationsDef);
 
-    // Add indexes
-    await queryInterface.addIndex('partner_integrations', ['partner_id']);
-    await queryInterface.addIndex('partner_integrations', ['integration_type']);
-    await queryInterface.addIndex('partner_integrations', ['partner_id', 'integration_type', 'provider'], {
-      unique: true,
-      name: 'partner_integrations_unique'
-    });
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS partner_integrations_partner_id ON "partner_integrations" ("partner_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS partner_integrations_integration_type ON "partner_integrations" ("integration_type")'
+    );
+    await sequelize.query(
+      'CREATE UNIQUE INDEX IF NOT EXISTS partner_integrations_unique ON "partner_integrations" ("partner_id", "integration_type", "provider")'
+    );
 
-    await queryInterface.addIndex('outlet_integrations', ['outlet_id']);
-    await queryInterface.addIndex('outlet_integrations', ['integration_type']);
-    await queryInterface.addIndex('outlet_integrations', ['outlet_id', 'integration_type', 'provider'], {
-      unique: true,
-      name: 'outlet_integrations_unique'
-    });
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS outlet_integrations_outlet_id ON "outlet_integrations" ("outlet_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS outlet_integrations_integration_type ON "outlet_integrations" ("integration_type")'
+    );
+    await sequelize.query(
+      'CREATE UNIQUE INDEX IF NOT EXISTS outlet_integrations_unique ON "outlet_integrations" ("outlet_id", "integration_type", "provider")'
+    );
   },
 
   down: async (queryInterface, Sequelize) => {

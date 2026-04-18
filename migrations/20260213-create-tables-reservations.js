@@ -2,37 +2,71 @@
 
 /**
  * Migration: Create Tables and Reservations
- * 
- * This migration creates:
- * 1. tables - For restaurant table management
- * 2. reservations - For customer reservations
- * 3. table_sessions - For tracking table occupancy
  */
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     const transaction = await queryInterface.sequelize.transaction();
-    
+    const sequelize = queryInterface.sequelize;
+
     try {
-      // 1. Create ENUM types
-      await queryInterface.sequelize.query(`
+      await sequelize.query(
+        `
         DO $$ BEGIN
           CREATE TYPE enum_tables_status AS ENUM('available', 'occupied', 'reserved', 'maintenance');
         EXCEPTION
           WHEN duplicate_object THEN null;
         END $$;
-      `, { transaction });
+      `,
+        { transaction }
+      );
 
-      await queryInterface.sequelize.query(`
+      await sequelize.query(
+        `
         DO $$ BEGIN
           CREATE TYPE enum_reservations_status AS ENUM('pending', 'confirmed', 'seated', 'completed', 'cancelled', 'no-show');
         EXCEPTION
           WHEN duplicate_object THEN null;
         END $$;
-      `, { transaction });
+      `,
+        { transaction }
+      );
 
-      // 2. Create tables table
-      await queryInterface.createTable('tables', {
+      const pgUdtToSequelizeType = (udt) => {
+        if (!udt) return Sequelize.UUID;
+        const u = String(udt).toLowerCase();
+        if (u === 'uuid') return Sequelize.UUID;
+        if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+        if (u === 'int8') return Sequelize.BIGINT;
+        return Sequelize.UUID;
+      };
+
+      const fkTypeFor = async (tableName, columnName = 'id') => {
+        const [rows] = await sequelize.query(
+          `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`,
+          { transaction }
+        );
+        return pgUdtToSequelizeType(rows[0]?.udt_name);
+      };
+
+      const customerFkType = await fkTypeFor('customers', 'id');
+
+      const ensureTableMerge = async (tableName, tableDef) => {
+        const tableList = await queryInterface.showAllTables({ transaction });
+        if (!tableList.includes(tableName)) {
+          await queryInterface.createTable(tableName, tableDef, { transaction });
+          return;
+        }
+        const d = await queryInterface.describeTable(tableName, { transaction });
+        for (const [col, def] of Object.entries(tableDef)) {
+          if (d[col]) continue;
+          const { comment: _c, ...rest } = def;
+          await queryInterface.addColumn(tableName, col, rest, { transaction });
+          d[col] = true;
+        }
+      };
+
+      const tablesDef = {
         id: {
           type: Sequelize.UUID,
           defaultValue: Sequelize.literal('gen_random_uuid()'),
@@ -85,26 +119,24 @@ module.exports = {
           allowNull: false,
           defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
-      }, { transaction });
+      };
 
-      // Create indexes for tables
-      await queryInterface.addIndex('tables', ['status'], {
-        name: 'idx_tables_status',
-        transaction
-      });
+      await ensureTableMerge('tables', tablesDef);
 
-      await queryInterface.addIndex('tables', ['area'], {
-        name: 'idx_tables_area',
-        transaction
-      });
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_tables_status ON "tables" ("status")',
+        { transaction }
+      );
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_tables_area ON "tables" ("area")',
+        { transaction }
+      );
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_tables_active ON "tables" ("is_active")',
+        { transaction }
+      );
 
-      await queryInterface.addIndex('tables', ['is_active'], {
-        name: 'idx_tables_active',
-        transaction
-      });
-
-      // 3. Create reservations table
-      await queryInterface.createTable('reservations', {
+      const reservationsDef = {
         id: {
           type: Sequelize.UUID,
           defaultValue: Sequelize.literal('gen_random_uuid()'),
@@ -115,10 +147,9 @@ module.exports = {
           allowNull: false,
           unique: true
         },
-        
-        // Customer Info
+
         customer_id: {
-          type: Sequelize.UUID,
+          type: customerFkType,
           references: {
             model: 'customers',
             key: 'id'
@@ -137,8 +168,7 @@ module.exports = {
         customer_email: {
           type: Sequelize.STRING(255)
         },
-        
-        // Reservation Details
+
         reservation_date: {
           type: Sequelize.DATEONLY,
           allowNull: false
@@ -156,8 +186,7 @@ module.exports = {
           defaultValue: 120,
           comment: 'Expected duration in minutes'
         },
-        
-        // Table Assignment
+
         table_id: {
           type: Sequelize.UUID,
           references: {
@@ -170,8 +199,7 @@ module.exports = {
         table_number: {
           type: Sequelize.STRING(20)
         },
-        
-        // Status & Payment
+
         status: {
           type: Sequelize.ENUM('pending', 'confirmed', 'seated', 'completed', 'cancelled', 'no-show'),
           allowNull: false,
@@ -185,8 +213,7 @@ module.exports = {
           type: Sequelize.BOOLEAN,
           defaultValue: false
         },
-        
-        // Additional Info
+
         special_requests: {
           type: Sequelize.TEXT
         },
@@ -196,8 +223,7 @@ module.exports = {
         cancellation_reason: {
           type: Sequelize.TEXT
         },
-        
-        // Staff Info (references will be added if employees table exists)
+
         created_by: {
           type: Sequelize.UUID
         },
@@ -207,8 +233,7 @@ module.exports = {
         seated_by: {
           type: Sequelize.UUID
         },
-        
-        // Timestamps
+
         confirmed_at: {
           type: Sequelize.DATE
         },
@@ -231,41 +256,36 @@ module.exports = {
           allowNull: false,
           defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
-      }, { transaction });
+      };
 
-      // Create indexes for reservations
-      await queryInterface.addIndex('reservations', ['reservation_date'], {
-        name: 'idx_reservations_date',
-        transaction
-      });
+      await ensureTableMerge('reservations', reservationsDef);
 
-      await queryInterface.addIndex('reservations', ['status'], {
-        name: 'idx_reservations_status',
-        transaction
-      });
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_reservations_date ON "reservations" ("reservation_date")',
+        { transaction }
+      );
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_reservations_status ON "reservations" ("status")',
+        { transaction }
+      );
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_reservations_customer ON "reservations" ("customer_id")',
+        { transaction }
+      );
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_reservations_table ON "reservations" ("table_id")',
+        { transaction }
+      );
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_reservations_number ON "reservations" ("reservation_number")',
+        { transaction }
+      );
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_reservations_phone ON "reservations" ("customer_phone")',
+        { transaction }
+      );
 
-      await queryInterface.addIndex('reservations', ['customer_id'], {
-        name: 'idx_reservations_customer',
-        transaction
-      });
-
-      await queryInterface.addIndex('reservations', ['table_id'], {
-        name: 'idx_reservations_table',
-        transaction
-      });
-
-      await queryInterface.addIndex('reservations', ['reservation_number'], {
-        name: 'idx_reservations_number',
-        transaction
-      });
-
-      await queryInterface.addIndex('reservations', ['customer_phone'], {
-        name: 'idx_reservations_phone',
-        transaction
-      });
-
-      // 4. Create table_sessions table
-      await queryInterface.createTable('table_sessions', {
+      const tableSessionsDef = {
         id: {
           type: Sequelize.UUID,
           defaultValue: Sequelize.literal('gen_random_uuid()'),
@@ -317,29 +337,30 @@ module.exports = {
           allowNull: false,
           defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
-      }, { transaction });
+      };
 
-      // Create indexes for table_sessions
-      await queryInterface.addIndex('table_sessions', ['table_id'], {
-        name: 'idx_table_sessions_table',
-        transaction
-      });
+      await ensureTableMerge('table_sessions', tableSessionsDef);
 
-      await queryInterface.addIndex('table_sessions', ['reservation_id'], {
-        name: 'idx_table_sessions_reservation',
-        transaction
-      });
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_table_sessions_table ON "table_sessions" ("table_id")',
+        { transaction }
+      );
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_table_sessions_reservation ON "table_sessions" ("reservation_id")',
+        { transaction }
+      );
 
-      // Index for active sessions (where ended_at IS NULL)
-      await queryInterface.sequelize.query(`
-        CREATE INDEX idx_table_sessions_active 
-        ON table_sessions(table_id, ended_at) 
+      await sequelize.query(
+        `
+        CREATE INDEX IF NOT EXISTS idx_table_sessions_active
+        ON "table_sessions"(table_id, ended_at)
         WHERE ended_at IS NULL;
-      `, { transaction });
+      `,
+        { transaction }
+      );
 
       await transaction.commit();
       console.log('✅ Tables and Reservations migration completed successfully');
-      
     } catch (error) {
       await transaction.rollback();
       console.error('❌ Migration failed:', error);
@@ -349,22 +370,22 @@ module.exports = {
 
   down: async (queryInterface, Sequelize) => {
     const transaction = await queryInterface.sequelize.transaction();
-    
+
     try {
-      // Drop tables in reverse order
       await queryInterface.dropTable('table_sessions', { transaction });
       await queryInterface.dropTable('reservations', { transaction });
       await queryInterface.dropTable('tables', { transaction });
 
-      // Drop ENUM types
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         DROP TYPE IF EXISTS enum_tables_status;
         DROP TYPE IF EXISTS enum_reservations_status;
-      `, { transaction });
+      `,
+        { transaction }
+      );
 
       await transaction.commit();
       console.log('✅ Tables and Reservations rollback completed');
-      
     } catch (error) {
       await transaction.rollback();
       console.error('❌ Rollback failed:', error);

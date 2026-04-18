@@ -1512,7 +1512,7 @@ const ReceivePage: NextPage<ReceivePageProps> = () => {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                onClick={() => window.open('/inventory/master/suppliers', '_blank')}
+                                onClick={() => router.push('/inventory/master/suppliers')}
                                 className="ml-2 border-green-200 text-green-600 hover:bg-green-50"
                                 disabled={isLoadingSuppliers}
                               >

@@ -302,56 +302,37 @@ module.exports = {
       }
     });
 
-    // Add indexes for finance_accounts
-    await queryInterface.addIndex('finance_accounts', ['accountNumber'], {
-      unique: true,
-      name: 'finance_accounts_account_number_unique'
-    });
-    await queryInterface.addIndex('finance_accounts', ['accountType'], {
-      name: 'finance_accounts_account_type_index'
-    });
-    await queryInterface.addIndex('finance_accounts', ['category'], {
-      name: 'finance_accounts_category_index'
-    });
+    const seq = queryInterface.sequelize;
+    await seq.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS finance_accounts_account_number_unique ON finance_accounts ("accountNumber");
+      CREATE INDEX IF NOT EXISTS finance_accounts_account_type_index ON finance_accounts ("accountType");
+      CREATE INDEX IF NOT EXISTS finance_accounts_category_index ON finance_accounts (category);
+      CREATE UNIQUE INDEX IF NOT EXISTS finance_transactions_transaction_number_unique ON finance_transactions ("transactionNumber");
+      CREATE INDEX IF NOT EXISTS finance_transactions_transaction_date_index ON finance_transactions ("transactionDate");
+      CREATE INDEX IF NOT EXISTS finance_transactions_transaction_type_index ON finance_transactions ("transactionType");
+      CREATE INDEX IF NOT EXISTS finance_transactions_account_id_index ON finance_transactions ("accountId");
+      CREATE INDEX IF NOT EXISTS finance_transactions_category_index ON finance_transactions (category);
+      CREATE INDEX IF NOT EXISTS finance_transactions_status_index ON finance_transactions (status);
+      CREATE INDEX IF NOT EXISTS finance_budgets_budget_period_index ON finance_budgets ("budgetPeriod");
+      CREATE INDEX IF NOT EXISTS finance_budgets_category_index ON finance_budgets (category);
+      CREATE INDEX IF NOT EXISTS finance_budgets_status_index ON finance_budgets (status);
+      CREATE INDEX IF NOT EXISTS finance_budgets_date_range_index ON finance_budgets ("startDate", "endDate");
+    `);
 
-    // Add indexes for finance_transactions
-    await queryInterface.addIndex('finance_transactions', ['transactionNumber'], {
-      unique: true,
-      name: 'finance_transactions_transaction_number_unique'
-    });
-    await queryInterface.addIndex('finance_transactions', ['transactionDate'], {
-      name: 'finance_transactions_transaction_date_index'
-    });
-    await queryInterface.addIndex('finance_transactions', ['transactionType'], {
-      name: 'finance_transactions_transaction_type_index'
-    });
-    await queryInterface.addIndex('finance_transactions', ['accountId'], {
-      name: 'finance_transactions_account_id_index'
-    });
-    await queryInterface.addIndex('finance_transactions', ['category'], {
-      name: 'finance_transactions_category_index'
-    });
-    await queryInterface.addIndex('finance_transactions', ['status'], {
-      name: 'finance_transactions_status_index'
-    });
-
-    // Add indexes for finance_budgets
-    await queryInterface.addIndex('finance_budgets', ['budgetPeriod'], {
-      name: 'finance_budgets_budget_period_index'
-    });
-    await queryInterface.addIndex('finance_budgets', ['category'], {
-      name: 'finance_budgets_category_index'
-    });
-    await queryInterface.addIndex('finance_budgets', ['status'], {
-      name: 'finance_budgets_status_index'
-    });
-    await queryInterface.addIndex('finance_budgets', ['startDate', 'endDate'], {
-      name: 'finance_budgets_date_range_index'
-    });
+    const [[{ acctCnt }]] = await seq.query(
+      'SELECT COUNT(*)::int AS "acctCnt" FROM finance_accounts'
+    );
+    const [[{ trxCnt }]] = await seq.query(
+      'SELECT COUNT(*)::int AS "trxCnt" FROM finance_transactions'
+    );
+    const [[{ bgCnt }]] = await seq.query(
+      'SELECT COUNT(*)::int AS "bgCnt" FROM finance_budgets'
+    );
 
     // Insert default accounts
     const now = new Date();
-    await queryInterface.bulkInsert('finance_accounts', [
+    if (Number(acctCnt) === 0) {
+      await queryInterface.bulkInsert('finance_accounts', [
       // Assets
       {
         id: '00000000-0000-0000-0000-000000000001',
@@ -447,10 +428,12 @@ module.exports = {
         createdAt: now,
         updatedAt: now
       }
-    ]);
+      ]);
+    }
 
     // Insert sample transactions
-    await queryInterface.bulkInsert('finance_transactions', [
+    if (Number(trxCnt) === 0) {
+      await queryInterface.bulkInsert('finance_transactions', [
       {
         id: '10000000-0000-0000-0000-000000000001',
         transactionNumber: 'TRX-2026-001',
@@ -505,10 +488,12 @@ module.exports = {
         createdAt: now,
         updatedAt: now
       }
-    ]);
+      ]);
+    }
 
     // Insert sample budgets
-    await queryInterface.bulkInsert('finance_budgets', [
+    if (Number(bgCnt) === 0) {
+      await queryInterface.bulkInsert('finance_budgets', [
       {
         id: '20000000-0000-0000-0000-000000000001',
         budgetName: 'Budget Operasional Februari 2026',
@@ -545,7 +530,8 @@ module.exports = {
         createdAt: now,
         updatedAt: now
       }
-    ]);
+      ]);
+    }
   },
 
   down: async (queryInterface, Sequelize) => {

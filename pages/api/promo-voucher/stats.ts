@@ -61,9 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const totalUsageThisMonth = promoUsageThisMonth + voucherUsageThisMonth;
 
-    // Calculate total discount given (mock calculation)
-    // In real scenario, this should come from transaction records
-    const totalDiscountGiven = 45000000; // Mock value
+    const totalDiscountGiven = 0;
 
     // Get top performing promos
     const topPromos = await Promo.findAll({

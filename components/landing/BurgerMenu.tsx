@@ -2,7 +2,20 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { Menu, X, Home, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
+import {
+  Menu,
+  X,
+  Home,
+  LogIn,
+  LogOut,
+  LayoutDashboard,
+  UserPlus,
+  Layers,
+  CreditCard,
+  MessagesSquare,
+  Building2,
+} from 'lucide-react';
+import { COMPANY_LEGAL_NAME, PRODUCT_LINE } from './brand';
 
 const BurgerMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -25,15 +38,18 @@ const BurgerMenu: React.FC = () => {
     <>
       {/* Burger Button */}
       <motion.button
+        type="button"
         onClick={toggleMenu}
-        className="fixed top-6 right-6 z-50 bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-shadow"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        aria-expanded={isOpen}
+        aria-label={isOpen ? 'Tutup menu' : 'Buka menu'}
+        className="fixed top-3 right-4 sm:top-4 sm:right-6 z-50 md:hidden rounded-full border border-slate-200/80 bg-white/90 p-3 shadow-md shadow-slate-900/10 backdrop-blur-md hover:bg-white transition-colors"
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.96 }}
       >
         {isOpen ? (
-          <X className="w-6 h-6 text-sky-600" />
+          <X className="w-6 h-6 text-slate-800" />
         ) : (
-          <Menu className="w-6 h-6 text-sky-600" />
+          <Menu className="w-6 h-6 text-slate-800" />
         )}
       </motion.button>
 
@@ -56,13 +72,16 @@ const BurgerMenu: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full w-80 bg-gradient-to-br from-sky-500 to-blue-600 z-40 shadow-2xl"
+              className="fixed top-0 right-0 h-full w-[min(100vw-3rem,20rem)] sm:w-80 bg-gradient-to-br from-slate-900 via-blue-900 to-sky-700 z-40 shadow-2xl"
             >
-              <div className="flex flex-col h-full p-8 pt-24">
+              <div className="flex flex-col h-full p-8 pt-20 sm:pt-24">
                 {/* Logo/Brand */}
                 <div className="mb-12">
                   <h2 className="text-3xl font-bold text-white mb-2">BEDAGANG</h2>
-                  <p className="text-sky-100 text-sm">Platform Manajemen Retail</p>
+                  <p className="text-sky-100/90 text-xs font-medium uppercase tracking-wide text-sky-200/80">
+                    {COMPANY_LEGAL_NAME}
+                  </p>
+                  <p className="text-sky-100/90 text-sm mt-2 leading-relaxed">{PRODUCT_LINE}</p>
                 </div>
 
                 {/* Menu Items */}
@@ -75,6 +94,39 @@ const BurgerMenu: React.FC = () => {
                     <Home className="w-5 h-5" />
                     <span className="font-medium">Beranda</span>
                   </motion.button>
+
+                  <a
+                    href="#perusahaan"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full flex items-center space-x-3 text-white hover:bg-white/10 rounded-lg p-3 transition-colors"
+                  >
+                    <Building2 className="w-5 h-5" aria-hidden />
+                    <span className="font-medium">Perusahaan</span>
+                  </a>
+                  <a
+                    href="#fitur"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full flex items-center space-x-3 text-white hover:bg-white/10 rounded-lg p-3 transition-colors"
+                  >
+                    <Layers className="w-5 h-5" aria-hidden />
+                    <span className="font-medium">Fitur</span>
+                  </a>
+                  <a
+                    href="#harga"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full flex items-center space-x-3 text-white hover:bg-white/10 rounded-lg p-3 transition-colors"
+                  >
+                    <CreditCard className="w-5 h-5" aria-hidden />
+                    <span className="font-medium">Harga</span>
+                  </a>
+                  <a
+                    href="#testimoni"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full flex items-center space-x-3 text-white hover:bg-white/10 rounded-lg p-3 transition-colors"
+                  >
+                    <MessagesSquare className="w-5 h-5" aria-hidden />
+                    <span className="font-medium">Testimoni</span>
+                  </a>
 
                   {session ? (
                     <>
@@ -109,21 +161,31 @@ const BurgerMenu: React.FC = () => {
                       </motion.button>
                     </>
                   ) : (
-                    <motion.button
-                      onClick={() => handleNavigation('/auth/login')}
-                      className="w-full flex items-center space-x-3 text-white hover:bg-white/10 rounded-lg p-3 transition-colors"
-                      whileHover={{ x: 5 }}
-                    >
-                      <LogIn className="w-5 h-5" />
-                      <span className="font-medium">Login</span>
-                    </motion.button>
+                    <>
+                      <motion.button
+                        onClick={() => handleNavigation('/auth/login')}
+                        className="w-full flex items-center space-x-3 text-white hover:bg-white/10 rounded-lg p-3 transition-colors"
+                        whileHover={{ x: 5 }}
+                      >
+                        <LogIn className="w-5 h-5" />
+                        <span className="font-medium">Login</span>
+                      </motion.button>
+                      <motion.button
+                        onClick={() => handleNavigation('/auth/register')}
+                        className="w-full flex items-center space-x-3 text-white hover:bg-white/10 rounded-lg p-3 transition-colors border border-white/20"
+                        whileHover={{ x: 5 }}
+                      >
+                        <UserPlus className="w-5 h-5" />
+                        <span className="font-medium">Daftar gratis</span>
+                      </motion.button>
+                    </>
                   )}
                 </nav>
 
                 {/* Footer */}
                 <div className="mt-auto pt-8 border-t border-white/20">
                   <p className="text-sky-100 text-xs text-center">
-                    © 2024 BEDAGANG. All rights reserved.
+                    © {new Date().getFullYear()} BEDAGANG
                   </p>
                 </div>
               </div>

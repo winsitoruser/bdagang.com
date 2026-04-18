@@ -2,15 +2,26 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const seq = queryInterface.sequelize;
+    await seq.query(`
+      DO 'BEGIN CREATE TYPE "public"."enum_products_product_type" AS ENUM(''finished'', ''raw_material'', ''manufactured''); EXCEPTION WHEN duplicate_object THEN null; END';
+    `);
+    const d = await queryInterface.describeTable('products');
+    const addIfMissing = async (column, options) => {
+      if (d[column]) return;
+      await queryInterface.addColumn('products', column, options);
+      d[column] = true;
+    };
+
     // Add new columns to products table for enhanced product management
-    await queryInterface.addColumn('products', 'product_type', {
+    await addIfMissing('product_type', {
       type: Sequelize.ENUM('finished', 'raw_material', 'manufactured'),
       allowNull: false,
       defaultValue: 'finished',
       comment: 'finished: Produk jadi siap jual, raw_material: Bahan baku, manufactured: Produk hasil produksi/racikan'
     });
 
-    await queryInterface.addColumn('products', 'recipe_id', {
+    await addIfMissing('recipe_id', {
       type: Sequelize.INTEGER,
       allowNull: true,
       references: {
@@ -22,7 +33,7 @@ module.exports = {
       comment: 'Link to recipe if product is manufactured'
     });
 
-    await queryInterface.addColumn('products', 'supplier_id', {
+    await addIfMissing('supplier_id', {
       type: Sequelize.INTEGER,
       allowNull: true,
       references: {
@@ -34,98 +45,107 @@ module.exports = {
       comment: 'Primary supplier for this product'
     });
 
-    await queryInterface.addColumn('products', 'purchase_price', {
+    await addIfMissing('purchase_price', {
       type: Sequelize.DECIMAL(15, 2),
       allowNull: true,
       comment: 'Harga beli dari supplier (untuk finished & raw_material)'
     });
 
-    await queryInterface.addColumn('products', 'production_cost', {
+    await addIfMissing('production_cost', {
       type: Sequelize.DECIMAL(15, 2),
       allowNull: true,
       comment: 'Biaya produksi (untuk manufactured products, calculated from recipe)'
     });
 
-    await queryInterface.addColumn('products', 'markup_percentage', {
+    await addIfMissing('markup_percentage', {
       type: Sequelize.DECIMAL(5, 2),
       allowNull: true,
       defaultValue: 0,
       comment: 'Markup percentage for pricing'
     });
 
-    await queryInterface.addColumn('products', 'can_be_sold', {
+    await addIfMissing('can_be_sold', {
       type: Sequelize.BOOLEAN,
       defaultValue: true,
       comment: 'Apakah produk bisa dijual (raw_material biasanya false)'
     });
 
-    await queryInterface.addColumn('products', 'can_be_purchased', {
+    await addIfMissing('can_be_purchased', {
       type: Sequelize.BOOLEAN,
       defaultValue: true,
       comment: 'Apakah produk bisa dibeli dari supplier'
     });
 
-    await queryInterface.addColumn('products', 'can_be_produced', {
+    await addIfMissing('can_be_produced', {
       type: Sequelize.BOOLEAN,
       defaultValue: false,
       comment: 'Apakah produk bisa diproduksi (manufactured = true)'
     });
 
-    await queryInterface.addColumn('products', 'lead_time_days', {
+    await addIfMissing('lead_time_days', {
       type: Sequelize.INTEGER,
       defaultValue: 0,
       comment: 'Lead time dari supplier dalam hari'
     });
 
-    await queryInterface.addColumn('products', 'production_time_minutes', {
+    await addIfMissing('production_time_minutes', {
       type: Sequelize.INTEGER,
       defaultValue: 0,
       comment: 'Waktu produksi dalam menit (untuk manufactured)'
     });
 
-    await queryInterface.addColumn('products', 'batch_size', {
+    await addIfMissing('batch_size', {
       type: Sequelize.DECIMAL(10, 2),
       defaultValue: 1,
       comment: 'Ukuran batch untuk produksi'
     });
 
-    await queryInterface.addColumn('products', 'quality_grade', {
+    await addIfMissing('quality_grade', {
       type: Sequelize.ENUM('A', 'B', 'C'),
       allowNull: true,
       comment: 'Grade kualitas produk'
     });
 
-    await queryInterface.addColumn('products', 'shelf_life_days', {
+    await addIfMissing('shelf_life_days', {
       type: Sequelize.INTEGER,
       allowNull: true,
       comment: 'Umur simpan produk dalam hari'
     });
 
-    await queryInterface.addColumn('products', 'storage_temperature', {
+    await addIfMissing('storage_temperature', {
       type: Sequelize.STRING(50),
       allowNull: true,
       comment: 'Suhu penyimpanan (e.g., "2-8°C", "Room Temperature")'
     });
 
-    await queryInterface.addColumn('products', 'requires_batch_tracking', {
+    await addIfMissing('requires_batch_tracking', {
       type: Sequelize.BOOLEAN,
       defaultValue: false,
       comment: 'Apakah produk memerlukan tracking batch/lot'
     });
 
-    await queryInterface.addColumn('products', 'requires_expiry_tracking', {
+    await addIfMissing('requires_expiry_tracking', {
       type: Sequelize.BOOLEAN,
       defaultValue: false,
       comment: 'Apakah produk memerlukan tracking tanggal kadaluarsa'
     });
 
-    // Add indexes for better query performance
-    await queryInterface.addIndex('products', ['product_type']);
-    await queryInterface.addIndex('products', ['recipe_id']);
-    await queryInterface.addIndex('products', ['supplier_id']);
-    await queryInterface.addIndex('products', ['can_be_sold']);
-    await queryInterface.addIndex('products', ['can_be_purchased']);
-    await queryInterface.addIndex('products', ['can_be_produced']);
+    const desc = await queryInterface.describeTable('products');
+    const idx = [
+      ['products_product_type_idx', 'product_type'],
+      ['products_recipe_id_idx', 'recipe_id'],
+      ['products_supplier_id_idx', 'supplier_id'],
+      ['products_can_be_sold_idx', 'can_be_sold'],
+      ['products_can_be_purchased_idx', 'can_be_purchased'],
+      ['products_can_be_produced_idx', 'can_be_produced']
+    ];
+    for (const [name, col] of idx) {
+      if (desc[col]) {
+        await seq.query(
+          `CREATE INDEX IF NOT EXISTS "${name}" ON products ("${col}");`
+        );
+      }
+    }
   },
 
   down: async (queryInterface, Sequelize) => {

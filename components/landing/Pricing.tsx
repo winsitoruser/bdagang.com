@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Check, Zap } from 'lucide-react';
 import { useRouter } from 'next/router';
+import { COMPANY_LEGAL_NAME } from './brand';
 
 const Pricing: React.FC = () => {
   const router = useRouter();
@@ -11,58 +12,58 @@ const Pricing: React.FC = () => {
       name: 'Starter',
       price: 'Gratis',
       period: 'Selamanya',
-      description: 'Sempurna untuk bisnis yang baru mulai',
+      description: 'Cocok untuk UMKM satu lokasi yang ingin digitalisasi bertahap',
       features: [
-        '1 Outlet',
-        'Unlimited Transaksi',
-        'Basic POS',
-        'Inventory Management',
-        'Sales Report',
-        'Customer Database',
-        'Cloud Backup',
-        'Email Support',
+        '1 outlet',
+        'Transaksi tanpa batas (fair use)',
+        'POS dasar & cetak struk',
+        'Inventori & katalog produk',
+        'Laporan penjualan harian',
+        'Basis data pelanggan',
+        'Backup cloud',
+        'Dukungan email',
       ],
-      cta: 'Mulai Gratis',
+      cta: 'Aktifkan Starter',
       popular: false,
     },
     {
       name: 'Professional',
       price: 'Rp 299K',
       period: '/bulan',
-      description: 'Untuk bisnis yang sedang berkembang',
+      description: 'Untuk restoran berkembang & retail multi-shift yang butuh insight lebih',
       features: [
-        'Hingga 3 Outlet',
-        'Unlimited Transaksi',
-        'Advanced POS',
-        'Inventory Management',
-        'Advanced Analytics',
-        'Customer Loyalty Program',
-        'Employee Management',
-        'Payment Integration',
-        'Priority Support',
-        'Custom Receipt',
+        'Hingga 3 outlet',
+        'Transaksi tanpa batas (fair use)',
+        'POS lanjutan & promosi',
+        'Inventori & mutasi stok',
+        'Analitik & dasbor manajemen',
+        'Program loyalitas & member',
+        'Manajemen karyawan & shift',
+        'Integrasi kanal pembayaran',
+        'Prioritas dukungan',
+        'Desain struk sesuai brand',
       ],
-      cta: 'Coba 14 Hari Gratis',
+      cta: 'Trial Professional 14 hari',
       popular: true,
     },
     {
       name: 'Enterprise',
       price: 'Custom',
-      period: 'Hubungi Kami',
-      description: 'Solusi lengkap untuk bisnis besar',
+      period: 'Hubungi kami',
+      description: 'Grup F&B, ritel nasional, atau integrasi khusus — kami rancang bersama',
       features: [
-        'Unlimited Outlet',
-        'Unlimited Transaksi',
-        'Full Features',
-        'Multi-Warehouse',
-        'API Integration',
-        'Custom Development',
-        'Dedicated Account Manager',
-        'On-premise Option',
-        '24/7 Priority Support',
-        'Training & Onboarding',
+        'Outlet tanpa batas (sesuai kontrak)',
+        'Volume transaksi enterprise',
+        'Seluruh modul & SLA dedicated',
+        'Multi-gudang & distribusi',
+        'API & integrasi sistem korporat',
+        'Pengembangan fitur khusus',
+        'Account manager berdedikasi',
+        'Opsi hybrid / on-premise (diskusi)',
+        'Dukungan prioritas 24/7',
+        'Pelatihan & change management',
       ],
-      cta: 'Hubungi Sales',
+      cta: 'Diskusi dengan tim kami',
       popular: false,
     },
   ];
@@ -77,7 +78,7 @@ const Pricing: React.FC = () => {
   };
 
   return (
-    <section className="relative py-20 bg-white overflow-hidden">
+    <section id="harga" className="relative scroll-mt-24 py-24 bg-white overflow-hidden">
       {/* Background Decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-sky-200/20 rounded-full blur-3xl" />
@@ -91,16 +92,22 @@ const Pricing: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-16"
+          className="text-center mb-16 max-w-3xl mx-auto"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Harga yang
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-600 to-blue-600">
-              {' '}Transparan
+          <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+            Langganan SaaS
+          </span>
+          <h2 className="mt-5 text-4xl md:text-5xl font-bold text-slate-900 tracking-tight">
+            Investasi jelas,
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-sky-600 to-blue-700">
+              {' '}
+              tanpa tebak-tebakan
             </span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Pilih paket yang sesuai dengan kebutuhan bisnis Anda. Upgrade atau downgrade kapan saja.
+          <p className="mt-4 text-lg md:text-xl text-slate-600 leading-relaxed">
+            Model berlangganan BEDAGANG disusun agar restoran, kafe, dan ritel bisa memilih tier yang
+            selaras dengan jumlah outlet dan kompleksitas operasi — dengan bimbingan tim{' '}
+            {COMPANY_LEGAL_NAME}.
           </p>
         </motion.div>
 
@@ -113,8 +120,10 @@ const Pricing: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
-              className={`relative bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 ${
-                plan.popular ? 'ring-2 ring-sky-500 scale-105' : ''
+              className={`relative bg-white rounded-3xl p-8 border border-slate-200/90 shadow-sm shadow-slate-900/5 hover:shadow-xl transition-all duration-300 ${
+                plan.popular
+                  ? 'ring-2 ring-sky-500 border-sky-200/80 md:scale-[1.02] z-[1]'
+                  : 'hover:border-slate-300'
               }`}
             >
               {/* Popular Badge */}
@@ -133,12 +142,12 @@ const Pricing: React.FC = () => {
                 <p className="text-gray-600 text-sm mb-4">{plan.description}</p>
                 <div className="mb-2">
                   <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                  {plan.period !== 'Hubungi Kami' && (
-                    <span className="text-gray-600 ml-2">{plan.period}</span>
+                  {plan.period !== 'Hubungi kami' && (
+                    <span className="text-slate-600 ml-2">{plan.period}</span>
                   )}
                 </div>
-                {plan.period === 'Hubungi Kami' && (
-                  <p className="text-gray-600 text-sm">{plan.period}</p>
+                {plan.period === 'Hubungi kami' && (
+                  <p className="text-slate-600 text-sm">{plan.period}</p>
                 )}
               </div>
 
@@ -154,13 +163,14 @@ const Pricing: React.FC = () => {
 
               {/* CTA Button */}
               <motion.button
+                type="button"
                 onClick={() => handleCTA(plan.name)}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`w-full py-3 rounded-full font-semibold transition-all ${
+                className={`w-full py-3.5 rounded-full font-semibold transition-all ${
                   plan.popular
-                    ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-lg hover:shadow-xl'
-                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    ? 'bg-gradient-to-r from-sky-600 to-blue-700 text-white shadow-md shadow-sky-600/25 hover:shadow-lg'
+                    : 'bg-slate-100 text-slate-900 hover:bg-slate-200/90'
                 }`}
               >
                 {plan.cta}
@@ -177,8 +187,9 @@ const Pricing: React.FC = () => {
           transition={{ duration: 0.8, delay: 0.3 }}
           className="mt-16 text-center"
         >
-          <p className="text-gray-600">
-            Semua paket termasuk free trial 14 hari. Tidak perlu kartu kredit untuk memulai.
+          <p className="text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            Paket berbayar umumnya mencakup trial 14 hari. Detail kontrak enterprise akan disepakati
+            langsung dengan perwakilan {COMPANY_LEGAL_NAME}.
           </p>
         </motion.div>
       </div>

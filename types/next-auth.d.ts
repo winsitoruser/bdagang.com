@@ -44,6 +44,8 @@ declare module "next-auth/jwt" {
   /** Memperluas tipe JWT untuk menambahkan properti khusus */
   interface JWT {
     id?: string
+    email?: string
+    name?: string
     role?: string
     businessName?: string
     position?: string

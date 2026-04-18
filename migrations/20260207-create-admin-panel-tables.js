@@ -2,8 +2,42 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // 1. Create partners table
-    await queryInterface.createTable('partners', {
+    const sequelize = queryInterface.sequelize;
+
+    const ensureTableMerge = async (tableName, tableDef) => {
+      const tableList = await queryInterface.showAllTables();
+      if (!tableList.includes(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [col, def] of Object.entries(tableDef)) {
+        if (d[col]) continue;
+        const { comment: _c, ...rest } = def;
+        await queryInterface.addColumn(tableName, col, rest);
+        d[col] = true;
+      }
+    };
+
+    /** Match FK column types to existing referenced PK types (handles INT vs UUID drift). */
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+    const fkTypeFor = async (tableName, columnName = 'id') => {
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns
+         WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+
+    // 1. Create partners table (merge columns if table exists but is incomplete)
+    const partnerTableDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -100,21 +134,22 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
 
-    // Add indexes for partners
-    await queryInterface.addIndex('partners', ['status'], {
-      name: 'idx_partners_status'
-    });
-    await queryInterface.addIndex('partners', ['activation_status'], {
-      name: 'idx_partners_activation_status'
-    });
-    await queryInterface.addIndex('partners', ['email'], {
-      name: 'idx_partners_email'
-    });
+    await ensureTableMerge('partners', partnerTableDef);
+
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_partners_status ON "partners" ("status")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_partners_activation_status ON "partners" ("activation_status")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_partners_email ON "partners" ("email")'
+    );
 
     // 2. Create subscription_packages table
-    await queryInterface.createTable('subscription_packages', {
+    const subscriptionPackagesDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -171,10 +206,11 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('subscription_packages', subscriptionPackagesDef);
 
     // 3. Create partner_subscriptions table
-    await queryInterface.createTable('partner_subscriptions', {
+    const partnerSubscriptionsDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -241,18 +277,18 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('partner_subscriptions', partnerSubscriptionsDef);
 
-    // Add indexes for partner_subscriptions
-    await queryInterface.addIndex('partner_subscriptions', ['partner_id'], {
-      name: 'idx_partner_subscriptions_partner'
-    });
-    await queryInterface.addIndex('partner_subscriptions', ['status'], {
-      name: 'idx_partner_subscriptions_status'
-    });
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_partner_subscriptions_partner ON "partner_subscriptions" ("partner_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_partner_subscriptions_status ON "partner_subscriptions" ("status")'
+    );
 
     // 4. Create partner_outlets table
-    await queryInterface.createTable('partner_outlets', {
+    const partnerOutletsDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -319,25 +355,27 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('partner_outlets', partnerOutletsDef);
 
-    // Add indexes for partner_outlets
-    await queryInterface.addIndex('partner_outlets', ['partner_id'], {
-      name: 'idx_partner_outlets_partner'
-    });
-    await queryInterface.addIndex('partner_outlets', ['outlet_code'], {
-      name: 'idx_partner_outlets_code'
-    });
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_partner_outlets_partner ON "partner_outlets" ("partner_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_partner_outlets_code ON "partner_outlets" ("outlet_code")'
+    );
 
     // 5. Create partner_users table
-    await queryInterface.createTable('partner_users', {
+    const partnerUsersPartnerFkType = await fkTypeFor('partners', 'id');
+    const partnerUsersOutletFkType = await fkTypeFor('partner_outlets', 'id');
+    const partnerUsersDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       partner_id: {
-        type: Sequelize.UUID,
+        type: partnerUsersPartnerFkType,
         allowNull: false,
         references: {
           model: 'partners',
@@ -346,7 +384,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       outlet_id: {
-        type: Sequelize.UUID,
+        type: partnerUsersOutletFkType,
         allowNull: true,
         references: {
           model: 'partner_outlets',
@@ -394,25 +432,27 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('partner_users', partnerUsersDef);
 
-    // Add indexes for partner_users
-    await queryInterface.addIndex('partner_users', ['partner_id'], {
-      name: 'idx_partner_users_partner'
-    });
-    await queryInterface.addIndex('partner_users', ['email'], {
-      name: 'idx_partner_users_email'
-    });
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_partner_users_partner ON "partner_users" ("partner_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_partner_users_email ON "partner_users" ("email")'
+    );
 
     // 6. Create activation_requests table
-    await queryInterface.createTable('activation_requests', {
+    const activationPartnerFkType = await fkTypeFor('partners', 'id');
+    const activationPackageFkType = await fkTypeFor('subscription_packages', 'id');
+    const activationRequestsDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       partner_id: {
-        type: Sequelize.UUID,
+        type: activationPartnerFkType,
         allowNull: false,
         references: {
           model: 'partners',
@@ -421,7 +461,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       package_id: {
-        type: Sequelize.UUID,
+        type: activationPackageFkType,
         allowNull: false,
         references: {
           model: 'subscription_packages',
@@ -468,64 +508,161 @@ module.exports = {
         allowNull: false,
         defaultValue: Sequelize.NOW
       }
-    });
+    };
+    await ensureTableMerge('activation_requests', activationRequestsDef);
 
-    // Add indexes for activation_requests
-    await queryInterface.addIndex('activation_requests', ['status'], {
-      name: 'idx_activation_requests_status'
-    });
-    await queryInterface.addIndex('activation_requests', ['partner_id'], {
-      name: 'idx_activation_requests_partner'
-    });
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_activation_requests_status ON "activation_requests" ("status")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_activation_requests_partner ON "activation_requests" ("partner_id")'
+    );
 
-    // Insert sample subscription packages
-    await queryInterface.bulkInsert('subscription_packages', [
-      {
-        id: '00000000-0000-0000-0000-000000000001',
-        name: 'Starter',
-        description: 'Paket untuk usaha kecil - cocok untuk toko retail atau apotek dengan 1 outlet',
-        price_monthly: 99000,
-        price_yearly: 990000,
-        max_outlets: 1,
-        max_users: 3,
-        max_products: 500,
-        max_transactions_per_month: 1000,
-        features: JSON.stringify(['pos', 'inventory', 'basic_reports']),
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date()
-      },
-      {
-        id: '00000000-0000-0000-0000-000000000002',
-        name: 'Professional',
-        description: 'Paket untuk usaha menengah - multi outlet dengan fitur lengkap',
-        price_monthly: 299000,
-        price_yearly: 2990000,
-        max_outlets: 5,
-        max_users: 10,
-        max_products: 5000,
-        max_transactions_per_month: 10000,
-        features: JSON.stringify(['pos', 'inventory', 'advanced_reports', 'multi_outlet', 'loyalty', 'analytics']),
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date()
-      },
-      {
-        id: '00000000-0000-0000-0000-000000000003',
-        name: 'Enterprise',
-        description: 'Paket untuk usaha besar - unlimited outlets dan fitur premium',
-        price_monthly: 999000,
-        price_yearly: 9990000,
-        max_outlets: 999,
-        max_users: 999,
-        max_products: 999999,
-        max_transactions_per_month: null,
-        features: JSON.stringify(['pos', 'inventory', 'advanced_reports', 'multi_outlet', 'loyalty', 'analytics', 'api_access', 'custom_integration', 'priority_support']),
-        is_active: true,
-        created_at: new Date(),
-        updated_at: new Date()
-      }
-    ]);
+    // Insert sample subscription packages (only when empty; id type must match existing column)
+    const [pkgRows] = await sequelize.query(
+      'SELECT COUNT(*)::int AS c FROM "subscription_packages"'
+    );
+    const [spkIdRows] = await sequelize.query(
+      `SELECT udt_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'subscription_packages' AND column_name = 'id'`
+    );
+    const spkIdUdt = String(spkIdRows[0]?.udt_name || '').toLowerCase();
+    const pkgIdsAreInteger = spkIdUdt === 'int4' || spkIdUdt === 'integer';
+
+    if (Number(pkgRows[0].c) === 0) {
+      const seedRows = pkgIdsAreInteger
+        ? [
+            {
+              id: 1,
+              name: 'Starter',
+              description:
+                'Paket untuk usaha kecil - cocok untuk toko retail atau apotek dengan 1 outlet',
+              price_monthly: 99000,
+              price_yearly: 990000,
+              max_outlets: 1,
+              max_users: 3,
+              max_products: 500,
+              max_transactions_per_month: 1000,
+              features: JSON.stringify(['pos', 'inventory', 'basic_reports']),
+              is_active: true,
+              created_at: new Date(),
+              updated_at: new Date()
+            },
+            {
+              id: 2,
+              name: 'Professional',
+              description: 'Paket untuk usaha menengah - multi outlet dengan fitur lengkap',
+              price_monthly: 299000,
+              price_yearly: 2990000,
+              max_outlets: 5,
+              max_users: 10,
+              max_products: 5000,
+              max_transactions_per_month: 10000,
+              features: JSON.stringify([
+                'pos',
+                'inventory',
+                'advanced_reports',
+                'multi_outlet',
+                'loyalty',
+                'analytics'
+              ]),
+              is_active: true,
+              created_at: new Date(),
+              updated_at: new Date()
+            },
+            {
+              id: 3,
+              name: 'Enterprise',
+              description: 'Paket untuk usaha besar - unlimited outlets dan fitur premium',
+              price_monthly: 999000,
+              price_yearly: 9990000,
+              max_outlets: 999,
+              max_users: 999,
+              max_products: 999999,
+              max_transactions_per_month: null,
+              features: JSON.stringify([
+                'pos',
+                'inventory',
+                'advanced_reports',
+                'multi_outlet',
+                'loyalty',
+                'analytics',
+                'api_access',
+                'custom_integration',
+                'priority_support'
+              ]),
+              is_active: true,
+              created_at: new Date(),
+              updated_at: new Date()
+            }
+          ]
+        : [
+            {
+              id: '00000000-0000-0000-0000-000000000001',
+              name: 'Starter',
+              description:
+                'Paket untuk usaha kecil - cocok untuk toko retail atau apotek dengan 1 outlet',
+              price_monthly: 99000,
+              price_yearly: 990000,
+              max_outlets: 1,
+              max_users: 3,
+              max_products: 500,
+              max_transactions_per_month: 1000,
+              features: JSON.stringify(['pos', 'inventory', 'basic_reports']),
+              is_active: true,
+              created_at: new Date(),
+              updated_at: new Date()
+            },
+            {
+              id: '00000000-0000-0000-0000-000000000002',
+              name: 'Professional',
+              description: 'Paket untuk usaha menengah - multi outlet dengan fitur lengkap',
+              price_monthly: 299000,
+              price_yearly: 2990000,
+              max_outlets: 5,
+              max_users: 10,
+              max_products: 5000,
+              max_transactions_per_month: 10000,
+              features: JSON.stringify([
+                'pos',
+                'inventory',
+                'advanced_reports',
+                'multi_outlet',
+                'loyalty',
+                'analytics'
+              ]),
+              is_active: true,
+              created_at: new Date(),
+              updated_at: new Date()
+            },
+            {
+              id: '00000000-0000-0000-0000-000000000003',
+              name: 'Enterprise',
+              description: 'Paket untuk usaha besar - unlimited outlets dan fitur premium',
+              price_monthly: 999000,
+              price_yearly: 9990000,
+              max_outlets: 999,
+              max_users: 999,
+              max_products: 999999,
+              max_transactions_per_month: null,
+              features: JSON.stringify([
+                'pos',
+                'inventory',
+                'advanced_reports',
+                'multi_outlet',
+                'loyalty',
+                'analytics',
+                'api_access',
+                'custom_integration',
+                'priority_support'
+              ]),
+              is_active: true,
+              created_at: new Date(),
+              updated_at: new Date()
+            }
+          ];
+      await queryInterface.bulkInsert('subscription_packages', seedRows);
+    }
 
     console.log('✅ Admin panel tables created successfully');
   },

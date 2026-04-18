@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { getTenantId } from '@/lib/api/tenantScope';
 const db = require('../../../../models');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -8,6 +9,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const session = await getServerSession(req, res, authOptions);
     if (!session) {
       return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const tenantId = getTenantId(session);
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Tenant context required' });
     }
 
     const { TableSession, Table } = db;
@@ -21,7 +27,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const sessions = await TableSession.findAll({
           where,
-          include: [{ model: Table, as: 'table' }],
+          include: [
+            {
+              model: Table,
+              as: 'table',
+              where: { tenantId },
+              required: true
+            }
+          ],
           order: [['createdAt', 'DESC']]
         });
 
@@ -35,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         // Check if table is available
-        const table = await Table.findByPk(tId);
+        const table = await Table.findOne({ where: { id: tId, tenantId } });
         if (!table) {
           return res.status(404).json({ error: 'Table not found' });
         }

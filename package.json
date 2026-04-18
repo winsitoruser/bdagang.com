@@ -27,6 +27,9 @@
     "netlify:deploy:prod": "netlify deploy --prod",
     "db:migrate": "sequelize-cli db:migrate",
     "db:seed": "sequelize-cli db:seed:all",
+    "db:seed:master": "sequelize-cli db:seed --seed 20260213-create-master-account.js",
+    "db:ensure:master": "node scripts/ensure-master-admin.js",
+    "dev:credentials": "node scripts/dev-credentials.js",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
     "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
     "db:create": "sequelize-cli db:create",
@@ -37,7 +40,9 @@
     "create-demo-user": "node scripts/create-demo-user.js",
     "setup-users": "node scripts/setup-users-table.js",
     "create-super-user": "node scripts/create-super-user.js",
-    "create-full-access": "node scripts/create-full-access-user.js"
+    "create-full-access": "node scripts/create-full-access-user.js",
+    "create-tenant-account": "node scripts/create-verified-tenant-account.js",
+    "seed:opanel": "node scripts/seed-opanel-demo-data.js"
   },
   "dependencies": {
     "@ant-design/icons": "^6.0.0",

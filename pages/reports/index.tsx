@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
   BarChart3, TrendingUp, TrendingDown, DollarSign,
   Users, ShoppingCart, Calendar, Download, Filter,
@@ -24,8 +24,9 @@ interface ReportSummary {
 
 const ReportsPage: React.FC = () => {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [dateRange, setDateRange] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
@@ -46,13 +47,7 @@ const ReportsPage: React.FC = () => {
     }
   }, [status, router]);
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      fetchReportSummary();
-    }
-  }, [status, dateRange]);
-
-  const fetchReportSummary = async () => {
+  const fetchReportSummary = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/reports/summary?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
@@ -65,6 +60,64 @@ const ReportsPage: React.FC = () => {
       console.error('Error fetching report summary:', error);
     } finally {
       setLoading(false);
+    }
+  }, [dateRange.startDate, dateRange.endDate]);
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchReportSummary();
+    }
+  }, [status, fetchReportSummary]);
+
+  const downloadJson = (filename: string, payload: unknown) => {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportBundle = async () => {
+    setExporting(true);
+    try {
+      const q = new URLSearchParams({
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+      });
+      const [summaryRes, salesRes, invRes, custRes, finRes, staffRes] = await Promise.all([
+        fetch(`/api/reports/summary?${q}`),
+        fetch(`/api/reports/comprehensive?reportType=sales&${q}&groupBy=day`),
+        fetch(`/api/reports/comprehensive?reportType=inventory&${q}`),
+        fetch(`/api/reports/comprehensive?reportType=customers&${q}`),
+        fetch(`/api/reports/comprehensive?reportType=financial&${q}`),
+        fetch(`/api/reports/comprehensive?reportType=staff&${q}`),
+      ]);
+      const [summaryJson, salesJson, invJson, custJson, finJson, staffJson] = await Promise.all([
+        summaryRes.json(),
+        salesRes.json(),
+        invRes.json(),
+        custRes.json(),
+        finRes.json(),
+        staffRes.json(),
+      ]);
+      downloadJson(`laporan-bundle-${dateRange.startDate}_${dateRange.endDate}.json`, {
+        exportedAt: new Date().toISOString(),
+        period: dateRange,
+        summary: summaryJson,
+        sales: salesJson,
+        inventory: invJson,
+        customers: custJson,
+        financial: finJson,
+        staff: staffJson,
+      });
+    } catch (e) {
+      console.error('Export bundle failed:', e);
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -89,45 +142,45 @@ const ReportsPage: React.FC = () => {
 
   const reportTypes = [
     {
-      title: 'Sales Report',
-      description: 'Detailed sales analysis and trends',
+      title: 'Laporan Penjualan',
+      description: 'Tren penjualan, metode bayar, dan produk terlaris',
       icon: DollarSign,
       href: '/reports/sales',
       color: 'from-green-500 to-emerald-600'
     },
     {
-      title: 'Kitchen Reports',
-      description: 'Kitchen performance and efficiency',
+      title: 'Laporan Dapur',
+      description: 'Performa dapur & efisiensi (Kitchen)',
       icon: BarChart3,
       href: '/kitchen/reports',
       color: 'from-orange-500 to-red-600'
     },
     {
-      title: 'Inventory Reports',
-      description: 'Stock levels and movements',
+      title: 'Laporan Inventori',
+      description: 'Stok, pergerakan, dan nilai persediaan',
       icon: ShoppingCart,
-      href: '/reports/inventory',
+      href: '/inventory/reports',
       color: 'from-blue-500 to-indigo-600'
     },
     {
-      title: 'Customer Analytics',
-      description: 'Customer behavior and preferences',
+      title: 'Analitik Pelanggan',
+      description: 'Perilaku dan segmentasi pelanggan',
       icon: Users,
-      href: '/reports/customers',
+      href: '/customers/reports',
       color: 'from-purple-500 to-pink-600'
     },
     {
-      title: 'Staff Performance',
-      description: 'Employee productivity metrics',
+      title: 'Performa Staff / Kasir',
+      description: 'Transaksi per staff dari data POS',
       icon: Activity,
       href: '/reports/staff',
       color: 'from-cyan-500 to-blue-600'
     },
     {
-      title: 'Financial Reports',
-      description: 'Revenue, costs, and profits',
+      title: 'Laporan Keuangan',
+      description: 'Ringkasan pendapatan, biaya, dan laporan keuangan',
       icon: PieChart,
-      href: '/reports/financial',
+      href: '/finance/reports',
       color: 'from-amber-500 to-orange-600'
     }
   ];
@@ -145,7 +198,7 @@ const ReportsPage: React.FC = () => {
   return (
     <DashboardLayout>
       <Head>
-        <title>Reports | BEDAGANG</title>
+        <title>Laporan & Analitik | BEDAGANG</title>
       </Head>
 
       <div className="space-y-6">
@@ -154,14 +207,14 @@ const ReportsPage: React.FC = () => {
           <div className="flex items-center">
             <div className="h-8 w-1.5 bg-gradient-to-b from-sky-400 to-blue-500 rounded-full mr-3"></div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">Reports & Analytics</h1>
-              <p className="text-gray-600">Business insights and performance metrics</p>
+              <h1 className="text-2xl font-bold text-gray-800">Laporan &amp; Analitik</h1>
+              <p className="text-gray-600">Ringkasan bisnis dan pintu masuk ke semua laporan</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             {/* Date Range */}
-            <div className="flex items-center gap-2">
+            <div id="report-period-filter" className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-gray-500" />
               <input
                 type="date"
@@ -169,7 +222,7 @@ const ReportsPage: React.FC = () => {
                 onChange={(e) => setDateRange({...dateRange, startDate: e.target.value})}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
-              <span className="text-gray-500">to</span>
+              <span className="text-gray-500">s/d</span>
               <input
                 type="date"
                 value={dateRange.endDate}
@@ -178,9 +231,9 @@ const ReportsPage: React.FC = () => {
               />
             </div>
             
-            <Button variant="outline">
+            <Button variant="outline" disabled={exporting || loading} onClick={handleExportBundle}>
               <Download className="w-4 h-4 mr-2" />
-              Export
+              {exporting ? 'Mengekspor…' : 'Export JSON'}
             </Button>
           </div>
         </div>
@@ -191,7 +244,7 @@ const ReportsPage: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Sales</p>
+                  <p className="text-sm text-gray-600 mb-1">Total penjualan</p>
                   <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.totalSales)}</p>
                   <div className={`flex items-center text-sm mt-1 ${getChangeColor(summary.salesChange)}`}>
                     {getChangeIcon(summary.salesChange)}
@@ -207,7 +260,7 @@ const ReportsPage: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Orders</p>
+                  <p className="text-sm text-gray-600 mb-1">Jumlah transaksi</p>
                   <p className="text-2xl font-bold text-gray-900">{summary.totalOrders.toLocaleString()}</p>
                   <div className={`flex items-center text-sm mt-1 ${getChangeColor(summary.ordersChange)}`}>
                     {getChangeIcon(summary.ordersChange)}
@@ -223,7 +276,7 @@ const ReportsPage: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Customers</p>
+                  <p className="text-sm text-gray-600 mb-1">Pelanggan (unik)</p>
                   <p className="text-2xl font-bold text-gray-900">{summary.totalCustomers.toLocaleString()}</p>
                   <div className={`flex items-center text-sm mt-1 ${getChangeColor(summary.customersChange)}`}>
                     {getChangeIcon(summary.customersChange)}
@@ -239,9 +292,9 @@ const ReportsPage: React.FC = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Avg Order Value</p>
+                  <p className="text-sm text-gray-600 mb-1">Nilai rata-rata per transaksi</p>
                   <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.avgOrderValue)}</p>
-                  <div className="text-sm text-gray-500 mt-1">Per transaction</div>
+                  <div className="text-sm text-gray-500 mt-1">Per transaksi</div>
                 </div>
                 <BarChart3 className="w-8 h-8 text-amber-600" />
               </div>
@@ -251,12 +304,12 @@ const ReportsPage: React.FC = () => {
 
         {/* Report Types Grid */}
         <div>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Available Reports</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Jenis laporan</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {reportTypes.map((report, index) => {
               const Icon = report.icon;
               return (
-                <a key={index} href={report.href}>
+                <Link key={index} href={report.href} className="block">
                   <Card className="hover:shadow-xl transition-all cursor-pointer group h-full">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between mb-4">
@@ -273,7 +326,7 @@ const ReportsPage: React.FC = () => {
                       </p>
                     </CardContent>
                   </Card>
-                </a>
+                </Link>
               );
             })}
           </div>
@@ -282,25 +335,29 @@ const ReportsPage: React.FC = () => {
         {/* Quick Actions */}
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle>Aksi cepat</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Button variant="outline" className="h-20 flex flex-col items-center justify-center" disabled={exporting || loading} onClick={handleExportBundle}>
                 <Download className="text-xl mb-1" />
-                <span className="text-sm">Export All</span>
+                <span className="text-sm">Export semua (JSON)</span>
               </Button>
-              <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-                <Calendar className="text-xl mb-1" />
-                <span className="text-sm">Schedule Report</span>
+              <Button variant="outline" className="h-20 flex flex-col items-center justify-center" asChild>
+                <Link href="/settings/notifications">
+                  <Calendar className="text-xl mb-1" />
+                  <span className="text-sm">Notifikasi &amp; jadwal</span>
+                </Link>
               </Button>
-              <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
+              <Button variant="outline" className="h-20 flex flex-col items-center justify-center" type="button" onClick={() => document.getElementById('report-period-filter')?.scrollIntoView({ behavior: 'smooth' })}>
                 <Filter className="text-xl mb-1" />
-                <span className="text-sm">Custom Filters</span>
+                <span className="text-sm">Filter periode</span>
               </Button>
-              <Button variant="outline" className="h-20 flex flex-col items-center justify-center">
-                <FileText className="text-xl mb-1" />
-                <span className="text-sm">Report Templates</span>
+              <Button variant="outline" className="h-20 flex flex-col items-center justify-center" asChild>
+                <Link href="/reports/sales">
+                  <FileText className="text-xl mb-1" />
+                  <span className="text-sm">Laporan penjualan</span>
+                </Link>
               </Button>
             </div>
           </CardContent>

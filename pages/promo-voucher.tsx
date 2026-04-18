@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { ModuleGuard } from '@/components/guards/ModuleGuard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1308,4 +1309,10 @@ const PromoVoucherPage: React.FC = () => {
   );
 };
 
-export default PromoVoucherPage;
+export default function PromoVoucherPageWithModuleGuard() {
+  return (
+    <ModuleGuard moduleCode="promo">
+      <PromoVoucherPage />
+    </ModuleGuard>
+  );
+}

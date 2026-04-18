@@ -2,8 +2,46 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const sequelize = queryInterface.sequelize;
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+    const fkTypeFor = async (tableName, columnName = 'id') => {
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+
+    const branchFkType = await fkTypeFor('branches', 'id');
+    const productFkType = await fkTypeFor('products', 'id');
+    const userFkType = await fkTypeFor('users', 'id');
+    const tenantFkType = await fkTypeFor('tenants', 'id');
+
+    const ensureTableMerge = async (tableName, tableDef) => {
+      const tableList = await queryInterface.showAllTables();
+      if (!tableList.includes(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [attrName, def] of Object.entries(tableDef)) {
+        const colName =
+          def && typeof def === 'object' && def.field ? def.field : attrName;
+        if (d[colName]) continue;
+        const { field: _f, comment: _c, ...rest } = def;
+        await queryInterface.addColumn(tableName, colName, rest);
+        d[colName] = true;
+      }
+    };
+
     // Create wastage_records table
-    await queryInterface.createTable('wastage_records', {
+    await ensureTableMerge('wastage_records', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -16,7 +54,7 @@ module.exports = {
         field: 'waste_number'
       },
       branchId: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: false,
         field: 'branch_id',
         references: {
@@ -27,7 +65,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       productId: {
-        type: Sequelize.UUID,
+        type: productFkType,
         allowNull: false,
         field: 'product_id',
         references: {
@@ -74,7 +112,7 @@ module.exports = {
         field: 'waste_date'
       },
       reportedBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: false,
         field: 'reported_by',
         references: {
@@ -83,7 +121,7 @@ module.exports = {
         }
       },
       verifiedBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: true,
         field: 'verified_by',
         references: {
@@ -107,7 +145,7 @@ module.exports = {
         field: 'photo_url'
       },
       tenantId: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         field: 'tenant_id',
         references: {
@@ -131,15 +169,17 @@ module.exports = {
       }
     });
 
+    const transferFkType = await fkTypeFor('inventory_transfers', 'id');
+
     // Create inter_branch_balances table
-    await queryInterface.createTable('inter_branch_balances', {
+    await ensureTableMerge('inter_branch_balances', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       fromBranchId: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: false,
         field: 'from_branch_id',
         references: {
@@ -150,7 +190,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       toBranchId: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: false,
         field: 'to_branch_id',
         references: {
@@ -166,7 +206,7 @@ module.exports = {
         field: 'transaction_type'
       },
       referenceId: {
-        type: Sequelize.UUID,
+        type: transferFkType,
         allowNull: false,
         field: 'reference_id',
         comment: 'Reference to transfer, settlement, or other transaction'
@@ -208,7 +248,7 @@ module.exports = {
         allowNull: true
       },
       createdBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: false,
         field: 'created_by',
         references: {
@@ -217,7 +257,7 @@ module.exports = {
         }
       },
       tenantId: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         field: 'tenant_id',
         references: {
@@ -241,42 +281,45 @@ module.exports = {
       }
     });
 
-    // Add is_standard to product_prices table
-    await queryInterface.addColumn('product_prices', 'is_standard', {
-      type: Sequelize.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-      field: 'is_standard',
-      comment: 'If true, branch cannot modify price locally'
-    });
+    const ppDesc = await queryInterface.describeTable('product_prices');
+    if (!ppDesc.is_standard) {
+      await queryInterface.addColumn('product_prices', 'is_standard', {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: 'is_standard',
+        comment: 'If true, branch cannot modify price locally'
+      });
+    }
 
-    // Add distributed_at to productions table
-    await queryInterface.addColumn('productions', 'distributed_at', {
-      type: Sequelize.DATE,
-      allowNull: true,
-      field: 'distributed_at',
-      comment: 'When production was distributed to branches'
-    });
+    if ((await queryInterface.showAllTables()).includes('productions')) {
+      const prodTbl = await queryInterface.describeTable('productions');
+      if (!prodTbl.distributed_at) {
+        await queryInterface.addColumn('productions', 'distributed_at', {
+          type: Sequelize.DATE,
+          allowNull: true,
+          field: 'distributed_at',
+          comment: 'When production was distributed to branches'
+        });
+      }
+    }
 
-    // Add indexes for wastage_records
-    await queryInterface.addIndex('wastage_records', ['waste_number'], { unique: true });
-    await queryInterface.addIndex('wastage_records', ['branch_id']);
-    await queryInterface.addIndex('wastage_records', ['product_id']);
-    await queryInterface.addIndex('wastage_records', ['waste_type']);
-    await queryInterface.addIndex('wastage_records', ['waste_date']);
-    await queryInterface.addIndex('wastage_records', ['reported_by']);
-    await queryInterface.addIndex('wastage_records', ['tenant_id']);
-
-    // Add indexes for inter_branch_balances
-    await queryInterface.addIndex('inter_branch_balances', ['from_branch_id', 'to_branch_id']);
-    await queryInterface.addIndex('inter_branch_balances', ['reference_id', 'reference_type']);
-    await queryInterface.addIndex('inter_branch_balances', ['transaction_type']);
-    await queryInterface.addIndex('inter_branch_balances', ['status']);
-    await queryInterface.addIndex('inter_branch_balances', ['due_date']);
-    await queryInterface.addIndex('inter_branch_balances', ['tenant_id']);
-
-    // Add index for product_prices is_standard
-    await queryInterface.addIndex('product_prices', ['is_standard']);
+    await sequelize.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS wastage_records_waste_number ON wastage_records (waste_number);
+      CREATE INDEX IF NOT EXISTS wastage_records_branch_id ON wastage_records (branch_id);
+      CREATE INDEX IF NOT EXISTS wastage_records_product_id ON wastage_records (product_id);
+      CREATE INDEX IF NOT EXISTS wastage_records_waste_type ON wastage_records (waste_type);
+      CREATE INDEX IF NOT EXISTS wastage_records_waste_date ON wastage_records (waste_date);
+      CREATE INDEX IF NOT EXISTS wastage_records_reported_by ON wastage_records (reported_by);
+      CREATE INDEX IF NOT EXISTS wastage_records_tenant_id ON wastage_records (tenant_id);
+      CREATE INDEX IF NOT EXISTS inter_branch_balances_branches ON inter_branch_balances (from_branch_id, to_branch_id);
+      CREATE INDEX IF NOT EXISTS inter_branch_balances_ref ON inter_branch_balances (reference_id, reference_type);
+      CREATE INDEX IF NOT EXISTS inter_branch_balances_transaction_type ON inter_branch_balances (transaction_type);
+      CREATE INDEX IF NOT EXISTS inter_branch_balances_status ON inter_branch_balances (status);
+      CREATE INDEX IF NOT EXISTS inter_branch_balances_due_date ON inter_branch_balances (due_date);
+      CREATE INDEX IF NOT EXISTS inter_branch_balances_tenant_id ON inter_branch_balances (tenant_id);
+      CREATE INDEX IF NOT EXISTS product_prices_is_standard ON product_prices (is_standard);
+    `);
 
     // Create trigger to update inter_branch_balances when transfers are completed
     await queryInterface.sequelize.query(`
@@ -303,17 +346,25 @@ module.exports = {
       $$ LANGUAGE plpgsql;
     `);
 
-    await queryInterface.sequelize.query(`
-      CREATE TRIGGER trigger_update_inter_branch_balance
-        AFTER UPDATE ON inventory_transfers
-        FOR EACH ROW
-        EXECUTE FUNCTION update_inter_branch_balance();
-    `);
+    const hasInvTransfers = (await queryInterface.showAllTables()).includes(
+      'inventory_transfers'
+    );
+    if (hasInvTransfers) {
+      await queryInterface.sequelize.query(`
+        DROP TRIGGER IF EXISTS trigger_update_inter_branch_balance ON inventory_transfers;
+        CREATE TRIGGER trigger_update_inter_branch_balance
+          AFTER UPDATE ON inventory_transfers
+          FOR EACH ROW
+          EXECUTE FUNCTION update_inter_branch_balance();
+      `);
+    }
   },
 
   down: async (queryInterface, Sequelize) => {
     // Drop triggers
-    await queryInterface.sequelize.query('DROP TRIGGER IF EXISTS trigger_update_inter_branch_balance');
+    await queryInterface.sequelize.query(
+      'DROP TRIGGER IF EXISTS trigger_update_inter_branch_balance ON inventory_transfers'
+    );
     await queryInterface.sequelize.query('DROP FUNCTION IF EXISTS update_inter_branch_balance()');
 
     // Remove indexes

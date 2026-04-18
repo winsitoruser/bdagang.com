@@ -25,7 +25,7 @@ interface ModuleInfo {
 }
 
 const MODULE_REGISTRY: ModuleInfo[] = [
-  { code: 'dashboard', name: 'Dashboard', description: 'Pusat kontrol & monitoring bisnis', icon: LayoutDashboard, href: '/hq/dashboard', gradient: 'from-indigo-500 to-indigo-600', iconColor: 'text-indigo-600', category: 'core' },
+  { code: 'dashboard', name: 'Dashboard', description: 'Pusat kontrol & monitoring bisnis', icon: LayoutDashboard, href: '/hq/home', gradient: 'from-indigo-500 to-indigo-600', iconColor: 'text-indigo-600', category: 'core' },
   { code: 'pos', name: 'Point of Sale', description: 'Sistem kasir & penjualan', icon: ShoppingCart, href: '/pos', gradient: 'from-blue-500 to-blue-600', iconColor: 'text-blue-600', category: 'core' },
   { code: 'branches', name: 'Cabang', description: 'Kelola & monitor cabang', icon: Building2, href: '/hq/branches', gradient: 'from-violet-500 to-violet-600', iconColor: 'text-violet-600', category: 'core' },
   { code: 'inventory', name: 'Inventory', description: 'Stok, produk & gudang', icon: Package, href: '/hq/inventory', gradient: 'from-emerald-500 to-emerald-600', iconColor: 'text-emerald-600', category: 'core' },
@@ -260,7 +260,7 @@ export default function UnifiedDashboard() {
             {/* Quick Access Bar */}
             <div className="flex items-center gap-2 mt-5 sm:mt-7 pt-4 sm:pt-6 border-t border-white/[0.06] overflow-x-auto pb-1 scrollbar-hide">
               {[
-                { label: 'Dashboard Operasional', href: '/hq/dashboard', icon: LayoutDashboard },
+                { label: 'Dashboard Operasional', href: '/hq/home', icon: LayoutDashboard },
                 { label: 'Laporan', href: '/hq/reports/consolidated', icon: BarChart3 },
                 { label: 'Kelola Modul', href: '/hq/settings/modules', icon: Package },
                 { label: 'Pengaturan', href: '/hq/settings', icon: Settings },
@@ -587,7 +587,7 @@ export default function UnifiedDashboard() {
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Pintasan</h3>
               <div className="space-y-1">
                 {[
-                  { label: 'Dashboard Operasional', desc: 'Sales, KPI & analytics', href: '/hq/dashboard', icon: LayoutDashboard },
+                  { label: 'Dashboard Operasional', desc: 'Sales, KPI & analytics', href: '/hq/home', icon: LayoutDashboard },
                   { label: 'Laporan Konsolidasi', desc: 'Cross-module reporting', href: '/hq/reports/consolidated', icon: BarChart3 },
                   { label: 'Kelola Modul', desc: 'Aktifkan / nonaktifkan modul', href: '/hq/settings/modules', icon: Package },
                 ].map(lnk => (

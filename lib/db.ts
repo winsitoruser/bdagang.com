@@ -2,8 +2,20 @@ import { Sequelize } from 'sequelize';
 import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
 
-// Load environment variables
+// Load environment variables (.env then .env.local when present)
 dotenv.config();
+dotenv.config({ path: '.env.local' });
+
+/** Shared Postgres settings: POSTGRES_* first, then DB_* (sequelize config) so one env block is enough */
+const pgHost = process.env.POSTGRES_HOST || process.env.DB_HOST || 'localhost';
+const pgPort = parseInt(
+  process.env.POSTGRES_PORT || process.env.DB_PORT || '5432',
+  10
+);
+const pgDatabase = process.env.POSTGRES_DB || process.env.DB_NAME || 'bedagang';
+const pgUser = process.env.POSTGRES_USER || process.env.DB_USER || 'postgres';
+const pgPassword =
+  process.env.POSTGRES_PASSWORD || process.env.DB_PASSWORD || 'postgres';
 
 // Database connection URL from environment variable or fallback to development URL
 const databaseUrl = process.env.DATABASE_URL || 'mysql://user:password@localhost:3306/farmanesia_evo';
@@ -32,11 +44,11 @@ const sequelizeInstance = new Sequelize(databaseUrl, {
 
 // PostgreSQL Pool for Finance Settings and other PostgreSQL features
 const pool = new Pool({
-  host: process.env.POSTGRES_HOST || 'localhost',
-  port: parseInt(process.env.POSTGRES_PORT || '5432'),
-  database: process.env.POSTGRES_DB || 'bedagang',
-  user: process.env.POSTGRES_USER || 'postgres',
-  password: process.env.POSTGRES_PASSWORD || 'postgres',
+  host: pgHost,
+  port: pgPort,
+  database: pgDatabase,
+  user: pgUser,
+  password: pgPassword,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
@@ -75,6 +87,11 @@ export async function testPostgresConnection() {
 
 // Export pool as default for PostgreSQL APIs
 export default pool;
+
+/** Parameterized queries (used by some inventory master APIs) */
+export function query(text: string, params?: unknown[]) {
+  return pool.query(text, params);
+}
 
 // Export sequelize separately for legacy code
 export const sequelize = sequelizeInstance;

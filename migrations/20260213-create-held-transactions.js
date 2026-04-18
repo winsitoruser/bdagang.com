@@ -2,51 +2,81 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('held_transactions', {
+    const sequelize = queryInterface.sequelize;
+
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+
+    const fkTypeFor = async (tableName, columnName = 'id') => {
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+
+    const ensureTableMerge = async (tableName, tableDef) => {
+      const tableList = await queryInterface.showAllTables();
+      if (!tableList.includes(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [col, def] of Object.entries(tableDef)) {
+        if (d[col]) continue;
+        const { comment: _c, ...rest } = def;
+        await queryInterface.addColumn(tableName, col, rest);
+        d[col] = true;
+      }
+    };
+
+    const cashierFkType = await fkTypeFor('employees', 'id');
+    const customerFkType = await fkTypeFor('customers', 'id');
+
+    const heldTransactionsDef = {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
-      holdNumber: {
+      hold_number: {
         type: Sequelize.STRING(50),
         allowNull: false,
-        unique: true,
-        field: 'hold_number'
+        unique: true
       },
-      cashierId: {
-        type: Sequelize.UUID,
+      cashier_id: {
+        type: cashierFkType,
         allowNull: false,
         references: {
           model: 'employees',
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT',
-        field: 'cashier_id'
+        onDelete: 'RESTRICT'
       },
-      customerName: {
+      customer_name: {
         type: Sequelize.STRING(255),
-        allowNull: true,
-        field: 'customer_name'
+        allowNull: true
       },
-      customerId: {
-        type: Sequelize.UUID,
+      customer_id: {
+        type: customerFkType,
         allowNull: true,
         references: {
           model: 'customers',
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
-        field: 'customer_id'
+        onDelete: 'SET NULL'
       },
-      
-      // Transaction Data (JSON)
-      cartItems: {
+
+      cart_items: {
         type: Sequelize.JSONB,
-        allowNull: false,
-        field: 'cart_items'
+        allowNull: false
       },
       subtotal: {
         type: Sequelize.DECIMAL(15, 2),
@@ -67,119 +97,108 @@ module.exports = {
         type: Sequelize.DECIMAL(15, 2),
         allowNull: false
       },
-      
-      // Customer & Discount Info
-      customerType: {
+
+      customer_type: {
         type: Sequelize.STRING(20),
-        defaultValue: 'walk-in',
-        field: 'customer_type'
+        defaultValue: 'walk-in'
       },
-      selectedMember: {
+      selected_member: {
         type: Sequelize.JSONB,
-        allowNull: true,
-        field: 'selected_member'
+        allowNull: true
       },
-      selectedVoucher: {
+      selected_voucher: {
         type: Sequelize.JSONB,
-        allowNull: true,
-        field: 'selected_voucher'
+        allowNull: true
       },
-      
-      // Metadata
-      holdReason: {
+
+      hold_reason: {
         type: Sequelize.STRING(255),
-        allowNull: true,
-        field: 'hold_reason'
+        allowNull: true
       },
       notes: {
         type: Sequelize.TEXT,
         allowNull: true
       },
-      
-      // Status & Timestamps
+
       status: {
         type: Sequelize.ENUM('held', 'resumed', 'cancelled', 'completed'),
         allowNull: false,
         defaultValue: 'held'
       },
-      heldAt: {
+      held_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.NOW,
-        field: 'held_at'
+        defaultValue: Sequelize.NOW
       },
-      resumedAt: {
+      resumed_at: {
         type: Sequelize.DATE,
-        allowNull: true,
-        field: 'resumed_at'
+        allowNull: true
       },
-      completedAt: {
+      completed_at: {
         type: Sequelize.DATE,
-        allowNull: true,
-        field: 'completed_at'
+        allowNull: true
       },
-      cancelledAt: {
+      cancelled_at: {
         type: Sequelize.DATE,
-        allowNull: true,
-        field: 'cancelled_at'
+        allowNull: true
       },
-      
-      createdAt: {
+
+      created_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.NOW,
-        field: 'created_at'
+        defaultValue: Sequelize.NOW
       },
-      updatedAt: {
+      updated_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.NOW,
-        field: 'updated_at'
+        defaultValue: Sequelize.NOW
       }
-    });
+    };
 
-    // Add indexes
-    await queryInterface.addIndex('held_transactions', ['cashier_id'], {
-      name: 'idx_held_transactions_cashier'
-    });
-    
-    await queryInterface.addIndex('held_transactions', ['status'], {
-      name: 'idx_held_transactions_status'
-    });
-    
-    await queryInterface.addIndex('held_transactions', ['held_at'], {
-      name: 'idx_held_transactions_held_at'
-    });
-    
-    await queryInterface.addIndex('held_transactions', ['hold_number'], {
-      name: 'idx_held_transactions_hold_number'
-    });
+    await ensureTableMerge('held_transactions', heldTransactionsDef);
 
-    // Add columns to pos_transactions table
-    await queryInterface.addColumn('pos_transactions', 'held_transaction_id', {
-      type: Sequelize.UUID,
-      allowNull: true,
-      references: {
-        model: 'held_transactions',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL'
-    });
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_held_transactions_cashier ON "held_transactions" ("cashier_id")'
+    );
 
-    await queryInterface.addColumn('pos_transactions', 'was_held', {
-      type: Sequelize.BOOLEAN,
-      defaultValue: false,
-      allowNull: false
-    });
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_held_transactions_status ON "held_transactions" ("status")'
+    );
+
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_held_transactions_held_at ON "held_transactions" ("held_at")'
+    );
+
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS idx_held_transactions_hold_number ON "held_transactions" ("hold_number")'
+    );
+
+    const posD = await queryInterface.describeTable('pos_transactions');
+    if (!posD.held_transaction_id) {
+      await queryInterface.addColumn('pos_transactions', 'held_transaction_id', {
+        type: Sequelize.UUID,
+        allowNull: true,
+        references: {
+          model: 'held_transactions',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL'
+      });
+    }
+    if (!posD.was_held) {
+      await queryInterface.addColumn('pos_transactions', 'was_held', {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false,
+        allowNull: false
+      });
+    }
   },
 
   down: async (queryInterface, Sequelize) => {
-    // Remove columns from pos_transactions
     await queryInterface.removeColumn('pos_transactions', 'was_held');
     await queryInterface.removeColumn('pos_transactions', 'held_transaction_id');
-    
-    // Drop table
+
     await queryInterface.dropTable('held_transactions');
   }
 };

@@ -11,11 +11,7 @@ module.exports = {
       },
       customerId: {
         type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'Customers',
-          key: 'id'
-        }
+        allowNull: true
       },
       customerName: {
         type: Sequelize.STRING(200),
@@ -260,6 +256,19 @@ module.exports = {
       }
     });
 
+    const invoiceIdFkType = await (async () => {
+      try {
+        const fi = await queryInterface.describeTable('finance_invoices');
+        const ty = String(fi.id?.type || '').toLowerCase();
+        if (/int|serial|bigserial|smallint|bigint/.test(ty)) {
+          return Sequelize.INTEGER;
+        }
+      } catch (_) {
+        /* no table */
+      }
+      return Sequelize.UUID;
+    })();
+
     // 4. Create finance_invoice_items table
     await queryInterface.createTable('finance_invoice_items', {
       id: {
@@ -268,7 +277,7 @@ module.exports = {
         primaryKey: true
       },
       invoiceId: {
-        type: Sequelize.UUID,
+        type: invoiceIdFkType,
         allowNull: false,
         references: {
           model: 'finance_invoices',
@@ -318,7 +327,7 @@ module.exports = {
         primaryKey: true
       },
       invoiceId: {
-        type: Sequelize.UUID,
+        type: invoiceIdFkType,
         allowNull: false,
         references: {
           model: 'finance_invoices',
@@ -460,35 +469,74 @@ module.exports = {
       }
     });
 
-    // Add indexes for better performance
-    await queryInterface.addIndex('finance_receivables', ['invoiceNumber'], {
-      unique: true,
-      name: 'finance_receivables_invoice_number_unique'
-    });
-    await queryInterface.addIndex('finance_receivables', ['status']);
-    await queryInterface.addIndex('finance_receivables', ['customerId']);
-    await queryInterface.addIndex('finance_receivables', ['dueDate']);
+    const seq = queryInterface.sequelize;
 
-    await queryInterface.addIndex('finance_payables', ['invoiceNumber'], {
-      unique: true,
-      name: 'finance_payables_invoice_number_unique'
-    });
-    await queryInterface.addIndex('finance_payables', ['status']);
-    await queryInterface.addIndex('finance_payables', ['supplierId']);
-    await queryInterface.addIndex('finance_payables', ['dueDate']);
+    await seq.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS finance_receivables_invoice_number_unique ON finance_receivables ("invoiceNumber");
+      CREATE INDEX IF NOT EXISTS finance_receivables_status_idx ON finance_receivables (status);
+      CREATE INDEX IF NOT EXISTS finance_receivables_customer_id_idx ON finance_receivables ("customerId");
+      CREATE INDEX IF NOT EXISTS finance_receivables_due_date_idx ON finance_receivables ("dueDate");
+      CREATE UNIQUE INDEX IF NOT EXISTS finance_payables_invoice_number_unique ON finance_payables ("invoiceNumber");
+      CREATE INDEX IF NOT EXISTS finance_payables_status_idx ON finance_payables (status);
+      CREATE INDEX IF NOT EXISTS finance_payables_supplier_id_idx ON finance_payables ("supplierId");
+      CREATE INDEX IF NOT EXISTS finance_payables_due_date_idx ON finance_payables ("dueDate");
+    `);
 
-    await queryInterface.addIndex('finance_invoices', ['invoiceNumber'], {
-      unique: true,
-      name: 'finance_invoices_invoice_number_unique'
-    });
-    await queryInterface.addIndex('finance_invoices', ['type']);
-    await queryInterface.addIndex('finance_invoices', ['paymentStatus']);
-    await queryInterface.addIndex('finance_invoices', ['status']);
+    const fi = await queryInterface.describeTable('finance_invoices');
+    const invCol = fi.invoiceNumber
+      ? 'invoiceNumber'
+      : fi.invoice_number
+        ? 'invoice_number'
+        : null;
+    if (invCol) {
+      await seq.query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS finance_invoices_invoice_number_unique ON finance_invoices ("${invCol}");`
+      );
+    }
+    if (fi.type) {
+      await seq.query(
+        `CREATE INDEX IF NOT EXISTS finance_invoices_type_idx ON finance_invoices (type);`
+      );
+    }
+    if (fi.paymentStatus) {
+      await seq.query(
+        `CREATE INDEX IF NOT EXISTS finance_invoices_payment_status_idx ON finance_invoices ("paymentStatus");`
+      );
+    }
+    if (fi.status) {
+      await seq.query(
+        `CREATE INDEX IF NOT EXISTS finance_invoices_status_idx ON finance_invoices (status);`
+      );
+    }
 
-    await queryInterface.addIndex('finance_invoice_items', ['invoiceId']);
-    await queryInterface.addIndex('finance_invoice_payments', ['invoiceId']);
-    await queryInterface.addIndex('finance_receivable_payments', ['receivableId']);
-    await queryInterface.addIndex('finance_payable_payments', ['payableId']);
+    const fii = await queryInterface.describeTable('finance_invoice_items');
+    const itemInv = fii.invoiceId
+      ? 'invoiceId'
+      : fii.invoice_id
+        ? 'invoice_id'
+        : null;
+    if (itemInv) {
+      await seq.query(
+        `CREATE INDEX IF NOT EXISTS finance_invoice_items_invoice_idx ON finance_invoice_items ("${itemInv}");`
+      );
+    }
+
+    const fip = await queryInterface.describeTable('finance_invoice_payments');
+    const payInv = fip.invoiceId
+      ? 'invoiceId'
+      : fip.invoice_id
+        ? 'invoice_id'
+        : null;
+    if (payInv) {
+      await seq.query(
+        `CREATE INDEX IF NOT EXISTS finance_invoice_payments_invoice_idx ON finance_invoice_payments ("${payInv}");`
+      );
+    }
+
+    await seq.query(`
+      CREATE INDEX IF NOT EXISTS finance_receivable_payments_receivable_idx ON finance_receivable_payments ("receivableId");
+      CREATE INDEX IF NOT EXISTS finance_payable_payments_payable_idx ON finance_payable_payments ("payableId");
+    `);
 
     // Insert sample data for testing
     const now = new Date();

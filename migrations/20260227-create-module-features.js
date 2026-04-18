@@ -2,6 +2,23 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const sequelize = queryInterface.sequelize;
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+    const fkTypeFor = async (tableName, columnName = 'id') => {
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+    const userFkType = await fkTypeFor('users', 'id');
+
     // Create module_features table
     await queryInterface.createTable('module_features', {
       id: {
@@ -113,7 +130,7 @@ module.exports = {
         allowNull: true
       },
       enabled_by: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: true,
         references: {
           model: 'users',
@@ -244,7 +261,7 @@ module.exports = {
         allowNull: true
       },
       activated_by: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: true,
         references: {
           model: 'users',

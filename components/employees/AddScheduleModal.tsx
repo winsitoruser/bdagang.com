@@ -147,7 +147,7 @@ const AddScheduleModal: React.FC<AddScheduleModalProps> = ({
               <option value="">Pilih Karyawan</option>
               {employees.map((emp) => (
                 <option key={emp.id} value={emp.id}>
-                  {emp.name} - {emp.position || emp.employeeNumber}
+                  {emp.name} - {emp.position || emp.employeeId}
                 </option>
               ))}
             </select>

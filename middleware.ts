@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
+const singleBranch =
+  process.env.NEXT_PUBLIC_SINGLE_BRANCH === 'true';
+
 export async function middleware(request: NextRequest) {
   const token = await getToken({ 
     req: request, 
@@ -28,11 +31,27 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Panel pemilik: hanya owner / admin pusat tenant / super_admin
+  if (pathname.startsWith('/opanel')) {
+    const role = String((token.role as string) || '').toLowerCase().trim();
+    const allowed = ['owner', 'hq_admin', 'super_admin', 'superadmin'];
+    if (!allowed.includes(role)) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+  }
+
+  // Satu cabang: rute legacy /hq dialihkan ke dashboard outlet.
+  // /opanel tidak dialihkan ke sini — kalau tidak, /opanel → /dashboard lalu F&B terdorong ke /dashboard-fnb.
+  if (singleBranch && pathname.startsWith('/hq')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
   // Admin routes - only for admin/super_admin
   if (pathname.startsWith('/admin/')) {
     const userRole = (token.role as string)?.toLowerCase();
     if (!['admin', 'super_admin', 'superadmin'].includes(userRole)) {
-      return NextResponse.redirect(new URL('/hq/dashboard', request.url));
+      const fallback = singleBranch ? '/dashboard' : '/opanel/dashboard';
+      return NextResponse.redirect(new URL(fallback, request.url));
     }
     return NextResponse.next();
   }
@@ -45,8 +64,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Allow /hq/home always — it handles its own under-review / inactive state
-    if (pathname === '/hq/home') {
+    // Multi-cabang HQ: /hq/home menampilkan status review / tenant (bukan mode single-branch)
+    if (!singleBranch && pathname === '/hq/home') {
       return NextResponse.next();
     }
 

@@ -2,8 +2,43 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Create webhook_event_configs table
-    await queryInterface.createTable('webhook_event_configs', {
+    const sequelize = queryInterface.sequelize;
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+    const fkTypeFor = async (tableName, columnName = 'id') => {
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+
+    const userFkType = await fkTypeFor('users', 'id');
+    const tenantFkType = await fkTypeFor('tenants', 'id');
+
+    const ensureTableMerge = async (tableName, tableDef) => {
+      const tableList = await queryInterface.showAllTables();
+      if (!tableList.includes(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [attrName, def] of Object.entries(tableDef)) {
+        const colName =
+          def && typeof def === 'object' && def.field ? def.field : attrName;
+        if (d[colName]) continue;
+        const { field: _f, comment: _c, ...rest } = def;
+        await queryInterface.addColumn(tableName, colName, rest);
+        d[colName] = true;
+      }
+    };
+
+    await ensureTableMerge('webhook_event_configs', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -64,7 +99,7 @@ module.exports = {
         comment: 'Retry configuration'
       },
       createdBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: false,
         field: 'created_by',
         references: {
@@ -73,7 +108,7 @@ module.exports = {
         }
       },
       tenantId: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         field: 'tenant_id',
         references: {
@@ -97,8 +132,7 @@ module.exports = {
       }
     });
 
-    // Create webhook_dispatch_logs table
-    await queryInterface.createTable('webhook_dispatch_logs', {
+    await ensureTableMerge('webhook_dispatch_logs', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -136,7 +170,7 @@ module.exports = {
         defaultValue: 'pending'
       },
       dispatchedBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: false,
         field: 'dispatched_by',
         references: {
@@ -155,7 +189,7 @@ module.exports = {
         field: 'error_message'
       },
       tenantId: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         field: 'tenant_id',
         references: {
@@ -173,8 +207,7 @@ module.exports = {
       }
     });
 
-    // Create webhook_results table for individual channel results
-    await queryInterface.createTable('webhook_results', {
+    await ensureTableMerge('webhook_results', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -240,15 +273,14 @@ module.exports = {
       }
     });
 
-    // Create dashboard_notifications table
-    await queryInterface.createTable('dashboard_notifications', {
+    await ensureTableMerge('dashboard_notifications', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       userId: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: false,
         field: 'user_id',
         references: {
@@ -302,7 +334,7 @@ module.exports = {
         field: 'expires_at'
       },
       tenantId: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         field: 'tenant_id',
         references: {
@@ -320,46 +352,48 @@ module.exports = {
       }
     });
 
-    // Add isLockedByHQ to product_prices table
-    await queryInterface.addColumn('product_prices', 'is_locked_by_hq', {
-      type: Sequelize.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-      field: 'is_locked_by_hq',
-      comment: 'If true, price cannot be modified by branch managers'
-    });
+    const ppCols = await queryInterface.describeTable('product_prices').catch(() => null);
+    if (ppCols && !ppCols.is_locked_by_hq) {
+      await queryInterface.addColumn('product_prices', 'is_locked_by_hq', {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: 'is_locked_by_hq',
+        comment: 'If true, price cannot be modified by branch managers'
+      });
+    }
 
-    // Add indexes
-    await queryInterface.addIndex('webhook_event_configs', ['event_type', 'tenant_id'], { unique: true });
-    await queryInterface.addIndex('webhook_event_configs', ['is_active']);
-    await queryInterface.addIndex('webhook_event_configs', ['tenant_id']);
+    await sequelize.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS webhook_event_configs_event_type_tenant_id ON webhook_event_configs (event_type, tenant_id);
+      CREATE INDEX IF NOT EXISTS webhook_event_configs_is_active ON webhook_event_configs (is_active);
+      CREATE INDEX IF NOT EXISTS webhook_event_configs_tenant_id ON webhook_event_configs (tenant_id);
 
-    await queryInterface.addIndex('webhook_dispatch_logs', ['event_type']);
-    await queryInterface.addIndex('webhook_dispatch_logs', ['status']);
-    await queryInterface.addIndex('webhook_dispatch_logs', ['created_at']);
-    await queryInterface.addIndex('webhook_dispatch_logs', ['tenant_id']);
+      CREATE INDEX IF NOT EXISTS webhook_dispatch_logs_event_type ON webhook_dispatch_logs (event_type);
+      CREATE INDEX IF NOT EXISTS webhook_dispatch_logs_status ON webhook_dispatch_logs (status);
+      CREATE INDEX IF NOT EXISTS webhook_dispatch_logs_created_at ON webhook_dispatch_logs (created_at);
+      CREATE INDEX IF NOT EXISTS webhook_dispatch_logs_tenant_id ON webhook_dispatch_logs (tenant_id);
 
-    await queryInterface.addIndex('webhook_results', ['dispatch_log_id']);
-    await queryInterface.addIndex('webhook_results', ['channel']);
-    await queryInterface.addIndex('webhook_results', ['success']);
-    await queryInterface.addIndex('webhook_results', ['next_retry_at']);
+      CREATE INDEX IF NOT EXISTS webhook_results_dispatch_log_id ON webhook_results (dispatch_log_id);
+      CREATE INDEX IF NOT EXISTS webhook_results_channel ON webhook_results (channel);
+      CREATE INDEX IF NOT EXISTS webhook_results_success ON webhook_results (success);
+      CREATE INDEX IF NOT EXISTS webhook_results_next_retry_at ON webhook_results (next_retry_at);
 
-    await queryInterface.addIndex('dashboard_notifications', ['user_id', 'is_read']);
-    await queryInterface.addIndex('dashboard_notifications', ['type']);
-    await queryInterface.addIndex('dashboard_notifications', ['priority']);
-    await queryInterface.addIndex('dashboard_notifications', ['expires_at']);
-    await queryInterface.addIndex('dashboard_notifications', ['tenant_id']);
+      CREATE INDEX IF NOT EXISTS dashboard_notifications_user_id_is_read ON dashboard_notifications (user_id, is_read);
+      CREATE INDEX IF NOT EXISTS dashboard_notifications_type ON dashboard_notifications (type);
+      CREATE INDEX IF NOT EXISTS dashboard_notifications_priority ON dashboard_notifications (priority);
+      CREATE INDEX IF NOT EXISTS dashboard_notifications_expires_at ON dashboard_notifications (expires_at);
+      CREATE INDEX IF NOT EXISTS dashboard_notifications_tenant_id ON dashboard_notifications (tenant_id);
 
-    await queryInterface.addIndex('product_prices', ['is_locked_by_hq']);
+      CREATE INDEX IF NOT EXISTS product_prices_is_locked_by_hq ON product_prices (is_locked_by_hq);
+    `);
 
-    // Insert default event configurations
-    await queryInterface.sequelize.query(`
+    await sequelize.query(`
       INSERT INTO webhook_event_configs (
         id, event_type, name, description, thresholds, is_active,
         email_recipients, whatsapp_recipients, created_by, tenant_id, created_at, updated_at
       )
-      SELECT 
-        uuid_generate_v4(),
+      SELECT
+        gen_random_uuid(),
         'transaction_voided',
         'Transaction Voided',
         'Alert when a transaction is voided',
@@ -375,18 +409,18 @@ module.exports = {
       JOIN tenants t ON u.tenant_id = t.id
       WHERE u.role = 'super_admin'
       AND NOT EXISTS (
-        SELECT 1 FROM webhook_event_configs 
+        SELECT 1 FROM webhook_event_configs
         WHERE event_type = 'transaction_voided' AND tenant_id = t.id
       )
     `);
 
-    await queryInterface.sequelize.query(`
+    await sequelize.query(`
       INSERT INTO webhook_event_configs (
         id, event_type, name, description, thresholds, is_active,
         email_recipients, created_by, tenant_id, created_at, updated_at
       )
-      SELECT 
-        uuid_generate_v4(),
+      SELECT
+        gen_random_uuid(),
         'low_stock',
         'Low Stock Alert',
         'Alert when product stock is low',
@@ -401,18 +435,18 @@ module.exports = {
       JOIN tenants t ON u.tenant_id = t.id
       WHERE u.role = 'super_admin'
       AND NOT EXISTS (
-        SELECT 1 FROM webhook_event_configs 
+        SELECT 1 FROM webhook_event_configs
         WHERE event_type = 'low_stock' AND tenant_id = t.id
       )
     `);
 
-    await queryInterface.sequelize.query(`
+    await sequelize.query(`
       INSERT INTO webhook_event_configs (
         id, event_type, name, description, thresholds, is_active,
         email_recipients, whatsapp_recipients, created_by, tenant_id, created_at, updated_at
       )
-      SELECT 
-        uuid_generate_v4(),
+      SELECT
+        gen_random_uuid(),
         'suspicious_activity',
         'Suspicious Activity',
         'Alert for suspicious activities (large voids, unusual patterns)',
@@ -428,76 +462,69 @@ module.exports = {
       JOIN tenants t ON u.tenant_id = t.id
       WHERE u.role = 'super_admin'
       AND NOT EXISTS (
-        SELECT 1 FROM webhook_event_configs 
+        SELECT 1 FROM webhook_event_configs
         WHERE event_type = 'suspicious_activity' AND tenant_id = t.id
       )
     `);
 
-    // Create function to check price lock before update
-    await queryInterface.sequelize.query(`
+    await sequelize.query(`
       CREATE OR REPLACE FUNCTION check_price_lock()
       RETURNS TRIGGER AS $$
       DECLARE
         is_locked BOOLEAN;
         user_role TEXT;
       BEGIN
-        -- Check if price is locked by HQ
         SELECT is_locked_by_hq INTO is_locked
         FROM product_prices
         WHERE id = NEW.id;
-        
-        -- Get current user role (this would need to be passed in the application context)
-        -- For now, we'll use a placeholder
+
         user_role := current_setting('app.current_user_role', true);
-        
-        -- If locked and user is not super_admin or admin, prevent update
+
         IF is_locked = true AND user_role NOT IN ('super_admin', 'admin') THEN
           RAISE EXCEPTION 'Price is locked by HQ. Cannot modify.';
         END IF;
-        
+
         RETURN NEW;
       END;
       $$ LANGUAGE plpgsql;
     `);
-
-    // Note: The trigger would need to be implemented at the application level
-    // since we can't easily pass user context to database triggers
   },
 
   down: async (queryInterface, Sequelize) => {
-    // Drop function
     await queryInterface.sequelize.query('DROP FUNCTION IF EXISTS check_price_lock()');
 
-    // Remove indexes
-    await queryInterface.removeIndex('product_prices', ['is_locked_by_hq']);
-    
-    await queryInterface.removeIndex('dashboard_notifications', ['tenant_id']);
-    await queryInterface.removeIndex('dashboard_notifications', ['expires_at']);
-    await queryInterface.removeIndex('dashboard_notifications', ['priority']);
-    await queryInterface.removeIndex('dashboard_notifications', ['type']);
-    await queryInterface.removeIndex('dashboard_notifications', ['user_id', 'is_read']);
-    
-    await queryInterface.removeIndex('webhook_results', ['next_retry_at']);
-    await queryInterface.removeIndex('webhook_results', ['success']);
-    await queryInterface.removeIndex('webhook_results', ['channel']);
-    await queryInterface.removeIndex('webhook_results', ['dispatch_log_id']);
-    
-    await queryInterface.removeIndex('webhook_dispatch_logs', ['tenant_id']);
-    await queryInterface.removeIndex('webhook_dispatch_logs', ['created_at']);
-    await queryInterface.removeIndex('webhook_dispatch_logs', ['status']);
-    await queryInterface.removeIndex('webhook_dispatch_logs', ['event_type']);
-    
-    await queryInterface.removeIndex('webhook_event_configs', ['tenant_id']);
-    await queryInterface.removeIndex('webhook_event_configs', ['is_active']);
-    await queryInterface.removeIndex('webhook_event_configs', ['event_type', 'tenant_id']);
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS product_prices_is_locked_by_hq;
 
-    // Drop tables
+      DROP INDEX IF EXISTS dashboard_notifications_tenant_id;
+      DROP INDEX IF EXISTS dashboard_notifications_expires_at;
+      DROP INDEX IF EXISTS dashboard_notifications_priority;
+      DROP INDEX IF EXISTS dashboard_notifications_type;
+      DROP INDEX IF EXISTS dashboard_notifications_user_id_is_read;
+
+      DROP INDEX IF EXISTS webhook_results_next_retry_at;
+      DROP INDEX IF EXISTS webhook_results_success;
+      DROP INDEX IF EXISTS webhook_results_channel;
+      DROP INDEX IF EXISTS webhook_results_dispatch_log_id;
+
+      DROP INDEX IF EXISTS webhook_dispatch_logs_tenant_id;
+      DROP INDEX IF EXISTS webhook_dispatch_logs_created_at;
+      DROP INDEX IF EXISTS webhook_dispatch_logs_status;
+      DROP INDEX IF EXISTS webhook_dispatch_logs_event_type;
+
+      DROP INDEX IF EXISTS webhook_event_configs_tenant_id;
+      DROP INDEX IF EXISTS webhook_event_configs_is_active;
+      DROP INDEX IF EXISTS webhook_event_configs_event_type_tenant_id;
+    `);
+
     await queryInterface.dropTable('dashboard_notifications');
     await queryInterface.dropTable('webhook_results');
     await queryInterface.dropTable('webhook_dispatch_logs');
     await queryInterface.dropTable('webhook_event_configs');
 
-    // Remove column
-    await queryInterface.removeColumn('product_prices', 'is_locked_by_hq');
+    const pp = await queryInterface.describeTable('product_prices').catch(() => null);
+    if (pp?.is_locked_by_hq) {
+      await queryInterface.removeColumn('product_prices', 'is_locked_by_hq');
+    }
   }
 };

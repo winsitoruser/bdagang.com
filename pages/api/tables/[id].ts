@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
+import { getTenantId } from '@/lib/api/tenantScope';
 const db = require('../../../models');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -11,16 +12,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
+    const tenantId = getTenantId(session);
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant context required' });
+    }
+
     const { Table } = db;
     const { id } = req.query;
 
     switch (req.method) {
       case 'GET':
-        return await getTable(req, res, Table, id as string);
+        return await getTable(req, res, Table, id as string, tenantId);
       case 'PUT':
-        return await updateTable(req, res, Table, id as string);
+        return await updateTable(req, res, Table, id as string, tenantId);
       case 'DELETE':
-        return await deleteTable(req, res, Table, id as string);
+        return await deleteTable(req, res, Table, id as string, tenantId);
       default:
         return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
@@ -30,8 +36,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function getTable(req: NextApiRequest, res: NextApiResponse, Table: any, id: string) {
-  const table = await Table.findByPk(id, {
+async function getTable(req: NextApiRequest, res: NextApiResponse, Table: any, id: string, tenantId: string) {
+  const table = await Table.findOne({
+    where: { id, tenantId },
     include: [
       { association: 'currentSession' },
       { association: 'currentReservation' },
@@ -46,8 +53,8 @@ async function getTable(req: NextApiRequest, res: NextApiResponse, Table: any, i
   return res.status(200).json({ success: true, data: table });
 }
 
-async function updateTable(req: NextApiRequest, res: NextApiResponse, Table: any, id: string) {
-  const table = await Table.findByPk(id);
+async function updateTable(req: NextApiRequest, res: NextApiResponse, Table: any, id: string, tenantId: string) {
+  const table = await Table.findOne({ where: { id, tenantId } });
 
   if (!table) {
     return res.status(404).json({ success: false, error: 'Table not found' });
@@ -67,8 +74,9 @@ async function updateTable(req: NextApiRequest, res: NextApiResponse, Table: any
   // Check if new table number conflicts
   if (tableNumber && tableNumber !== table.tableNumber) {
     const existing = await Table.findOne({
-      where: { 
+      where: {
         tableNumber,
+        tenantId,
         id: { [db.Sequelize.Op.ne]: id }
       }
     });
@@ -95,8 +103,8 @@ async function updateTable(req: NextApiRequest, res: NextApiResponse, Table: any
   return res.status(200).json({ success: true, data: table });
 }
 
-async function deleteTable(req: NextApiRequest, res: NextApiResponse, Table: any, id: string) {
-  const table = await Table.findByPk(id);
+async function deleteTable(req: NextApiRequest, res: NextApiResponse, Table: any, id: string, tenantId: string) {
+  const table = await Table.findOne({ where: { id, tenantId } });
 
   if (!table) {
     return res.status(404).json({ success: false, error: 'Table not found' });

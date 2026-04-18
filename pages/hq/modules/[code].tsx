@@ -54,7 +54,7 @@ const MODULE_DETAILS: Record<string, ModuleDetail> = {
     name: 'Dashboard',
     tagline: 'Pusat Kontrol & Monitoring Bisnis Real-Time',
     longDesc: 'Dashboard HQ menampilkan ringkasan komprehensif dari seluruh operasional bisnis Anda. Monitor penjualan harian, status cabang, KPI karyawan, dan dapatkan insight berbasis data untuk pengambilan keputusan yang lebih cepat dan tepat.',
-    icon: LayoutDashboard, gradient: 'from-indigo-500 to-indigo-600', gradientBg: 'from-indigo-900 via-indigo-950 to-violet-950', href: '/hq/dashboard', category: 'Core System',
+    icon: LayoutDashboard, gradient: 'from-indigo-500 to-indigo-600', gradientBg: 'from-indigo-900 via-indigo-950 to-violet-950', href: '/hq/home', category: 'Core System',
     highlights: ['Monitoring real-time semua cabang & outlet', 'KPI & analytics cross-module dalam satu layar', 'AI-powered insight & rekomendasi otomatis'],
     features: [
       { title: 'Sales Overview', desc: 'Grafik penjualan harian, mingguan, bulanan dengan perbandingan periode sebelumnya', icon: TrendingUp },

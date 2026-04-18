@@ -14,93 +14,132 @@ module.exports = {
     const transaction = await queryInterface.sequelize.transaction();
     
     try {
-      // 1. Add HPP fields to products table
-      await queryInterface.addColumn('products', 'hpp', {
+      const sequelize = queryInterface.sequelize;
+
+      // 1. Add HPP fields to products table (skip columns already present from earlier migrations)
+      const pd = await queryInterface.describeTable('products', { transaction });
+      const addIfMissing = async (col, def) => {
+        if (pd[col]) return;
+        const { comment: _c, ...rest } = def;
+        await queryInterface.addColumn('products', col, rest, { transaction });
+        pd[col] = true;
+      };
+
+      await addIfMissing('hpp', {
         type: Sequelize.DECIMAL(15, 2),
         defaultValue: 0,
         comment: 'Harga Pokok Penjualan (Cost of Goods Sold)'
-      }, { transaction });
+      });
 
-      await queryInterface.addColumn('products', 'hpp_method', {
+      await addIfMissing('hpp_method', {
         type: Sequelize.STRING(20),
         defaultValue: 'average',
         comment: 'fifo, lifo, average, standard'
-      }, { transaction });
+      });
 
-      await queryInterface.addColumn('products', 'last_purchase_price', {
+      await addIfMissing('last_purchase_price', {
         type: Sequelize.DECIMAL(15, 2),
         comment: 'Last purchase price from PO'
-      }, { transaction });
+      });
 
-      await queryInterface.addColumn('products', 'average_purchase_price', {
+      await addIfMissing('average_purchase_price', {
         type: Sequelize.DECIMAL(15, 2),
         comment: 'Average purchase price'
-      }, { transaction });
+      });
 
-      await queryInterface.addColumn('products', 'standard_cost', {
+      await addIfMissing('standard_cost', {
         type: Sequelize.DECIMAL(15, 2),
         comment: 'Standard/predetermined cost'
-      }, { transaction });
+      });
 
-      await queryInterface.addColumn('products', 'margin_amount', {
+      await addIfMissing('margin_amount', {
         type: Sequelize.DECIMAL(15, 2),
         comment: 'Selling Price - HPP'
-      }, { transaction });
+      });
 
-      await queryInterface.addColumn('products', 'margin_percentage', {
+      await addIfMissing('margin_percentage', {
         type: Sequelize.DECIMAL(5, 2),
         comment: 'Margin / Selling Price * 100'
-      }, { transaction });
+      });
 
-      await queryInterface.addColumn('products', 'markup_percentage', {
+      await addIfMissing('markup_percentage', {
         type: Sequelize.DECIMAL(5, 2),
         comment: 'Margin / HPP * 100'
-      }, { transaction });
+      });
 
-      await queryInterface.addColumn('products', 'min_margin_percentage', {
+      await addIfMissing('min_margin_percentage', {
         type: Sequelize.DECIMAL(5, 2),
         defaultValue: 20,
         comment: 'Minimum acceptable margin percentage'
-      }, { transaction });
+      });
 
-      await queryInterface.addColumn('products', 'packaging_cost', {
+      await addIfMissing('packaging_cost', {
         type: Sequelize.DECIMAL(15, 2),
         defaultValue: 0,
         comment: 'Packaging cost per unit'
-      }, { transaction });
+      });
 
-      await queryInterface.addColumn('products', 'labor_cost', {
+      await addIfMissing('labor_cost', {
         type: Sequelize.DECIMAL(15, 2),
         defaultValue: 0,
         comment: 'Labor cost per unit'
-      }, { transaction });
+      });
 
-      await queryInterface.addColumn('products', 'overhead_cost', {
+      await addIfMissing('overhead_cost', {
         type: Sequelize.DECIMAL(15, 2),
         defaultValue: 0,
         comment: 'Overhead cost per unit'
-      }, { transaction });
-
-      // Create indexes for HPP fields
-      await queryInterface.addIndex('products', ['hpp'], {
-        name: 'idx_products_hpp',
-        transaction
       });
 
-      await queryInterface.addIndex('products', ['margin_percentage'], {
-        name: 'idx_products_margin',
-        transaction
-      });
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_products_hpp ON "products" ("hpp")',
+        { transaction }
+      );
+
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_products_margin ON "products" ("margin_percentage")',
+        { transaction }
+      );
+
+      const pgUdtToSequelizeType = (udt) => {
+        if (!udt) return Sequelize.UUID;
+        const u = String(udt).toLowerCase();
+        if (u === 'uuid') return Sequelize.UUID;
+        if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+        if (u === 'int8') return Sequelize.BIGINT;
+        return Sequelize.UUID;
+      };
+
+      const [productIdUdtRows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'id'`,
+        { transaction }
+      );
+      const productIdType = pgUdtToSequelizeType(productIdUdtRows[0]?.udt_name);
+
+      const ensureTableMerge = async (tableName, tableDef) => {
+        const tableList = await queryInterface.showAllTables({ transaction });
+        if (!tableList.includes(tableName)) {
+          await queryInterface.createTable(tableName, tableDef, { transaction });
+          return;
+        }
+        const d = await queryInterface.describeTable(tableName, { transaction });
+        for (const [col, def] of Object.entries(tableDef)) {
+          if (d[col]) continue;
+          const { comment: _c, ...rest } = def;
+          await queryInterface.addColumn(tableName, col, rest, { transaction });
+          d[col] = true;
+        }
+      };
 
       // 2. Create product_cost_history table
-      await queryInterface.createTable('product_cost_history', {
+      const productCostHistoryDef = {
         id: {
           type: Sequelize.UUID,
           defaultValue: Sequelize.literal('gen_random_uuid()'),
           primaryKey: true
         },
         product_id: {
-          type: Sequelize.UUID,
+          type: productIdType,
           allowNull: false,
           references: {
             model: 'products',
@@ -109,8 +148,7 @@ module.exports = {
           onDelete: 'CASCADE',
           onUpdate: 'CASCADE'
         },
-        
-        // Cost Details
+
         old_hpp: {
           type: Sequelize.DECIMAL(15, 2)
         },
@@ -125,8 +163,7 @@ module.exports = {
           type: Sequelize.DECIMAL(5, 2),
           comment: 'Percentage change'
         },
-        
-        // Cost Breakdown
+
         purchase_price: {
           type: Sequelize.DECIMAL(15, 2)
         },
@@ -139,8 +176,7 @@ module.exports = {
         overhead_cost: {
           type: Sequelize.DECIMAL(15, 2)
         },
-        
-        // Reason & Source
+
         change_reason: {
           type: Sequelize.STRING(255),
           comment: 'purchase, adjustment, recipe_update, manual'
@@ -152,8 +188,7 @@ module.exports = {
         notes: {
           type: Sequelize.TEXT
         },
-        
-        // Audit
+
         changed_by: {
           type: Sequelize.UUID
         },
@@ -161,39 +196,39 @@ module.exports = {
           type: Sequelize.DATE,
           defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         },
-        
+
         created_at: {
           type: Sequelize.DATE,
           allowNull: false,
           defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
-      }, { transaction });
+      };
+      await ensureTableMerge('product_cost_history', productCostHistoryDef);
 
-      // Create indexes for product_cost_history
-      await queryInterface.addIndex('product_cost_history', ['product_id'], {
-        name: 'idx_cost_history_product',
-        transaction
-      });
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_cost_history_product ON "product_cost_history" ("product_id")',
+        { transaction }
+      );
 
-      await queryInterface.addIndex('product_cost_history', ['changed_at'], {
-        name: 'idx_cost_history_date',
-        transaction
-      });
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_cost_history_date ON "product_cost_history" ("changed_at")',
+        { transaction }
+      );
 
-      await queryInterface.addIndex('product_cost_history', ['change_reason'], {
-        name: 'idx_cost_history_reason',
-        transaction
-      });
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_cost_history_reason ON "product_cost_history" ("change_reason")',
+        { transaction }
+      );
 
       // 3. Create product_cost_components table
-      await queryInterface.createTable('product_cost_components', {
+      const productCostComponentsDef = {
         id: {
           type: Sequelize.UUID,
           defaultValue: Sequelize.literal('gen_random_uuid()'),
           primaryKey: true
         },
         product_id: {
-          type: Sequelize.UUID,
+          type: productIdType,
           allowNull: false,
           references: {
             model: 'products',
@@ -202,7 +237,7 @@ module.exports = {
           onDelete: 'CASCADE',
           onUpdate: 'CASCADE'
         },
-        
+
         component_type: {
           type: Sequelize.STRING(50),
           allowNull: false,
@@ -215,7 +250,7 @@ module.exports = {
         component_description: {
           type: Sequelize.TEXT
         },
-        
+
         cost_amount: {
           type: Sequelize.DECIMAL(15, 2),
           allowNull: false
@@ -227,12 +262,12 @@ module.exports = {
         unit: {
           type: Sequelize.STRING(20)
         },
-        
+
         is_active: {
           type: Sequelize.BOOLEAN,
           defaultValue: true
         },
-        
+
         created_at: {
           type: Sequelize.DATE,
           allowNull: false,
@@ -243,23 +278,23 @@ module.exports = {
           allowNull: false,
           defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
         }
-      }, { transaction });
+      };
+      await ensureTableMerge('product_cost_components', productCostComponentsDef);
 
-      // Create indexes for product_cost_components
-      await queryInterface.addIndex('product_cost_components', ['product_id'], {
-        name: 'idx_cost_components_product',
-        transaction
-      });
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_cost_components_product ON "product_cost_components" ("product_id")',
+        { transaction }
+      );
 
-      await queryInterface.addIndex('product_cost_components', ['component_type'], {
-        name: 'idx_cost_components_type',
-        transaction
-      });
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_cost_components_type ON "product_cost_components" ("component_type")',
+        { transaction }
+      );
 
-      await queryInterface.addIndex('product_cost_components', ['is_active'], {
-        name: 'idx_cost_components_active',
-        transaction
-      });
+      await sequelize.query(
+        'CREATE INDEX IF NOT EXISTS idx_cost_components_active ON "product_cost_components" ("is_active")',
+        { transaction }
+      );
 
       await transaction.commit();
       console.log('✅ HPP fields migration completed successfully');

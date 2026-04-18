@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]';
+import { getSessionTenantId } from '@/lib/session-scope';
 
 const Customer = require('../../../models/Customer');
 const PosTransaction = require('../../../models/PosTransaction');
@@ -13,19 +14,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const tenantId = getSessionTenantId(session);
+  if (!tenantId) {
+    return res.status(400).json({
+      error: 'tenant_required',
+      message: 'Tenant tidak ditemukan pada sesi. Silakan login ulang.'
+    });
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
+    const tenantWhere = { tenantId };
+
     // Get overall statistics
-    const totalCustomers = await Customer.count();
-    const activeCustomers = await Customer.count({ where: { status: 'active' } });
-    const vipCustomers = await Customer.count({ where: { type: 'vip' } });
-    const memberCustomers = await Customer.count({ where: { type: 'member' } });
+    const totalCustomers = await Customer.count({ where: tenantWhere });
+    const activeCustomers = await Customer.count({ where: { ...tenantWhere, status: 'active' } });
+    const vipCustomers = await Customer.count({ where: { ...tenantWhere, type: 'vip' } });
+    const memberCustomers = await Customer.count({ where: { ...tenantWhere, type: 'member' } });
 
     // Get average lifetime value
     const avgStats = await Customer.findAll({
+      where: tenantWhere,
       attributes: [
         [Customer.sequelize.fn('AVG', Customer.sequelize.col('totalSpent')), 'avgLifetimeValue'],
         [Customer.sequelize.fn('AVG', Customer.sequelize.col('totalPurchases')), 'avgPurchases'],
@@ -41,6 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const newCustomersThisMonth = await Customer.count({
       where: {
+        tenantId,
         createdAt: {
           [Op.gte]: startOfMonth
         }
@@ -49,6 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Get customers by membership level
     const customersByLevel = await Customer.findAll({
+      where: tenantWhere,
       attributes: [
         'membershipLevel',
         [Customer.sequelize.fn('COUNT', Customer.sequelize.col('id')), 'count']
@@ -59,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Get top customers by spending
     const topCustomers = await Customer.findAll({
-      where: { isActive: true },
+      where: { ...tenantWhere, isActive: true },
       order: [['totalSpent', 'DESC']],
       limit: 10,
       attributes: ['id', 'name', 'phone', 'email', 'totalSpent', 'totalPurchases', 'membershipLevel']
@@ -67,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Get recent customers
     const recentCustomers = await Customer.findAll({
-      where: { isActive: true },
+      where: { ...tenantWhere, isActive: true },
       order: [['createdAt', 'DESC']],
       limit: 10,
       attributes: ['id', 'name', 'phone', 'email', 'createdAt', 'type', 'status']

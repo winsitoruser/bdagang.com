@@ -39,6 +39,7 @@ import {
   Fuel,
   Fingerprint,
   Utensils,
+  UtensilsCrossed,
   Calendar,
   ChefHat,
   Ticket,
@@ -117,7 +118,7 @@ export type ModuleCode =
   | 'fms'
   | 'manufacturing';
 
-export type LayoutType = 'hq' | 'branch' | 'admin';
+export type LayoutType = 'hq' | 'branch' | 'admin' | 'opanel';
 
 export interface MenuItem {
   id: string;
@@ -176,13 +177,6 @@ export const hqSidebarConfig: SidebarConfig = {
           name: 'Home', 
           href: '/hq/home', 
           icon: LayoutDashboard,
-          modules: ['dashboard']
-        },
-        { 
-          id: 'dashboard',
-          name: 'Dashboard Operasional', 
-          href: '/hq/dashboard', 
-          icon: BarChart3,
           modules: ['dashboard']
         }
       ]
@@ -513,6 +507,32 @@ export const hqSidebarConfig: SidebarConfig = {
 };
 
 // ============================================
+// OPANEL — panel pemilik (F&B / restoran), terpisah dari HQ
+// ============================================
+export const opanelSidebarConfig: SidebarConfig = {
+  layout: 'opanel',
+  logo: {
+    icon: UtensilsCrossed,
+    title: 'BEDAGANG',
+    subtitle: 'Panel pemilik',
+    href: '/opanel/dashboard',
+  },
+  groups: [
+    {
+      id: 'owner_hub',
+      title: 'Ringkasan bisnis',
+      roles: ['owner', 'hq_admin', 'super_admin'],
+      items: [
+        { id: 'opanel-dash', name: 'Dasbor', href: '/opanel/dashboard', icon: LayoutDashboard, modules: ['dashboard'] },
+        { id: 'opanel-business', name: 'Profil bisnis', href: '/opanel/business', icon: Building2, modules: ['dashboard'] },
+        { id: 'opanel-outlets', name: 'Cabang & outlet', href: '/opanel/outlets', icon: Store, modules: ['dashboard'] },
+        { id: 'opanel-workforce', name: 'Tim & jadwal', href: '/opanel/workforce', icon: UserCheck, modules: ['employees'] },
+      ],
+    },
+  ],
+};
+
+// ============================================
 // BRANCH SIDEBAR CONFIGURATION
 // ============================================
 export const branchSidebarConfig: SidebarConfig = {
@@ -603,6 +623,8 @@ export function getSidebarConfig(layout: LayoutType): SidebarConfig {
       return branchSidebarConfig;
     case 'admin':
       return adminSidebarConfig;
+    case 'opanel':
+      return opanelSidebarConfig;
     default:
       return branchSidebarConfig;
   }

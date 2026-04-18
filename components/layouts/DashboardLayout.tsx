@@ -3,14 +3,25 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useBusinessType } from '@/contexts/BusinessTypeContext';
-import { 
+import {
   LogOut,
   Store,
   Menu,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Shield,
+  Building2,
 } from 'lucide-react';
+import { isSuperAdminRole } from '@/utils/adminAuth';
+import { isSingleBranchDeployment } from '@/lib/singleBranch';
+
+/** Pemilik tenant / admin pusat: kelola multi-cabang lewat area HQ */
+function canAccessTenantHqDashboard(role: string | undefined): boolean {
+  if (!role) return false;
+  const r = role.toLowerCase().trim();
+  return r === 'owner' || r === 'hq_admin';
+}
 import {
   branchSidebarConfig,
   filterSidebarConfig,
@@ -35,6 +46,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   // Get user role from session
   const userRole = (session?.user as any)?.role as UserRole | undefined;
+  const sessionRole = session?.user ? (session.user as { role?: string }).role : undefined;
+  const showTenantHqButton =
+    Boolean(session?.user) &&
+    !isSingleBranchDeployment() &&
+    canAccessTenantHqDashboard(sessionRole);
+  const showPlatformAdminButton = Boolean(session?.user) && isSuperAdminRole(sessionRole);
 
   // Convert enabled modules to ModuleCode array
   const enabledModuleCodes = useMemo(() => {
@@ -200,18 +217,46 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       }`}>
         {/* Top Bar */}
         <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
-          <div className="flex items-center justify-between h-16 px-6">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden text-gray-500 hover:text-gray-700"
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            <div className="flex-1 lg:flex-none">
-              <h1 className="text-xl font-semibold text-gray-900">
+          <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="shrink-0 text-gray-500 hover:text-gray-700 lg:hidden"
+                aria-label="Buka menu"
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+              <h1 className="truncate text-lg font-semibold text-gray-900 sm:text-xl">
                 {findActiveMenuItem(filteredConfig.groups, router.pathname)?.name || 'Dashboard'}
               </h1>
             </div>
+            {(showTenantHqButton || showPlatformAdminButton) && (
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                {showTenantHqButton && (
+                  <Link
+                    href="/opanel/dashboard"
+                    className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-gradient-to-r from-sky-600 to-blue-700 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-sky-700 hover:to-blue-800 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2"
+                    title="Pantau dan kelola seluruh cabang dari satu dashboard"
+                  >
+                    <Building2 className="h-4 w-4 shrink-0 opacity-95" aria-hidden />
+                    <span className="hidden sm:inline">Pusat multi-cabang</span>
+                    <span className="sm:hidden">HQ</span>
+                  </Link>
+                )}
+                {showPlatformAdminButton && (
+                  <Link
+                    href="/admin/dashboard"
+                    className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-600 to-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:from-violet-700 hover:to-indigo-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2"
+                    title="Kontrol panel penyedia platform (SaaS)"
+                  >
+                    <Shield className="h-4 w-4 shrink-0 opacity-95" aria-hidden />
+                    <span className="hidden sm:inline">Panel platform</span>
+                    <span className="sm:hidden">Admin</span>
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </header>
 

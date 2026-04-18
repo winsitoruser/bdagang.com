@@ -15,7 +15,13 @@ export default async function handler(
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const tenantId = session.user.tenantId;
+    const tenantId = session.user.tenantId as string | undefined;
+    if (!tenantId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tenant context required for kitchen dashboard'
+      });
+    }
 
     if (req.method === 'GET') {
       // Get today's date range
@@ -23,7 +29,7 @@ export default async function handler(
       const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-      // Get active orders
+      // Get active orders (kitchen_order_items uses kitchen_order_id; STRING_AGG must not use LIMIT inside aggregate)
       const activeOrders = await sequelize.query(`
         SELECT 
           ko.id,
@@ -34,15 +40,15 @@ export default async function handler(
           ko.total_amount,
           ko.created_at,
           COUNT(koi.id) as item_count,
-          STRING_AGG(p.name, ', ' ORDER BY koi.id LIMIT 2) as first_items
+          STRING_AGG(p.name, ', ' ORDER BY koi.id) as first_items
         FROM kitchen_orders ko
-        LEFT JOIN kitchen_order_items koi ON ko.id = koi.order_id
+        LEFT JOIN kitchen_order_items koi ON ko.id = koi.kitchen_order_id
         LEFT JOIN products p ON koi.product_id = p.id
         WHERE ko.tenant_id = :tenantId
           AND ko.status IN ('new', 'preparing')
           AND ko.created_at >= :startDate
           AND ko.created_at < :endDate
-        GROUP BY ko.id
+        GROUP BY ko.id, ko.order_number, ko.table_number, ko.order_type, ko.status, ko.total_amount, ko.created_at
         ORDER BY ko.created_at ASC
         LIMIT 20
       `, {
@@ -57,7 +63,7 @@ export default async function handler(
           COUNT(CASE WHEN status = 'served' THEN 1 END) as completed_orders,
           COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_orders,
           COALESCE(SUM(CASE WHEN status = 'served' THEN total_amount END), 0) as total_revenue,
-          COUNT(DISTINCT customer_id) as unique_customers
+          COUNT(DISTINCT NULLIF(TRIM(COALESCE(customer_name, '')), '')) as unique_customers
         FROM kitchen_orders
         WHERE tenant_id = :tenantId
           AND created_at >= :startDate
@@ -67,15 +73,17 @@ export default async function handler(
         type: QueryTypes.SELECT
       });
 
-      // Get low stock items
-      const lowStockItems = await sequelize.query(`
+      // Get low stock items (optional table — jangan gagalkan seluruh dashboard)
+      let lowStockItems: unknown[] = [];
+      try {
+        lowStockItems = await sequelize.query(`
         SELECT 
           kii.id,
           p.name,
           p.unit,
           kii.quantity,
           kii.minimum_stock,
-          (kii.quantity * p.buy_price) as value
+          (kii.quantity * COALESCE(p.buy_price, 0)) as value
         FROM kitchen_inventory_items kii
         JOIN products p ON kii.product_id = p.id
         WHERE kii.tenant_id = :tenantId
@@ -86,6 +94,9 @@ export default async function handler(
         replacements: { tenantId },
         type: QueryTypes.SELECT
       });
+      } catch (e: any) {
+        console.warn('[kitchen/dashboard] lowStockItems skipped:', e?.message);
+      }
 
       // Get staff on duty
       const staffOnDuty = await sequelize.query(`
@@ -115,7 +126,7 @@ export default async function handler(
         type: QueryTypes.SELECT
       });
 
-      // Get table status
+      // Meja tidak selalu punya tenant_id; hubungkan order via table_number + filter tenant di kitchen_orders
       const tableStatus = await sequelize.query(`
         SELECT 
           t.id,
@@ -125,13 +136,13 @@ export default async function handler(
           COUNT(ko.id) as active_orders,
           COALESCE(SUM(ko.total_amount), 0) as current_order_value
         FROM tables t
-        LEFT JOIN kitchen_orders ko ON t.id = ko.table_id 
+        LEFT JOIN kitchen_orders ko ON LOWER(TRIM(COALESCE(ko.table_number, ''))) = LOWER(TRIM(COALESCE(t.table_number, '')))
+          AND ko.tenant_id = :tenantId
           AND ko.status IN ('new', 'preparing')
           AND ko.created_at >= :startDate
           AND ko.created_at < :endDate
-        WHERE t.tenant_id = :tenantId
         GROUP BY t.id, t.table_number, t.capacity, t.status
-        ORDER BY CAST(t.table_number AS INTEGER)
+        ORDER BY t.table_number
       `, {
         replacements: { tenantId, startDate, endDate },
         type: QueryTypes.SELECT
@@ -154,23 +165,22 @@ export default async function handler(
         type: QueryTypes.SELECT
       });
 
-      // Get top dishes today
+      // Get top dishes today (harga dari produk; kolom koi.price tidak ada di schema default)
       const topDishes = await sequelize.query(`
         SELECT 
           p.id,
           p.name,
-          p.image_url,
           COUNT(koi.id) as order_count,
           SUM(koi.quantity) as quantity_sold,
-          SUM(koi.quantity * koi.price) as revenue
+          SUM(koi.quantity * COALESCE(p.sell_price, 0)) as revenue
         FROM kitchen_order_items koi
-        JOIN kitchen_orders ko ON koi.order_id = ko.id
+        JOIN kitchen_orders ko ON koi.kitchen_order_id = ko.id
         JOIN products p ON koi.product_id = p.id
         WHERE ko.tenant_id = :tenantId
           AND ko.status = 'served'
           AND ko.created_at >= :startDate
           AND ko.created_at < :endDate
-        GROUP BY p.id, p.name, p.image_url
+        GROUP BY p.id, p.name
         ORDER BY quantity_sold DESC
         LIMIT 10
       `, {
@@ -178,20 +188,19 @@ export default async function handler(
         type: QueryTypes.SELECT
       });
 
-      // Get pending reservations
+      // Reservasi: skema memakai reservation_date + reservation_time + guest_count (tanpa tenant_id di export default)
       const pendingReservations = await sequelize.query(`
         SELECT 
           r.id,
           r.customer_name,
-          r.party_size,
+          r.guest_count AS party_size,
           r.reservation_time,
           r.status,
           t.table_number
         FROM reservations r
         LEFT JOIN tables t ON r.table_id = t.id
         WHERE r.tenant_id = :tenantId
-          AND r.reservation_time >= CURRENT_DATE
-          AND r.reservation_time < CURRENT_DATE + INTERVAL '1 day'
+          AND r.reservation_date = CURRENT_DATE
           AND r.status IN ('pending', 'confirmed')
         ORDER BY r.reservation_time ASC
         LIMIT 10

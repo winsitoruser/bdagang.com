@@ -26,7 +26,7 @@ const FinanceReportsPage: NextPage<ReportsPageProps> = () => {
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.push('/login');
+        router.push('/auth/login');
         return;
       }
       

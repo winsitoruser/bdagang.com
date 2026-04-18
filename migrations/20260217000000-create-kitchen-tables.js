@@ -671,22 +671,60 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('kitchen_settings', ['tenant_id'], { unique: true });
-    await queryInterface.addIndex('kitchen_staff', ['tenant_id']);
-    await queryInterface.addIndex('kitchen_staff', ['role']);
-    await queryInterface.addIndex('kitchen_staff', ['shift']);
-    await queryInterface.addIndex('kitchen_orders', ['tenant_id']);
-    await queryInterface.addIndex('kitchen_orders', ['order_number']);
-    await queryInterface.addIndex('kitchen_orders', ['status']);
-    await queryInterface.addIndex('kitchen_orders', ['order_type']);
-    await queryInterface.addIndex('kitchen_order_items', ['kitchen_order_id']);
-    await queryInterface.addIndex('kitchen_recipes', ['tenant_id']);
-    await queryInterface.addIndex('kitchen_recipes', ['category']);
-    await queryInterface.addIndex('kitchen_inventory_items', ['tenant_id']);
-    await queryInterface.addIndex('kitchen_inventory_items', ['status']);
-    await queryInterface.addIndex('kitchen_recipe_ingredients', ['recipe_id']);
-    await queryInterface.addIndex('kitchen_inventory_transactions', ['inventory_item_id']);
+    const sequelize = queryInterface.sequelize;
+
+    await sequelize.query(
+      'CREATE UNIQUE INDEX IF NOT EXISTS kitchen_settings_tenant_id ON "kitchen_settings" ("tenant_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_staff_tenant_id ON "kitchen_staff" ("tenant_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_staff_role ON "kitchen_staff" ("role")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_staff_shift ON "kitchen_staff" ("shift")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_orders_tenant_id ON "kitchen_orders" ("tenant_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_orders_order_number ON "kitchen_orders" ("order_number")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_orders_status ON "kitchen_orders" ("status")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_orders_order_type ON "kitchen_orders" ("order_type")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_order_items_kitchen_order_id ON "kitchen_order_items" ("kitchen_order_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_recipes_tenant_id ON "kitchen_recipes" ("tenant_id")'
+    );
+    await sequelize.query(`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'kitchen_recipes' AND column_name = 'category'
+        ) THEN
+          EXECUTE 'CREATE INDEX IF NOT EXISTS kitchen_recipes_category ON "kitchen_recipes" ("category")';
+        END IF;
+      END $$;
+    `);
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_inventory_items_tenant_id ON "kitchen_inventory_items" ("tenant_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_inventory_items_status ON "kitchen_inventory_items" ("status")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_recipe_ingredients_recipe_id ON "kitchen_recipe_ingredients" ("recipe_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS kitchen_inventory_transactions_inventory_item_id ON "kitchen_inventory_transactions" ("inventory_item_id")'
+    );
   },
 
   down: async (queryInterface, Sequelize) => {

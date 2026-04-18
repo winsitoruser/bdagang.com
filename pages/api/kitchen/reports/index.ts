@@ -64,10 +64,10 @@ async function getSalesReport(
       p.category_id,
       c.name as category_name,
       SUM(koi.quantity) as total_sold,
-      SUM(koi.quantity * koi.price) as total_revenue,
+      SUM(koi.quantity * COALESCE(p.sell_price, 0)) as total_revenue,
       COUNT(DISTINCT ko.id) as order_count
     FROM kitchen_order_items koi
-    JOIN kitchen_orders ko ON koi.order_id = ko.id
+    JOIN kitchen_orders ko ON koi.kitchen_order_id = ko.id
     JOIN products p ON koi.product_id = p.id
     LEFT JOIN categories c ON p.category_id = c.id
     WHERE ko.tenant_id = :tenantId
@@ -99,25 +99,32 @@ async function getSalesReport(
     type: QueryTypes.SELECT
   });
 
-  // Get category performance
+  // Get category performance (persentase dari total revenue periode)
   const categoryPerformance = await sequelize.query(`
     SELECT 
-      c.name as category_name,
-      COUNT(DISTINCT ko.id) as order_count,
-      SUM(koi.quantity) as items_sold,
-      SUM(koi.quantity * koi.price) as total_revenue,
+      category_name,
+      order_count,
+      items_sold,
+      total_revenue,
       ROUND(
-        (SUM(koi.quantity * koi.price) / SUM(SUM(koi.quantity * koi.price)) OVER ()) * 100, 
+        (total_revenue::numeric / NULLIF(SUM(total_revenue) OVER (), 0)) * 100,
         2
       ) as revenue_percentage
-    FROM kitchen_order_items koi
-    JOIN kitchen_orders ko ON koi.order_id = ko.id
-    JOIN products p ON koi.product_id = p.id
-    LEFT JOIN categories c ON p.category_id = c.id
-    WHERE ko.tenant_id = :tenantId
-      AND ko.status = 'served'
-      AND ko.created_at BETWEEN :startDate AND :endDate
-    GROUP BY c.id, c.name
+    FROM (
+      SELECT 
+        c.name as category_name,
+        COUNT(DISTINCT ko.id) as order_count,
+        SUM(koi.quantity) as items_sold,
+        SUM(koi.quantity * COALESCE(p.sell_price, 0)) as total_revenue
+      FROM kitchen_order_items koi
+      JOIN kitchen_orders ko ON koi.kitchen_order_id = ko.id
+      JOIN products p ON koi.product_id = p.id
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE ko.tenant_id = :tenantId
+        AND ko.status = 'served'
+        AND ko.created_at BETWEEN :startDate AND :endDate
+      GROUP BY c.id, c.name
+    ) cat_rev
     ORDER BY total_revenue DESC
   `, {
     replacements: { tenantId, startDate, endDate },

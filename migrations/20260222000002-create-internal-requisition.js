@@ -2,8 +2,45 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Create internal_requisitions table for SCM
-    await queryInterface.createTable('internal_requisitions', {
+    const sequelize = queryInterface.sequelize;
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+    const fkTypeFor = async (tableName, columnName = 'id') => {
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+
+    const branchFkType = await fkTypeFor('branches', 'id');
+    const userFkType = await fkTypeFor('users', 'id');
+    const productFkType = await fkTypeFor('products', 'id');
+
+    let tablesNow = await queryInterface.showAllTables();
+    const ensureTableMerge = async (tableName, tableDef) => {
+      if (!tablesNow.includes(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        tablesNow.push(tableName);
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [attrName, def] of Object.entries(tableDef)) {
+        if (!def || typeof def !== 'object') continue;
+        const colName = def.field ? def.field : attrName;
+        if (d[colName]) continue;
+        const { field: _f, comment: _c, ...rest } = def;
+        await queryInterface.addColumn(tableName, colName, rest);
+        d[colName] = true;
+      }
+    };
+
+    await ensureTableMerge('internal_requisitions', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -15,7 +52,7 @@ module.exports = {
         unique: true
       },
       requesting_branch_id: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: false,
         references: {
           model: 'branches',
@@ -25,7 +62,7 @@ module.exports = {
         onDelete: 'RESTRICT'
       },
       fulfilling_branch_id: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: true,
         references: {
           model: 'branches',
@@ -35,7 +72,13 @@ module.exports = {
         onDelete: 'SET NULL'
       },
       request_type: {
-        type: Sequelize.ENUM('restock', 'new_item', 'emergency', 'scheduled', 'transfer'),
+        type: Sequelize.ENUM(
+          'restock',
+          'new_item',
+          'emergency',
+          'scheduled',
+          'transfer'
+        ),
         defaultValue: 'restock'
       },
       priority: {
@@ -88,7 +131,7 @@ module.exports = {
         allowNull: true
       },
       requested_by: {
-        type: Sequelize.INTEGER,
+        type: userFkType,
         allowNull: false,
         references: {
           model: 'users',
@@ -98,7 +141,7 @@ module.exports = {
         onDelete: 'RESTRICT'
       },
       reviewed_by: {
-        type: Sequelize.INTEGER,
+        type: userFkType,
         allowNull: true,
         references: {
           model: 'users',
@@ -112,7 +155,7 @@ module.exports = {
         allowNull: true
       },
       approved_by: {
-        type: Sequelize.INTEGER,
+        type: userFkType,
         allowNull: true,
         references: {
           model: 'users',
@@ -139,8 +182,7 @@ module.exports = {
       }
     });
 
-    // Create internal_requisition_items table
-    await queryInterface.createTable('internal_requisition_items', {
+    await ensureTableMerge('internal_requisition_items', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -157,7 +199,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       product_id: {
-        type: Sequelize.INTEGER,
+        type: productFkType,
         allowNull: false,
         references: {
           model: 'products',
@@ -199,7 +241,13 @@ module.exports = {
         allowNull: true
       },
       status: {
-        type: Sequelize.ENUM('pending', 'approved', 'partially_approved', 'rejected', 'fulfilled'),
+        type: Sequelize.ENUM(
+          'pending',
+          'approved',
+          'partially_approved',
+          'rejected',
+          'fulfilled'
+        ),
         defaultValue: 'pending'
       },
       notes: {
@@ -220,19 +268,19 @@ module.exports = {
       }
     });
 
-    // Create indexes
-    await queryInterface.addIndex('internal_requisitions', ['ir_number']);
-    await queryInterface.addIndex('internal_requisitions', ['requesting_branch_id']);
-    await queryInterface.addIndex('internal_requisitions', ['status']);
-    await queryInterface.addIndex('internal_requisitions', ['priority']);
-    await queryInterface.addIndex('internal_requisitions', ['created_at']);
-    await queryInterface.addIndex('internal_requisition_items', ['requisition_id']);
-    await queryInterface.addIndex('internal_requisition_items', ['product_id']);
-    await queryInterface.addIndex('internal_requisition_items', ['status']);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS internal_requisitions_ir_number_idx ON internal_requisitions (ir_number);
+      CREATE INDEX IF NOT EXISTS internal_requisitions_requesting_branch_idx ON internal_requisitions (requesting_branch_id);
+      CREATE INDEX IF NOT EXISTS internal_requisitions_status_idx ON internal_requisitions (status);
+      CREATE INDEX IF NOT EXISTS internal_requisitions_priority_idx ON internal_requisitions (priority);
+      CREATE INDEX IF NOT EXISTS internal_requisitions_created_at_idx ON internal_requisitions (created_at);
+      CREATE INDEX IF NOT EXISTS internal_requisition_items_requisition_id_idx ON internal_requisition_items (requisition_id);
+      CREATE INDEX IF NOT EXISTS internal_requisition_items_product_id_idx ON internal_requisition_items (product_id);
+      CREATE INDEX IF NOT EXISTS internal_requisition_items_status_idx ON internal_requisition_items (status);
+    `);
   },
 
   async down(queryInterface, Sequelize) {
-    // Remove indexes and drop tables
     await queryInterface.dropTable('internal_requisition_items');
     await queryInterface.dropTable('internal_requisitions');
   }

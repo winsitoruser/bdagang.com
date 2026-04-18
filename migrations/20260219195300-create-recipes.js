@@ -192,14 +192,48 @@ module.exports = {
       }
     });
 
-    // Create indexes
-    await queryInterface.addIndex('recipes', ['code']);
-    await queryInterface.addIndex('recipes', ['category']);
-    await queryInterface.addIndex('recipes', ['status']);
-    await queryInterface.addIndex('recipes', ['created_by']);
-    
-    await queryInterface.addIndex('recipe_ingredients', ['recipe_id']);
-    await queryInterface.addIndex('recipe_ingredients', ['product_id']);
+    const sequelize = queryInterface.sequelize;
+
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS recipes_code ON "recipes" ("code")'
+    );
+    await sequelize.query(`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'recipes' AND column_name = 'category'
+        ) THEN
+          EXECUTE 'CREATE INDEX IF NOT EXISTS recipes_category ON "recipes" ("category")';
+        END IF;
+      END $$;
+    `);
+    await sequelize.query(`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'recipes' AND column_name = 'status'
+        ) THEN
+          EXECUTE 'CREATE INDEX IF NOT EXISTS recipes_status ON "recipes" ("status")';
+        END IF;
+      END $$;
+    `);
+    await sequelize.query(`
+      DO $$ BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'recipes' AND column_name = 'created_by'
+        ) THEN
+          EXECUTE 'CREATE INDEX IF NOT EXISTS recipes_created_by ON "recipes" ("created_by")';
+        END IF;
+      END $$;
+    `);
+
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS recipe_ingredients_recipe_id ON "recipe_ingredients" ("recipe_id")'
+    );
+    await sequelize.query(
+      'CREATE INDEX IF NOT EXISTS recipe_ingredients_product_id ON "recipe_ingredients" ("product_id")'
+    );
   },
 
   async down (queryInterface, Sequelize) {

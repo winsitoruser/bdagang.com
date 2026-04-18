@@ -2,6 +2,20 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const sequelize = queryInterface.sequelize;
+    const tables = await queryInterface.showAllTables();
+    const warehouseRef =
+      tables.includes('inventory_warehouses')
+        ? {
+            references: {
+              model: 'inventory_warehouses',
+              key: 'id'
+            },
+            onUpdate: 'CASCADE',
+            onDelete: 'SET NULL'
+          }
+        : {};
+
     // Create inventory_products table
     await queryInterface.createTable('inventory_products', {
       id: {
@@ -121,10 +135,12 @@ module.exports = {
       },
     });
 
-    await queryInterface.addIndex('inventory_products', ['tenantId']);
-    await queryInterface.addIndex('inventory_products', ['category']);
-    await queryInterface.addIndex('inventory_products', ['isActive']);
-    await queryInterface.addIndex('inventory_products', ['barcode']);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS inventory_products_tenant_idx ON inventory_products ("tenantId");
+      CREATE INDEX IF NOT EXISTS inventory_products_category_idx ON inventory_products ("category");
+      CREATE INDEX IF NOT EXISTS inventory_products_is_active_idx ON inventory_products ("isActive");
+      CREATE INDEX IF NOT EXISTS inventory_products_barcode_idx ON inventory_products ("barcode");
+    `);
 
     // Create inventory_stocks table
     await queryInterface.createTable('inventory_stocks', {
@@ -156,12 +172,7 @@ module.exports = {
       warehouseId: {
         type: Sequelize.UUID,
         allowNull: true,
-        references: {
-          model: 'inventory_warehouses',
-          key: 'id',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'SET NULL',
+        ...warehouseRef,
       },
       productId: {
         type: Sequelize.UUID,
@@ -352,11 +363,13 @@ module.exports = {
       },
     });
 
-    await queryInterface.addIndex('inventory_stock_movements', ['tenantId']);
-    await queryInterface.addIndex('inventory_stock_movements', ['branchId']);
-    await queryInterface.addIndex('inventory_stock_movements', ['productId']);
-    await queryInterface.addIndex('inventory_stock_movements', ['type']);
-    await queryInterface.addIndex('inventory_stock_movements', ['performedAt']);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS inventory_stock_movements_tenant_idx ON inventory_stock_movements ("tenantId");
+      CREATE INDEX IF NOT EXISTS inventory_stock_movements_branch_idx ON inventory_stock_movements ("branchId");
+      CREATE INDEX IF NOT EXISTS inventory_stock_movements_product_idx ON inventory_stock_movements ("productId");
+      CREATE INDEX IF NOT EXISTS inventory_stock_movements_type_idx ON inventory_stock_movements ("type");
+      CREATE INDEX IF NOT EXISTS inventory_stock_movements_performed_idx ON inventory_stock_movements ("performedAt");
+    `);
   },
 
   down: async (queryInterface, Sequelize) => {

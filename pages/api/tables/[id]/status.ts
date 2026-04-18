@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
+import { getTenantId } from '@/lib/api/tenantScope';
 const db = require('../../../../models');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -13,6 +14,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method !== 'PATCH') {
       return res.status(405).json({ success: false, error: 'Method not allowed' });
+    }
+
+    const tenantId = getTenantId(session);
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant context required' });
     }
 
     const { Table } = db;
@@ -31,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const table = await Table.findByPk(id);
+    const table = await Table.findOne({ where: { id, tenantId } });
 
     if (!table) {
       return res.status(404).json({ success: false, error: 'Table not found' });

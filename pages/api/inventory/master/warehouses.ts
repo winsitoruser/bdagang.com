@@ -11,12 +11,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     switch (req.method) {
-      case 'GET':
-        const result = await pool.query('SELECT * FROM warehouses ORDER BY name ASC');
+      case 'GET': {
+        const { search, is_active } = req.query;
+        let sql = 'SELECT * FROM warehouses WHERE 1=1';
+        const params: unknown[] = [];
+        let i = 1;
+        if (search) {
+          sql += ` AND (name ILIKE $${i} OR code ILIKE $${i} OR city ILIKE $${i})`;
+          params.push(`%${search}%`);
+          i++;
+        }
+        if (is_active !== undefined) {
+          sql += ` AND is_active = $${i}`;
+          params.push(is_active === 'true');
+          i++;
+        }
+        sql += ' ORDER BY name ASC';
+        const result = await pool.query(sql, params);
         return res.status(200).json({ success: true, data: result.rows, count: result.rows.length });
+      }
 
       case 'POST':
         const { code, name, description, address, city, province, manager_name, phone, email, is_main } = req.body;
+        if (!code || !name) {
+          return res.status(400).json({ success: false, error: 'Code and name are required' });
+        }
         const insertResult = await pool.query(
           `INSERT INTO warehouses (code, name, description, address, city, province, manager_name, phone, email, is_main, created_by, updated_by)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11) RETURNING *`,

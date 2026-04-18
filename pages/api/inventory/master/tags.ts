@@ -11,9 +11,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     switch (req.method) {
-      case 'GET':
-        const result = await pool.query('SELECT * FROM tags ORDER BY name ASC');
+      case 'GET': {
+        const { search, is_active } = req.query;
+        let sql = 'SELECT * FROM tags WHERE 1=1';
+        const params: unknown[] = [];
+        let i = 1;
+        if (search) {
+          sql += ` AND (name ILIKE $${i} OR slug ILIKE $${i} OR description ILIKE $${i})`;
+          params.push(`%${search}%`);
+          i++;
+        }
+        if (is_active !== undefined) {
+          sql += ` AND is_active = $${i}`;
+          params.push(is_active === 'true');
+          i++;
+        }
+        sql += ' ORDER BY name ASC';
+        const result = await pool.query(sql, params);
         return res.status(200).json({ success: true, data: result.rows, count: result.rows.length });
+      }
 
       case 'POST':
         const { name, slug, description, color, icon } = req.body;

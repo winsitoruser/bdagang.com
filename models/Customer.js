@@ -125,6 +125,16 @@ module.exports = (sequelize, DataTypes) => {
     },
     partnerId: {
       type: DataTypes.UUID
+    },
+    tenantId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'tenant_id',
+      references: {
+        model: 'tenants',
+        key: 'id'
+      },
+      comment: 'Tenant / outlet scope for multi-tenant isolation'
     }
   }, {
     tableName: 'customers',
@@ -144,6 +154,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       {
         fields: ['membershipLevel']
+      },
+      {
+        fields: ['tenantId']
       }
     ]
   });

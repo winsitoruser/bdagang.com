@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
+import { getTenantId } from '@/lib/api/tenantScope';
 const db = require('../../../../models');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -13,14 +14,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { Reservation } = db;
     const { id } = req.query;
+    const tenantId = getTenantId(session);
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant context required' });
+    }
 
     switch (req.method) {
       case 'GET':
-        return await getReservation(req, res, Reservation, id as string);
+        return await getReservation(req, res, Reservation, id as string, tenantId);
       case 'PUT':
-        return await updateReservation(req, res, Reservation, id as string);
+        return await updateReservation(req, res, Reservation, id as string, tenantId);
       case 'DELETE':
-        return await deleteReservation(req, res, Reservation, id as string);
+        return await deleteReservation(req, res, Reservation, id as string, tenantId);
       default:
         return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
@@ -30,8 +35,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function getReservation(req: NextApiRequest, res: NextApiResponse, Reservation: any, id: string) {
-  const reservation = await Reservation.findByPk(id, {
+async function getReservation(req: NextApiRequest, res: NextApiResponse, Reservation: any, id: string, tenantId: string) {
+  const reservation = await Reservation.findOne({
+    where: { id, tenantId },
     include: [
       { association: 'table' },
       { association: 'customer' },
@@ -46,8 +52,8 @@ async function getReservation(req: NextApiRequest, res: NextApiResponse, Reserva
   return res.status(200).json({ success: true, data: reservation });
 }
 
-async function updateReservation(req: NextApiRequest, res: NextApiResponse, Reservation: any, id: string) {
-  const reservation = await Reservation.findByPk(id);
+async function updateReservation(req: NextApiRequest, res: NextApiResponse, Reservation: any, id: string, tenantId: string) {
+  const reservation = await Reservation.findOne({ where: { id, tenantId } });
 
   if (!reservation) {
     return res.status(404).json({ success: false, error: 'Reservation not found' });
@@ -69,7 +75,7 @@ async function updateReservation(req: NextApiRequest, res: NextApiResponse, Rese
   // Validate table if changing
   if (tableId && tableId !== reservation.tableId) {
     const { Table } = db;
-    const table = await Table.findByPk(tableId);
+    const table = await Table.findOne({ where: { id: tableId, tenantId } });
     
     if (!table) {
       return res.status(404).json({ success: false, error: 'Table not found' });
@@ -106,8 +112,8 @@ async function updateReservation(req: NextApiRequest, res: NextApiResponse, Rese
   });
 }
 
-async function deleteReservation(req: NextApiRequest, res: NextApiResponse, Reservation: any, id: string) {
-  const reservation = await Reservation.findByPk(id);
+async function deleteReservation(req: NextApiRequest, res: NextApiResponse, Reservation: any, id: string, tenantId: string) {
+  const reservation = await Reservation.findOne({ where: { id, tenantId } });
 
   if (!reservation) {
     return res.status(404).json({ success: false, error: 'Reservation not found' });

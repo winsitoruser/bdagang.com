@@ -1,26 +1,21 @@
 import axios from 'axios';
 import { getSession } from 'next-auth/react';
 
-// Create a base axios instance with common configuration
+// Same-origin `/api/*`: NextAuth memakai cookie httpOnly; tidak perlu Bearer JWT manual.
 const apiClient = axios.create({
   baseURL: '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, // Always include credentials for cross-domain requests
+  withCredentials: true,
 });
 
-// Add request interceptor for authentication
 apiClient.interceptors.request.use(
   async (config) => {
     try {
-      // Try to get the session
       const session = await getSession();
-      
-      // If we have a session, add the auth token
       if (session) {
-        // Add auth header if not already present
         if (!config.headers.Authorization) {
           config.headers.Authorization = `Bearer ${session.user?.id || 'anonymous'}`;
         }

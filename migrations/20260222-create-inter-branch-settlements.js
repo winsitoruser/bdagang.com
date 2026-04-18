@@ -2,8 +2,47 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    const sequelize = queryInterface.sequelize;
+    const pgUdtToSequelizeType = (udt) => {
+      if (!udt) return Sequelize.UUID;
+      const u = String(udt).toLowerCase();
+      if (u === 'uuid') return Sequelize.UUID;
+      if (u === 'int4' || u === 'integer') return Sequelize.INTEGER;
+      if (u === 'int8') return Sequelize.BIGINT;
+      return Sequelize.UUID;
+    };
+    const fkTypeFor = async (tableName, columnName = 'id') => {
+      const [rows] = await sequelize.query(
+        `SELECT udt_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '${tableName}' AND column_name = '${columnName}'`
+      );
+      return pgUdtToSequelizeType(rows[0]?.udt_name);
+    };
+
+    const branchFkType = await fkTypeFor('branches', 'id');
+    const userFkType = await fkTypeFor('users', 'id');
+    const tenantFkType = await fkTypeFor('tenants', 'id');
+
+    const ensureTableMerge = async (tableName, tableDef) => {
+      const tableList = await queryInterface.showAllTables();
+      if (!tableList.includes(tableName)) {
+        await queryInterface.createTable(tableName, tableDef);
+        return;
+      }
+      const d = await queryInterface.describeTable(tableName);
+      for (const [attrName, def] of Object.entries(tableDef)) {
+        const colName =
+          def && typeof def === 'object' && def.field ? def.field : attrName;
+        if (d[colName]) continue;
+        const { field: _f, comment: _c, ...rest } = def;
+        await queryInterface.addColumn(tableName, colName, rest);
+        d[colName] = true;
+      }
+    };
+
+    const invTransferType = await fkTypeFor('inventory_transfers', 'id');
+
     // Create inter-branch settlements table
-    await queryInterface.createTable('inter_branch_settlements', {
+    await ensureTableMerge('inter_branch_settlements', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -15,7 +54,7 @@ module.exports = {
         unique: true
       },
       fromBranchId: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: false,
         field: 'from_branch_id',
         references: {
@@ -26,7 +65,7 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       toBranchId: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: false,
         field: 'to_branch_id',
         references: {
@@ -72,7 +111,7 @@ module.exports = {
         defaultValue: 'manual'
       },
       referenceId: {
-        type: Sequelize.UUID,
+        type: invTransferType,
         allowNull: true,
         field: 'reference_id',
         comment: 'Reference to related document (e.g., inventory transfer ID)'
@@ -94,7 +133,7 @@ module.exports = {
         defaultValue: 'pending'
       },
       approvedBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: true,
         field: 'approved_by',
         references: {
@@ -108,7 +147,7 @@ module.exports = {
         field: 'approved_at'
       },
       paidBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: true,
         field: 'paid_by',
         references: {
@@ -142,7 +181,7 @@ module.exports = {
         allowNull: true
       },
       createdBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: false,
         field: 'created_by',
         references: {
@@ -151,7 +190,7 @@ module.exports = {
         }
       },
       updatedBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: true,
         field: 'updated_by',
         references: {
@@ -160,7 +199,7 @@ module.exports = {
         }
       },
       tenantId: {
-        type: Sequelize.UUID,
+        type: tenantFkType,
         allowNull: false,
         field: 'tenant_id',
         references: {
@@ -184,18 +223,19 @@ module.exports = {
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('inter_branch_settlements', ['settlement_number'], { unique: true });
-    await queryInterface.addIndex('inter_branch_settlements', ['from_branch_id']);
-    await queryInterface.addIndex('inter_branch_settlements', ['to_branch_id']);
-    await queryInterface.addIndex('inter_branch_settlements', ['status']);
-    await queryInterface.addIndex('inter_branch_settlements', ['settlement_type']);
-    await queryInterface.addIndex('inter_branch_settlements', ['settlement_date']);
-    await queryInterface.addIndex('inter_branch_settlements', ['due_date']);
-    await queryInterface.addIndex('inter_branch_settlements', ['tenant_id']);
+    await sequelize.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS inter_branch_settlements_settlement_number ON inter_branch_settlements ("settlementNumber");
+      CREATE INDEX IF NOT EXISTS inter_branch_settlements_from_branch_id ON inter_branch_settlements (from_branch_id);
+      CREATE INDEX IF NOT EXISTS inter_branch_settlements_to_branch_id ON inter_branch_settlements (to_branch_id);
+      CREATE INDEX IF NOT EXISTS inter_branch_settlements_status ON inter_branch_settlements (status);
+      CREATE INDEX IF NOT EXISTS inter_branch_settlements_settlement_type ON inter_branch_settlements ("settlementType");
+      CREATE INDEX IF NOT EXISTS inter_branch_settlements_settlement_date ON inter_branch_settlements ("settlementDate");
+      CREATE INDEX IF NOT EXISTS inter_branch_settlements_due_date ON inter_branch_settlements (due_date);
+      CREATE INDEX IF NOT EXISTS inter_branch_settlements_tenant_id ON inter_branch_settlements (tenant_id);
+    `);
 
     // Create settlement history table for audit trail
-    await queryInterface.createTable('inter_branch_settlement_history', {
+    await ensureTableMerge('inter_branch_settlement_history', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
@@ -231,7 +271,7 @@ module.exports = {
         allowNull: true
       },
       userId: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: false,
         field: 'user_id',
         references: {
@@ -257,21 +297,22 @@ module.exports = {
       }
     });
 
-    // Add indexes for history table
-    await queryInterface.addIndex('inter_branch_settlement_history', ['settlement_id']);
-    await queryInterface.addIndex('inter_branch_settlement_history', ['action']);
-    await queryInterface.addIndex('inter_branch_settlement_history', ['user_id']);
-    await queryInterface.addIndex('inter_branch_settlement_history', ['created_at']);
+    await sequelize.query(`
+      CREATE INDEX IF NOT EXISTS inter_branch_settlement_history_settlement_id ON inter_branch_settlement_history (settlement_id);
+      CREATE INDEX IF NOT EXISTS inter_branch_settlement_history_action ON inter_branch_settlement_history (action);
+      CREATE INDEX IF NOT EXISTS inter_branch_settlement_history_user_id ON inter_branch_settlement_history (user_id);
+      CREATE INDEX IF NOT EXISTS inter_branch_settlement_history_created_at ON inter_branch_settlement_history (created_at);
+    `);
 
     // Add petty cash accounts per branch
-    await queryInterface.createTable('branch_petty_cash', {
+    await ensureTableMerge('branch_petty_cash', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true
       },
       branchId: {
-        type: Sequelize.UUID,
+        type: branchFkType,
         allowNull: false,
         unique: true,
         field: 'branch_id',
@@ -294,7 +335,7 @@ module.exports = {
         field: 'last_replenished_at'
       },
       lastReplenishedBy: {
-        type: Sequelize.UUID,
+        type: userFkType,
         allowNull: true,
         field: 'last_replenished_by',
         references: {
@@ -343,9 +384,10 @@ module.exports = {
       }
     });
 
-    // Add indexes for petty cash table
-    await queryInterface.addIndex('branch_petty_cash', ['branch_id'], { unique: true });
-    await queryInterface.addIndex('branch_petty_cash', ['tenant_id']);
+    await sequelize.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS branch_petty_cash_branch_id ON branch_petty_cash (branch_id);
+      CREATE INDEX IF NOT EXISTS branch_petty_cash_tenant_id ON branch_petty_cash (tenant_id);
+    `);
   },
 
   down: async (queryInterface, Sequelize) => {
