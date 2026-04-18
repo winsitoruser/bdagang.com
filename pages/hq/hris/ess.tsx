@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   User, FileText, Calendar, DollarSign, Clock, Bell, Shield,
   Award, GraduationCap, Heart, Briefcase, Send, Eye, CheckCircle,
@@ -9,17 +10,31 @@ import {
 
 type ESSTab = 'overview' | 'profile' | 'leave' | 'claims' | 'documents' | 'reminders';
 
+const MOCK_ESS_WORKFLOW = { pendingClaims: 2, approvedClaims: 8, rejectedClaims: 1, totalClaimAmount: 4500000, pendingLeave: 1, approvedLeave: 5 };
+const MOCK_ESS_REMINDER = { totalReminders: 6, upcoming: 3, overdue: 1, categories: { contract: 2, certification: 1, probation: 1, birthday: 2 } };
+const MOCK_ESS_REMINDERS = [
+  { id: 'rem1', type: 'contract_expiry', title: 'Kontrak akan berakhir', description: 'Kontrak Anda berakhir dalam 30 hari', due_date: '2026-04-12', priority: 'high', status: 'upcoming' },
+  { id: 'rem2', type: 'certification', title: 'Sertifikasi perlu diperbarui', description: 'Sertifikasi K3 expired bulan depan', due_date: '2026-04-15', priority: 'medium', status: 'upcoming' },
+  { id: 'rem3', type: 'birthday', title: 'Ulang Tahun Rekan Kerja', description: 'Budi Santoso berulang tahun', due_date: '2026-03-20', priority: 'low', status: 'upcoming' },
+];
+const MOCK_ESS_CLAIMS = [
+  { id: 'cl1', claim_type: 'medical', description: 'Biaya berobat rawat jalan', amount: 1500000, status: 'approved', submitted_date: '2026-03-05', approved_amount: 1500000 },
+  { id: 'cl2', claim_type: 'transport', description: 'Biaya transport dinas Bandung', amount: 850000, status: 'pending', submitted_date: '2026-03-10' },
+  { id: 'cl3', claim_type: 'meals', description: 'Biaya makan lembur', amount: 350000, status: 'approved', submitted_date: '2026-03-08', approved_amount: 350000 },
+];
+
 export default function ESSPortalPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ESSTab>('overview');
 
   // Data
   const [profile, setProfile] = useState<any>(null);
-  const [claims, setClaims] = useState<any[]>([]);
-  const [reminders, setReminders] = useState<any[]>([]);
-  const [workflowSummary, setWorkflowSummary] = useState<any>(null);
-  const [reminderSummary, setReminderSummary] = useState<any>(null);
+  const [claims, setClaims] = useState<any[]>(MOCK_ESS_CLAIMS);
+  const [reminders, setReminders] = useState<any[]>(MOCK_ESS_REMINDERS);
+  const [workflowSummary, setWorkflowSummary] = useState<any>(MOCK_ESS_WORKFLOW);
+  const [reminderSummary, setReminderSummary] = useState<any>(MOCK_ESS_REMINDER);
 
   // Claim modal
   const [showClaimModal, setShowClaimModal] = useState(false);
@@ -47,32 +62,32 @@ export default function ESSPortalPage() {
     try {
       const res = await fetch('/api/hq/hris/workflow?action=summary');
       const json = await res.json();
-      setWorkflowSummary(json.data);
-    } catch (e) { console.error(e); }
+      setWorkflowSummary(json.data || MOCK_ESS_WORKFLOW);
+    } catch (e) { console.error(e); setWorkflowSummary(MOCK_ESS_WORKFLOW); }
   };
 
   const fetchReminderSummary = async () => {
     try {
       const res = await fetch('/api/hq/hris/reminders?action=summary');
       const json = await res.json();
-      setReminderSummary(json.data);
-    } catch (e) { console.error(e); }
+      setReminderSummary(json.data || MOCK_ESS_REMINDER);
+    } catch (e) { console.error(e); setReminderSummary(MOCK_ESS_REMINDER); }
   };
 
   const fetchReminders = async () => {
     try {
       const res = await fetch('/api/hq/hris/reminders?action=upcoming&days=60');
       const json = await res.json();
-      setReminders(json.data || []);
-    } catch (e) { console.error(e); }
+      setReminders(json.data || MOCK_ESS_REMINDERS);
+    } catch (e) { console.error(e); setReminders(MOCK_ESS_REMINDERS); }
   };
 
   const fetchClaims = async () => {
     try {
       const res = await fetch('/api/hq/hris/workflow?action=claims');
       const json = await res.json();
-      setClaims(json.data || []);
-    } catch (e) { console.error(e); }
+      setClaims(json.data || MOCK_ESS_CLAIMS);
+    } catch (e) { console.error(e); setClaims(MOCK_ESS_CLAIMS); }
   };
 
   const handleFileUpload = async (files: FileList | null) => {
@@ -139,7 +154,7 @@ export default function ESSPortalPage() {
   if (!mounted) return null;
 
   return (
-    <HQLayout title="Employee Self Service" currentMenu="hris">
+    <HQLayout title={t('hris.essTitle')} currentMenu="hris">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm ${toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'}`}>
           {toast.message}
@@ -158,10 +173,10 @@ export default function ESSPortalPage() {
         {/* Quick Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Klaim Pending', value: workflowSummary?.claims?.pending || 0, icon: Clock, color: 'text-yellow-600 bg-yellow-50', desc: 'Menunggu persetujuan' },
+            { label: 'Klaim Tertunda', value: workflowSummary?.claims?.pending || 0, icon: Clock, color: 'text-yellow-600 bg-yellow-50', desc: 'Menunggu persetujuan' },
             { label: 'Klaim Disetujui', value: workflowSummary?.claims?.approved || 0, icon: CheckCircle, color: 'text-green-600 bg-green-50', desc: 'Sudah disetujui' },
             { label: 'Kontrak Akan Habis', value: reminderSummary?.contractExpiring30d || 0, icon: AlertTriangle, color: 'text-orange-600 bg-orange-50', desc: '30 hari ke depan' },
-            { label: 'Sertifikasi Expired', value: reminderSummary?.certExpiring30d || 0, icon: Award, color: 'text-red-600 bg-red-50', desc: '30 hari ke depan' },
+            { label: 'Sertifikasi Kedaluwarsa', value: reminderSummary?.certExpiring30d || 0, icon: Award, color: 'text-red-600 bg-red-50', desc: '30 hari ke depan' },
           ].map((card, i) => (
             <div key={i} className="bg-white rounded-xl border p-4">
               <div className="flex items-start justify-between">

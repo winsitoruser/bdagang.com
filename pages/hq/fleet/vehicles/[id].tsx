@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import HQLayout from '../../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   Truck, 
   MapPin, 
@@ -25,6 +26,7 @@ import {
 } from '../../../../lib/mockData/fleetAdvanced';
 
 export default function VehicleDetailPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = router.query;
   const [mounted, setMounted] = useState(false);
@@ -142,11 +144,11 @@ export default function VehicleDetailPage() {
           <div className="border-b border-gray-200">
             <div className="flex">
               {[
-                { id: 'overview', label: 'Overview', icon: Truck },
-                { id: 'trips', label: 'Trip History', icon: MapPin },
-                { id: 'fuel', label: 'Fuel Records', icon: Fuel },
-                { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-                { id: 'costs', label: 'Cost Analysis', icon: DollarSign }
+                { id: 'overview', label: 'Ringkasan', icon: Truck },
+                { id: 'trips', label: 'Riwayat Perjalanan', icon: MapPin },
+                { id: 'fuel', label: 'Catatan BBM', icon: Fuel },
+                { id: 'maintenance', label: 'Pemeliharaan', icon: Wrench },
+                { id: 'costs', label: 'Analisis Biaya', icon: DollarSign }
               ].map(tab => (
                 <button
                   key={tab.id}

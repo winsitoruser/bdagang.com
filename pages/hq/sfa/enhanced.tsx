@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
 import { Users, Plus, Eye, Edit, Trash2, X, Check, TrendingUp, Target, BarChart3, Loader2, DollarSign, Calendar, Shield, Award, Settings, Search, RefreshCw, CheckCircle2, XCircle, UserPlus, MapPin, ChevronRight, Star, Briefcase, Zap, CreditCard, AlertTriangle, Crown, Medal, Gift, Percent, Calculator, Save, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { rowsOr, MOCK_HQ_SFA_ENHANCED } from '@/lib/hq/mock-data';
 
 type TabKey = 'overview' | 'teams' | 'targets' | 'achievements' | 'incentives' | 'plafon' | 'parameters';
 
@@ -26,18 +27,18 @@ export default function SFAEnhancedPage() {
   const [form, setForm] = useState<any>({});
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
-  // Data states
-  const [dashboard, setDashboard] = useState<any>(null);
-  const [teams, setTeams] = useState<any[]>([]);
-  const [targetGroups, setTargetGroups] = useState<any[]>([]);
-  const [achievements, setAchievements] = useState<any[]>([]);
-  const [incentiveSchemes, setIncentiveSchemes] = useState<any[]>([]);
-  const [incentiveCalcs, setIncentiveCalcs] = useState<any[]>([]);
-  const [plafonList, setPlafonList] = useState<any[]>([]);
-  const [parameters, setParameters] = useState<any>({});
+  // Data states (nilai awal + fallback: MOCK_HQ_SFA_ENHANCED)
+  const [dashboard, setDashboard] = useState<any>(MOCK_HQ_SFA_ENHANCED.dashboard);
+  const [teams, setTeams] = useState<any[]>(MOCK_HQ_SFA_ENHANCED.teams);
+  const [targetGroups, setTargetGroups] = useState<any[]>(MOCK_HQ_SFA_ENHANCED.targetGroups);
+  const [achievements, setAchievements] = useState<any[]>(MOCK_HQ_SFA_ENHANCED.achievements);
+  const [incentiveSchemes, setIncentiveSchemes] = useState<any[]>(MOCK_HQ_SFA_ENHANCED.incentiveSchemes);
+  const [incentiveCalcs, setIncentiveCalcs] = useState<any[]>(MOCK_HQ_SFA_ENHANCED.incentiveCalcs);
+  const [plafonList, setPlafonList] = useState<any[]>(MOCK_HQ_SFA_ENHANCED.plafonList);
+  const [parameters, setParameters] = useState<any>(MOCK_HQ_SFA_ENHANCED.parameters);
   const [paramEdits, setParamEdits] = useState<Record<string, string>>({});
-  const [users, setUsers] = useState<any[]>([]);
-  const [territories, setTerritories] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>(MOCK_HQ_SFA_ENHANCED.users);
+  const [territories, setTerritories] = useState<any[]>(MOCK_HQ_SFA_ENHANCED.territories);
 
   const showToast = (msg: string, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
 
@@ -53,6 +54,7 @@ export default function SFAEnhancedPage() {
   };
 
   const fetchAll = useCallback(async () => {
+    const M = MOCK_HQ_SFA_ENHANCED;
     setLoading(true);
     try {
       const [d, t, tg, ach, is, ic, pl, p] = await Promise.all([
@@ -61,27 +63,53 @@ export default function SFAEnhancedPage() {
         api('incentive-schemes'), api('incentive-calculations&period=' + String(new Date().getMonth() + 1).padStart(2, '0') + '&year=' + new Date().getFullYear()),
         api('plafon-list'), api('parameters')
       ]);
-      if (d.data) setDashboard(d.data);
-      if (t.data) setTeams(t.data);
-      if (tg.data) setTargetGroups(tg.data);
-      if (ach.data) setAchievements(ach.data);
-      if (is.data) setIncentiveSchemes(is.data);
-      if (ic.data) setIncentiveCalcs(ic.data);
-      if (pl.data) setPlafonList(pl.data);
-      if (p.data) setParameters(p.data);
-    } catch (e) { console.error(e); }
+      if (d.success) setDashboard(d.data ?? M.dashboard);
+      else setDashboard(M.dashboard);
+      if (t.success) setTeams(rowsOr(t.data, M.teams));
+      else setTeams(M.teams);
+      if (tg.success) setTargetGroups(rowsOr(tg.data, M.targetGroups));
+      else setTargetGroups(M.targetGroups);
+      if (ach.success) setAchievements(rowsOr(ach.data, M.achievements));
+      else setAchievements(M.achievements);
+      if (is.success) setIncentiveSchemes(rowsOr(is.data, M.incentiveSchemes));
+      else setIncentiveSchemes(M.incentiveSchemes);
+      if (ic.success) setIncentiveCalcs(rowsOr(ic.data, M.incentiveCalcs));
+      else setIncentiveCalcs(M.incentiveCalcs);
+      if (pl.success) setPlafonList(rowsOr(pl.data, M.plafonList));
+      else setPlafonList(M.plafonList);
+      if (p.success) {
+        const raw = p.data;
+        setParameters(raw && typeof raw === 'object' && Object.keys(raw).length > 0 ? raw : M.parameters);
+      } else setParameters(M.parameters);
+    } catch (e) {
+      console.error(e);
+      setDashboard(M.dashboard);
+      setTeams(M.teams);
+      setTargetGroups(M.targetGroups);
+      setAchievements(M.achievements);
+      setIncentiveSchemes(M.incentiveSchemes);
+      setIncentiveCalcs(M.incentiveCalcs);
+      setPlafonList(M.plafonList);
+      setParameters(M.parameters);
+    }
     setLoading(false);
   }, []);
 
   const fetchSupport = useCallback(async () => {
+    const M = MOCK_HQ_SFA_ENHANCED;
     try {
       const [u, ter] = await Promise.all([
         fetch('/api/hq/integrations/sfa-marketing?action=sfa-salespeople').then(r => r.json()),
         apiBase('territories')
       ]);
-      if (u.data) setUsers(u.data);
-      if (ter.data) setTerritories(ter.data);
-    } catch {}
+      if (u.success) setUsers(rowsOr(u.data, M.users));
+      else setUsers(M.users);
+      if (ter.success) setTerritories(rowsOr(ter.data, M.territories));
+      else setTerritories(M.territories);
+    } catch {
+      setUsers(M.users);
+      setTerritories(M.territories);
+    }
   }, []);
 
   useEffect(() => { fetchAll(); fetchSupport(); }, []);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Zap, Activity, CheckCircle, XCircle, AlertTriangle,
   Clock, TrendingUp, ArrowRight, Play, Pause, RefreshCw,
@@ -39,6 +40,7 @@ interface FlowExecution {
 
 export default function IntegrationFlows() {
   const { data: session } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [flows, setFlows] = useState<IntegrationFlow[]>([]);
   const [recentExecutions, setRecentExecutions] = useState<FlowExecution[]>([]);
@@ -80,10 +82,10 @@ export default function IntegrationFlows() {
   const handleToggleFlow = async (flowId: string, isActive: boolean) => {
     try {
       // In production, call API to toggle flow
-      toast.success(`Flow ${!isActive ? 'activated' : 'deactivated'}`);
+      toast.success(!isActive ? t('mp.flows.flowActivated') : t('mp.flows.flowDeactivated'));
       fetchFlows();
     } catch (error) {
-      toast.error('Failed to toggle flow');
+      toast.error(t('mp.flows.failedToToggle'));
     }
   };
   
@@ -124,8 +126,8 @@ export default function IntegrationFlows() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Integration Flows</h1>
-            <p className="text-gray-600 mt-1">Monitor and manage module integration flows</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('mp.flows.title')}</h1>
+            <p className="text-gray-600 mt-1">{t('mp.flows.subtitle')}</p>
           </div>
           
           <button
@@ -133,37 +135,37 @@ export default function IntegrationFlows() {
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
           >
             <RefreshCw className="w-5 h-5" />
-            Refresh
+            {t('mp.flows.refresh')}
           </button>
         </div>
         
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <SummaryCard
-            title="Total Flows"
+            title={t('mp.flows.totalFlows')}
             value={flows.length}
-            subtitle={`${flows.filter(f => f.isActive).length} active`}
+            subtitle={`${flows.filter(f => f.isActive).length} ${t('mp.flows.active')}`}
             icon={Zap}
             color="blue"
           />
           <SummaryCard
-            title="Total Executions"
+            title={t('mp.flows.totalExecutions')}
             value={flows.reduce((sum, f) => sum + f.totalExecutions, 0).toLocaleString()}
-            subtitle="Last 7 days"
+            subtitle={t('mp.flows.last7Days')}
             icon={Activity}
             color="purple"
           />
           <SummaryCard
-            title="Avg Success Rate"
+            title={t('mp.flows.avgSuccessRate')}
             value={`${(flows.reduce((sum, f) => sum + f.successRate, 0) / flows.length).toFixed(1)}%`}
-            subtitle="Across all flows"
+            subtitle={t('mp.flows.acrossAllFlows')}
             icon={TrendingUp}
             color="green"
           />
           <SummaryCard
-            title="Healthy Flows"
+            title={t('mp.flows.healthyFlows')}
             value={flows.filter(f => f.status === 'healthy').length}
-            subtitle={`${flows.filter(f => f.status === 'error').length} with errors`}
+            subtitle={t('mp.flows.withErrors', { count: flows.filter(f => f.status === 'error').length })}
             icon={CheckCircle}
             color="emerald"
           />
@@ -181,7 +183,7 @@ export default function IntegrationFlows() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {status === 'all' ? t('mp.flows.all') : status === 'healthy' ? t('mp.flows.healthy') : status === 'warning' ? t('mp.flows.warning') : t('mp.flows.error')}
             </button>
           ))}
         </div>
@@ -189,7 +191,7 @@ export default function IntegrationFlows() {
         {/* Flows List */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Active Integration Flows</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{t('mp.flows.activeIntegrationFlows')}</h2>
           </div>
           
           <div className="divide-y divide-gray-200">
@@ -234,15 +236,15 @@ export default function IntegrationFlows() {
                 
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Active Tenants</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('mp.flows.activeTenants')}</p>
                     <p className="text-lg font-semibold text-gray-900">{flow.activeTenants}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Total Executions</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('mp.flows.totalExecutions')}</p>
                     <p className="text-lg font-semibold text-gray-900">{flow.totalExecutions.toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Success Rate</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('mp.flows.successRate')}</p>
                     <p className={`text-lg font-semibold ${
                       flow.successRate >= 99 ? 'text-green-600' :
                       flow.successRate >= 95 ? 'text-yellow-600' :
@@ -252,13 +254,13 @@ export default function IntegrationFlows() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Avg Execution</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('mp.flows.avgExecution')}</p>
                     <p className="text-lg font-semibold text-gray-900">{flow.avgExecutionTime}ms</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Last Executed</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('mp.flows.lastExecuted')}</p>
                     <p className="text-sm text-gray-900">
-                      {flow.lastExecuted ? new Date(flow.lastExecuted).toLocaleTimeString() : 'Never'}
+                      {flow.lastExecuted ? new Date(flow.lastExecuted).toLocaleTimeString() : t('mp.flows.never')}
                     </p>
                   </div>
                 </div>
@@ -270,8 +272,8 @@ export default function IntegrationFlows() {
         {/* Recent Executions */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Executions</h2>
-            <p className="text-sm text-gray-600 mt-1">Real-time flow execution log</p>
+            <h2 className="text-lg font-semibold text-gray-900">{t('mp.flows.recentExecutions')}</h2>
+            <p className="text-sm text-gray-600 mt-1">{t('mp.flows.realtimeLog')}</p>
           </div>
           
           <div className="divide-y divide-gray-200">

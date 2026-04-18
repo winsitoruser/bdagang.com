@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import HQLayout from '../../../components/hq/HQLayout';
 import Modal, { ConfirmDialog } from '../../../components/hq/ui/Modal';
 import { StatusBadge } from '../../../components/hq/ui/Badge';
@@ -34,21 +35,28 @@ const INDUSTRY_OPTIONS = [
   { value: 'rental', label: 'Rental' }, { value: 'property', label: 'Property' },
 ];
 
-const CATEGORY_CONFIG: Record<string, { icon: any; color: string; label: string }> = {
-  operations: { icon: Clock, color: 'bg-blue-100 text-blue-800', label: 'Operasional' },
-  pricing: { icon: DollarSign, color: 'bg-green-100 text-green-800', label: 'Harga' },
-  notifications: { icon: Bell, color: 'bg-yellow-100 text-yellow-800', label: 'Notifikasi' },
-  security: { icon: Shield, color: 'bg-red-100 text-red-800', label: 'Keamanan' },
-  compliance: { icon: FileText, color: 'bg-purple-100 text-purple-800', label: 'Compliance' },
-  workflow: { icon: Zap, color: 'bg-teal-100 text-teal-800', label: 'Workflow' },
-  integration: { icon: Globe, color: 'bg-indigo-100 text-indigo-800', label: 'Integrasi' },
+const CATEGORY_CONFIG: Record<string, { icon: any; color: string; tKey: string }> = {
+  operations: { icon: Clock, color: 'bg-blue-100 text-blue-800', tKey: 'branchSettings.catOperations' },
+  pricing: { icon: DollarSign, color: 'bg-green-100 text-green-800', tKey: 'branchSettings.catPricing' },
+  notifications: { icon: Bell, color: 'bg-yellow-100 text-yellow-800', tKey: 'branchSettings.catNotifications' },
+  security: { icon: Shield, color: 'bg-red-100 text-red-800', tKey: 'branchSettings.catSecurity' },
+  compliance: { icon: FileText, color: 'bg-purple-100 text-purple-800', tKey: 'branchSettings.catCompliance' },
+  workflow: { icon: Zap, color: 'bg-teal-100 text-teal-800', tKey: 'branchSettings.catWorkflow' },
+  integration: { icon: Globe, color: 'bg-indigo-100 text-indigo-800', tKey: 'branchSettings.catIntegration' },
 };
 
 
 
+const MOCK_SETTING_TEMPLATES: BranchSettingTemplate[] = [
+  { id: 'tpl1', name: 'Standar F&B', description: 'Template pengaturan standar untuk outlet F&B', category: 'operations', industry: 'fnb', settings: { openingHour: '08:00', closingHour: '22:00', maxCapacity: 60, takeawayEnabled: true, deliveryEnabled: true }, appliedBranches: 4, isDefault: true, createdAt: '2025-06-01', updatedAt: '2026-01-15' },
+  { id: 'tpl2', name: 'Harga Premium Jakarta', description: 'Template harga untuk cabang premium Jakarta', category: 'pricing', industry: 'fnb', settings: { priceMultiplier: 1.15, taxIncluded: true, serviceCharge: 5 }, appliedBranches: 2, isDefault: false, createdAt: '2025-08-01', updatedAt: '2026-02-10' },
+  { id: 'tpl3', name: 'Keamanan Standar', description: 'Pengaturan keamanan default untuk semua cabang', category: 'security', industry: 'general', settings: { maxLoginAttempts: 5, sessionTimeout: 30, twoFactorRequired: false }, appliedBranches: 6, isDefault: true, createdAt: '2025-01-01', updatedAt: '2025-12-20' },
+];
+
 export default function BranchSettings() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
-  const [templates, setTemplates] = useState<BranchSettingTemplate[]>([]);
+  const [templates, setTemplates] = useState<BranchSettingTemplate[]>(MOCK_SETTING_TEMPLATES);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -68,33 +76,62 @@ export default function BranchSettings() {
     name: '', description: '',
     category: 'operations' as SettingCategory,
     industry: 'general',
-    isDefault: false
+    isDefault: false,
+    settings: {} as Record<string, any>,
   });
+
+  const [branches, setBranches] = useState<Array<{ id: string; name: string; code: string; type?: string }>>([]);
+  const [applyBranchIds, setApplyBranchIds] = useState<string[]>([]);
+  const [applyOverwrite, setApplyOverwrite] = useState(false);
+  const [applying, setApplying] = useState(false);
 
   const fetchTemplates = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/hq/branches/enhanced?action=settings-templates');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data?.length > 0) { setTemplates(json.data); return; }
-      }
       const response = await fetch('/api/hq/branch-settings');
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        if (payload.templates) setTemplates(payload.templates);
+        const items = payload.templates || [];
+        if (items.length) {
+          setTemplates(items);
+          return;
+        }
       }
+      const res = await fetch('/api/hq/branches/enhanced?action=settings-templates');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data?.templates?.length > 0) {
+          setTemplates(json.data.templates);
+          return;
+        }
+      }
+      setTemplates(MOCK_SETTING_TEMPLATES);
     } catch (error) {
       console.error('Error fetching settings:', error);
+      setTemplates(MOCK_SETTING_TEMPLATES);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBranchesList = async () => {
+    try {
+      const r = await fetch('/api/hq/branches?limit=200');
+      if (r.ok) {
+        const j = await r.json();
+        const list = j.data?.branches || j.branches || [];
+        setBranches(list.map((b: any) => ({ id: b.id, name: b.name, code: b.code, type: b.type })));
+      }
+    } catch {
+      // noop
     }
   };
 
   useEffect(() => {
     setMounted(true);
     fetchTemplates();
+    fetchBranchesList();
   }, []);
 
   if (!mounted) return null;
@@ -107,39 +144,112 @@ export default function BranchSettings() {
         body: JSON.stringify(formData)
       });
       if (res.ok) {
-        toast.success('Template berhasil dibuat');
+        toast.success(t('branchSettings.templateCreated'));
+        await fetchTemplates();
       } else {
-        // fallback: add locally
-        setTemplates(prev => [...prev, { ...formData, id: Date.now().toString(), settings: {}, appliedBranches: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]);
-        toast.success('Template ditambahkan (lokal)');
+        const j = await res.json().catch(() => ({}));
+        toast.error(j.error?.message || t('branchSettings.updateFailed'));
       }
     } catch {
-      setTemplates(prev => [...prev, { ...formData, id: Date.now().toString(), settings: {}, appliedBranches: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }]);
+      toast.error(t('branchSettings.updateFailed'));
+    } finally {
+      setSaving(false);
+      setShowCreateModal(false);
     }
-    setSaving(false);
-    setShowCreateModal(false);
-    fetchTemplates();
   };
 
   const handleEdit = async () => {
+    if (!selectedTemplate) return;
     setSaving(true);
     try {
-      if (selectedTemplate) {
-        setTemplates(prev => prev.map(t => t.id === selectedTemplate.id ? { ...t, ...formData, updatedAt: new Date().toISOString() } : t));
-        toast.success('Template diperbarui');
+      const res = await fetch(`/api/hq/branch-settings/${selectedTemplate.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        toast.success(t('branchSettings.templateUpdated'));
+        await fetchTemplates();
+      } else {
+        const j = await res.json().catch(() => ({}));
+        toast.error(j.error?.message || t('branchSettings.updateFailed'));
       }
-    } catch { toast.error('Gagal memperbarui'); }
-    setSaving(false);
-    setShowEditModal(false);
-    fetchTemplates();
+    } catch {
+      toast.error(t('branchSettings.updateFailed'));
+    } finally {
+      setSaving(false);
+      setShowEditModal(false);
+    }
   };
 
   const handleDelete = async () => {
     if (!selectedTemplate) return;
-    setTemplates(prev => prev.filter(t => t.id !== selectedTemplate.id));
-    toast.success('Template dihapus');
-    setShowDeleteConfirm(false);
-    setSelectedTemplate(null);
+    try {
+      const res = await fetch(`/api/hq/branch-settings/${selectedTemplate.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success(t('branchSettings.templateDeleted'));
+        await fetchTemplates();
+      } else {
+        const j = await res.json().catch(() => ({}));
+        toast.error(j.error?.message || t('branchSettings.updateFailed'));
+      }
+    } catch {
+      toast.error(t('branchSettings.updateFailed'));
+    } finally {
+      setShowDeleteConfirm(false);
+      setSelectedTemplate(null);
+    }
+  };
+
+  const handleDuplicate = async (template: BranchSettingTemplate) => {
+    try {
+      const res = await fetch('/api/hq/branch-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `${template.name} (Copy)`,
+          description: template.description,
+          category: template.category,
+          industry: template.industry || 'general',
+          settings: template.settings || {},
+          isDefault: false,
+        }),
+      });
+      if (res.ok) {
+        toast.success(t('branchSettings.duplicated'));
+        await fetchTemplates();
+      } else {
+        toast.error(t('branchSettings.updateFailed'));
+      }
+    } catch {
+      toast.error(t('branchSettings.updateFailed'));
+    }
+  };
+
+  const handleApply = async () => {
+    if (!selectedTemplate || applyBranchIds.length === 0) return;
+    setApplying(true);
+    try {
+      const res = await fetch(`/api/hq/branch-settings/${selectedTemplate.id}/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branchIds: applyBranchIds, overwrite: applyOverwrite }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success(j.message || `Template applied to ${applyBranchIds.length} branches`);
+        setShowApplyModal(false);
+        setApplyBranchIds([]);
+        setApplyOverwrite(false);
+        await fetchTemplates();
+      } else {
+        toast.error(j.error?.message || t('branchSettings.updateFailed'));
+      }
+    } catch {
+      toast.error(t('branchSettings.updateFailed'));
+    } finally {
+      setApplying(false);
+    }
   };
 
   const handleExportTemplates = () => {
@@ -148,7 +258,7 @@ export default function BranchSettings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `branch-settings-templates-${new Date().toISOString().slice(0,10)}.json`; a.click();
     URL.revokeObjectURL(url);
-    toast.success('Templates exported');
+    toast.success(t('branchSettings.templatesExported'));
   };
 
   const getCategoryIcon = (category: string) => {
@@ -158,35 +268,35 @@ export default function BranchSettings() {
     return <Icon className="w-4 h-4" />;
   };
   const getCategoryColor = (category: string) => CATEGORY_CONFIG[category]?.color || 'bg-gray-100 text-gray-800';
-  const getCategoryLabel = (category: string) => CATEGORY_CONFIG[category]?.label || category;
+  const getCategoryLabel = (category: string) => CATEGORY_CONFIG[category]?.tKey || category;
 
-  const filteredTemplates = templates.filter(t => {
-    const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) || t.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
-    const matchesIndustry = industryFilter === 'all' || !t.industry || t.industry === industryFilter || t.industry === 'general';
+  const filteredTemplates = templates.filter(tpl => {
+    const matchesSearch = tpl.name.toLowerCase().includes(searchTerm.toLowerCase()) || tpl.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || tpl.category === categoryFilter;
+    const matchesIndustry = industryFilter === 'all' || !tpl.industry || tpl.industry === industryFilter || tpl.industry === 'general';
     return matchesSearch && matchesCategory && matchesIndustry;
   });
 
   const categoryCounts = Object.keys(CATEGORY_CONFIG).reduce((acc, k) => {
-    acc[k] = templates.filter(t => t.category === k).length;
+    acc[k] = templates.filter(tpl => tpl.category === k).length;
     return acc;
   }, {} as Record<string, number>);
 
   return (
-    <HQLayout title="Pengaturan Cabang" subtitle="Template pengaturan multi-industri">
+    <HQLayout title={t('branchSettings.title')} subtitle={t('branchSettings.subtitle')}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Pengaturan Cabang</h1>
-            <p className="text-gray-500">Kelola template, compliance, dan workflow untuk semua cabang</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('branchSettings.title')}</h1>
+            <p className="text-gray-500">{t('branchSettings.manageDesc')}</p>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={handleExportTemplates} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              <Download className="w-4 h-4" /> Export
+              <Download className="w-4 h-4" /> {t('branchSettings.exportBtn')}
             </button>
-            <button onClick={() => { setFormData({ name: '', description: '', category: 'operations', industry: 'general', isDefault: false }); setShowCreateModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-              <Plus className="w-4 h-4" /> Buat Template
+            <button onClick={() => { setFormData({ name: '', description: '', category: 'operations', industry: 'general', isDefault: false, settings: {} }); setShowCreateModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              <Plus className="w-4 h-4" /> {t('branchSettings.createTemplate')}
             </button>
           </div>
         </div>
@@ -202,7 +312,7 @@ export default function BranchSettings() {
                   <div className={`p-1.5 rounded-lg ${cfg.color.split(' ')[0]}`}><Icon className={`w-4 h-4 ${cfg.color.split(' ')[1]}`} /></div>
                 </div>
                 <p className="text-lg font-bold text-gray-900">{count}</p>
-                <p className="text-xs text-gray-500">{cfg.label}</p>
+                <p className="text-xs text-gray-500">{t(cfg.tKey)}</p>
               </button>
             );
           })}
@@ -210,9 +320,9 @@ export default function BranchSettings() {
 
         {/* Sub-tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
-          {[{ v: 'templates' as const, l: 'Templates', icon: Layers }, { v: 'compliance' as const, l: 'Compliance', icon: FileText }, { v: 'workflows' as const, l: 'Workflows', icon: Zap }].map(t => (
-            <button key={t.v} onClick={() => setSubTab(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${subTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
-              <t.icon className="w-4 h-4" />{t.l}
+          {[{ v: 'templates' as const, l: t('branchSettings.tabTemplates'), icon: Layers }, { v: 'compliance' as const, l: t('branchSettings.tabCompliance'), icon: FileText }, { v: 'workflows' as const, l: t('branchSettings.tabWorkflows'), icon: Zap }].map(tb => (
+            <button key={tb.v} onClick={() => setSubTab(tb.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${subTab === tb.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+              <tb.icon className="w-4 h-4" />{tb.l}
             </button>
           ))}
         </div>
@@ -223,19 +333,19 @@ export default function BranchSettings() {
             <div className="flex items-center gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input type="text" placeholder="Cari template..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-56 text-sm focus:ring-2 focus:ring-blue-500" />
+                <input type="text" placeholder={t('branchSettings.searchPlaceholder')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-56 text-sm focus:ring-2 focus:ring-blue-500" />
               </div>
               <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                <option value="all">Semua Kategori</option>
-                {Object.entries(CATEGORY_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                <option value="all">{t('branchSettings.allCategories')}</option>
+                {Object.entries(CATEGORY_CONFIG).map(([k, v]) => <option key={k} value={k}>{t(v.tKey)}</option>)}
               </select>
               <select value={industryFilter} onChange={(e) => setIndustryFilter(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                <option value="all">Semua Industri</option>
+                <option value="all">{t('branchSettings.allIndustries')}</option>
                 {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
             <button onClick={fetchTemplates} disabled={loading} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('branchSettings.refresh')}
             </button>
           </div>
         </div>
@@ -246,7 +356,7 @@ export default function BranchSettings() {
             {loading ? (
               <div className="col-span-3 flex justify-center py-12"><RefreshCw className="w-8 h-8 animate-spin text-blue-600" /></div>
             ) : filteredTemplates.length === 0 ? (
-              <div className="col-span-3 text-center py-12 text-gray-500">Tidak ada template ditemukan</div>
+              <div className="col-span-3 text-center py-12 text-gray-500">{t('branchSettings.noTemplatesFound')}</div>
             ) : (
               filteredTemplates.map((template) => (
                 <div key={template.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
@@ -254,7 +364,7 @@ export default function BranchSettings() {
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(template.category)}`}>
-                          {getCategoryIcon(template.category)}{getCategoryLabel(template.category)}
+                          {getCategoryIcon(template.category)}{t(getCategoryLabel(template.category))}
                         </span>
                         {template.industry && template.industry !== 'general' && (
                           <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-xs">{INDUSTRY_OPTIONS.find(i => i.value === template.industry)?.label}</span>
@@ -265,15 +375,18 @@ export default function BranchSettings() {
                     <h3 className="font-semibold text-gray-900 text-sm mb-1">{template.name}</h3>
                     <p className="text-xs text-gray-500 mb-3 line-clamp-2">{template.description}</p>
                     <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5" />{template.appliedBranches} cabang</span>
+                      <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5" />{template.appliedBranches} {t('branchSettings.branchCount')}</span>
                       <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{new Date(template.updatedAt).toLocaleDateString('id-ID')}</span>
                     </div>
                   </div>
                   <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                    <button onClick={() => { setSelectedTemplate(template); setShowViewModal(true); }} className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"><Eye className="w-3.5 h-3.5" />Lihat</button>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => { setSelectedTemplate(template); setFormData({ name: template.name, description: template.description, category: template.category, industry: template.industry || 'general', isDefault: template.isDefault }); setShowEditModal(true); }} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Edit className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => { const n = { ...template, id: Date.now().toString(), name: `${template.name} (Copy)`, isDefault: false }; setTemplates(prev => [...prev, n]); toast.success('Template diduplikasi'); }} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"><Copy className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => { setSelectedTemplate(template); setShowViewModal(true); }} className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{t('branchSettings.view')}</button>
+                      <button onClick={() => { setSelectedTemplate(template); setApplyBranchIds([]); setApplyOverwrite(false); setShowApplyModal(true); }} className="ml-2 text-xs text-teal-600 hover:text-teal-800 font-medium flex items-center gap-1"><Zap className="w-3.5 h-3.5" /> {t('branchSettings.apply') || 'Terapkan'}</button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => { setSelectedTemplate(template); setFormData({ name: template.name, description: template.description, category: template.category, industry: template.industry || 'general', isDefault: template.isDefault, settings: template.settings || {} }); setShowEditModal(true); }} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Edit className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => handleDuplicate(template)} className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"><Copy className="w-3.5 h-3.5" /></button>
                       <button onClick={() => { setSelectedTemplate(template); setShowDeleteConfirm(true); }} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" disabled={template.isDefault}><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </div>
@@ -287,7 +400,7 @@ export default function BranchSettings() {
         {subTab === 'compliance' && (
           <div className="space-y-4">
             <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-              <p className="text-sm text-purple-700"><strong>Compliance & Regulasi</strong>: Kelola pengaturan kepatuhan regulasi per industri. Template compliance memastikan setiap cabang memenuhi standar yang berlaku.</p>
+              <p className="text-sm text-purple-700"><strong>{t('branchSettings.complianceTitle')}</strong>: {t('branchSettings.complianceDesc')}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
@@ -317,8 +430,8 @@ export default function BranchSettings() {
                         </div>
                       ))}
                     </div>
-                    <button onClick={() => { setFormData({ name: c.title, description: c.desc, category: 'compliance', industry: c.industry, isDefault: false }); setShowCreateModal(true); }} className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">
-                      <Plus className="w-4 h-4" /> Buat Template
+                    <button onClick={() => { const s: Record<string, any> = {}; c.items.forEach(it => { s[it] = true; }); setFormData({ name: c.title, description: c.desc, category: 'compliance', industry: c.industry, isDefault: false, settings: s }); setShowCreateModal(true); }} className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">
+                      <Plus className="w-4 h-4" /> {t('branchSettings.createTemplate')}
                     </button>
                   </div>
                 );
@@ -331,7 +444,7 @@ export default function BranchSettings() {
         {subTab === 'workflows' && (
           <div className="space-y-4">
             <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
-              <p className="text-sm text-teal-700"><strong>Workflow Settings</strong>: Kelola alur kerja dan otomasi untuk operasional cabang. Termasuk approval chain, eskalasi, dan notifikasi otomatis.</p>
+              <p className="text-sm text-teal-700"><strong>{t('branchSettings.workflowTitle')}</strong>: {t('branchSettings.workflowDesc')}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
@@ -358,8 +471,8 @@ export default function BranchSettings() {
                         </div>
                       ))}
                     </div>
-                    <button onClick={() => { setFormData({ name: w.title, description: w.desc, category: 'workflow', industry: 'general', isDefault: false }); setShowCreateModal(true); }} className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-teal-50 border border-teal-200 rounded-lg text-xs font-medium text-teal-700 hover:bg-teal-100">
-                      <Plus className="w-3.5 h-3.5" /> Aktifkan Workflow
+                    <button onClick={() => { const s: Record<string, any> = { steps: w.steps }; setFormData({ name: w.title, description: w.desc, category: 'workflow', industry: 'general', isDefault: false, settings: s }); setShowCreateModal(true); }} className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-teal-50 border border-teal-200 rounded-lg text-xs font-medium text-teal-700 hover:bg-teal-100">
+                      <Plus className="w-3.5 h-3.5" /> {t('branchSettings.activateWorkflow')}
                     </button>
                   </div>
                 );
@@ -369,25 +482,25 @@ export default function BranchSettings() {
         )}
 
         {/* Create/Edit Modal */}
-        <Modal isOpen={showCreateModal || showEditModal} onClose={() => { setShowCreateModal(false); setShowEditModal(false); }} title={showCreateModal ? 'Buat Template Baru' : 'Edit Template'} size="lg">
+        <Modal isOpen={showCreateModal || showEditModal} onClose={() => { setShowCreateModal(false); setShowEditModal(false); }} title={showCreateModal ? t('branchSettings.createNewTemplate') : t('branchSettings.editTemplate')} size="lg">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nama Template</label>
-              <input type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Masukkan nama template" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('branchSettings.templateName')}</label>
+              <input type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder={t('branchSettings.templateNamePlaceholder')} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-              <textarea value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" rows={2} placeholder="Deskripsi template" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('branchSettings.description')}</label>
+              <textarea value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" rows={2} placeholder={t('branchSettings.descriptionPlaceholder')} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('branchSettings.category')}</label>
                 <select value={formData.category} onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as SettingCategory }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                  {Object.entries(CATEGORY_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  {Object.entries(CATEGORY_CONFIG).map(([k, v]) => <option key={k} value={k}>{t(v.tKey)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Industri</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('branchSettings.industry')}</label>
                 <select value={formData.industry} onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                   {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
@@ -395,19 +508,40 @@ export default function BranchSettings() {
             </div>
             <div className="flex items-center gap-2">
               <input type="checkbox" id="isDefault" checked={formData.isDefault} onChange={(e) => setFormData(prev => ({ ...prev, isDefault: e.target.checked }))} className="w-4 h-4 text-blue-600 border-gray-300 rounded" />
-              <label htmlFor="isDefault" className="text-sm text-gray-700">Jadikan template default</label>
+              <label htmlFor="isDefault" className="text-sm text-gray-700">{t('branchSettings.makeDefault')}</label>
             </div>
+
+            {/* Settings JSON Editor */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('branchSettings.settings') || 'Settings'} (JSON)</label>
+              <textarea
+                value={(() => { try { return JSON.stringify(formData.settings || {}, null, 2); } catch { return '{}'; } })()}
+                onChange={(e) => {
+                  try {
+                    const parsed = JSON.parse(e.target.value || '{}');
+                    setFormData(prev => ({ ...prev, settings: parsed }));
+                  } catch {
+                    // keep previous settings if JSON invalid; user can fix
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-xs"
+                rows={6}
+                placeholder='{\n  "openingTime": "08:00",\n  "closingTime": "21:00"\n}'
+              />
+              <p className="text-[11px] text-gray-400 mt-1">{t('branchSettings.settingsJsonHelp') || 'Edit konfigurasi sebagai JSON. Contoh: {"openingTime":"08:00"}'}</p>
+            </div>
+
             <div className="flex justify-end gap-3 pt-4">
-              <button onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Batal</button>
+              <button onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">{t('branchSettings.cancel')}</button>
               <button onClick={showCreateModal ? handleCreate : handleEdit} disabled={saving || !formData.name} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                <Save className="w-4 h-4" />{saving ? 'Menyimpan...' : 'Simpan'}
+                <Save className="w-4 h-4" />{saving ? t('branchSettings.saving') : t('branchSettings.save')}
               </button>
             </div>
           </div>
         </Modal>
 
         {/* View Modal */}
-        <Modal isOpen={showViewModal} onClose={() => setShowViewModal(false)} title={selectedTemplate?.name || 'Detail Template'} size="lg">
+        <Modal isOpen={showViewModal} onClose={() => setShowViewModal(false)} title={selectedTemplate?.name || t('branchSettings.detailTemplate')} size="lg">
           {selectedTemplate && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 flex-wrap">
@@ -421,28 +555,83 @@ export default function BranchSettings() {
               </div>
               <p className="text-gray-600">{selectedTemplate.description}</p>
               <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 mb-3">Pengaturan</h4>
+                <h4 className="font-medium text-gray-900 mb-3">{t('branchSettings.settings')}</h4>
                 <div className="space-y-2">
                   {Object.entries(selectedTemplate.settings).map(([key, value]) => (
                     <div key={key} className="flex justify-between py-2 border-b border-gray-200 last:border-0">
                       <span className="text-gray-500 capitalize text-sm">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
                       <span className="font-medium text-sm">
-                        {typeof value === 'boolean' ? (value ? '✅ Ya' : '❌ Tidak') : Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                        {typeof value === 'boolean' ? (value ? `✅ ${t('branchSettings.yes')}` : `❌ ${t('branchSettings.no')}`) : Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value)}
                       </span>
                     </div>
                   ))}
                 </div>
               </div>
               <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>Diterapkan ke {selectedTemplate.appliedBranches} cabang</span>
-                <span>Terakhir diperbarui: {new Date(selectedTemplate.updatedAt).toLocaleDateString('id-ID')}</span>
+                <span>{t('branchSettings.appliedTo')} {selectedTemplate.appliedBranches} {t('branchSettings.branchCount')}</span>
+                <span>{t('branchSettings.lastUpdated')}: {new Date(selectedTemplate.updatedAt).toLocaleDateString('id-ID')}</span>
               </div>
             </div>
           )}
         </Modal>
 
+        {/* Apply Template Modal */}
+        <Modal isOpen={showApplyModal} onClose={() => { setShowApplyModal(false); setApplyBranchIds([]); setApplyOverwrite(false); }} title={`${t('branchSettings.apply') || 'Terapkan'}: ${selectedTemplate?.name || ''}`} size="lg">
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+              {t('branchSettings.applyInfo') || 'Pilih cabang yang akan menerima template ini. Pengaturan akan di-merge ke kolom `settings` cabang sesuai kategori.'}
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                {applyBranchIds.length} / {branches.length} {t('branchSettings.branchCount') || 'cabang'} {t('branchSettings.selected') || 'dipilih'}
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setApplyBranchIds(branches.map(b => b.id))} className="text-xs text-blue-600 hover:underline">
+                  {t('branchSettings.selectAll') || 'Pilih semua'}
+                </button>
+                <button onClick={() => setApplyBranchIds([])} className="text-xs text-gray-500 hover:underline">
+                  {t('branchSettings.clear') || 'Kosongkan'}
+                </button>
+              </div>
+            </div>
+            <div className="max-h-80 overflow-y-auto border rounded-lg divide-y">
+              {branches.length === 0 ? (
+                <div className="p-4 text-sm text-gray-400 text-center">{t('branchSettings.noBranches') || 'Tidak ada cabang'}</div>
+              ) : branches.map(b => {
+                const checked = applyBranchIds.includes(b.id);
+                return (
+                  <label key={b.id} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" checked={checked} onChange={(e) => {
+                      setApplyBranchIds(prev => e.target.checked ? [...prev, b.id] : prev.filter(id => id !== b.id));
+                    }} className="w-4 h-4 text-blue-600 border-gray-300 rounded" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-900">{b.name}</div>
+                      <div className="text-xs text-gray-500">{b.code}{b.type ? ` • ${b.type}` : ''}</div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="applyOverwrite" checked={applyOverwrite} onChange={(e) => setApplyOverwrite(e.target.checked)} className="w-4 h-4 text-blue-600 border-gray-300 rounded" />
+              <label htmlFor="applyOverwrite" className="text-sm text-gray-700">
+                {t('branchSettings.applyOverwrite') || 'Timpa pengaturan yang sudah ada (overwrite)'}
+              </label>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <button onClick={() => { setShowApplyModal(false); setApplyBranchIds([]); setApplyOverwrite(false); }} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                {t('branchSettings.cancel')}
+              </button>
+              <button onClick={handleApply} disabled={applying || applyBranchIds.length === 0} className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50">
+                <Zap className="w-4 h-4" />
+                {applying ? (t('branchSettings.saving') || 'Menyimpan...') : (t('branchSettings.applyConfirm') || `Terapkan ke ${applyBranchIds.length} cabang`)}
+              </button>
+            </div>
+          </div>
+        </Modal>
+
         {/* Delete Confirm */}
-        <ConfirmDialog isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} onConfirm={handleDelete} title="Hapus Template" message={`Apakah Anda yakin ingin menghapus template "${selectedTemplate?.name}"? Template yang sedang digunakan oleh cabang akan direset ke pengaturan default.`} confirmText="Hapus" variant="danger" />
+        <ConfirmDialog isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} onConfirm={handleDelete} title={t('branchSettings.deleteTemplate')} message={t('branchSettings.deleteConfirm', { name: selectedTemplate?.name || '' })} confirmText={t('branchSettings.delete')} variant="danger" />
       </div>
     </HQLayout>
   );

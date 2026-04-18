@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   TrendingUp, 
   TrendingDown,
@@ -46,6 +47,7 @@ import {
 } from 'recharts';
 
 export default function FleetKPIDashboard() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [kpis, setKpis] = useState<any>(mockFleetKPIs);
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month' | 'year'>('month');
@@ -151,8 +153,8 @@ export default function FleetKPIDashboard() {
                     <BarChart3 className="w-8 h-8" />
                   </div>
                   <div>
-                    <h1 className="text-4xl font-bold">Fleet KPI Dashboard</h1>
-                    <p className="text-blue-100 mt-1">Real-time Performance Analytics & Insights</p>
+                    <h1 className="text-4xl font-bold">{t('fleet.kpiTitle')}</h1>
+                    <p className="text-blue-100 mt-1">{t('fleet.kpiSubtitle')}</p>
                   </div>
                 </div>
               </div>
@@ -174,7 +176,7 @@ export default function FleetKPIDashboard() {
                 </div>
                 <button className="flex items-center gap-2 px-6 py-3 bg-white text-blue-600 rounded-xl hover:bg-blue-50 transition-all shadow-lg font-semibold">
                   <Download className="w-5 h-5" />
-                  Export Report
+                  {t('fleet.exportReport')}
                 </button>
               </div>
             </div>
@@ -187,7 +189,7 @@ export default function FleetKPIDashboard() {
             <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
               <Activity className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Fleet Overview</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('fleet.fleetSummary')}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <KPICard
@@ -195,7 +197,7 @@ export default function FleetKPIDashboard() {
               value={kpis.overview.totalVehicles}
               icon={Truck}
               gradient="from-blue-500 to-blue-600"
-              subtitle="All registered vehicles"
+              subtitle="Semua kendaraan terdaftar"
             />
             <KPICard
               title="Kendaraan Aktif"
@@ -204,24 +206,24 @@ export default function FleetKPIDashboard() {
               gradient="from-green-500 to-emerald-600"
               trend="up"
               trendValue={5}
-              subtitle="Currently operational"
+              subtitle="Sedang beroperasi"
             />
             <KPICard
               title="Sedang di Jalan"
               value={kpis.overview.vehiclesOnRoute}
               icon={MapPin}
               gradient="from-purple-500 to-purple-600"
-              subtitle="On active routes"
+              subtitle="Di rute aktif"
             />
             <KPICard
-              title="Utilization Rate"
+              title="Tingkat Utilisasi"
               value={kpis.overview.fleetUtilization}
               unit="%"
               icon={Target}
               gradient="from-indigo-500 to-indigo-600"
               trend="up"
               trendValue={3}
-              subtitle="Fleet efficiency"
+              subtitle="Efisiensi armada"
             />
           </div>
         </div>
@@ -232,7 +234,7 @@ export default function FleetKPIDashboard() {
             <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Operational Performance</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('fleet.operationalPerformance')}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <KPICard
@@ -243,7 +245,7 @@ export default function FleetKPIDashboard() {
               gradient="from-blue-500 to-cyan-600"
               trend="up"
               trendValue={12}
-              subtitle="Distance covered"
+              subtitle="Jarak tempuh"
             />
             <KPICard
               title="Total Trip Bulan Ini"
@@ -252,7 +254,7 @@ export default function FleetKPIDashboard() {
               gradient="from-green-500 to-emerald-600"
               trend="up"
               trendValue={8}
-              subtitle="Completed trips"
+              subtitle="Perjalanan selesai"
             />
             <KPICard
               title="On-Time Delivery"
@@ -262,15 +264,15 @@ export default function FleetKPIDashboard() {
               gradient="from-emerald-500 to-teal-600"
               trend="up"
               trendValue={2}
-              subtitle="Delivery performance"
+              subtitle="Performa pengiriman"
             />
             <KPICard
-              title="Route Completion"
+              title="Penyelesaian Rute"
               value={kpis.operational.routeCompletionRate}
               unit="%"
               icon={Activity}
               gradient="from-teal-500 to-cyan-600"
-              subtitle="Route efficiency"
+              subtitle="Efisiensi rute"
             />
           </div>
         </div>
@@ -509,43 +511,43 @@ export default function FleetKPIDashboard() {
             <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg">
               <Shield className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Safety & Compliance</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('fleet.safetyCompliance')}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <KPICard
-              title="Safety Score"
+              title="Skor Keselamatan"
               value={kpis.safety.averageSafetyScore}
               unit="/100"
               icon={Shield}
               gradient="from-green-500 to-emerald-600"
               trend="up"
               trendValue={1}
-              subtitle="Overall safety rating"
+              subtitle="Rating keselamatan keseluruhan"
             />
             <KPICard
-              title="Speeding Incidents"
+              title="Insiden Kecepatan"
               value={kpis.safety.speedingIncidents}
               icon={AlertCircle}
               gradient="from-red-500 to-rose-600"
               trend="down"
               trendValue={20}
-              subtitle="This month"
+              subtitle="Bulan ini"
             />
             <KPICard
-              title="Harsh Braking"
+              title="Pengereman Keras"
               value={kpis.safety.harshBrakingEvents}
               unit="events"
               icon={AlertCircle}
               gradient="from-orange-500 to-red-600"
-              subtitle="Safety events"
+              subtitle="Kejadian keselamatan"
             />
             <KPICard
-              title="Compliance Rate"
+              title="Tingkat Kepatuhan"
               value={kpis.safety.complianceRate}
               unit="%"
               icon={CheckCircle}
               gradient="from-emerald-500 to-green-600"
-              subtitle="Regulatory compliance"
+              subtitle="Kepatuhan regulasi"
             />
           </div>
         </div>
@@ -556,42 +558,42 @@ export default function FleetKPIDashboard() {
             <div className="p-2 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg">
               <DollarSign className="w-6 h-6 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Cost Analysis</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('fleet.costAnalysis')}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <KPICard
-              title="Total Operating Cost"
+              title="Total Biaya Operasi"
               value={Math.round(kpis.cost.totalOperatingCost / 1000000)}
               unit="Jt"
               icon={DollarSign}
               gradient="from-red-500 to-rose-600"
-              subtitle="Monthly total"
+              subtitle="Total bulanan"
             />
             <KPICard
-              title="Fuel Cost"
+              title="Biaya BBM"
               value={Math.round(kpis.cost.fuelCost / 1000000)}
               unit="Jt"
               icon={Fuel}
               gradient="from-orange-500 to-red-600"
               trend="down"
               trendValue={5}
-              subtitle="Fuel expenses"
+              subtitle="Pengeluaran BBM"
             />
             <KPICard
-              title="Driver Cost"
+              title="Biaya Pengemudi"
               value={Math.round(kpis.cost.driverCost / 1000000)}
               unit="Jt"
               icon={Users}
               gradient="from-purple-500 to-pink-600"
-              subtitle="Salary & benefits"
+              subtitle="Gaji & tunjangan"
             />
             <KPICard
-              title="Cost per Trip"
+              title="Biaya per Perjalanan"
               value={Math.round(kpis.cost.costPerTrip / 1000)}
               unit="K"
               icon={Truck}
               gradient="from-indigo-500 to-purple-600"
-              subtitle="Average per trip"
+              subtitle="Rata-rata per perjalanan"
             />
           </div>
         </div>

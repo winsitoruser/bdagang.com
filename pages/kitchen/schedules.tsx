@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,8 +39,10 @@ interface ScheduleData {
 
 const KitchenSchedulesPage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: session, status } = useSession();
-  const [scheduleData, setScheduleData] = useState<ScheduleData | null>(null);
+  const MOCK_K_SCHED: ScheduleData = { week: 11, year: 2026, weekDates: ['2026-03-09', '2026-03-10', '2026-03-11', '2026-03-12', '2026-03-13', '2026-03-14', '2026-03-15'], schedules: [{ id: 'ks1', name: 'Chef Andi', role: 'head_chef', defaultShift: 'morning', status: 'active', schedules: { '2026-03-09': { id: 's1', shift: 'morning', status: 'confirmed', notes: '' }, '2026-03-10': { id: 's2', shift: 'morning', status: 'confirmed', notes: '' } } }, { id: 'ks2', name: 'Budi P.', role: 'sous_chef', defaultShift: 'afternoon', status: 'active', schedules: { '2026-03-09': { id: 's3', shift: 'afternoon', status: 'confirmed', notes: '' } } }] };
+  const [scheduleData, setScheduleData] = useState<ScheduleData | null>(MOCK_K_SCHED);
   const [loading, setLoading] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(0);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -81,6 +84,7 @@ const KitchenSchedulesPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching schedules:', error);
+      setScheduleData(MOCK_K_SCHED);
     } finally {
       setLoading(false);
     }

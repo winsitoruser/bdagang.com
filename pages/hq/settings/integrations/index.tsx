@@ -511,7 +511,7 @@ export default function IntegrationsSettingsPage() {
                         <div className="flex items-center gap-2">
                           {activeConfig ? (
                             <button
-                              onClick={() => window.location.href = `/hq/settings/integrations/${provider.category}/${provider.code}`}
+                              onClick={() => window.location.href = `/hq/settings/integrations/manage/${provider.code}`}
                               className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
                             >
                               <Settings className="w-4 h-4" />
@@ -625,18 +625,48 @@ export default function IntegrationsSettingsPage() {
                             <td className="px-4 py-4">
                               <div className="flex items-center justify-center gap-1">
                                 <button
+                                  onClick={async () => {
+                                    try {
+                                      const r = await fetch(`/api/hq/integrations/configs/${config.id}/test`, { method: 'POST' });
+                                      const json = await r.json();
+                                      alert(json.message || (r.ok ? 'Test berhasil' : 'Test gagal'));
+                                      fetchData();
+                                    } catch {
+                                      alert('Gagal melakukan test koneksi');
+                                    }
+                                  }}
                                   className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                   title="Test Connection"
                                 >
                                   <TestTube className="w-4 h-4" />
                                 </button>
                                 <button
+                                  onClick={() => {
+                                    const providerObj = providers.find(p => p.id === config.providerId);
+                                    if (providerObj) {
+                                      window.location.href = `/hq/settings/integrations/manage/${providerObj.code}?configId=${config.id}`;
+                                    }
+                                  }}
                                   className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                   title="Edit"
                                 >
                                   <Edit className="w-4 h-4" />
                                 </button>
                                 <button
+                                  onClick={async () => {
+                                    if (!confirm(`Hapus konfigurasi "${config.name}"?`)) return;
+                                    try {
+                                      const r = await fetch(`/api/hq/integrations/configs/${config.id}`, { method: 'DELETE' });
+                                      if (r.ok) {
+                                        alert('Konfigurasi dihapus');
+                                        fetchData();
+                                      } else {
+                                        alert('Gagal menghapus konfigurasi');
+                                      }
+                                    } catch {
+                                      alert('Gagal menghapus konfigurasi');
+                                    }
+                                  }}
                                   className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                   title="Delete"
                                 >
@@ -710,7 +740,10 @@ export default function IntegrationsSettingsPage() {
                           <p className="text-xs text-gray-400">
                             {new Date(req.createdAt).toLocaleDateString('id-ID')}
                           </p>
-                          <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                          <button
+                            onClick={() => window.location.href = `/hq/settings/integrations/requests/${req.id}`}
+                            className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          >
                             <ChevronRight className="w-5 h-5" />
                           </button>
                         </div>

@@ -74,9 +74,9 @@ const statusMappings: Record<string, { variant: BadgeVariant; label: string }> =
   pending: { variant: 'warning', label: 'Menunggu' },
   
   // Requisition
-  draft: { variant: 'default', label: 'Draft' },
+  draft: { variant: 'default', label: 'Draf' },
   submitted: { variant: 'primary', label: 'Diajukan' },
-  under_review: { variant: 'warning', label: 'Dalam Review' },
+  under_review: { variant: 'warning', label: 'Dalam Peninjauan' },
   approved: { variant: 'success', label: 'Disetujui' },
   partially_approved: { variant: 'info', label: 'Disetujui Sebagian' },
   rejected: { variant: 'danger', label: 'Ditolak' },
@@ -90,13 +90,13 @@ const statusMappings: Record<string, { variant: BadgeVariant; label: string }> =
   // Branch status
   online: { variant: 'success', label: 'Online' },
   offline: { variant: 'danger', label: 'Offline' },
-  warning: { variant: 'warning', label: 'Warning' },
+  warning: { variant: 'warning', label: 'Peringatan' },
 
   // Priority
-  low: { variant: 'default', label: 'Low' },
+  low: { variant: 'default', label: 'Rendah' },
   normal: { variant: 'primary', label: 'Normal' },
-  high: { variant: 'warning', label: 'High' },
-  urgent: { variant: 'danger', label: 'Urgent' },
+  high: { variant: 'warning', label: 'Tinggi' },
+  urgent: { variant: 'danger', label: 'Mendesak' },
 
   // Boolean
   yes: { variant: 'success', label: 'Ya' },

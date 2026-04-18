@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import {
   ArrowUpRight,
@@ -100,12 +101,32 @@ const formatCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
+const MOCK_ACCT_SUMMARY: AccountsSummary = {
+  totalReceivables: 450000000, totalPayables: 320000000, netPosition: 130000000,
+  overdueReceivables: 85000000, overduePayables: 42000000, dueThisWeek: 65000000,
+  collectedThisMonth: 180000000, paidThisMonth: 145000000,
+};
+
+const MOCK_RECEIVABLES: Receivable[] = [
+  { id: 'r1', invoiceNumber: 'INV-2026-001', customer: 'PT Maju Bersama', customerType: 'corporate', issueDate: '2026-02-15', dueDate: '2026-03-15', amount: 85000000, paid: 0, balance: 85000000, status: 'current', daysOverdue: 0, contact: 'Agus Pratama', phone: '081234567101' },
+  { id: 'r2', invoiceNumber: 'INV-2026-002', customer: 'Hotel Grand Nusa', customerType: 'corporate', issueDate: '2026-01-20', dueDate: '2026-02-20', amount: 120000000, paid: 50000000, balance: 70000000, status: 'overdue', daysOverdue: 20, contact: 'Wayan Sudirta', phone: '081234567103' },
+  { id: 'r3', invoiceNumber: 'INV-2026-003', customer: 'CV Sejahtera Abadi', customerType: 'corporate', issueDate: '2026-02-28', dueDate: '2026-03-28', amount: 65000000, paid: 65000000, balance: 0, status: 'paid', daysOverdue: 0, contact: 'Ratna Sari', phone: '081234567102' },
+  { id: 'r4', invoiceNumber: 'INV-2026-004', customer: 'Restoran Padang Sederhana', customerType: 'individual', issueDate: '2026-03-01', dueDate: '2026-03-31', amount: 35000000, paid: 15000000, balance: 20000000, status: 'partial', daysOverdue: 0, contact: 'Hasan', phone: '081234567104' },
+];
+
+const MOCK_PAYABLES: Payable[] = [
+  { id: 'p1', invoiceNumber: 'BILL-2026-001', supplier: 'PT Sumber Makmur', category: 'Bahan Baku', issueDate: '2026-02-10', dueDate: '2026-03-10', amount: 95000000, paid: 0, balance: 95000000, status: 'overdue', daysOverdue: 2, priority: 'high' },
+  { id: 'p2', invoiceNumber: 'BILL-2026-002', supplier: 'CV Maju Jaya Packaging', category: 'Packaging', issueDate: '2026-02-25', dueDate: '2026-03-25', amount: 45000000, paid: 0, balance: 45000000, status: 'current', daysOverdue: 0, priority: 'medium' },
+  { id: 'p3', invoiceNumber: 'BILL-2026-003', supplier: 'PT Teknologi Nusantara', category: 'IT Equipment', issueDate: '2026-03-01', dueDate: '2026-04-01', amount: 180000000, paid: 90000000, balance: 90000000, status: 'partial', daysOverdue: 0, priority: 'medium' },
+];
+
 export default function AccountsManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<AccountsSummary>(defaultSummary);
-  const [receivables, setReceivables] = useState<Receivable[]>([]);
-  const [payables, setPayables] = useState<Payable[]>([]);
+  const [summary, setSummary] = useState<AccountsSummary>(MOCK_ACCT_SUMMARY);
+  const [receivables, setReceivables] = useState<Receivable[]>(MOCK_RECEIVABLES);
+  const [payables, setPayables] = useState<Payable[]>(MOCK_PAYABLES);
   const [agingReceivables, setAgingReceivables] = useState<AgingData>({...defaultAging, category: 'Receivables'});
   const [agingPayables, setAgingPayables] = useState<AgingData>({...defaultAging, category: 'Payables'});
   const [viewMode, setViewMode] = useState<'receivables' | 'payables' | 'aging'>('receivables');
@@ -126,6 +147,9 @@ export default function AccountsManagement() {
       }
     } catch (error) {
       console.error('Error fetching accounts data:', error);
+      setSummary(MOCK_ACCT_SUMMARY);
+      setReceivables(MOCK_RECEIVABLES);
+      setPayables(MOCK_PAYABLES);
     } finally {
       setLoading(false);
     }
@@ -209,8 +233,8 @@ export default function AccountsManagement() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Accounts Management</h1>
-              <p className="text-gray-500">Kelola piutang dan hutang perusahaan</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.accTitle')}</h1>
+              <p className="text-gray-500">{t('finance.accSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -222,11 +246,11 @@ export default function AccountsManagement() {
             </button>
             <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
               <Plus className="w-4 h-4" />
-              New Invoice
+              {t('finance.newInvoice')}
             </button>
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
-              Export
+              {t('finance.export')}
             </button>
           </div>
         </div>
@@ -236,7 +260,7 @@ export default function AccountsManagement() {
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <ArrowDownRight className="w-5 h-5 opacity-80" />
-              <p className="text-green-100 text-sm">Total Receivables (A/R)</p>
+              <p className="text-green-100 text-sm">{t('finance.totalReceivables')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.totalReceivables)}</p>
             <p className="text-green-200 text-xs mt-1">{formatCurrency(summary.overdueReceivables)} overdue</p>
@@ -245,14 +269,14 @@ export default function AccountsManagement() {
           <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <ArrowUpRight className="w-5 h-5 opacity-80" />
-              <p className="text-red-100 text-sm">Total Payables (A/P)</p>
+              <p className="text-red-100 text-sm">{t('finance.totalPayables')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.totalPayables)}</p>
             <p className="text-red-200 text-xs mt-1">{formatCurrency(summary.overduePayables)} overdue</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Net Position</p>
+            <p className="text-gray-500 text-sm">{t('finance.netPosition')}</p>
             <p className={`text-2xl font-bold ${summary.netPosition >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {summary.netPosition >= 0 ? '+' : ''}{formatCurrency(summary.netPosition)}
             </p>
@@ -260,7 +284,7 @@ export default function AccountsManagement() {
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Due This Week</p>
+            <p className="text-gray-500 text-sm">{t('finance.dueThisWeek')}</p>
             <p className="text-2xl font-bold text-orange-600">{formatCurrency(summary.dueThisWeek)}</p>
             <p className="text-xs text-gray-500 mt-1">Requires attention</p>
           </div>
@@ -275,12 +299,12 @@ export default function AccountsManagement() {
                   <ArrowDownRight className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Collected This Month</p>
+                  <p className="text-sm text-gray-500">{t('finance.collectedThisMonth')}</p>
                   <p className="text-xl font-bold text-green-600">{formatCurrency(summary.collectedThisMonth)}</p>
                 </div>
               </div>
               <Link href="/hq/finance/accounts?tab=collections" className="text-sm text-blue-600 hover:underline">
-                View Details
+                {t('finance.viewDetails')}
               </Link>
             </div>
           </div>
@@ -292,12 +316,12 @@ export default function AccountsManagement() {
                   <ArrowUpRight className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Paid This Month</p>
+                  <p className="text-sm text-gray-500">{t('finance.paidThisMonth')}</p>
                   <p className="text-xl font-bold text-red-600">{formatCurrency(summary.paidThisMonth)}</p>
                 </div>
               </div>
               <Link href="/hq/finance/accounts?tab=payments" className="text-sm text-blue-600 hover:underline">
-                View Details
+                {t('finance.viewDetails')}
               </Link>
             </div>
           </div>
@@ -311,21 +335,21 @@ export default function AccountsManagement() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'receivables' ? 'bg-green-50 text-green-600' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               <ArrowDownRight className="w-4 h-4" />
-              Receivables (A/R)
+              {t('finance.receivablesAR')}
             </button>
             <button
               onClick={() => setViewMode('payables')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'payables' ? 'bg-red-50 text-red-600' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               <ArrowUpRight className="w-4 h-4" />
-              Payables (A/P)
+              {t('finance.payablesAP')}
             </button>
             <button
               onClick={() => setViewMode('aging')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'aging' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
             >
               <Calendar className="w-4 h-4" />
-              Aging Analysis
+              {t('finance.agingAnalysis')}
             </button>
           </div>
           <div className="flex items-center gap-2">
@@ -334,11 +358,11 @@ export default function AccountsManagement() {
               onChange={(e) => setFilterStatus(e.target.value as any)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
             >
-              <option value="all">All Status</option>
-              <option value="current">Current</option>
-              <option value="overdue">Overdue</option>
-              <option value="partial">Partial</option>
-              <option value="paid">Paid</option>
+              <option value="all">{t('finance.allStatus')}</option>
+              <option value="current">{t('finance.current')}</option>
+              <option value="overdue">{t('finance.overdue')}</option>
+              <option value="partial">{t('finance.partial')}</option>
+              <option value="paid">{t('finance.paid')}</option>
             </select>
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -397,7 +421,7 @@ export default function AccountsManagement() {
                         <button className="p-1.5 hover:bg-gray-100 rounded" title="View">
                           <Eye className="w-4 h-4 text-gray-500" />
                         </button>
-                        <button className="p-1.5 hover:bg-gray-100 rounded" title="Send Reminder">
+                        <button className="p-1.5 hover:bg-gray-100 rounded" title="Kirim Pengingat">
                           <Mail className="w-4 h-4 text-gray-500" />
                         </button>
                         <button className="p-1.5 hover:bg-gray-100 rounded" title="Call">

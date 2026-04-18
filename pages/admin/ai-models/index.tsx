@@ -127,7 +127,7 @@ export default function AdminAIModels() {
                 { label: 'Eksekusi', value: stats.totalExecutions, icon: Activity, color: 'text-purple-600', bg: 'bg-purple-50' },
                 { label: 'Berhasil', value: stats.successExecutions, icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
                 { label: 'Gagal', value: stats.failedExecutions, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
-                { label: 'Total Cost', value: `$${stats.totalCost.toFixed(4)}`, icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                { label: 'Total Biaya', value: `$${stats.totalCost.toFixed(4)}`, icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50' },
               ].map(s => (
                 <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
                   <div className="flex items-center gap-3">
@@ -204,7 +204,7 @@ export default function AdminAIModels() {
                     <div key={wf.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50/50">
                       <div>
                         <div className="text-sm font-medium text-gray-900">{wf.name}</div>
-                        <div className="text-[10px] text-gray-400">{wf.category} • {wf.module} • {wf.model_name || 'No model'}</div>
+                        <div className="text-[10px] text-gray-400">{wf.category} • {wf.module} • {wf.model_name || 'Tanpa model'}</div>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full ${wf.is_active ? 'bg-green-500' : 'bg-gray-300'}`} />

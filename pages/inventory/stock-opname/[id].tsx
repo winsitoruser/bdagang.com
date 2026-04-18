@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ const StockOpnameDetailPage: React.FC = () => {
   const router = useRouter();
   const { id } = router.query;
   const { data: session, status } = useSession();
+  const { t, formatCurrency, formatDate } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [opname, setOpname] = useState<any>(null);
@@ -72,7 +74,7 @@ const StockOpnameDetailPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading stock opname:', error);
-      alert('Gagal memuat data stock opname');
+      alert(t('inventory.stockOpname.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -158,11 +160,11 @@ const StockOpnameDetailPage: React.FC = () => {
         })
       });
 
-      alert('✅ Progress berhasil disimpan!');
+      alert(t('inventory.stockOpname.saveSuccess'));
       loadStockOpname();
     } catch (error) {
       console.error('Error saving progress:', error);
-      alert('Gagal menyimpan progress');
+      alert(t('inventory.stockOpname.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -172,7 +174,7 @@ const StockOpnameDetailPage: React.FC = () => {
     const uncountedItems = items.filter(item => item.physical_stock === null);
     
     if (uncountedItems.length > 0) {
-      if (!confirm(`Masih ada ${uncountedItems.length} item yang belum dihitung. Lanjutkan menyelesaikan stock opname?`)) {
+      if (!confirm(`${t('inventory.stockOpname.uncountedItems', { count: uncountedItems.length.toString() })}`)) {
         return;
       }
     }
@@ -188,11 +190,11 @@ const StockOpnameDetailPage: React.FC = () => {
         })
       });
 
-      alert('✅ Stock opname berhasil diselesaikan!');
+      alert(t('inventory.stockOpname.completeSuccess'));
       router.push('/inventory/stock-opname');
     } catch (error) {
       console.error('Error completing opname:', error);
-      alert('Gagal menyelesaikan stock opname');
+      alert(t('inventory.stockOpname.completeFailed'));
     } finally {
       setSaving(false);
     }
@@ -263,25 +265,25 @@ const StockOpnameDetailPage: React.FC = () => {
       const result = await response.json();
       
       if (result.success) {
-        alert('✅ Laporan insiden berhasil dibuat!');
+        alert(t('inventory.stockOpname.incidentSuccess'));
         loadIncidents();
         loadStockOpname();
       } else {
-        alert('Gagal membuat incident report: ' + result.message);
+        alert(t('inventory.stockOpname.incidentFailed') + ': ' + result.message);
       }
     } catch (error) {
       console.error('Error creating incident report:', error);
-      alert('Gagal membuat incident report');
+      alert(t('inventory.stockOpname.incidentError'));
     }
   };
 
   const getStatusBadge = (status: string) => {
     const badges: any = {
-      pending: { color: 'bg-gray-100 text-gray-700', label: 'Menunggu' },
-      counted: { color: 'bg-blue-100 text-blue-700', label: 'Dihitung' },
-      verified: { color: 'bg-green-100 text-green-700', label: 'Terverifikasi' },
-      investigated: { color: 'bg-yellow-100 text-yellow-700', label: 'Diinvestigasi' },
-      approved: { color: 'bg-purple-100 text-purple-700', label: 'Disetujui' }
+      pending: { color: 'bg-gray-100 text-gray-700', label: t('inventory.stockOpname.pending') },
+      counted: { color: 'bg-blue-100 text-blue-700', label: t('inventory.stockOpname.counted') },
+      verified: { color: 'bg-green-100 text-green-700', label: t('inventory.stockOpname.verified') },
+      investigated: { color: 'bg-yellow-100 text-yellow-700', label: t('inventory.stockOpname.investigated') },
+      approved: { color: 'bg-purple-100 text-purple-700', label: t('inventory.stockOpname.approved') }
     };
     const badge = badges[status] || badges.pending;
     return <Badge className={badge.color}>{badge.label}</Badge>;
@@ -289,22 +291,15 @@ const StockOpnameDetailPage: React.FC = () => {
 
   const getVarianceBadge = (category: string) => {
     const badges: any = {
-      none: { color: 'bg-green-100 text-green-700', label: 'Tidak Ada Selisih' },
-      minor: { color: 'bg-blue-100 text-blue-700', label: 'Kecil' },
-      moderate: { color: 'bg-yellow-100 text-yellow-700', label: 'Sedang' },
-      major: { color: 'bg-red-100 text-red-700', label: 'Besar' }
+      none: { color: 'bg-green-100 text-green-700', label: t('inventory.stockOpname.noVariance') },
+      minor: { color: 'bg-blue-100 text-blue-700', label: t('inventory.stockOpname.minor') },
+      moderate: { color: 'bg-yellow-100 text-yellow-700', label: t('inventory.stockOpname.moderate') },
+      major: { color: 'bg-red-100 text-red-700', label: t('inventory.stockOpname.major') }
     };
     const badge = badges[category] || badges.none;
     return <Badge className={badge.color}>{badge.label}</Badge>;
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const filteredItems = items.filter(item =>
     item.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -324,7 +319,7 @@ const StockOpnameDetailPage: React.FC = () => {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Memuat data...</p>
+            <p className="mt-4 text-gray-600">{t('common.loading')}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -337,9 +332,9 @@ const StockOpnameDetailPage: React.FC = () => {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <FaExclamationTriangle className="mx-auto text-6xl text-red-500 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Stock Opname Tidak Ditemukan</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('inventory.stockOpname.notFound')}</h2>
             <Link href="/inventory/stock-opname">
-              <Button className="mt-4">Kembali ke Daftar</Button>
+              <Button className="mt-4">{t('inventory.stockOpname.backToList')}</Button>
             </Link>
           </div>
         </div>
@@ -361,7 +356,7 @@ const StockOpnameDetailPage: React.FC = () => {
               <Link href="/inventory/stock-opname">
                 <Button variant="outline" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30">
                   <FaArrowLeft className="mr-2" />
-                  Kembali
+                  {t('common.back')}
                 </Button>
               </Link>
               <div>
@@ -369,7 +364,7 @@ const StockOpnameDetailPage: React.FC = () => {
                   {opname.opname_number}
                 </h1>
                 <p className="text-indigo-100">
-                  {opname.warehouse?.name || 'Gudang'} - {new Date(opname.scheduled_date).toLocaleDateString('id-ID')}
+                  {opname.warehouse?.name || 'Gudang'} - {formatDate(opname.scheduled_date)}
                 </p>
               </div>
             </div>
@@ -380,7 +375,7 @@ const StockOpnameDetailPage: React.FC = () => {
                 className="bg-white text-indigo-600 hover:bg-indigo-50"
               >
                 <FaSave className="mr-2" />
-                Simpan Progress
+                {t('inventory.stockOpname.saveProgress')}
               </Button>
               <Button
                 onClick={handleCompleteOpname}
@@ -388,7 +383,7 @@ const StockOpnameDetailPage: React.FC = () => {
                 className="bg-green-600 hover:bg-green-700 text-white"
               >
                 <FaCheck className="mr-2" />
-                Selesaikan
+                {t('inventory.stockOpname.complete')}
               </Button>
               <Button
                 onClick={() => window.print()}
@@ -403,19 +398,19 @@ const StockOpnameDetailPage: React.FC = () => {
           {/* Quick Stats */}
           <div className="grid grid-cols-4 gap-4 mt-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-              <p className="text-xs text-indigo-200 mb-1">Total Item</p>
+              <p className="text-xs text-indigo-200 mb-1">{t('inventory.stockOpname.totalItem')}</p>
               <p className="text-2xl font-bold">{stats.total}</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-              <p className="text-xs text-indigo-200 mb-1">Sudah Dihitung</p>
+              <p className="text-xs text-indigo-200 mb-1">{t('inventory.stockOpname.alreadyCounted')}</p>
               <p className="text-2xl font-bold">{stats.counted}</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-              <p className="text-xs text-indigo-200 mb-1">Ada Selisih</p>
+              <p className="text-xs text-indigo-200 mb-1">{t('inventory.stockOpname.hasVariance')}</p>
               <p className="text-2xl font-bold">{stats.withVariance}</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-              <p className="text-xs text-indigo-200 mb-1">Total Selisih</p>
+              <p className="text-xs text-indigo-200 mb-1">{t('inventory.stockOpname.totalVariance')}</p>
               <p className={`text-2xl font-bold ${stats.totalVariance < 0 ? 'text-red-200' : 'text-green-200'}`}>
                 {formatCurrency(stats.totalVariance)}
               </p>
@@ -429,7 +424,7 @@ const StockOpnameDetailPage: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <FaFileAlt className="mr-2" />
-                Laporan Insiden ({incidents.length})
+                {t('inventory.stockOpname.incidentReports')} ({incidents.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -443,17 +438,17 @@ const StockOpnameDetailPage: React.FC = () => {
                             {incident.incident_number}
                           </Badge>
                           <Badge className="bg-gray-100 text-gray-700">
-                            Menunggu Persetujuan {incident.approval_level}
+                            {t('inventory.stockOpname.awaitingApproval')} {incident.approval_level}
                           </Badge>
                         </div>
                         <p className="font-semibold text-gray-900 mb-1">
                           {incident.product?.name}
                         </p>
                         <p className="text-sm text-gray-600">
-                          <strong>Selisih:</strong> {incident.variance_quantity} unit ({formatCurrency(incident.variance_value)})
+                          <strong>{t('inventory.stockOpname.varianceLabel')}:</strong> {incident.variance_quantity} unit ({formatCurrency(incident.variance_value)})
                         </p>
                         <p className="text-sm text-gray-600">
-                          <strong>Akar Masalah:</strong> {incident.root_cause}
+                          <strong>{t('inventory.stockOpname.rootCause')}:</strong> {incident.root_cause}
                         </p>
                       </div>
                       <Button size="sm" variant="outline">
@@ -475,7 +470,7 @@ const StockOpnameDetailPage: React.FC = () => {
               <FaBarcode className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Cari produk (nama atau SKU)..."
+                placeholder={t('inventory.stockOpname.searchProduct')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -487,21 +482,21 @@ const StockOpnameDetailPage: React.FC = () => {
         {/* Items Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Daftar Produk untuk Dihitung</CardTitle>
+            <CardTitle>{t('inventory.stockOpname.productList')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produk</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lokasi</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Stok Sistem</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Stok Fisik</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Selisih</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Kategori</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.product')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.location')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.systemStock')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.physicalStock')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.difference')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.category')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.statusLabel')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.stockOpname.action')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -547,7 +542,7 @@ const StockOpnameDetailPage: React.FC = () => {
                             className="text-yellow-600 border-yellow-600"
                           >
                             <FaExclamationTriangle className="mr-1" />
-                            Selesaikan
+                            {t('inventory.stockOpname.resolve')}
                           </Button>
                         )}
                       </td>

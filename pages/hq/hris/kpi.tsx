@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   Target, TrendingUp, TrendingDown, Award, Users, 
   Building2, Calendar, Filter, Download, ChevronDown,
@@ -65,10 +66,12 @@ interface KPITemplate {
   is_active: boolean;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  sales: 'Penjualan', operations: 'Operasional', customer: 'Pelanggan',
-  financial: 'Keuangan', hr: 'SDM', quality: 'Kualitas'
-};
+function getCategoryLabels(t: (key: string) => string): Record<string, string> {
+  return {
+    sales: t('hris.catSales'), operations: t('hris.catOperations'), customer: t('hris.catCustomer'),
+    financial: t('hris.catFinancial'), hr: t('hris.catHr'), quality: t('hris.catQuality')
+  };
+}
 
 const CATEGORY_COLORS: Record<string, string> = {
   sales: 'bg-blue-100 text-blue-700', operations: 'bg-green-100 text-green-700',
@@ -77,7 +80,33 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 
+const MOCK_BRANCH_KPIS: BranchKPI[] = [
+  { branchId: '1', branchName: 'Kantor Pusat Jakarta', branchCode: 'HQ-001', manager: 'Ahmad Wijaya', overallAchievement: 92, salesKPI: 95, operationsKPI: 88, customerKPI: 90, employeeCount: 35, topPerformers: 12, lowPerformers: 2, totalRevenue: 1350000000, transactionCount: 4520 },
+  { branchId: '2', branchName: 'Cabang Bandung', branchCode: 'BR-002', manager: 'Siti Rahayu', overallAchievement: 88, salesKPI: 90, operationsKPI: 85, customerKPI: 88, employeeCount: 24, topPerformers: 8, lowPerformers: 3, totalRevenue: 980000000, transactionCount: 3210 },
+  { branchId: '3', branchName: 'Cabang Surabaya', branchCode: 'BR-003', manager: 'Budi Santoso', overallAchievement: 78, salesKPI: 75, operationsKPI: 80, customerKPI: 82, employeeCount: 22, topPerformers: 5, lowPerformers: 5, totalRevenue: 820000000, transactionCount: 2890 },
+  { branchId: '5', branchName: 'Cabang Bali', branchCode: 'BR-005', manager: 'Made Wirawan', overallAchievement: 95, salesKPI: 98, operationsKPI: 92, customerKPI: 94, employeeCount: 18, topPerformers: 8, lowPerformers: 1, totalRevenue: 1050000000, transactionCount: 3680 },
+  { branchId: '4', branchName: 'Cabang Medan', branchCode: 'BR-004', manager: 'Dewi Lestari', overallAchievement: 82, salesKPI: 80, operationsKPI: 84, customerKPI: 83, employeeCount: 20, topPerformers: 6, lowPerformers: 4, totalRevenue: 710000000, transactionCount: 2450 },
+  { branchId: '7', branchName: 'Cabang Semarang', branchCode: 'BR-007', manager: 'Putri Maharani', overallAchievement: 85, salesKPI: 87, operationsKPI: 82, customerKPI: 86, employeeCount: 16, topPerformers: 5, lowPerformers: 2, totalRevenue: 760000000, transactionCount: 2680 },
+];
+
+const MOCK_EMPLOYEE_KPIS: EmployeeKPI[] = [
+  { employeeId: 'EMP-001', employeeName: 'Ahmad Wijaya', position: 'General Manager', branchName: 'Kantor Pusat Jakarta', department: 'MANAGEMENT', overallScore: 94, overallAchievement: 94, metrics: [{ id: 'k1', name: 'Revenue Target', category: 'sales', target: 1200000000, actual: 1350000000, unit: 'Rp', weight: 40, trend: 'up', period: '2026-03' }], status: 'exceeded', lastUpdated: '2026-03-12' },
+  { employeeId: 'EMP-002', employeeName: 'Siti Rahayu', position: 'Branch Manager', branchName: 'Cabang Bandung', department: 'OPERATIONS', overallScore: 88, overallAchievement: 88, metrics: [{ id: 'k2', name: 'Revenue Target', category: 'sales', target: 900000000, actual: 980000000, unit: 'Rp', weight: 40, trend: 'up', period: '2026-03' }], status: 'achieved', lastUpdated: '2026-03-12' },
+  { employeeId: 'EMP-010', employeeName: 'Fajar Setiawan', position: 'Sales Supervisor', branchName: 'Cabang Bandung', department: 'SALES', overallScore: 72, overallAchievement: 72, metrics: [{ id: 'k3', name: 'Sales Target', category: 'sales', target: 500000000, actual: 360000000, unit: 'Rp', weight: 50, trend: 'down', period: '2026-03' }], status: 'partial', lastUpdated: '2026-03-12' },
+  { employeeId: 'EMP-007', employeeName: 'Made Wirawan', position: 'Branch Manager', branchName: 'Cabang Bali', department: 'OPERATIONS', overallScore: 96, overallAchievement: 96, metrics: [{ id: 'k4', name: 'Revenue Target', category: 'sales', target: 900000000, actual: 1050000000, unit: 'Rp', weight: 40, trend: 'up', period: '2026-03' }], status: 'exceeded', lastUpdated: '2026-03-12' },
+  { employeeId: 'EMP-006', employeeName: 'Lisa Permata', position: 'Finance Manager', branchName: 'Kantor Pusat Jakarta', department: 'FINANCE', overallScore: 90, overallAchievement: 90, metrics: [{ id: 'k5', name: 'Financial Accuracy', category: 'financial', target: 99, actual: 99.5, unit: '%', weight: 50, trend: 'stable', period: '2026-03' }], status: 'achieved', lastUpdated: '2026-03-12' },
+];
+
+const MOCK_KPI_TEMPLATES: KPITemplate[] = [
+  { id: 'tpl1', code: 'REV_TARGET', name: 'Revenue Target', category: 'sales', unit: 'Rp', data_type: 'currency', formula_type: 'actual_vs_target', formula: '(actual/target)*100', default_weight: 40, measurement_frequency: 'monthly', is_active: true },
+  { id: 'tpl2', code: 'CUST_SAT', name: 'Customer Satisfaction', category: 'customer', unit: '%', data_type: 'percentage', formula_type: 'actual_vs_target', formula: '(actual/target)*100', default_weight: 20, measurement_frequency: 'monthly', is_active: true },
+  { id: 'tpl3', code: 'OPS_EFF', name: 'Operational Efficiency', category: 'operations', unit: '%', data_type: 'percentage', formula_type: 'actual_vs_target', formula: '(actual/target)*100', default_weight: 20, measurement_frequency: 'monthly', is_active: true },
+  { id: 'tpl4', code: 'FIN_ACC', name: 'Financial Accuracy', category: 'financial', unit: '%', data_type: 'percentage', formula_type: 'actual_vs_target', formula: '(actual/target)*100', default_weight: 20, measurement_frequency: 'quarterly', is_active: true },
+];
+
 export default function KPIDashboard() {
+  const { t } = useTranslation();
+  const CATEGORY_LABELS = getCategoryLabels(t);
   const [mounted, setMounted] = useState(false);
   const [employeeKPIs, setEmployeeKPIs] = useState<EmployeeKPI[]>([]);
   const [branchKPIs, setBranchKPIs] = useState<BranchKPI[]>([]);
@@ -96,6 +125,61 @@ export default function KPIDashboard() {
   const showToast = (type: string, message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleExportKPIPdf = (kpi: EmployeeKPI | null) => {
+    if (!kpi) return;
+    const w = window.open('', '_blank');
+    if (!w) {
+      showToast('error', 'Pop-up diblokir browser');
+      return;
+    }
+    const rows = (kpi.metrics || []).map((m) => {
+      const pct = m.target > 0 ? Math.round((m.actual / m.target) * 100) : 0;
+      return `<tr>
+        <td>${m.name}</td><td>${m.category}</td><td style="text-align:right">${m.weight}%</td>
+        <td style="text-align:right">${m.target}</td><td style="text-align:right">${m.actual}</td>
+        <td style="text-align:right"><strong>${pct}%</strong></td>
+      </tr>`;
+    }).join('');
+    w.document.write(`<!doctype html><html><head><title>KPI - ${kpi.employeeName}</title>
+      <style>
+        body{font-family:Arial,sans-serif;padding:24px;color:#111}
+        h1{font-size:20px;margin:0 0 4px}
+        .meta{color:#666;font-size:13px;margin-bottom:16px}
+        .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+        .card{border:1px solid #e5e7eb;border-radius:8px;padding:10px}
+        table{width:100%;border-collapse:collapse;font-size:13px}
+        th,td{border:1px solid #e5e7eb;padding:6px 8px}
+        th{background:#f9fafb;text-align:left}
+        @media print{.noprint{display:none}}
+      </style></head><body>
+      <h1>Laporan KPI Karyawan</h1>
+      <div class="meta">${kpi.employeeName} • ${kpi.position || ''} • ${kpi.branchName || ''} • Periode ${kpi.period || ''}</div>
+      <div class="grid">
+        <div class="card"><div>Skor Keseluruhan</div><strong style="font-size:22px">${kpi.overallScore ?? '-'}</strong></div>
+        <div class="card"><div>Pencapaian</div><strong style="font-size:22px">${kpi.overallAchievement ?? 0}%</strong></div>
+        <div class="card"><div>Status</div><strong style="font-size:16px">${kpi.status || '-'}</strong></div>
+      </div>
+      <table><thead><tr><th>Metrik</th><th>Kategori</th><th>Bobot</th><th>Target</th><th>Aktual</th><th>Pencapaian</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="6" style="text-align:center;color:#999">Tidak ada metrik</td></tr>'}</tbody></table>
+      <div class="noprint" style="margin-top:20px"><button onclick="window.print()">Cetak / Simpan PDF</button></div>
+      </body></html>`);
+    w.document.close();
+  };
+
+  const handleEditKPI = (kpi: EmployeeKPI | null) => {
+    if (!kpi) return;
+    const firstMetric = kpi.metrics?.[0];
+    setAssignForm({
+      employeeId: kpi.employeeId || '',
+      branchId: '',
+      templateCode: firstMetric?.name || '',
+      target: String(firstMetric?.target || ''),
+      weight: Number(firstMetric?.weight || 100)
+    });
+    setSelectedKPI(null);
+    setShowAssignDialog(true);
   };
 
   const getPeriodParam = () => {
@@ -118,13 +202,15 @@ export default function KPIDashboard() {
         setBranchKPIs(data.branchKPIs || []);
         if (data.templates) setTemplates(data.templates);
       } else {
-        setEmployeeKPIs([]);
-        setBranchKPIs([]);
+        setEmployeeKPIs(MOCK_EMPLOYEE_KPIS);
+        setBranchKPIs(MOCK_BRANCH_KPIS);
+        setTemplates(MOCK_KPI_TEMPLATES);
       }
     } catch (error) {
       console.error('Failed to fetch KPI data:', error);
-      setEmployeeKPIs([]);
-      setBranchKPIs([]);
+      setEmployeeKPIs(MOCK_EMPLOYEE_KPIS);
+      setBranchKPIs(MOCK_BRANCH_KPIS);
+      setTemplates(MOCK_KPI_TEMPLATES);
     } finally {
       setLoading(false);
     }
@@ -150,7 +236,7 @@ export default function KPIDashboard() {
   }, [employeeKPIs, searchQuery, categoryFilter]);
 
   const handleExportCSV = () => {
-    const rows = [['Karyawan', 'Posisi', 'Cabang', 'Score', 'Achievement', 'Status']];
+    const rows = [['Karyawan', 'Posisi', 'Cabang', 'Skor', 'Pencapaian', 'Status']];
     employeeKPIs.forEach(e => {
       rows.push([e.employeeName, e.position, e.branchName, String(e.overallScore), `${e.overallAchievement}%`, e.status]);
     });
@@ -160,12 +246,12 @@ export default function KPIDashboard() {
     const a = document.createElement('a');
     a.href = url; a.download = `kpi-report-${getPeriodParam()}.csv`; a.click();
     URL.revokeObjectURL(url);
-    showToast('success', 'Data KPI berhasil diexport');
+    showToast('success', t('hris.kpiExportSuccess'));
   };
 
   const handleAssignKPI = async () => {
     const tpl = templates.find(t => t.code === assignForm.templateCode);
-    if (!assignForm.employeeId || !tpl) { showToast('error', 'Pilih karyawan dan template KPI'); return; }
+    if (!assignForm.employeeId || !tpl) { showToast('error', t('hris.selectEmployeeAndTemplate')); return; }
     try {
       const res = await fetch('/api/hq/hris/kpi', {
         method: 'POST',
@@ -181,15 +267,15 @@ export default function KPIDashboard() {
         })
       });
       if (res.ok) {
-        showToast('success', 'KPI berhasil di-assign');
+        showToast('success', t('hris.kpiAssignSuccess'));
         setShowAssignDialog(false);
         setAssignForm({ employeeId: '', branchId: '', templateCode: '', target: '', weight: 100 });
         fetchData();
       } else {
         const err = await res.json();
-        showToast('error', err.error || 'Gagal assign KPI');
+        showToast('error', err.error || t('hris.kpiAssignFailed'));
       }
-    } catch { showToast('error', 'Gagal menghubungi server'); }
+    } catch { showToast('error', t('hris.serverError')); }
   };
 
   if (!mounted) return null;
@@ -203,10 +289,10 @@ export default function KPIDashboard() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'exceeded': return <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Melampaui</span>;
-      case 'achieved': return <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Tercapai</span>;
-      case 'partial': return <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-full flex items-center gap-1"><Clock className="w-3 h-3" /> Sebagian</span>;
-      case 'not_achieved': return <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Tidak Tercapai</span>;
+      case 'exceeded': return <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {t('hris.exceededBadge')}</span>;
+      case 'achieved': return <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full flex items-center gap-1"><CheckCircle className="w-3 h-3" /> {t('hris.achievedBadge')}</span>;
+      case 'partial': return <span className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-full flex items-center gap-1"><Clock className="w-3 h-3" /> {t('hris.partialBadge')}</span>;
+      case 'not_achieved': return <span className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-full flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {t('hris.notAchievedBadge')}</span>;
       default: return null;
     }
   };
@@ -231,7 +317,7 @@ export default function KPIDashboard() {
   };
 
   return (
-    <HQLayout title="KPI Dashboard" subtitle="Monitoring Key Performance Indicators Karyawan">
+    <HQLayout title={t('hris.kpiTitle')} subtitle={t('hris.kpiSubtitle')}>
       <div className="space-y-6">
         {/* Summary Stats */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -241,7 +327,7 @@ export default function KPIDashboard() {
                 <Target className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Avg. Achievement</p>
+                <p className="text-sm text-gray-500">{t('hris.avgAchievement')}</p>
                 <p className="text-xl font-bold">{avgAchievement.toFixed(0)}%</p>
               </div>
             </div>
@@ -252,7 +338,7 @@ export default function KPIDashboard() {
                 <TrendingUp className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Melampaui Target</p>
+                <p className="text-sm text-gray-500">{t('hris.exceeded')}</p>
                 <p className="text-xl font-bold">{exceededCount}</p>
               </div>
             </div>
@@ -263,7 +349,7 @@ export default function KPIDashboard() {
                 <CheckCircle className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Tercapai</p>
+                <p className="text-sm text-gray-500">{t('hris.achieved')}</p>
                 <p className="text-xl font-bold">{achievedCount}</p>
               </div>
             </div>
@@ -274,7 +360,7 @@ export default function KPIDashboard() {
                 <Clock className="w-5 h-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Sebagian</p>
+                <p className="text-sm text-gray-500">{t('hris.partial')}</p>
                 <p className="text-xl font-bold">{partialCount}</p>
               </div>
             </div>
@@ -285,7 +371,7 @@ export default function KPIDashboard() {
                 <AlertCircle className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Tidak Tercapai</p>
+                <p className="text-sm text-gray-500">{t('hris.notAchieved')}</p>
                 <p className="text-xl font-bold">{notAchievedCount}</p>
               </div>
             </div>
@@ -296,7 +382,7 @@ export default function KPIDashboard() {
                 <Users className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Total Karyawan</p>
+                <p className="text-sm text-gray-500">{t('hris.totalEmployees')}</p>
                 <p className="text-xl font-bold">{totalEmployees}</p>
               </div>
             </div>
@@ -308,22 +394,22 @@ export default function KPIDashboard() {
           <div className="flex flex-wrap gap-4 justify-between items-center">
             <div className="flex gap-2">
               <button onClick={() => setActiveTab('dashboard')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                <BarChart3 className="w-4 h-4 inline mr-2" />Dashboard
+                <BarChart3 className="w-4 h-4 inline mr-2" />{t('hris.dashboard')}
               </button>
               <button onClick={() => setActiveTab('templates')} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'templates' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                <FileText className="w-4 h-4 inline mr-2" />Template KPI ({templates.length})
+                <FileText className="w-4 h-4 inline mr-2" />{t('hris.templateKpi')} ({templates.length})
               </button>
               <button onClick={() => { setShowAssignDialog(true); }} className="px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-700">
-                <UserPlus className="w-4 h-4 inline mr-2" />Assign KPI
+                <UserPlus className="w-4 h-4 inline mr-2" />{t('hris.assignKpi')}
               </button>
             </div>
             <div className="flex gap-2">
               <select value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm">
-                <option value="current">Bulan Ini</option>
-                <option value="last">Bulan Lalu</option>
+                <option value="current">{t('hris.thisMonth')}</option>
+                <option value="last">{t('hris.lastMonth')}</option>
               </select>
               <button onClick={handleExportCSV} className="flex items-center gap-2 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50">
-                <Download className="w-4 h-4" />Export CSV
+                <Download className="w-4 h-4" />{t('hris.exportCsv')}
               </button>
             </div>
           </div>
@@ -332,20 +418,20 @@ export default function KPIDashboard() {
           {activeTab === 'dashboard' && (
             <div className="flex gap-2 mt-3 pt-3 border-t">
               <button onClick={() => setViewMode('branch')} className={`px-3 py-1.5 rounded-md text-sm ${viewMode === 'branch' ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-500 hover:bg-gray-100'}`}>
-                <Building2 className="w-4 h-4 inline mr-1" />Per Cabang
+                <Building2 className="w-4 h-4 inline mr-1" />{t('hris.perBranch')}
               </button>
               <button onClick={() => setViewMode('employee')} className={`px-3 py-1.5 rounded-md text-sm ${viewMode === 'employee' ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-500 hover:bg-gray-100'}`}>
-                <Users className="w-4 h-4 inline mr-1" />Per Karyawan
+                <Users className="w-4 h-4 inline mr-1" />{t('hris.perEmployee')}
               </button>
               {viewMode === 'employee' && (
                 <div className="flex-1 flex gap-2 ml-4">
                   <div className="relative flex-1 max-w-xs">
                     <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
-                    <input type="text" placeholder="Cari karyawan..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                    <input type="text" placeholder={t('hris.searchEmployee')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                       className="pl-9 pr-3 py-1.5 border rounded-md text-sm w-full" />
                   </div>
                   <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="px-2 py-1.5 border rounded-md text-sm">
-                    <option value="all">Semua Kategori</option>
+                    <option value="all">{t('hris.allCategories')}</option>
                     {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </div>
@@ -361,7 +447,7 @@ export default function KPIDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Branch Comparison Bar Chart */}
               <div className="bg-white rounded-xl shadow-sm border p-6">
-                <h3 className="font-semibold text-lg mb-4">Perbandingan KPI Cabang</h3>
+                <h3 className="font-semibold text-lg mb-4">{t('hris.branchKpiComparison')}</h3>
                 {typeof window !== 'undefined' && (
                   <Chart
                     type="bar"
@@ -378,9 +464,9 @@ export default function KPIDashboard() {
                       tooltip: { y: { formatter: (val: number) => `${val}%` } }
                     }}
                     series={[
-                      { name: 'Sales', data: branchKPIs.map(b => b.salesKPI) },
-                      { name: 'Operations', data: branchKPIs.map(b => b.operationsKPI) },
-                      { name: 'Customer', data: branchKPIs.map(b => b.customerKPI) }
+                      { name: 'Penjualan', data: branchKPIs.map(b => b.salesKPI) },
+                      { name: 'Operasional', data: branchKPIs.map(b => b.operationsKPI) },
+                      { name: 'Pelanggan', data: branchKPIs.map(b => b.customerKPI) }
                     ]}
                   />
                 )}
@@ -388,14 +474,14 @@ export default function KPIDashboard() {
 
               {/* Overall Achievement Radar Chart */}
               <div className="bg-white rounded-xl shadow-sm border p-6">
-                <h3 className="font-semibold text-lg mb-4">Radar KPI per Cabang</h3>
+                <h3 className="font-semibold text-lg mb-4">{t('hris.radarKpiBranch')}</h3>
                 {typeof window !== 'undefined' && (
                   <Chart
                     type="radar"
                     height={300}
                     options={{
                       chart: { toolbar: { show: false }, fontFamily: 'inherit' },
-                      xaxis: { categories: ['Sales', 'Operations', 'Customer', 'Overall'] },
+                      xaxis: { categories: ['Penjualan', 'Operasional', 'Pelanggan', 'Keseluruhan'] },
                       yaxis: { max: 110 },
                       colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
                       markers: { size: 4 },
@@ -451,7 +537,7 @@ export default function KPIDashboard() {
                             }
                           },
                           colors: [branch.overallAchievement >= 100 ? '#10B981' : branch.overallAchievement >= 80 ? '#F59E0B' : '#EF4444'],
-                          labels: ['Achievement']
+                          labels: ['Pencapaian']
                         }}
                         series={[Math.min(branch.overallAchievement, 100)]}
                       />
@@ -461,9 +547,9 @@ export default function KPIDashboard() {
                   {/* Mini Bar Chart for KPI breakdown */}
                   <div className="space-y-2 mt-4">
                     {[
-                      { label: 'Sales', value: branch.salesKPI, color: '#3B82F6' },
-                      { label: 'Operations', value: branch.operationsKPI, color: '#10B981' },
-                      { label: 'Customer', value: branch.customerKPI, color: '#F59E0B' }
+                      { label: 'Penjualan', value: branch.salesKPI, color: '#3B82F6' },
+                      { label: 'Operasional', value: branch.operationsKPI, color: '#10B981' },
+                      { label: 'Pelanggan', value: branch.customerKPI, color: '#F59E0B' }
                     ].map((kpi) => (
                       <div key={kpi.label} className="flex items-center gap-3">
                         <span className="text-xs text-gray-500 w-20">{kpi.label}</span>
@@ -484,11 +570,11 @@ export default function KPIDashboard() {
                   {(branch.totalRevenue !== undefined && branch.totalRevenue > 0) && (
                     <div className="mt-3 pt-3 border-t">
                       <div className="flex justify-between text-xs">
-                        <span className="text-gray-500 flex items-center gap-1"><DollarSign className="w-3 h-3" /> Revenue</span>
+                        <span className="text-gray-500 flex items-center gap-1"><DollarSign className="w-3 h-3" /> {t('hris.revenue')}</span>
                         <span className="font-semibold text-gray-700">Rp {(branch.totalRevenue / 1000000).toFixed(0)} Jt</span>
                       </div>
                       <div className="flex justify-between text-xs mt-1">
-                        <span className="text-gray-500">Transaksi</span>
+                        <span className="text-gray-500">{t('hris.transaction')}</span>
                         <span className="font-semibold text-gray-700">{(branch.transactionCount || 0).toLocaleString()}</span>
                       </div>
                     </div>
@@ -496,12 +582,12 @@ export default function KPIDashboard() {
 
                   <div className="mt-3 pt-3 border-t flex justify-between items-center text-sm">
                     <div className="flex items-center gap-3">
-                      <span className="text-gray-500">{branch.employeeCount} staff</span>
+                      <span className="text-gray-500">{branch.employeeCount} {t('hris.staff')}</span>
                       <span className="text-green-600">{branch.topPerformers} ↑</span>
                       <span className="text-red-600">{branch.lowPerformers} ↓</span>
                     </div>
                     <button className="flex items-center gap-1 text-blue-600 hover:underline">
-                      <Eye className="w-4 h-4" /> Detail
+                      <Eye className="w-4 h-4" /> {t('hris.detail')}
                     </button>
                   </div>
                 </div>
@@ -517,13 +603,13 @@ export default function KPIDashboard() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Karyawan</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabang</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Score</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Achievement</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Metrics</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hris.employee')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hris.branch')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('hris.score')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('hris.achievement')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('hris.status')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('hris.metrics')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('hris.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -566,7 +652,7 @@ export default function KPIDashboard() {
                           onClick={() => setSelectedKPI(emp)}
                           className="text-blue-600 hover:underline text-sm"
                         >
-                          Detail
+                          {t('hris.detail')}
                         </button>
                       </td>
                     </tr>
@@ -615,7 +701,7 @@ export default function KPIDashboard() {
                         series={[selectedKPI?.overallScore || 0]}
                       />
                     )}
-                    <p className="text-sm text-gray-600 font-medium">Overall Score</p>
+                    <p className="text-sm text-gray-600 font-medium">Skor Keseluruhan</p>
                   </div>
                   <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 text-center">
                     {typeof window !== 'undefined' && (
@@ -639,18 +725,18 @@ export default function KPIDashboard() {
                         series={[Math.min(selectedKPI?.overallAchievement || 0, 100)]}
                       />
                     )}
-                    <p className="text-sm text-gray-600 font-medium">Achievement</p>
+                    <p className="text-sm text-gray-600 font-medium">Pencapaian</p>
                   </div>
                   <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 flex flex-col items-center justify-center">
                     <div className="mb-2">{getStatusBadge(selectedKPI?.status)}</div>
                     <p className="text-sm text-gray-600 font-medium mt-2">Status KPI</p>
-                    <p className="text-xs text-gray-400 mt-1">Last updated: {selectedKPI?.lastUpdated}</p>
+                    <p className="text-xs text-gray-400 mt-1">Terakhir diperbarui: {selectedKPI?.lastUpdated}</p>
                   </div>
                 </div>
 
                 {/* Metrics Bar Chart */}
                 <div className="bg-white border rounded-xl p-4">
-                  <h4 className="font-semibold mb-4">KPI Metrics Overview</h4>
+                  <h4 className="font-semibold mb-4">Ringkasan Metrik KPI</h4>
                   {typeof window !== 'undefined' && (
                     <Chart
                       type="bar"
@@ -692,7 +778,7 @@ export default function KPIDashboard() {
 
                 {/* Detailed Metrics Cards */}
                 <div>
-                  <h4 className="font-semibold mb-4">Detail per Metric</h4>
+                  <h4 className="font-semibold mb-4">Detail per Metrik</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {selectedKPI?.metrics?.map((metric) => {
                       const achievement = (metric.actual / metric.target) * 100;
@@ -701,11 +787,11 @@ export default function KPIDashboard() {
                           <div className="flex justify-between items-start mb-3">
                             <div>
                               <p className="font-medium text-gray-900">{metric.name}</p>
-                              <p className="text-xs text-gray-500">Bobot: {metric.weight}% • {metric.category}</p>
+                              <p className="text-xs text-gray-500">Bobot: {metric.weight}% • {CATEGORY_LABELS[metric.category] || metric.category}</p>
                             </div>
                             <div className={`flex items-center gap-1 text-sm font-semibold ${metric.trend === 'up' ? 'text-green-600' : metric.trend === 'down' ? 'text-red-600' : 'text-gray-500'}`}>
                               {metric.trend === 'up' ? <TrendingUp className="w-4 h-4" /> : metric.trend === 'down' ? <TrendingDown className="w-4 h-4" /> : null}
-                              {metric.trend}
+                              {metric.trend === 'up' ? 'Naik' : metric.trend === 'down' ? 'Turun' : 'Stabil'}
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
@@ -733,7 +819,7 @@ export default function KPIDashboard() {
                             )}
                             <div className="flex-1">
                               <div className="flex justify-between text-sm mb-1">
-                                <span className="text-gray-500">Actual</span>
+                                <span className="text-gray-500">Aktual</span>
                                 <span className="font-medium">{formatValue(metric.actual, metric.unit)}</span>
                               </div>
                               <div className="flex justify-between text-sm">
@@ -749,10 +835,10 @@ export default function KPIDashboard() {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4 border-t">
-                  <button className="px-4 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2">
-                    <Download className="w-4 h-4" /> Export PDF
+                  <button onClick={() => handleExportKPIPdf(selectedKPI)} className="px-4 py-2 border rounded-lg hover:bg-gray-50 flex items-center gap-2">
+                    <Download className="w-4 h-4" /> Ekspor PDF
                   </button>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Edit KPI</button>
+                  <button onClick={() => handleEditKPI(selectedKPI)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Edit KPI</button>
                 </div>
               </div>
             </div>
@@ -763,7 +849,7 @@ export default function KPIDashboard() {
         {activeTab === 'templates' && (
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
             <div className="p-4 border-b flex justify-between items-center">
-              <h3 className="font-semibold text-lg">Template KPI Standard</h3>
+              <h3 className="font-semibold text-lg">Template KPI Standar</h3>
               <span className="text-sm text-gray-500">{templates.length} template tersedia</span>
             </div>
             {templates.length === 0 ? (
@@ -819,7 +905,7 @@ export default function KPIDashboard() {
             <div className="bg-white rounded-xl w-full max-w-lg m-4 shadow-2xl">
               <div className="p-5 border-b flex justify-between items-center">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
-                  <UserPlus className="w-5 h-5 text-green-600" /> Assign KPI ke Karyawan
+                  <UserPlus className="w-5 h-5 text-green-600" /> {t('hris.assignKpi')}
                 </h3>
                 <button onClick={() => setShowAssignDialog(false)} className="text-gray-400 hover:text-gray-600">
                   <X className="w-5 h-5" />
@@ -827,7 +913,7 @@ export default function KPIDashboard() {
               </div>
               <div className="p-5 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Karyawan *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('hris.employee')} *</label>
                   <select value={assignForm.employeeId} onChange={e => setAssignForm(f => ({ ...f, employeeId: e.target.value }))}
                     className="w-full px-3 py-2 border rounded-lg text-sm">
                     <option value="">Pilih karyawan...</option>
@@ -835,7 +921,7 @@ export default function KPIDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Template KPI *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('hris.templateKpi')} *</label>
                   <select value={assignForm.templateCode} onChange={e => {
                     const tpl = templates.find(t => t.code === e.target.value);
                     setAssignForm(f => ({ ...f, templateCode: e.target.value, weight: tpl?.default_weight || 100 }));
@@ -857,13 +943,13 @@ export default function KPIDashboard() {
                   </div>
                 </div>
                 <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3">
-                  Periode: <strong>{getPeriodParam()}</strong> · KPI akan otomatis di-assign ke karyawan untuk periode ini
+                  Periode: <strong>{getPeriodParam()}</strong> · KPI akan otomatis ditetapkan ke karyawan untuk periode ini
                 </div>
               </div>
               <div className="p-5 border-t flex justify-end gap-2">
-                <button onClick={() => setShowAssignDialog(false)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">Batal</button>
+                <button onClick={() => setShowAssignDialog(false)} className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50">{t('hris.cancel')}</button>
                 <button onClick={handleAssignKPI} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 flex items-center gap-2">
-                  <Save className="w-4 h-4" /> Assign KPI
+                  <Save className="w-4 h-4" /> {t('hris.assignKpi')}
                 </button>
               </div>
             </div>

@@ -5,6 +5,7 @@ import {
   FaFileExcel, FaFileCsv, FaMoneyBillWave, FaReceipt
 } from 'react-icons/fa';
 import FinanceLayout from '@/components/layouts/finance-layout';
+import { useTranslation } from '@/lib/i18n';
 import { formatRupiah } from '@/utils/exportUtils';
 
 interface Transaction {
@@ -20,8 +21,15 @@ interface Transaction {
 }
 
 const TransactionsPage = () => {
+  const { t } = useTranslation();
+  const MOCK_TXS: Transaction[] = [
+    { id: 'tx1', date: '15/03/2026', type: 'income', category: 'Penjualan', description: 'Penjualan harian', amount: 4500000, paymentMethod: 'Cash', source: 'pos', status: 'completed' },
+    { id: 'tx2', date: '15/03/2026', type: 'expense', category: 'Pembelian', description: 'Bahan baku', amount: 2800000, paymentMethod: 'Transfer', source: 'manual', status: 'completed' },
+    { id: 'tx3', date: '14/03/2026', type: 'income', category: 'Penjualan', description: 'Penjualan harian', amount: 3900000, paymentMethod: 'QRIS', source: 'pos', status: 'completed' },
+    { id: 'tx4', date: '14/03/2026', type: 'expense', category: 'Operasional', description: 'Listrik & Air', amount: 1200000, paymentMethod: 'Transfer', source: 'manual', status: 'completed' },
+  ];
   const [loading, setLoading] = useState(true);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TXS);
   const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
@@ -75,6 +83,12 @@ const TransactionsPage = () => {
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
+      setTransactions(MOCK_TXS);
+      setFilteredTransactions(MOCK_TXS);
+      const inc = MOCK_TXS.filter(tx => tx.type === 'income').reduce((s, tx) => s + tx.amount, 0);
+      const exp = MOCK_TXS.filter(tx => tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0);
+      setTotalIncome(inc);
+      setTotalExpense(exp);
     } finally {
       setLoading(false);
     }

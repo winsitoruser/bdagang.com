@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import HQLayout from '../../../components/hq/HQLayout';
 import {
@@ -54,6 +55,7 @@ interface Stocktake {
 
 
 export default function StocktakeManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stocktakes, setStocktakes] = useState<Stocktake[]>([]);
@@ -112,19 +114,19 @@ export default function StocktakeManagement() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'scheduled': return <span className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs"><Calendar className="w-3 h-3" />Scheduled</span>;
-      case 'in_progress': return <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs"><Play className="w-3 h-3" />In Progress</span>;
-      case 'completed': return <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs"><CheckCircle className="w-3 h-3" />Completed</span>;
-      case 'cancelled': return <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs"><XCircle className="w-3 h-3" />Cancelled</span>;
+      case 'scheduled': return <span className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs"><Calendar className="w-3 h-3" />{t('inventory.stBadgeScheduled')}</span>;
+      case 'in_progress': return <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs"><Play className="w-3 h-3" />{t('inventory.stBadgeInProgress')}</span>;
+      case 'completed': return <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs"><CheckCircle className="w-3 h-3" />{t('inventory.stBadgeCompleted')}</span>;
+      case 'cancelled': return <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs"><XCircle className="w-3 h-3" />{t('inventory.stBadgeCancelled')}</span>;
       default: return null;
     }
   };
 
   const getTypeBadge = (type: string) => {
     switch (type) {
-      case 'full': return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">Full Count</span>;
-      case 'partial': return <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs">Partial</span>;
-      case 'cycle': return <span className="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-xs">Cycle Count</span>;
+      case 'full': return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">{t('inventory.stTypeFull')}</span>;
+      case 'partial': return <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs">{t('inventory.stTypePartial')}</span>;
+      case 'cycle': return <span className="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-xs">{t('inventory.stTypeCycle')}</span>;
       default: return null;
     }
   };
@@ -153,21 +155,21 @@ export default function StocktakeManagement() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Stock Opname</h1>
-              <p className="text-gray-500">Jadwal dan kelola stock opname seluruh cabang</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('inventory.stTitle')}</h1>
+              <p className="text-gray-500">{t('inventory.stSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
-              Export
+              {t('inventory.stExport')}
             </button>
             <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
-              Jadwalkan Opname
+              {t('inventory.stSchedule')}
             </button>
           </div>
         </div>
@@ -181,7 +183,7 @@ export default function StocktakeManagement() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-700">{stats.scheduled}</p>
-                <p className="text-sm text-blue-600">Scheduled</p>
+                <p className="text-sm text-blue-600">{t('inventory.stStatScheduled')}</p>
               </div>
             </div>
           </div>
@@ -192,7 +194,7 @@ export default function StocktakeManagement() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-yellow-700">{stats.inProgress}</p>
-                <p className="text-sm text-yellow-600">In Progress</p>
+                <p className="text-sm text-yellow-600">{t('inventory.stStatInProgress')}</p>
               </div>
             </div>
           </div>
@@ -203,7 +205,7 @@ export default function StocktakeManagement() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-700">{stats.completed}</p>
-                <p className="text-sm text-green-600">Completed</p>
+                <p className="text-sm text-green-600">{t('inventory.stStatCompleted')}</p>
               </div>
             </div>
           </div>
@@ -214,7 +216,7 @@ export default function StocktakeManagement() {
               </div>
               <div>
                 <p className={`text-lg font-bold ${stats.totalVariance < 0 ? 'text-red-700' : 'text-gray-700'}`}>{formatCurrency(stats.totalVariance)}</p>
-                <p className={`text-sm ${stats.totalVariance < 0 ? 'text-red-600' : 'text-gray-600'}`}>Total Variance</p>
+                <p className={`text-sm ${stats.totalVariance < 0 ? 'text-red-600' : 'text-gray-600'}`}>{t('inventory.stStatVariance')}</p>
               </div>
             </div>
           </div>
@@ -228,7 +230,7 @@ export default function StocktakeManagement() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Cari nomor opname atau cabang..."
+                  placeholder={t('inventory.stSearchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -240,11 +242,11 @@ export default function StocktakeManagement() {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
             >
-              <option value="all">Semua Status</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="all">{t('inventory.stAllStatus')}</option>
+              <option value="scheduled">{t('inventory.stStatusScheduled')}</option>
+              <option value="in_progress">{t('inventory.stStatusInProgress')}</option>
+              <option value="completed">{t('inventory.stStatusCompleted')}</option>
+              <option value="cancelled">{t('inventory.stStatusCancelled')}</option>
             </select>
           </div>
         </div>
@@ -254,14 +256,14 @@ export default function StocktakeManagement() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">No. Opname</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabang</th>
-                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Tipe</th>
-                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Progress</th>
-                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Variance</th>
-                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.stThNumber')}</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.stThBranch')}</th>
+                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.stThType')}</th>
+                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.stThProgress')}</th>
+                <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.stThVariance')}</th>
+                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.stThStatus')}</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.stThDate')}</th>
+                <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.stThAction')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -269,7 +271,7 @@ export default function StocktakeManagement() {
                 <tr key={stocktake.id} className="hover:bg-gray-50">
                   <td className="px-5 py-4">
                     <p className="font-medium text-blue-600">{stocktake.stocktakeNumber}</p>
-                    <p className="text-xs text-gray-500">By {stocktake.createdBy}</p>
+                    <p className="text-xs text-gray-500">{t('inventory.stBy')} {stocktake.createdBy}</p>
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">
@@ -302,7 +304,7 @@ export default function StocktakeManagement() {
                         <p className={`font-medium ${stocktake.varianceValue < 0 ? 'text-red-600' : 'text-green-600'}`}>
                           {formatCurrency(stocktake.varianceValue)}
                         </p>
-                        <p className="text-xs text-gray-500">{stocktake.varianceCount} items</p>
+                        <p className="text-xs text-gray-500">{stocktake.varianceCount} {t('inventory.stItems')}</p>
                       </div>
                     ) : (
                       <span className="text-gray-400">-</span>
@@ -319,7 +321,7 @@ export default function StocktakeManagement() {
                         <Eye className="w-4 h-4" />
                       </button>
                       {stocktake.status === 'scheduled' && (
-                        <button className="p-2 hover:bg-green-100 rounded-lg text-green-600" title="Start">
+                        <button className="p-2 hover:bg-green-100 rounded-lg text-green-600" title={t('inventory.stStart')}>
                           <Play className="w-4 h-4" />
                         </button>
                       )}
@@ -336,20 +338,20 @@ export default function StocktakeManagement() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl w-full max-w-lg">
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Jadwalkan Stock Opname</h2>
+                <h2 className="text-xl font-bold text-gray-900">{t('inventory.stCreateTitle')}</h2>
                 <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cabang *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.stBranchLabel')}</label>
                   <select
                     value={newStocktake.branch}
                     onChange={(e) => setNewStocktake({ ...newStocktake, branch: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   >
-                    <option value="">Pilih Cabang</option>
+                    <option value="">{t('inventory.stBranchPlaceholder')}</option>
                     {branches.map(b => (
                       <option key={b.id} value={b.code}>{b.name}</option>
                     ))}
@@ -357,19 +359,19 @@ export default function StocktakeManagement() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipe Opname *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.stTypeLabel')}</label>
                     <select
                       value={newStocktake.type}
                       onChange={(e) => setNewStocktake({ ...newStocktake, type: e.target.value as any })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     >
-                      <option value="full">Full Count</option>
-                      <option value="partial">Partial</option>
-                      <option value="cycle">Cycle Count</option>
+                      <option value="full">{t('inventory.stTypeFull')}</option>
+                      <option value="partial">{t('inventory.stTypePartial')}</option>
+                      <option value="cycle">{t('inventory.stTypeCycle')}</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tanggal *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.stDateLabel')}</label>
                     <input
                       type="date"
                       value={newStocktake.scheduledDate}
@@ -379,23 +381,23 @@ export default function StocktakeManagement() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.stAssignLabel')}</label>
                   <input
                     type="text"
                     value={newStocktake.assignedTo}
                     onChange={(e) => setNewStocktake({ ...newStocktake, assignedTo: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    placeholder="Nama staff (pisahkan dengan koma)"
+                    placeholder={t('inventory.stAssignPlaceholder')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Catatan</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.stNotesLabel')}</label>
                   <textarea
                     value={newStocktake.notes}
                     onChange={(e) => setNewStocktake({ ...newStocktake, notes: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     rows={3}
-                    placeholder="Catatan atau instruksi khusus..."
+                    placeholder={t('inventory.stNotesPlaceholder')}
                   />
                 </div>
               </div>
@@ -404,10 +406,10 @@ export default function StocktakeManagement() {
                   onClick={() => setShowCreateModal(false)}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Batal
+                  {t('inventory.stCancel')}
                 </button>
                 <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                  Jadwalkan
+                  {t('inventory.stScheduleBtn')}
                 </button>
               </div>
             </div>
@@ -435,7 +437,7 @@ export default function StocktakeManagement() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-xs text-gray-500 mb-1">Progress</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('inventory.stDetailProgress')}</p>
                     <p className="text-xl font-bold text-gray-900">{selectedStocktake.countedItems} / {selectedStocktake.totalItems}</p>
                     <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                       <div
@@ -445,39 +447,39 @@ export default function StocktakeManagement() {
                     </div>
                   </div>
                   <div className={`rounded-lg p-4 ${selectedStocktake.varianceValue < 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-                    <p className="text-xs text-gray-500 mb-1">Variance</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('inventory.stDetailVariance')}</p>
                     <p className={`text-xl font-bold ${selectedStocktake.varianceValue < 0 ? 'text-red-600' : 'text-gray-900'}`}>
                       {formatCurrency(selectedStocktake.varianceValue)}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">{selectedStocktake.varianceCount} items with variance</p>
+                    <p className="text-xs text-gray-500 mt-1">{t('inventory.stItemsWithVariance').replace('{count}', String(selectedStocktake.varianceCount))}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-500">Scheduled Date</p>
+                    <p className="text-gray-500">{t('inventory.stScheduledDate')}</p>
                     <p className="font-medium text-gray-900">{formatDate(selectedStocktake.scheduledDate)}</p>
                   </div>
                   {selectedStocktake.startedAt && (
                     <div>
-                      <p className="text-gray-500">Started At</p>
+                      <p className="text-gray-500">{t('inventory.stStartedAt')}</p>
                       <p className="font-medium text-gray-900">{formatDateTime(selectedStocktake.startedAt)}</p>
                     </div>
                   )}
                   {selectedStocktake.completedAt && (
                     <div>
-                      <p className="text-gray-500">Completed At</p>
+                      <p className="text-gray-500">{t('inventory.stCompletedAt')}</p>
                       <p className="font-medium text-gray-900">{formatDateTime(selectedStocktake.completedAt)}</p>
                     </div>
                   )}
                   <div>
-                    <p className="text-gray-500">Created By</p>
+                    <p className="text-gray-500">{t('inventory.stCreatedBy')}</p>
                     <p className="font-medium text-gray-900">{selectedStocktake.createdBy}</p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-500 mb-2">Assigned To</p>
+                  <p className="text-sm text-gray-500 mb-2">{t('inventory.stAssignedTo')}</p>
                   <div className="flex flex-wrap gap-2">
                     {selectedStocktake.assignedTo.map((person, idx) => (
                       <span key={idx} className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-700">
@@ -489,7 +491,7 @@ export default function StocktakeManagement() {
 
                 {selectedStocktake.notes && (
                   <div>
-                    <p className="text-sm text-gray-500 mb-2">Notes</p>
+                    <p className="text-sm text-gray-500 mb-2">{t('inventory.stNotes')}</p>
                     <p className="text-gray-700 bg-gray-50 rounded-lg p-3">{selectedStocktake.notes}</p>
                   </div>
                 )}
@@ -499,11 +501,11 @@ export default function StocktakeManagement() {
                   onClick={() => setShowDetailModal(false)}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  Tutup
+                  {t('inventory.stClose')}
                 </button>
                 {selectedStocktake.status === 'completed' && (
                   <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Download Report
+                    {t('inventory.stDownloadReport')}
                   </button>
                 )}
               </div>

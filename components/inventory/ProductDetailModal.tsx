@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useTranslation } from '@/lib/i18n';
 import { 
   FaBox, FaTag, FaWarehouse, FaEdit, FaTrash, FaChartLine, 
   FaHistory, FaShoppingCart, FaBoxes, FaArrowUp, FaArrowDown,
@@ -19,6 +20,7 @@ export interface ProductDetail {
   cost: number;
   stock: number;
   minStock: number;
+  unit?: string;
   supplier: string;
   description?: string;
   status: 'active' | 'inactive';
@@ -57,6 +59,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onEdit,
   onDelete
 }) => {
+  const { t, formatCurrency, formatDate } = useTranslation();
   const [activeTab, setActiveTab] = useState('overview');
   const [detailsData, setDetailsData] = useState<ProductDetailsData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -86,30 +89,8 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   if (!product) return null;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
   const formatDateTime = (date: string) => {
-    return new Date(date).toLocaleString('id-ID', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return formatDate(date, 'datetime');
   };
 
   const profitMargin = ((product.price - product.cost) / product.price * 100).toFixed(1);
@@ -132,10 +113,10 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     <span>SKU: {product.sku}</span>
                   </div>
                   <Badge variant={product.status === 'active' ? 'default' : 'secondary'}>
-                    {product.status === 'active' ? 'Aktif' : 'Tidak Aktif'}
+                    {product.status === 'active' ? t('inventory.active') : t('inventory.productDetail.inactive')}
                   </Badge>
                   <Badge variant={stockStatus === 'low' ? 'destructive' : 'default'}>
-                    {stockStatus === 'low' ? '⚠️ Stok Rendah' : '✓ Stok Normal'}
+                    {stockStatus === 'low' ? t('inventory.statusLow') : t('inventory.statusNormal')}
                   </Badge>
                 </div>
               </div>
@@ -174,7 +155,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <FaDollarSign className="text-green-600" />
-                    <span className="text-sm text-green-700 font-medium">Harga Jual</span>
+                    <span className="text-sm text-green-700 font-medium">{t('inventory.sellingPrice')}</span>
                   </div>
                   <p className="text-2xl font-bold text-green-700">
                     {formatCurrency(product.price)}
@@ -183,7 +164,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <FaDollarSign className="text-blue-600" />
-                    <span className="text-sm text-blue-700 font-medium">Harga Beli</span>
+                    <span className="text-sm text-blue-700 font-medium">{t('inventory.productDetail.costPrice')}</span>
                   </div>
                   <p className="text-2xl font-bold text-blue-700">
                     {formatCurrency(product.cost)}
@@ -199,7 +180,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
                   <div className="flex items-center space-x-2 mb-2">
                     <FaBox className="text-orange-600" />
-                    <span className="text-sm text-orange-700 font-medium">Stok Total</span>
+                    <span className="text-sm text-orange-700 font-medium">{t('inventory.productDetail.totalStock')}</span>
                   </div>
                   <p className="text-2xl font-bold text-orange-700">{product.stock} {product.unit || 'pcs'}</p>
                 </div>
@@ -209,25 +190,25 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                   <h4 className="font-semibold text-gray-900 mb-3 flex items-center space-x-2">
                     <FaTag className="text-purple-600" />
-                    <span>Informasi Produk</span>
+                    <span>{t('inventory.productDetail.productInfo')}</span>
                   </h4>
                   <div className="space-y-2">
                     <div className="flex justify-between py-2 border-b border-gray-100">
-                      <span className="text-sm text-gray-600">Kategori</span>
+                      <span className="text-sm text-gray-600">{t('inventory.category')}</span>
                       <span className="text-sm font-medium text-gray-900">{product.category || '-'}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-gray-100">
-                      <span className="text-sm text-gray-600">Satuan</span>
+                      <span className="text-sm text-gray-600">{t('inventory.productDetail.unit')}</span>
                       <span className="text-sm font-medium text-gray-900">{product.unit || '-'}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-gray-100">
-                      <span className="text-sm text-gray-600">Stok Minimum</span>
+                      <span className="text-sm text-gray-600">{t('inventory.productDetail.minStock')}</span>
                       <span className="text-sm font-medium text-gray-900">{product.minStock || 0}</span>
                     </div>
                     <div className="flex justify-between py-2">
-                      <span className="text-sm text-gray-600">Status</span>
+                      <span className="text-sm text-gray-600">{t('common.status')}</span>
                       <Badge variant={product.status === 'active' ? 'default' : 'secondary'}>
-                        {product.status === 'active' ? 'Aktif' : 'Tidak Aktif'}
+                        {product.status === 'active' ? t('inventory.active') : t('inventory.productDetail.inactive')}
                       </Badge>
                     </div>
                   </div>
@@ -245,12 +226,12 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   ) : detailsData?.product?.supplier ? (
                     <div className="space-y-2">
                       <div className="flex justify-between py-2 border-b border-gray-100">
-                        <span className="text-sm text-gray-600">Nama</span>
+                        <span className="text-sm text-gray-600">{t('inventory.productDetail.name')}</span>
                         <span className="text-sm font-medium text-gray-900">{detailsData.product.supplier.name}</span>
                       </div>
                       {detailsData.product.supplier.contact_person && (
                         <div className="flex justify-between py-2 border-b border-gray-100">
-                          <span className="text-sm text-gray-600">Kontak</span>
+                          <span className="text-sm text-gray-600">{t('inventory.productDetail.contact')}</span>
                           <span className="text-sm font-medium text-gray-900">{detailsData.product.supplier.contact_person}</span>
                         </div>
                       )}
@@ -262,20 +243,20 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       )}
                       {detailsData.avg_purchase_price > 0 && (
                         <div className="flex justify-between py-2">
-                          <span className="text-sm text-gray-600">Rata-rata Harga</span>
+                          <span className="text-sm text-gray-600">{t('inventory.productDetail.avgPrice')}</span>
                           <span className="text-sm font-medium text-green-600">{formatCurrency(detailsData.avg_purchase_price)}</span>
                         </div>
                       )}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">Tidak ada supplier</p>
+                    <p className="text-sm text-gray-500">{t('inventory.productDetail.noSupplier')}</p>
                   )}
                 </div>
               </div>
 
               {product.description && (
                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-                  <h4 className="font-semibold text-gray-900 mb-2">Deskripsi</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">{t('inventory.productDetail.description')}</h4>
                   <p className="text-sm text-gray-700">{product.description}</p>
                 </div>
               )}
@@ -286,7 +267,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {loading ? (
                 <div className="text-center py-12">
                   <div className="animate-spin h-12 w-12 mx-auto border-4 border-blue-600 border-t-transparent rounded-full mb-4"></div>
-                  <p className="text-gray-600">Memuat data stok...</p>
+                  <p className="text-gray-600">{t('inventory.loading')}</p>
                 </div>
               ) : (
                 <>
@@ -569,14 +550,14 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     </div>
                   </div>
 
-                  {detailsData?.avg_purchase_price > 0 && (
+                  {(detailsData?.avg_purchase_price ?? 0) > 0 && (
                     <div className="p-4 bg-green-50 rounded-xl border border-green-200">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <FaDollarSign className="text-green-600 text-xl" />
-                          <span className="font-semibold text-green-900">Rata-rata Harga Pembelian</span>
+                          <span className="font-semibold text-green-900">{t('inventory.productDetail.avgPrice')}</span>
                         </div>
-                        <p className="text-2xl font-bold text-green-700">{formatCurrency(detailsData.avg_purchase_price)}</p>
+                        <p className="text-2xl font-bold text-green-700">{formatCurrency(detailsData?.avg_purchase_price ?? 0)}</p>
                       </div>
                     </div>
                   )}
@@ -635,7 +616,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       <div className="space-y-2">
                         {detailsData.avg_purchase_price > 0 && (
                           <div className="flex justify-between py-2 border-b border-gray-100">
-                            <span className="text-sm text-gray-600">Rata-rata Harga</span>
+                            <span className="text-sm text-gray-600">{t('inventory.productDetail.avgPrice')}</span>
                             <span className="text-sm font-medium text-green-600">{formatCurrency(detailsData.avg_purchase_price)}</span>
                           </div>
                         )}

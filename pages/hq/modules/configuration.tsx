@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Package, Settings, Zap, CheckCircle, XCircle,
   ChevronRight, Search, Filter, Plus, Edit, Trash2
@@ -28,6 +29,7 @@ interface TenantModuleConfig {
 
 export default function ModuleConfiguration() {
   const { data: session } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [modules, setModules] = useState<Module[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<string>('');
@@ -48,11 +50,11 @@ export default function ModuleConfiguration() {
       if (data.success) {
         setModules(data.data.modules);
       } else {
-        toast.error('Failed to load modules');
+        toast.error(t('mp.config.failedToLoad'));
       }
     } catch (error) {
       console.error('Error fetching modules:', error);
-      toast.error('Failed to load modules');
+      toast.error(t('mp.config.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -69,14 +71,14 @@ export default function ModuleConfiguration() {
       const data = await response.json();
       
       if (data.success) {
-        toast.success(`Module ${!isActive ? 'activated' : 'deactivated'}`);
+        toast.success(!isActive ? t('mp.config.moduleActivated') : t('mp.config.moduleDeactivated'));
         fetchModules();
       } else {
-        toast.error(data.error || 'Failed to update module');
+        toast.error(data.error || t('mp.config.failedToUpdate'));
       }
     } catch (error) {
       console.error('Error toggling module:', error);
-      toast.error('Failed to update module');
+      toast.error(t('mp.config.failedToUpdate'));
     }
   };
   
@@ -95,8 +97,8 @@ export default function ModuleConfiguration() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Module Configuration</h1>
-            <p className="text-gray-600 mt-1">Manage and configure system modules</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('mp.config.title')}</h1>
+            <p className="text-gray-600 mt-1">{t('mp.config.subtitle')}</p>
           </div>
           
           <button
@@ -104,7 +106,7 @@ export default function ModuleConfiguration() {
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
-            Configure Tenant Modules
+            {t('mp.config.configureTenantModules')}
           </button>
         </div>
         
@@ -116,7 +118,7 @@ export default function ModuleConfiguration() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search modules..."
+                placeholder={t('mp.config.searchModules')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -147,7 +149,7 @@ export default function ModuleConfiguration() {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading modules...</p>
+              <p className="text-gray-600">{t('mp.config.loadingModules')}</p>
             </div>
           </div>
         ) : (
@@ -165,7 +167,7 @@ export default function ModuleConfiguration() {
         {filteredModules.length === 0 && !loading && (
           <div className="text-center py-12">
             <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">No modules found</p>
+            <p className="text-gray-500">{t('mp.config.noModulesFound')}</p>
           </div>
         )}
       </div>
@@ -175,7 +177,7 @@ export default function ModuleConfiguration() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Configure Tenant Modules</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t('mp.config.configureTenantModules')}</h2>
               <button
                 onClick={() => setShowModuleSelector(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -189,7 +191,7 @@ export default function ModuleConfiguration() {
                 onModulesSelected={(moduleIds) => {
                   console.log('Selected modules:', moduleIds);
                   setShowModuleSelector(false);
-                  toast.success('Modules configured successfully');
+                  toast.success(t('mp.config.configuredSuccess'));
                 }}
               />
             </div>
@@ -206,6 +208,7 @@ interface ModuleConfigCardProps {
 }
 
 function ModuleConfigCard({ module, onToggle }: ModuleConfigCardProps) {
+  const { t } = useTranslation();
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'core':
@@ -263,19 +266,19 @@ function ModuleConfigCard({ module, onToggle }: ModuleConfigCardProps) {
           {module.isActive ? (
             <>
               <CheckCircle className="w-4 h-4 text-green-500" />
-              <span>Active</span>
+              <span>{t('mp.config.active')}</span>
             </>
           ) : (
             <>
               <XCircle className="w-4 h-4 text-gray-400" />
-              <span>Inactive</span>
+              <span>{t('mp.config.inactive')}</span>
             </>
           )}
         </div>
         
         {module.tenantCount !== undefined && (
           <div className="text-sm text-gray-600">
-            {module.tenantCount} tenants
+            {module.tenantCount} {t('mp.config.tenants')}
           </div>
         )}
       </div>
@@ -283,11 +286,11 @@ function ModuleConfigCard({ module, onToggle }: ModuleConfigCardProps) {
       <div className="mt-4 flex gap-2">
         <button className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center justify-center gap-2">
           <Settings className="w-4 h-4" />
-          Configure
+          {t('mp.config.configure')}
         </button>
         <button className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 flex items-center justify-center gap-2">
           <Zap className="w-4 h-4" />
-          Flows
+          {t('mp.config.flows')}
         </button>
       </div>
     </div>

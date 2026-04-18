@@ -179,7 +179,86 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         foSql += ' WHERE id=:id AND tenant_id=:tid';
         await qExec(foSql, foParams);
         fireAudit(foStatus === 'approved' ? 'approve' : foStatus === 'rejected' ? 'reject' : 'status_change', 'sfa_field_order', foId, { status: foStatus });
-        return ok(res, { message: `Order ${foStatus}` });
+
+        // Auto-sync ke sfa_sales_entries saat order di-approve (tidak double insert karena guard NOT EXISTS)
+        let autoSyncedLines = 0;
+        if (foStatus === 'approved') {
+          try {
+            const order = await qOne(
+              `SELECT fo.*, u.name AS salesperson_name, c.name AS customer_display, c.channel AS customer_channel
+                 FROM sfa_field_orders fo
+                 LEFT JOIN users u ON fo.salesperson_id = u.id
+                 LEFT JOIN customers c ON c.id::text = fo.customer_id::text
+                WHERE fo.id = :id AND fo.tenant_id = :tid`,
+              { id: foId, tid },
+            );
+            if (order) {
+              const items = await q(
+                `SELECT product_id, product_name, product_sku, category_name,
+                        quantity, unit, unit_price, discount_amount, subtotal
+                   FROM sfa_field_order_items WHERE field_order_id = :fid ORDER BY sort_order`,
+                { fid: foId },
+              );
+              const entryDate = order.order_date || new Date().toISOString().slice(0, 10);
+              const period = String(entryDate).slice(0, 7);
+              const year = parseInt(period.split('-')[0], 10);
+              for (const it of items) {
+                // guard: skip bila sudah pernah disync
+                const exists = await qOne(
+                  `SELECT id FROM sfa_sales_entries
+                    WHERE tenant_id = :tid AND reference_type = 'field_order'
+                      AND reference_id = :rid AND product_sku = :psku LIMIT 1`,
+                  { tid, rid: String(foId), psku: it.product_sku || '' },
+                );
+                if (exists) continue;
+                const qty = parseFloat(it.quantity) || 0;
+                const price = parseFloat(it.unit_price) || 0;
+                const disc = parseFloat(it.discount_amount) || 0;
+                const net = parseFloat(it.subtotal) || (qty * price - disc);
+                const okInsert = await qExec(
+                  `INSERT INTO sfa_sales_entries
+                     (tenant_id, entry_date, period, year, sales_type, source, reference_type, reference_id, reference_number,
+                      salesperson_id, salesperson_name, team_id, territory_id,
+                      outlet_id, outlet_name, outlet_channel,
+                      product_id, product_sku, product_name, product_group, product_uom,
+                      quantity, unit_price, gross_amount, discount_amount, net_amount, currency,
+                      status, created_by)
+                   VALUES
+                     (:tid, :edate, :period, :year, 'primary', 'field_order', 'field_order', :rid, :rnum,
+                      :sp, :spname, :team, :ter,
+                      :oid, :oname, :ochan,
+                      :pid, :psku, :pname, :pgrp, :puom,
+                      :qty, :price, :gross, :disc, :net, :curr,
+                      'confirmed', :uid)`,
+                  {
+                    tid, uid,
+                    edate: entryDate, period, year,
+                    rid: String(foId), rnum: order.order_number,
+                    sp: order.salesperson_id, spname: order.salesperson_name,
+                    team: order.team_id, ter: order.territory_id,
+                    oid: order.customer_id ? String(order.customer_id) : null,
+                    oname: order.customer_display || order.customer_name,
+                    ochan: order.customer_channel || null,
+                    pid: it.product_id ? String(it.product_id) : null,
+                    psku: it.product_sku || null,
+                    pname: it.product_name, pgrp: it.category_name || null,
+                    puom: it.unit || 'pcs',
+                    qty, price, gross: qty * price, disc, net,
+                    curr: 'IDR',
+                  },
+                );
+                if (okInsert) autoSyncedLines++;
+              }
+              if (autoSyncedLines > 0) {
+                fireAudit('link', 'sfa_sales_entry', String(foId), { source: 'field_order_auto_sync', lines: autoSyncedLines });
+              }
+            }
+          } catch (syncErr: any) {
+            console.error('[advanced] auto-sync sales entry error:', syncErr.message);
+          }
+        }
+
+        return ok(res, { message: `Order ${foStatus}`, auto_synced_lines: autoSyncedLines });
       }
 
       // ═══════════════════════════════════════

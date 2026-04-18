@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Plane, Receipt, Wallet, Plus, Edit, Trash2, X, Check, Eye, Search, MapPin, Calendar, DollarSign } from 'lucide-react';
 
 interface TravelReq { id: string; employee_id: number; request_number: string; destination: string; departure_city: string; purpose: string; departure_date: string; return_date: string; travel_type: string; transportation: string; accommodation_needed: boolean; estimated_budget: number; actual_cost: number; advance_amount: number; status: string; itinerary: any[]; notes: string; }
@@ -8,12 +9,27 @@ interface Budget { id: string; category: string; fiscal_year: number; monthly_li
 
 type TabKey = 'requests' | 'expenses' | 'budgets';
 
+const MOCK_TE_OVERVIEW = { totalRequests: 24, pendingRequests: 3, totalExpenses: 185000000, budgetUtilization: 62, avgTripCost: 7700000 };
+const MOCK_TE_REQUESTS: TravelReq[] = [
+  { id: 'tr1', employee_id: 1, request_number: 'TRV-2026-024', destination: 'Surabaya', departure_city: 'Jakarta', purpose: 'Visit cabang dan audit operasional', departure_date: '2026-03-18', return_date: '2026-03-20', travel_type: 'domestic', transportation: 'flight', accommodation_needed: true, estimated_budget: 8500000, actual_cost: 0, advance_amount: 5000000, status: 'approved', itinerary: [], notes: '' },
+  { id: 'tr2', employee_id: 5, request_number: 'TRV-2026-023', destination: 'Bali', departure_city: 'Jakarta', purpose: 'Meeting dengan supplier baru', departure_date: '2026-03-22', return_date: '2026-03-24', travel_type: 'domestic', transportation: 'flight', accommodation_needed: true, estimated_budget: 12000000, actual_cost: 0, advance_amount: 0, status: 'pending', itinerary: [], notes: '' },
+  { id: 'tr3', employee_id: 3, request_number: 'TRV-2026-022', destination: 'Bandung', departure_city: 'Jakarta', purpose: 'Training cabang baru', departure_date: '2026-03-10', return_date: '2026-03-12', travel_type: 'domestic', transportation: 'train', accommodation_needed: true, estimated_budget: 4500000, actual_cost: 4200000, advance_amount: 3000000, status: 'completed', itinerary: [], notes: '' },
+];
+const MOCK_TE_EXPENSES: TravelExp[] = [
+  { id: 'te1', travel_request_id: 'tr3', employee_id: 3, expense_date: '2026-03-10', category: 'transportation', description: 'Tiket KA Argo Parahyangan PP', amount: 600000, receipt_url: '', status: 'reimbursed' },
+  { id: 'te2', travel_request_id: 'tr3', employee_id: 3, expense_date: '2026-03-10', category: 'accommodation', description: 'Hotel 2 malam', amount: 1600000, receipt_url: '', status: 'reimbursed' },
+];
+const MOCK_TE_BUDGETS: Budget[] = [
+  { id: 'tb1', category: 'travel', fiscal_year: 2026, monthly_limit: 50000000, annual_limit: 600000000, used_amount: 185000000, remaining_amount: 415000000, is_active: true },
+];
+
 export default function TravelExpensePage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('requests');
-  const [overview, setOverview] = useState<any>({});
-  const [requests, setRequests] = useState<TravelReq[]>([]);
-  const [expenses, setExpenses] = useState<TravelExp[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [overview, setOverview] = useState<any>(MOCK_TE_OVERVIEW);
+  const [requests, setRequests] = useState<TravelReq[]>(MOCK_TE_REQUESTS);
+  const [expenses, setExpenses] = useState<TravelExp[]>(MOCK_TE_EXPENSES);
+  const [budgets, setBudgets] = useState<Budget[]>(MOCK_TE_BUDGETS);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
@@ -45,7 +61,13 @@ export default function TravelExpensePage() {
       setRequests(rq.data || []);
       setExpenses(ex.data || []);
       setBudgets(bg.data || []);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setOverview(MOCK_TE_OVERVIEW);
+      setRequests(MOCK_TE_REQUESTS);
+      setExpenses(MOCK_TE_EXPENSES);
+      setBudgets(MOCK_TE_BUDGETS);
+    }
     setLoading(false);
   }, [api]);
 
@@ -69,15 +91,15 @@ export default function TravelExpensePage() {
         if (editingItem) await api('budget', 'PUT', budgetForm, `&id=${editingItem.id}`);
         else await api('budget', 'POST', budgetForm);
       }
-      showToast(editingItem ? 'Updated' : 'Created');
+      showToast(editingItem ? 'Diperbarui' : 'Dibuat');
       setShowModal(false); loadData();
-    } catch (e) { showToast('Error', 'error'); }
+    } catch (e) { showToast('Gagal menyimpan', 'error'); }
   };
 
   const handleDelete = async (action: string, id: string) => {
     if (!confirm('Hapus data ini?')) return;
     await api(action, 'DELETE', null, `&id=${id}`);
-    showToast('Deleted'); loadData();
+    showToast('Dihapus'); loadData();
   };
 
   const statusColor = (s: string) => {
@@ -88,17 +110,17 @@ export default function TravelExpensePage() {
   const tabs: { key: TabKey; label: string; icon: any }[] = [
     { key: 'requests', label: 'Perjalanan Dinas', icon: Plane },
     { key: 'expenses', label: 'Klaim Biaya', icon: Receipt },
-    { key: 'budgets', label: 'Budget Control', icon: Wallet },
+    { key: 'budgets', label: 'Kontrol Anggaran', icon: Wallet },
   ];
 
   return (
-    <HQLayout title="Travel & Expense Management">
+    <HQLayout title={t('hris.travelExpenseTitle')}>
     <div className="p-6 max-w-7xl mx-auto">
       {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Travel & Expense Management</h1>
-        <p className="text-gray-500 mt-1">Pengajuan perjalanan dinas, klaim biaya, dan kontrol budget</p>
+        <h1 className="text-2xl font-bold text-gray-900">Manajemen Perjalanan & Pengeluaran</h1>
+        <p className="text-gray-500 mt-1">Pengajuan perjalanan dinas, klaim biaya, dan kontrol anggaran</p>
       </div>
 
       {/* Overview Cards */}
@@ -111,7 +133,7 @@ export default function TravelExpensePage() {
         <div className="bg-white border rounded-xl p-4">
           <Calendar className="w-5 h-5 text-orange-600 mb-1" />
           <p className="text-2xl font-bold text-orange-600">{overview.pendingApproval || 0}</p>
-          <p className="text-xs text-gray-500">Menunggu Approval</p>
+          <p className="text-xs text-gray-500">Menunggu Persetujuan</p>
         </div>
         <div className="bg-white border rounded-xl p-4">
           <Receipt className="w-5 h-5 text-green-600 mb-1" />
@@ -135,7 +157,7 @@ export default function TravelExpensePage() {
         ))}
       </div>
 
-      {loading && <div className="text-center py-10 text-gray-400">Loading...</div>}
+      {loading && <div className="text-center py-10 text-gray-400">Memuat...</div>}
 
       {/* REQUESTS TAB */}
       {!loading && tab === 'requests' && !detailReq && (
@@ -175,11 +197,11 @@ export default function TravelExpensePage() {
                 <div className="flex gap-1 mt-3 pt-3 border-t">
                   <button onClick={async () => { const res = await api('request-detail', 'GET', null, `&id=${r.id}`); setDetailReq(res.data); }} className="text-xs px-2 py-1 text-indigo-600 hover:bg-indigo-50 rounded flex items-center gap-1"><Eye className="w-3 h-3" />Detail</button>
                   {r.status === 'pending' && (<>
-                    <button onClick={async () => { await api('approve-request', 'POST', { id: r.id }); showToast('Approved'); loadData(); }} className="text-xs px-2 py-1 text-green-600 hover:bg-green-50 rounded flex items-center gap-1"><Check className="w-3 h-3" />Approve</button>
-                    <button onClick={async () => { await api('reject-request', 'POST', { id: r.id, reason: 'Ditolak' }); showToast('Rejected'); loadData(); }} className="text-xs px-2 py-1 text-red-600 hover:bg-red-50 rounded">Reject</button>
+                    <button onClick={async () => { await api('approve-request', 'POST', { id: r.id }); showToast('Disetujui'); loadData(); }} className="text-xs px-2 py-1 text-green-600 hover:bg-green-50 rounded flex items-center gap-1"><Check className="w-3 h-3" />Setujui</button>
+                    <button onClick={async () => { await api('reject-request', 'POST', { id: r.id, reason: 'Ditolak' }); showToast('Ditolak'); loadData(); }} className="text-xs px-2 py-1 text-red-600 hover:bg-red-50 rounded">Tolak</button>
                   </>)}
                   {r.status === 'approved' && (
-                    <button onClick={async () => { await api('complete-travel', 'POST', { id: r.id }); showToast('Travel completed'); loadData(); }} className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded">Selesai</button>
+                    <button onClick={async () => { await api('complete-travel', 'POST', { id: r.id }); showToast('Perjalanan selesai'); loadData(); }} className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded">Selesai</button>
                   )}
                   <button onClick={() => handleDelete('request', r.id)} className="text-xs px-2 py-1 text-gray-400 hover:text-red-600 ml-auto"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
@@ -202,9 +224,9 @@ export default function TravelExpensePage() {
             <h2 className="text-xl font-bold">{detailReq.request?.destination}</h2>
             <p className="text-gray-500">{detailReq.request?.purpose}</p>
             <div className="grid md:grid-cols-3 gap-4 mt-4">
-              <div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-500">Budget</p><p className="font-bold">{fmtCur(detailReq.request?.estimated_budget)}</p></div>
+              <div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-500">Anggaran</p><p className="font-bold">{fmtCur(detailReq.request?.estimated_budget)}</p></div>
               <div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-500">Aktual</p><p className="font-bold">{fmtCur(detailReq.request?.actual_cost)}</p></div>
-              <div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-500">Total Expense</p><p className="font-bold">{fmtCur(detailReq.totalExpenses)}</p></div>
+              <div className="bg-gray-50 p-3 rounded-lg"><p className="text-xs text-gray-500">Total Pengeluaran</p><p className="font-bold">{fmtCur(detailReq.totalExpenses)}</p></div>
             </div>
             <h3 className="font-semibold mt-6 mb-3">Rincian Biaya ({(detailReq.expenses || []).length})</h3>
             {(detailReq.expenses || []).length > 0 ? (
@@ -256,10 +278,10 @@ export default function TravelExpensePage() {
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
                         {e.status === 'submitted' && (
-                          <button onClick={async () => { await api('approve-expense', 'POST', { id: e.id }); showToast('Expense approved'); loadData(); }} className="text-xs px-2 py-1 text-green-600 hover:bg-green-50 rounded">Approve</button>
+                          <button onClick={async () => { await api('approve-expense', 'POST', { id: e.id }); showToast('Biaya disetujui'); loadData(); }} className="text-xs px-2 py-1 text-green-600 hover:bg-green-50 rounded">Setujui</button>
                         )}
                         {e.status === 'approved' && (
-                          <button onClick={async () => { await api('reimburse-expense', 'POST', { id: e.id }); showToast('Reimbursed'); loadData(); }} className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded">Reimburse</button>
+                          <button onClick={async () => { await api('reimburse-expense', 'POST', { id: e.id }); showToast('Diganti'); loadData(); }} className="text-xs px-2 py-1 text-blue-600 hover:bg-blue-50 rounded">Ganti Biaya</button>
                         )}
                         <button onClick={() => handleDelete('expense', e.id)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
@@ -277,9 +299,9 @@ export default function TravelExpensePage() {
       {!loading && tab === 'budgets' && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Budget Control</h2>
+            <h2 className="text-lg font-semibold">Kontrol Anggaran</h2>
             <button onClick={() => openAdd('budget')} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
-              <Plus className="w-4 h-4" /> Tambah Budget
+              <Plus className="w-4 h-4" /> Tambah Anggaran
             </button>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -309,7 +331,7 @@ export default function TravelExpensePage() {
                 </div>
               );
             })}
-            {budgets.length === 0 && <p className="text-center text-gray-400 py-8 col-span-3">Belum ada budget</p>}
+            {budgets.length === 0 && <p className="text-center text-gray-400 py-8 col-span-3">Belum ada anggaran</p>}
           </div>
         </div>
       )}
@@ -320,7 +342,7 @@ export default function TravelExpensePage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-5 border-b">
               <h3 className="text-lg font-semibold">
-                {modalType === 'request' ? 'Pengajuan Perjalanan' : modalType === 'expense' ? 'Klaim Biaya' : 'Budget'}
+                {modalType === 'request' ? 'Pengajuan Perjalanan' : modalType === 'expense' ? 'Klaim Biaya' : 'Anggaran'}
               </h3>
               <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
             </div>
@@ -349,7 +371,7 @@ export default function TravelExpensePage() {
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-sm font-medium text-gray-700">Estimasi Budget</label><input type="number" value={reqForm.estimatedBudget} onChange={e => setReqForm({ ...reqForm, estimatedBudget: parseInt(e.target.value) || 0 })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>
+                  <div><label className="text-sm font-medium text-gray-700">Estimasi Anggaran</label><input type="number" value={reqForm.estimatedBudget} onChange={e => setReqForm({ ...reqForm, estimatedBudget: parseInt(e.target.value) || 0 })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>
                   <div><label className="text-sm font-medium text-gray-700">Uang Muka</label><input type="number" value={reqForm.advanceAmount} onChange={e => setReqForm({ ...reqForm, advanceAmount: parseInt(e.target.value) || 0 })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>
                 </div>
               </>)}
@@ -367,7 +389,7 @@ export default function TravelExpensePage() {
               {modalType === 'budget' && (<>
                 <div><label className="text-sm font-medium text-gray-700">Kategori</label>
                   <select value={budgetForm.category} onChange={e => setBudgetForm({ ...budgetForm, category: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
-                    <option value="travel">Travel</option><option value="meals">Meals</option><option value="transportation">Transportation</option><option value="accommodation">Accommodation</option><option value="communication">Communication</option>
+                    <option value="travel">Perjalanan</option><option value="meals">Makan</option><option value="transportation">Transportasi</option><option value="accommodation">Akomodasi</option><option value="communication">Komunikasi</option>
                   </select>
                 </div>
                 <div><label className="text-sm font-medium text-gray-700">Tahun Fiskal</label><input type="number" value={budgetForm.fiscalYear} onChange={e => setBudgetForm({ ...budgetForm, fiscalYear: parseInt(e.target.value) })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>

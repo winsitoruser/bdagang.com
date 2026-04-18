@@ -7,7 +7,7 @@ import {
   LayoutGrid, CalendarDays, BarChart3, List, Plus, Filter, Search, ChevronLeft, ChevronRight,
   Clock, AlertTriangle, CheckCircle, Loader2, GripVertical, MoreHorizontal, Eye, Trash2,
   X, CalendarCheck, ArrowRight, Timer, Star, Flag, Phone, Mail, Users, FileText,
-  Zap, RefreshCw, Download, ChevronDown, Circle
+  Zap, RefreshCw, Download, ChevronDown, Circle, Navigation, MapPin, Building2, Sparkles,
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════
@@ -28,10 +28,18 @@ interface Task {
   assigned_to?: number;
   assigned_name?: string;
   customer_name?: string;
+  customer_id?: string;
+  purpose?: string;
+  outlet_name?: string;
+  outlet_code?: string;
   checklist?: { text: string; done: boolean }[];
   tags?: string[];
   isOverdue?: boolean;
   progress?: number;
+  sfa_visit_id?: string | null;
+  visit_row_status?: string | null;
+  linked_visit_date?: string | null;
+  visit_customer_name?: string | null;
 }
 
 interface CalEvent {
@@ -77,7 +85,8 @@ const STATUS_COLORS: Record<string, string> = {
 };
 const TYPE_ICONS: Record<string, any> = {
   call: Phone, email: Mail, meeting: Users, follow_up: ArrowRight,
-  review: Eye, approval: CheckCircle, document: FileText, custom: Star
+  review: Eye, approval: CheckCircle, document: FileText, custom: Star,
+  visit: Navigation, field_visit: MapPin,
 };
 
 const fmtDate = (d: string | undefined) => {
@@ -92,7 +101,13 @@ const fmtTime = (d: string | undefined) => {
 // ═══════════════════════════════════════════
 // Main Component
 // ═══════════════════════════════════════════
-export default function TaskCalendarModule({ showToast }: { showToast: (msg: string) => void }) {
+type TaskCalendarProps = {
+  showToast: (msg: string) => void;
+  /** Tab khusus SFA: task lapangan ter-link kunjungan (rencana vs realisasi) */
+  fieldForceBridge?: boolean;
+};
+
+export default function TaskCalendarModule({ showToast, fieldForceBridge }: TaskCalendarProps) {
   const [view, setView] = useState<ViewMode>('kanban');
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
@@ -113,6 +128,15 @@ export default function TaskCalendarModule({ showToast }: { showToast: (msg: str
   const [eventForm, setEventForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [custQ, setCustQ] = useState('');
+  const [custResults, setCustResults] = useState<any[]>([]);
+  const [custLoading, setCustLoading] = useState(false);
+  const [visitSug, setVisitSug] = useState<any[]>([]);
+  const [sugLoading, setSugLoading] = useState(false);
+  const visitPeriod = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
 
   // ── Data Loading (all parallel, non-blocking) ──
   const usersLoaded = useRef(false);
@@ -131,6 +155,7 @@ export default function TaskCalendarModule({ showToast }: { showToast: (msg: str
     const v = viewRef.current;
     const f = filtersRef.current;
     const promises: Promise<any>[] = [];
+    const ff = fieldForceBridge ? '&visit_link=only' : '';
 
     // Stats & users: fire-and-forget, don't block
     if (!statsLoaded.current || forceRefresh) {
@@ -142,13 +167,13 @@ export default function TaskCalendarModule({ showToast }: { showToast: (msg: str
 
     // Only load data for the active view
     if (v === 'kanban' || v === 'list') {
-      const q = `&priority=${f.priority}&type=${f.type}&assigned=${f.assigned}`;
+      const q = `&priority=${f.priority}&type=${f.type}&assigned=${f.assigned}${ff}`;
       promises.push(api('board', 'GET', undefined, q).then(r => { if (r.success) setBoardData(r.data); }));
     } else if (v === 'gantt') {
-      promises.push(api('gantt', 'GET', undefined, `&range=${ganttRangeRef.current}`).then(r => { if (r.success) setGanttTasks(r.data || []); }));
+      promises.push(api('gantt', 'GET', undefined, `&range=${ganttRangeRef.current}${ff}`).then(r => { if (r.success) setGanttTasks(r.data || []); }));
     } else if (v === 'calendar') {
       const y = calDateRef.current.getFullYear(); const m = calDateRef.current.getMonth() + 1;
-      promises.push(api('calendar', 'GET', undefined, `&year=${y}&month=${m}`).then(r => {
+      promises.push(api('calendar', 'GET', undefined, `&year=${y}&month=${m}${ff}`).then(r => {
         if (r.success) { setCalEvents(r.data.events || []); setCalTaskEvents(r.data.taskEvents || []); }
       }));
       // Holidays: non-blocking background, never blocks UI
@@ -158,12 +183,72 @@ export default function TaskCalendarModule({ showToast }: { showToast: (msg: str
     if (promises.length > 0) await Promise.all(promises);
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fieldForceBridge]);
+
+  useEffect(() => {
+    if (fieldForceBridge) setFilters(f => ({ ...f, type: 'field_visit' }));
+  }, [fieldForceBridge]);
 
   // Trigger load on view/filter/range/date change
   useEffect(() => { loadData(); }, [view, filters, ganttRange, calDate, loadData]);
 
   const loadAll = useCallback(() => loadData(true), [loadData]);
+
+  // CRM customer search (picker)
+  const custTimer = useRef<any>(null);
+  useEffect(() => {
+    if (!showCreateTask) return;
+    if (custTimer.current) clearTimeout(custTimer.current);
+    if (!custQ.trim() || custQ.trim().length < 2) {
+      setCustResults([]);
+      return;
+    }
+    custTimer.current = setTimeout(async () => {
+      setCustLoading(true);
+      const r = await api('customer-picker', 'GET', undefined, `&q=${encodeURIComponent(custQ.trim())}&limit=40`);
+      if (r.success) setCustResults(r.data || []);
+      setCustLoading(false);
+    }, 300);
+    return () => { if (custTimer.current) clearTimeout(custTimer.current); };
+  }, [custQ, showCreateTask]);
+
+  // Saran kunjungan dari data penjualan (top outlet)
+  useEffect(() => {
+    if (!showCreateTask) return;
+    let cancelled = false;
+    (async () => {
+      setSugLoading(true);
+      const r = await api('visit-suggestions', 'GET', undefined, `&period=${visitPeriod}`);
+      if (!cancelled && r.success) setVisitSug(r.data?.suggestions || []);
+      setSugLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [showCreateTask, visitPeriod]);
+
+  const applyCustomer = (c: any) => {
+    const label = c.display_name || c.company_name || '';
+    setTaskForm((p: any) => ({
+      ...p,
+      customer_id: c.id,
+      _cust_label: label,
+      outlet_name: p.outlet_name || c.display_name || c.company_name || '',
+      title: p.title || `Kunjungan: ${label || 'Outlet'}`,
+    }));
+    setCustQ('');
+    setCustResults([]);
+  };
+
+  const applySuggestion = (s: any) => {
+    setTaskForm((p: any) => ({
+      ...p,
+      task_type: p.task_type || 'visit',
+      outlet_name: s.outlet_name || '',
+      outlet_code: s.outlet_code || '',
+      purpose: s.suggested_purpose || p.purpose,
+      customer_id: s.customer_id || p.customer_id,
+      title: p.title || `Visit: ${s.outlet_name || 'Outlet'}`,
+    }));
+  };
 
   // ── Kanban Drag & Drop ──
   const dragItem = useRef<{ taskId: string; fromCol: string } | null>(null);
@@ -217,7 +302,8 @@ export default function TaskCalendarModule({ showToast }: { showToast: (msg: str
   const createTask = async () => {
     if (!taskForm.title?.trim()) { showToast('Judul task wajib diisi'); return; }
     setSaving(true);
-    const r = await api('create-task', 'POST', taskForm);
+    const { _cust_label, ...payload } = taskForm;
+    const r = await api('create-task', 'POST', payload);
     if (r.success) {
       showToast('Task berhasil dibuat');
       setShowCreateTask(false);
@@ -283,6 +369,13 @@ export default function TaskCalendarModule({ showToast }: { showToast: (msg: str
         </div>
       )}
 
+      {fieldForceBridge && (
+        <div className="p-3 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-indigo-50 text-xs text-violet-900 leading-relaxed">
+          <span className="font-bold">Rencana vs realisasi lapangan</span>
+          {' '}— Task terhubung ke jadwal kunjungan SFA. Check-in / check-out dari aplikasi karyawan memperbarui status task ini secara otomatis.
+        </div>
+      )}
+
       {/* ── Toolbar ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white rounded-2xl border border-gray-100 p-3">
         {/* View Switcher */}
@@ -315,9 +408,13 @@ export default function TaskCalendarModule({ showToast }: { showToast: (msg: str
           <button onClick={() => loadAll()} className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:border-gray-300 bg-white">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button onClick={() => { setShowCreateTask(true); setTaskForm({ priority: 'medium', status: 'open', task_type: 'follow_up' }); }}
+          <button onClick={() => {
+            setShowCreateTask(true);
+            setTaskForm({ priority: 'medium', status: 'open', task_type: fieldForceBridge ? 'field_visit' : 'follow_up', purpose: '' });
+            setCustQ(''); setCustResults([]);
+          }}
             className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all">
-            <Plus className="w-3.5 h-3.5" /> Task
+            <Plus className="w-3.5 h-3.5" /> Task / Visit
           </button>
           {view === 'calendar' && (
             <button onClick={() => { setShowCreateEvent(true); setEventForm({ event_type: 'meeting', color: '#3b82f6' }); }}
@@ -348,6 +445,8 @@ export default function TaskCalendarModule({ showToast }: { showToast: (msg: str
             <option value="email">Email</option>
             <option value="meeting">Meeting</option>
             <option value="follow_up">Follow Up</option>
+            <option value="visit">Visit / Kunjungan</option>
+            <option value="field_visit">Field Visit (lapangan)</option>
             <option value="review">Review</option>
             <option value="document">Document</option>
           </select>
@@ -434,16 +533,91 @@ export default function TaskCalendarModule({ showToast }: { showToast: (msg: str
       {/* CREATE TASK MODAL */}
       {/* ════════════════════════════════════════ */}
       {showCreateTask && (
-        <Modal title="Buat Task Baru" onClose={() => setShowCreateTask(false)}>
-          <div className="space-y-3">
-            <Input label="Judul *" value={taskForm.title || ''} onChange={v => setTaskForm((p: any) => ({ ...p, title: v }))} />
+        <Modal title="Rencana Call / Visit" onClose={() => setShowCreateTask(false)} wide>
+          <div className="space-y-4 max-h-[78vh] overflow-y-auto pr-1">
+            <p className="text-[11px] text-gray-500 leading-relaxed">
+              Hubungkan dengan <strong>Pelanggan (CRM)</strong> untuk outlet/kunjungan. Saran di bawah diambil dari <strong>produktivitas penjualan</strong> (top outlet periode).
+            </p>
+
+            {/* Saran dari penjualan */}
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs font-bold text-indigo-900">Saran rencana kunjungan ({visitPeriod})</span>
+                {sugLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-500" />}
+              </div>
+              <div className="max-h-36 overflow-y-auto space-y-1">
+                {visitSug.length === 0 && !sugLoading && (
+                  <p className="text-[11px] text-gray-500">Belum ada data penjualan / outlet untuk periode ini.</p>
+                )}
+                {visitSug.map((s: any, i: number) => (
+                  <button key={i} type="button" onClick={() => applySuggestion(s)}
+                    className="w-full text-left flex items-start justify-between gap-2 px-2 py-1.5 rounded-lg bg-white border border-indigo-100 hover:border-amber-300 text-[11px]">
+                    <span>
+                      <span className="font-semibold text-gray-900">{s.outlet_name || 'Outlet'}</span>
+                      {s.outlet_code && <span className="text-gray-400 ml-1 font-mono">{s.outlet_code}</span>}
+                      {s.customer_name && <span className="block text-emerald-700">CRM: {s.customer_name}</span>}
+                    </span>
+                    <span className="shrink-0 text-amber-700 font-semibold">{s.revenue ? `${Math.round(s.revenue).toLocaleString('id-ID')}` : '—'}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Input label="Judul task *" value={taskForm.title || ''} onChange={v => setTaskForm((p: any) => ({ ...p, title: v }))} />
             <Textarea label="Deskripsi" value={taskForm.description || ''} onChange={v => setTaskForm((p: any) => ({ ...p, description: v }))} />
+            <Textarea label="Tujuan / purpose" value={taskForm.purpose || ''} onChange={v => setTaskForm((p: any) => ({ ...p, purpose: v }))}
+              placeholder="Contoh: Cek stok, follow-up PO, survey display, negosiasi promo…" />
+
             <div className="grid grid-cols-2 gap-3">
-              <Select label="Tipe" value={taskForm.task_type || 'follow_up'} onChange={v => setTaskForm((p: any) => ({ ...p, task_type: v }))}
-                options={[{ v: 'call', l: 'Call' }, { v: 'email', l: 'Email' }, { v: 'meeting', l: 'Meeting' }, { v: 'follow_up', l: 'Follow Up' }, { v: 'review', l: 'Review' }, { v: 'approval', l: 'Approval' }, { v: 'document', l: 'Document' }, { v: 'custom', l: 'Custom' }]} />
+              <Select label="Tipe aktivitas" value={taskForm.task_type || 'follow_up'} onChange={v => setTaskForm((p: any) => ({ ...p, task_type: v }))}
+                options={[
+                  { v: 'call', l: 'Call (telepon)' },
+                  { v: 'visit', l: 'Visit / Kunjungan toko' },
+                  { v: 'field_visit', l: 'Field visit (rute)' },
+                  { v: 'email', l: 'Email' },
+                  { v: 'meeting', l: 'Meeting' },
+                  { v: 'follow_up', l: 'Follow Up' },
+                  { v: 'review', l: 'Review' },
+                  { v: 'approval', l: 'Approval' },
+                  { v: 'document', l: 'Document' },
+                  { v: 'custom', l: 'Custom' },
+                ]} />
               <Select label="Prioritas" value={taskForm.priority || 'medium'} onChange={v => setTaskForm((p: any) => ({ ...p, priority: v }))}
                 options={[{ v: 'urgent', l: 'Urgent' }, { v: 'high', l: 'High' }, { v: 'medium', l: 'Medium' }, { v: 'low', l: 'Low' }]} />
             </div>
+
+            {(taskForm.task_type === 'visit' || taskForm.task_type === 'field_visit' || taskForm.task_type === 'call') && (
+              <div className="rounded-xl border border-amber-100 bg-amber-50/30 p-3 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+                  <Building2 className="w-4 h-4" /> Pelanggan & outlet (CRM)
+                </div>
+                <div className="relative">
+                  <Input label="Cari pelanggan (min. 2 huruf)" value={custQ} onChange={v => setCustQ(v)} placeholder="Nama toko / perusahaan / kota…" />
+                  {custLoading && <Loader2 className="w-4 h-4 animate-spin absolute right-3 top-9 text-amber-500" />}
+                  {custResults.length > 0 && (
+                    <div className="absolute z-20 mt-1 w-full max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                      {custResults.map((c: any) => (
+                        <button key={c.id} type="button" onClick={() => applyCustomer(c)}
+                          className="w-full text-left px-3 py-2 text-[11px] hover:bg-amber-50 border-b border-gray-50 last:border-0">
+                          <span className="font-semibold text-gray-900">{c.display_name}</span>
+                          {c.company_name && <span className="text-gray-500"> · {c.company_name}</span>}
+                          <span className="block text-[10px] text-gray-400">{c.city || c.address || c.customer_number}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {taskForm.customer_id && (
+                  <p className="text-[11px] text-emerald-700 font-semibold">Terhubung ke CRM: {taskForm._cust_label || 'pelanggan dipilih'}</p>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <Input label="Nama outlet / lokasi kunjungan" value={taskForm.outlet_name || ''} onChange={v => setTaskForm((p: any) => ({ ...p, outlet_name: v }))} />
+                  <Input label="Kode outlet (opsional)" value={taskForm.outlet_code || ''} onChange={v => setTaskForm((p: any) => ({ ...p, outlet_code: v }))} />
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <Input label="Start Date" type="date" value={taskForm.start_date?.slice(0, 10) || ''} onChange={v => setTaskForm((p: any) => ({ ...p, start_date: v }))} />
               <Input label="Due Date" type="date" value={taskForm.due_date?.slice(0, 10) || ''} onChange={v => setTaskForm((p: any) => ({ ...p, due_date: v }))} />
@@ -454,10 +628,10 @@ export default function TaskCalendarModule({ showToast }: { showToast: (msg: str
               <Input label="Estimasi Jam" type="number" value={taskForm.estimated_hours || ''} onChange={v => setTaskForm((p: any) => ({ ...p, estimated_hours: v ? Number(v) : null }))} />
             </div>
             <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
-              <button onClick={() => setShowCreateTask(false)} className="px-4 py-2 text-xs font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200">Batal</button>
-              <button onClick={createTask} disabled={saving}
+              <button type="button" onClick={() => setShowCreateTask(false)} className="px-4 py-2 text-xs font-medium text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200">Batal</button>
+              <button type="button" onClick={createTask} disabled={saving}
                 className="px-6 py-2 text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl shadow-sm hover:shadow-md disabled:opacity-50 flex items-center gap-1.5">
-                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Buat Task
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Simpan rencana
               </button>
             </div>
           </div>
@@ -506,6 +680,19 @@ export default function TaskCalendarModule({ showToast }: { showToast: (msg: str
               {selectedTask.task_number && <span className="text-[10px] font-mono text-gray-400">{selectedTask.task_number}</span>}
             </div>
             {selectedTask.description && <p className="text-sm text-gray-600">{selectedTask.description}</p>}
+            {(selectedTask as any).purpose && (
+              <div className="rounded-lg bg-amber-50 border border-amber-100 px-3 py-2 text-xs">
+                <span className="text-gray-500 font-semibold">Tujuan: </span>
+                <span className="text-gray-800">{(selectedTask as any).purpose}</span>
+              </div>
+            )}
+            {((selectedTask as any).outlet_name || (selectedTask as any).outlet_code) && (
+              <div className="text-xs flex items-center gap-2 text-gray-700">
+                <Navigation className="w-3.5 h-3.5 text-amber-600" />
+                <span>{(selectedTask as any).outlet_name}</span>
+                {(selectedTask as any).outlet_code && <span className="font-mono text-gray-400">({(selectedTask as any).outlet_code})</span>}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div><span className="text-gray-400">Assigned:</span> <span className="font-medium">{selectedTask.assigned_name || '-'}</span></div>
               <div><span className="text-gray-400">Customer:</span> <span className="font-medium">{selectedTask.customer_name || '-'}</span></div>
@@ -575,6 +762,22 @@ function KanbanCard({ task, onDragStart, onQuickUpdate, onDelete, onSelect }: {
       <h4 className="text-sm font-semibold text-gray-900 leading-snug mb-2 line-clamp-2 cursor-pointer" onClick={() => onSelect(task)}>
         {task.title}
       </h4>
+      {(task as any).purpose && (
+        <p className="text-[10px] text-gray-500 line-clamp-2 mb-1">{(task as any).purpose}</p>
+      )}
+      {(task as any).sfa_visit_id && (
+        <div className="text-[9px] text-violet-800 bg-violet-50 border border-violet-100 rounded-lg px-2 py-1 mb-1 font-semibold flex items-center gap-1 flex-wrap">
+          <Navigation className="w-3 h-3 shrink-0" />
+          <span>Kunjungan SFA: {(task as any).visit_row_status || '—'}</span>
+          {(task as any).linked_visit_date && <span className="text-violet-600 font-normal">· {fmtDate((task as any).linked_visit_date)}</span>}
+        </div>
+      )}
+      {((task as any).customer_name || (task as any).outlet_name) && (
+        <p className="text-[10px] text-indigo-600 font-medium mb-1 flex items-center gap-1">
+          <MapPin className="w-3 h-3 shrink-0" />
+          <span className="truncate">{(task as any).customer_name || (task as any).outlet_name}</span>
+        </p>
+      )}
 
       {/* Meta */}
       <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -1062,11 +1265,11 @@ function TaskListView({ columns, search, onQuickUpdate, onDelete, onSelect }: {
 // ═══════════════════════════════════════════
 // Shared UI Components
 // ═══════════════════════════════════════════
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className={`relative bg-white rounded-2xl shadow-xl w-full max-h-[90vh] overflow-y-auto ${wide ? 'max-w-2xl' : 'max-w-lg'}`} onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h3 className="text-sm font-bold text-gray-900">{title}</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><X className="w-4 h-4" /></button>

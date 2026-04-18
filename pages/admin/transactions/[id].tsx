@@ -128,7 +128,7 @@ export default function TransactionDetailPage() {
               onClick={() => router.push('/admin/transactions')}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Back to Transactions
+              Kembali ke Transaksi
             </button>
           </div>
         </div>
@@ -150,12 +150,12 @@ export default function TransactionDetailPage() {
             className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Transactions
+            Kembali ke Transaksi
           </button>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Transaction Detail</h1>
-              <p className="mt-2 text-sm text-gray-600">Transaction ID: {transaction?.id}</p>
+              <h1 className="text-3xl font-bold text-gray-900">Detail Transaksi</h1>
+              <p className="mt-2 text-sm text-gray-600">ID Transaksi: {transaction?.id}</p>
             </div>
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(transaction?.status || '')}`}>
               {transaction?.status}
@@ -168,16 +168,16 @@ export default function TransactionDetailPage() {
           <div className="lg:col-span-2 space-y-6">
             {/* Transaction Information */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Transaction Information</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Informasi Transaksi</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Transaction ID</label>
+                  <label className="text-sm font-medium text-gray-500">ID Transaksi</label>
                   <p className="text-sm text-gray-900 mt-1 font-mono">{transaction?.id}</p>
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Amount</label>
+                  <label className="text-sm font-medium text-gray-500">Jumlah</label>
                   <div className="flex items-center mt-1">
                     <DollarSign className="h-4 w-4 text-gray-400 mr-2" />
                     <p className="text-sm text-gray-900 font-semibold">
@@ -196,7 +196,7 @@ export default function TransactionDetailPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Payment Method</label>
+                  <label className="text-sm font-medium text-gray-500">Metode Pembayaran</label>
                   <div className="flex items-center mt-1">
                     <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
                     <p className="text-sm text-gray-900">{transaction?.paymentMethod || '-'}</p>
@@ -204,7 +204,7 @@ export default function TransactionDetailPage() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="text-sm font-medium text-gray-500">Description</label>
+                  <label className="text-sm font-medium text-gray-500">Deskripsi</label>
                   <div className="flex items-start mt-1">
                     <FileText className="h-4 w-4 text-gray-400 mr-2 mt-0.5" />
                     <p className="text-sm text-gray-900">{transaction?.description || '-'}</p>
@@ -212,7 +212,7 @@ export default function TransactionDetailPage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Transaction Date</label>
+                  <label className="text-sm font-medium text-gray-500">Tanggal Transaksi</label>
                   <div className="flex items-center mt-1">
                     <Calendar className="h-4 w-4 text-gray-400 mr-2" />
                     <p className="text-sm text-gray-900">
@@ -227,12 +227,12 @@ export default function TransactionDetailPage() {
             {transaction?.tenant && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Tenant Information</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">Informasi Tenant</h2>
                   <button
                     onClick={() => router.push(`/admin/tenants/${transaction.tenant.id}`)}
                     className="text-sm text-blue-600 hover:text-blue-700 font-medium"
                   >
-                    View Tenant
+                    Lihat Tenant
                   </button>
                 </div>
 
@@ -276,11 +276,11 @@ export default function TransactionDetailPage() {
           <div className="space-y-6">
             {/* Quick Summary */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Quick Summary</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Ringkasan</h3>
               
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs text-gray-500">Total Amount</p>
+                  <p className="text-xs text-gray-500">Total Jumlah</p>
                   <p className="text-2xl font-bold text-gray-900">
                     {formatCurrency(transaction?.amount || 0)}
                   </p>
@@ -294,14 +294,14 @@ export default function TransactionDetailPage() {
                 </div>
 
                 <div>
-                  <p className="text-xs text-gray-500">Payment Method</p>
+                  <p className="text-xs text-gray-500">Metode Pembayaran</p>
                   <p className="text-sm font-medium text-gray-900 mt-1">
                     {transaction?.paymentMethod || '-'}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-xs text-gray-500">Date</p>
+                  <p className="text-xs text-gray-500">Tanggal</p>
                   <p className="text-sm font-medium text-gray-900 mt-1">
                     {transaction?.createdAt ? new Date(transaction.createdAt).toLocaleDateString() : '-'}
                   </p>
@@ -311,7 +311,7 @@ export default function TransactionDetailPage() {
 
             {/* Actions */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Actions</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Aksi</h3>
               
               <div className="space-y-3">
                 <button
@@ -319,7 +319,7 @@ export default function TransactionDetailPage() {
                   className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   <Download className="h-4 w-4" />
-                  <span>Download Invoice</span>
+                  <span>Unduh Invoice</span>
                 </button>
 
                 <button
@@ -327,14 +327,14 @@ export default function TransactionDetailPage() {
                   className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                 >
                   <Building2 className="h-4 w-4" />
-                  <span>View Tenant</span>
+                  <span>Lihat Tenant</span>
                 </button>
               </div>
             </div>
 
             {/* Status Timeline */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">Status Timeline</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-4">Riwayat Status</h3>
               
               <div className="space-y-3">
                 <div className="flex items-start space-x-3">

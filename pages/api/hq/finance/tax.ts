@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { successResponse, errorResponse, ErrorCodes, HttpStatus } from '../../../../lib/api/response';
 import { withHQAuth } from '../../../../lib/middleware/withHQAuth';
+import { getTenantContext } from '../../../../lib/middleware/tenantIsolation';
 
 interface TaxObligation {
   id: string;
@@ -107,11 +108,37 @@ function getTaxData(req: NextApiRequest, res: NextApiResponse) {
     totalPending: filteredObligations.filter(t => t.status !== 'paid').reduce((sum, t) => sum + t.amount, 0)
   };
 
+  // PPN Masukan vs Keluaran reconciliation
+  const totalPpnKeluaran = mockBranchTax.reduce((s, b) => s + b.ppnOut, 0);
+  const totalPpnMasukan = mockBranchTax.reduce((s, b) => s + b.ppnIn, 0);
+  const ppnPayable = totalPpnKeluaran - totalPpnMasukan;
+
+  const ppnReconciliation = {
+    ppnKeluaran: {
+      label: 'PPN Keluaran (Penjualan)',
+      total: totalPpnKeluaran,
+      branches: mockBranchTax.map(b => ({ branchId: b.branchId, branchName: b.branchName, branchCode: b.branchCode, amount: b.ppnOut, revenue: b.revenue })),
+    },
+    ppnMasukan: {
+      label: 'PPN Masukan (Pembelian)',
+      total: totalPpnMasukan,
+      branches: mockBranchTax.map(b => ({ branchId: b.branchId, branchName: b.branchName, branchCode: b.branchCode, amount: b.ppnIn })),
+    },
+    ppnPayable: {
+      label: ppnPayable >= 0 ? 'PPN Kurang Bayar' : 'PPN Lebih Bayar',
+      total: ppnPayable,
+      status: ppnPayable >= 0 ? 'kurang_bayar' : 'lebih_bayar',
+      branches: mockBranchTax.map(b => ({ branchId: b.branchId, branchName: b.branchName, branchCode: b.branchCode, amount: b.ppnPayable })),
+    },
+    ppnRate: 12,
+  };
+
   return res.status(HttpStatus.OK).json(
     successResponse({
       obligations: filteredObligations,
       branchTax: mockBranchTax,
-      summary
+      summary,
+      ppnReconciliation
     })
   );
 }
@@ -129,24 +156,68 @@ function calculateTax(req: NextApiRequest, res: NextApiResponse) {
   let details: any = {};
 
   switch (type) {
-    case 'ppn':
-      const ppnOut = (revenue || 0) * 0.11;
-      const ppnIn = (expenses || 0) * 0.11;
+    case 'ppn': {
+      // PPN 12% effective 1 Jan 2025 (UU HPP No.7/2021)
+      const ppnRate = 0.12;
+      const ppnOut = (revenue || 0) * ppnRate;
+      const ppnIn = (expenses || 0) * ppnRate;
       calculatedAmount = ppnOut - ppnIn;
-      details = { ppnOut, ppnIn, ppnPayable: calculatedAmount };
+      details = { ppnRate: '12%', ppnOut, ppnIn, ppnPayable: calculatedAmount };
       break;
-    case 'pph21':
-      calculatedAmount = (salaries || 0) * 0.05; // Simplified
-      details = { grossSalaries: salaries, taxRate: '5%', taxAmount: calculatedAmount };
+    }
+    case 'pph21': {
+      // PPh 21 progressive rates (UU HPP No.7/2021, effective 2022+)
+      // Bracket 1: 0 - 60jt = 5%
+      // Bracket 2: 60jt - 250jt = 15%
+      // Bracket 3: 250jt - 500jt = 25%
+      // Bracket 4: 500jt - 5M = 30%
+      // Bracket 5: > 5M = 35%
+      const annualTaxableIncome = salaries || 0;
+      let taxAmount = 0;
+      const brackets = [
+        { limit: 60000000, rate: 0.05 },
+        { limit: 250000000, rate: 0.15 },
+        { limit: 500000000, rate: 0.25 },
+        { limit: 5000000000, rate: 0.30 },
+        { limit: Infinity, rate: 0.35 },
+      ];
+      let remaining = annualTaxableIncome;
+      let prevLimit = 0;
+      const bracketDetails: { bracket: string; taxableAmount: number; rate: string; tax: number }[] = [];
+      for (const b of brackets) {
+        if (remaining <= 0) break;
+        const taxable = Math.min(remaining, b.limit - prevLimit);
+        const tax = taxable * b.rate;
+        taxAmount += tax;
+        bracketDetails.push({
+          bracket: `${prevLimit.toLocaleString('id-ID')} - ${b.limit === Infinity ? '∞' : b.limit.toLocaleString('id-ID')}`,
+          taxableAmount: taxable, rate: `${b.rate * 100}%`, tax
+        });
+        remaining -= taxable;
+        prevLimit = b.limit;
+      }
+      calculatedAmount = taxAmount;
+      details = { annualTaxableIncome, brackets: bracketDetails, totalTax: taxAmount };
       break;
-    case 'pph23':
-      calculatedAmount = (expenses || 0) * 0.02;
-      details = { serviceExpenses: expenses, taxRate: '2%', taxAmount: calculatedAmount };
+    }
+    case 'pph23': {
+      // PPh 23: 2% for services, 15% for dividends/interest/royalties
+      // Default to 2% for service expenses
+      const pph23Rate = 0.02;
+      calculatedAmount = (expenses || 0) * pph23Rate;
+      details = { serviceExpenses: expenses, taxRate: '2%', taxAmount: calculatedAmount, note: 'Rate 15% applies for dividends, interest, and royalties' };
       break;
-    case 'pph25':
-      calculatedAmount = (revenue || 0) * 0.005; // Simplified monthly installment
-      details = { monthlyRevenue: revenue, taxRate: '0.5%', taxAmount: calculatedAmount };
+    }
+    case 'pph25': {
+      // PPh 25: Monthly installment = (Prior year PPh 29 liability) / 12
+      // Simplified: use estimated annual tax / 12
+      const annualRevenue = (revenue || 0) * 12;
+      const estimatedProfit = annualRevenue * 0.20; // 20% net margin estimate
+      const estimatedAnnualTax = estimatedProfit * 0.22; // PPh Badan 22%
+      calculatedAmount = Math.round(estimatedAnnualTax / 12);
+      details = { monthlyRevenue: revenue, estimatedAnnualProfit: estimatedProfit, pphBadanRate: '22%', monthlyInstallment: calculatedAmount };
       break;
+    }
   }
 
   return res.status(HttpStatus.OK).json(

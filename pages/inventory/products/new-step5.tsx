@@ -32,7 +32,7 @@
               className="bg-blue-600 hover:bg-blue-700"
               disabled={uploadingImage}
             >
-              {uploadingImage ? 'Uploading...' : '+ Upload Gambar'}
+              {uploadingImage ? 'Mengunggah...' : '+ Upload Gambar'}
             </Button>
           </label>
         </div>

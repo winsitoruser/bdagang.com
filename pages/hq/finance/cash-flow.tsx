@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
+import { FinancePageSkeleton } from '../../../components/finance/FinanceSkeleton';
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -80,13 +83,35 @@ const formatCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
+const MOCK_CF_SUMMARY: CashFlowSummary = {
+  openingBalance: 3200000000, closingBalance: 3450000000, netChange: 250000000,
+  cashInflow: 4250000000, cashOutflow: 4000000000, operatingCashFlow: 350000000,
+  investingCashFlow: -80000000, financingCashFlow: -20000000, freeCashFlow: 270000000,
+};
+
+const MOCK_CF_ITEMS: CashFlowItem[] = [
+  { id: 'cf1', date: '2026-03-12', description: 'Penerimaan Penjualan Harian', category: 'Operating', type: 'inflow', source: 'Sales', destination: 'BCA 1234567890', amount: 113500000, status: 'completed', reference: 'TXN-2026-0312' },
+  { id: 'cf2', date: '2026-03-12', description: 'Pembayaran Supplier Bahan Baku', category: 'Operating', type: 'outflow', source: 'BCA 1234567890', destination: 'PT Sumber Makmur', amount: 95000000, status: 'completed', reference: 'PAY-2026-0312-001' },
+  { id: 'cf3', date: '2026-03-11', description: 'Transfer ke Cabang Bali', category: 'Operating', type: 'transfer', source: 'BCA 1234567890', destination: 'BCA 0987654321', amount: 50000000, status: 'completed', reference: 'TRF-2026-0311' },
+  { id: 'cf4', date: '2026-03-10', description: 'Pembelian Mesin Roasting', category: 'Investing', type: 'outflow', source: 'Mandiri 2468013579', destination: 'PT Mesin Indo', amount: 80000000, status: 'completed', reference: 'INV-2026-0310' },
+  { id: 'cf5', date: '2026-03-15', description: 'Pembayaran Gaji Maret', category: 'Operating', type: 'outflow', source: 'BCA 1234567890', destination: 'Multi-transfer', amount: 520000000, status: 'scheduled', reference: 'PAY-2026-0315' },
+];
+
+const MOCK_BANK_ACCOUNTS: BankAccount[] = [
+  { id: 'ba1', name: 'Rekening Utama Operasional', bank: 'BCA', accountNumber: '1234567890', type: 'checking', balance: 2100000000, currency: 'IDR' },
+  { id: 'ba2', name: 'Rekening Investasi', bank: 'Mandiri', accountNumber: '2468013579', type: 'savings', balance: 1200000000, currency: 'IDR' },
+  { id: 'ba3', name: 'Kas Kecil Pusat', bank: '-', accountNumber: '-', type: 'petty_cash', balance: 15000000, currency: 'IDR' },
+  { id: 'ba4', name: 'Rekening Cabang Bali', bank: 'BCA', accountNumber: '0987654321', type: 'checking', balance: 135000000, currency: 'IDR' },
+];
+
 export default function CashFlowManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
-  const [summary, setSummary] = useState<CashFlowSummary>(defaultCFSummary);
-  const [cashFlowItems, setCashFlowItems] = useState<CashFlowItem[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const { period } = useFinancePeriod();
+  const [summary, setSummary] = useState<CashFlowSummary>(MOCK_CF_SUMMARY);
+  const [cashFlowItems, setCashFlowItems] = useState<CashFlowItem[]>(MOCK_CF_ITEMS);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(MOCK_BANK_ACCOUNTS);
   const [forecast, setForecast] = useState<CashForecast[]>([]);
   const [viewMode, setViewMode] = useState<'overview' | 'transactions' | 'accounts' | 'forecast'>('overview');
   const [filterType, setFilterType] = useState<'all' | 'inflow' | 'outflow' | 'transfer'>('all');
@@ -105,6 +130,9 @@ export default function CashFlowManagement() {
       }
     } catch (error) {
       console.error('Error fetching cash flow data:', error);
+      setSummary(MOCK_CF_SUMMARY);
+      setCashFlowItems(MOCK_CF_ITEMS);
+      setBankAccounts(MOCK_BANK_ACCOUNTS);
     } finally {
       setLoading(false);
     }
@@ -144,8 +172,8 @@ export default function CashFlowManagement() {
   };
 
   const cashFlowChartSeries = [
-    { name: 'Cash In', data: weeklyData.map(w => Math.round(w.inflow)) },
-    { name: 'Cash Out', data: weeklyData.map(w => -Math.round(w.outflow)) }
+    { name: 'Kas Masuk', data: weeklyData.map(w => Math.round(w.inflow)) },
+    { name: 'Kas Keluar', data: weeklyData.map(w => -Math.round(w.outflow)) }
   ];
 
   // Derive balance trend from opening balance + weekly cumulative net
@@ -251,26 +279,17 @@ export default function CashFlowManagement() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Cash Flow Management</h1>
-              <p className="text-gray-500">Monitor dan kelola arus kas perusahaan</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.cfTitle')}</h1>
+              <p className="text-gray-500">{t('finance.cfSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              <option value="week">Minggu Ini</option>
-              <option value="month">Bulan Ini</option>
-              <option value="quarter">Kuartal Ini</option>
-              <option value="year">Tahun Ini</option>
-            </select>
+            <PeriodSelector />
             <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-              <Plus className="w-4 h-4" /> New Transaction
+              <Plus className="w-4 h-4" /> {t('finance.newTransaction')}
             </button>
             <button onClick={() => {
               const rows = cashFlowItems.map(i => `${i.date},${i.description},${i.category},${i.type},${i.amount},${i.status},${i.reference}`);
@@ -279,7 +298,7 @@ export default function CashFlowManagement() {
               const a = document.createElement('a'); a.href = url; a.download = `cash-flow-${period}.csv`; a.click(); URL.revokeObjectURL(url);
               toast.success('Export cash flow berhasil');
             }} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              <Download className="w-4 h-4" /> Export
+              <Download className="w-4 h-4" /> {t('finance.export')}
             </button>
           </div>
         </div>
@@ -287,14 +306,14 @@ export default function CashFlowManagement() {
         {/* Summary Cards */}
         <div className="grid grid-cols-5 gap-4">
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Opening Balance</p>
+            <p className="text-gray-500 text-sm">{t('finance.openingBalance')}</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.openingBalance)}</p>
           </div>
 
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <ArrowDownRight className="w-5 h-5 opacity-80" />
-              <p className="text-green-100 text-sm">Cash Inflow</p>
+              <p className="text-green-100 text-sm">{t('finance.cfInflow')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.cashInflow)}</p>
           </div>
@@ -302,13 +321,13 @@ export default function CashFlowManagement() {
           <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <ArrowUpRight className="w-5 h-5 opacity-80" />
-              <p className="text-red-100 text-sm">Cash Outflow</p>
+              <p className="text-red-100 text-sm">{t('finance.cfOutflow')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.cashOutflow)}</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Net Change</p>
+            <p className="text-gray-500 text-sm">{t('finance.cfNet')}</p>
             <p className={`text-2xl font-bold ${summary.netChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {summary.netChange >= 0 ? '+' : ''}{formatCurrency(summary.netChange)}
             </p>
@@ -317,7 +336,7 @@ export default function CashFlowManagement() {
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <Wallet className="w-5 h-5 opacity-80" />
-              <p className="text-blue-100 text-sm">Closing Balance</p>
+              <p className="text-blue-100 text-sm">{t('finance.closingBalance')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.closingBalance)}</p>
           </div>
@@ -331,7 +350,7 @@ export default function CashFlowManagement() {
                 <TrendingUp className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Operating Cash Flow</p>
+                <p className="text-xs text-gray-500">{t('finance.operatingCashFlow')}</p>
                 <p className="text-lg font-bold text-green-600">{formatCurrency(summary.operatingCashFlow)}</p>
               </div>
             </div>
@@ -343,7 +362,7 @@ export default function CashFlowManagement() {
                 <Building2 className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Investing Cash Flow</p>
+                <p className="text-xs text-gray-500">{t('finance.investingCashFlow')}</p>
                 <p className="text-lg font-bold text-red-600">{formatCurrency(summary.investingCashFlow)}</p>
               </div>
             </div>
@@ -355,7 +374,7 @@ export default function CashFlowManagement() {
                 <Landmark className="w-5 h-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Financing Cash Flow</p>
+                <p className="text-xs text-gray-500">{t('finance.financingCashFlow')}</p>
                 <p className="text-lg font-bold text-red-600">{formatCurrency(summary.financingCashFlow)}</p>
               </div>
             </div>
@@ -367,7 +386,7 @@ export default function CashFlowManagement() {
                 <BanknoteIcon className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Free Cash Flow</p>
+                <p className="text-xs text-gray-500">{t('finance.freeCashFlow')}</p>
                 <p className="text-lg font-bold text-green-600">{formatCurrency(summary.freeCashFlow)}</p>
               </div>
             </div>
@@ -377,10 +396,10 @@ export default function CashFlowManagement() {
         {/* View Mode Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
           {[
-            { key: 'overview', label: 'Overview', icon: TrendingUp },
-            { key: 'transactions', label: 'Transactions', icon: ArrowRightLeft },
-            { key: 'accounts', label: 'Bank Accounts', icon: Landmark },
-            { key: 'forecast', label: 'Forecast', icon: Calendar }
+            { key: 'overview', label: t('finance.cfOverview'), icon: TrendingUp },
+            { key: 'transactions', label: t('finance.cfTransactions'), icon: ArrowRightLeft },
+            { key: 'accounts', label: t('finance.cfBankAccounts'), icon: Landmark },
+            { key: 'forecast', label: t('finance.cfProjection'), icon: Calendar }
           ].map((tab) => (
             <button
               key={tab.key}
@@ -396,22 +415,22 @@ export default function CashFlowManagement() {
         {viewMode === 'overview' && (
           <div className="grid grid-cols-2 gap-6">
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Weekly Cash Flow</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('finance.weeklyCashFlow')}</h3>
               <Chart options={cashFlowChartOptions} series={cashFlowChartSeries} type="bar" height={300} />
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Balance Trend</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('finance.balanceTrend')}</h3>
               <Chart options={balanceTrendOptions} series={balanceTrendSeries} type="area" height={300} />
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Cash Flow by Activity</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('finance.cfByActivity')}</h3>
               <Chart options={cashFlowBreakdownOptions} series={cashFlowBreakdownSeries} type="bar" height={200} />
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Bank Account Summary</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('finance.bankAccountSummary')}</h3>
               <div className="space-y-3">
                 {bankAccounts.slice(0, 4).map((account) => (
                   <div key={account.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -429,7 +448,7 @@ export default function CashFlowManagement() {
                 ))}
               </div>
               <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
-                <p className="font-medium text-gray-700">Total Balance</p>
+                <p className="font-medium text-gray-700">{t('finance.totalBalance')}</p>
                 <p className="text-xl font-bold text-blue-600">{formatCurrency(totalBankBalance)}</p>
               </div>
             </div>
@@ -493,13 +512,13 @@ export default function CashFlowManagement() {
                     account.type === 'savings' ? 'bg-green-100 text-green-700' :
                     'bg-yellow-100 text-yellow-700'
                   }`}>
-                    {account.type === 'checking' ? 'Checking' : account.type === 'savings' ? 'Savings' : 'Petty Cash'}
+                    {account.type === 'checking' ? 'Giro' : account.type === 'savings' ? 'Tabungan' : 'Kas Kecil'}
                   </span>
                 </div>
                 <h3 className="font-semibold text-gray-900">{account.name}</h3>
                 <p className="text-sm text-gray-500 mb-4">{account.bank} {account.accountNumber !== '-' && `• ${account.accountNumber}`}</p>
                 <div className="pt-4 border-t border-gray-200">
-                  <p className="text-xs text-gray-500">Current Balance</p>
+                  <p className="text-xs text-gray-500">Saldo Saat Ini</p>
                   <p className="text-2xl font-bold text-gray-900">{formatCurrency(account.balance)}</p>
                 </div>
               </div>

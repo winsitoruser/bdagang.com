@@ -74,7 +74,7 @@ export default function ModuleManagementDebug() {
           {loading && (
             <div className="text-center py-8">
               <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-600 mb-3" />
-              <p className="text-gray-600">Loading...</p>
+              <p className="text-gray-600">Memuat...</p>
             </div>
           )}
 

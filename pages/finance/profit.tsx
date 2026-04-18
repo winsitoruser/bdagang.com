@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   FaChartLine, FaBoxOpen, FaCalendarAlt, FaArrowUp, 
   FaArrowDown, FaSearch, FaFilter, FaDollarSign,
@@ -32,6 +33,7 @@ interface ProfitTrend {
 }
 
 const ProfitPage: React.FC = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'7d' | '30d' | '3m'>('30d');
   const [searchQuery, setSearchQuery] = useState('');

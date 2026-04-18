@@ -48,6 +48,15 @@ export async function checkPermission(
       };
     }
 
+    // SUPER ADMIN BYPASS - Full access to all permissions
+    if (user.role === 'super_admin') {
+      return {
+        authorized: true,
+        user,
+        permissions: {}
+      };
+    }
+
     // Get permissions from role
     const permissions = user.roleDetails?.permissions || {};
 
@@ -136,6 +145,15 @@ export async function checkAnyPermission(
       };
     }
 
+    // SUPER ADMIN BYPASS - Full access to all permissions
+    if (user.role === 'super_admin') {
+      return {
+        authorized: true,
+        user,
+        permissions: {}
+      };
+    }
+
     const permissions = user.roleDetails?.permissions || {};
 
     // Check if user has any of the required permissions
@@ -199,6 +217,15 @@ export async function checkAllPermissions(
       };
     }
 
+    // SUPER ADMIN BYPASS - Full access to all permissions
+    if (user.role === 'super_admin') {
+      return {
+        authorized: true,
+        user,
+        permissions: {}
+      };
+    }
+
     const permissions = user.roleDetails?.permissions || {};
 
     // Check if user has all required permissions
@@ -251,6 +278,22 @@ export async function getUserPermissions(
         attributes: ['permissions']
       }]
     });
+
+    // SUPER ADMIN BYPASS - Return all permissions as true
+    if (user?.role === 'super_admin') {
+      const allPermissions: Record<string, boolean> = {};
+      try {
+        const { PERMISSIONS_STRUCTURE } = require('@/lib/permissions/permissions-structure');
+        for (const mod of Object.values(PERMISSIONS_STRUCTURE)) {
+          for (const key of Object.keys((mod as any).permissions)) {
+            allPermissions[key] = true;
+          }
+        }
+      } catch (e) {
+        // Fallback: return empty (bypass still works via role check)
+      }
+      return allPermissions;
+    }
 
     return user?.roleDetails?.permissions || {};
 

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { PageGuard } from '../../../components/permissions';
+import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
+import { FinancePageSkeleton } from '../../../components/finance/FinanceSkeleton';
 import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import {
   TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, RefreshCw, Download,
@@ -78,15 +82,42 @@ const formatFullCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
+const MOCK_PL_SUMMARY: PLSummary = {
+  revenue: 4250000000, cogs: 1700000000, grossProfit: 2550000000, grossMargin: 60,
+  operatingExpenses: 1650000000, operatingIncome: 900000000, operatingMargin: 21.2,
+  otherIncome: 35000000, otherExpenses: 15000000, ebitda: 1050000000,
+  depreciation: 85000000, interestExpense: 25000000, taxExpense: 175000000,
+  netIncome: 850000000, netMargin: 20, previousNetIncome: 780000000, growth: 9.0,
+};
+
+const MOCK_PL_ITEMS: PLLineItem[] = [
+  { id: '1', name: 'Pendapatan Penjualan', currentPeriod: 4250000000, previousPeriod: 3920000000, change: 330000000, changePercent: 8.4 },
+  { id: '2', name: 'Harga Pokok Penjualan (COGS)', currentPeriod: -1700000000, previousPeriod: -1568000000, change: -132000000, changePercent: 8.4 },
+  { id: '3', name: 'Laba Kotor', currentPeriod: 2550000000, previousPeriod: 2352000000, change: 198000000, changePercent: 8.4, isSubtotal: true },
+  { id: '4', name: 'Biaya Gaji & Tunjangan', currentPeriod: -520000000, previousPeriod: -510000000, change: -10000000, changePercent: 2.0, indent: 1 },
+  { id: '5', name: 'Biaya Utilitas', currentPeriod: -145000000, previousPeriod: -135000000, change: -10000000, changePercent: 7.4, indent: 1 },
+  { id: '6', name: 'Biaya Marketing', currentPeriod: -185000000, previousPeriod: -190000000, change: 5000000, changePercent: -2.6, indent: 1 },
+  { id: '7', name: 'Total Biaya Operasional', currentPeriod: -1650000000, previousPeriod: -1540000000, change: -110000000, changePercent: 7.1, isSubtotal: true },
+  { id: '8', name: 'Laba Bersih', currentPeriod: 850000000, previousPeriod: 780000000, change: 70000000, changePercent: 9.0, isTotal: true },
+];
+
+const MOCK_BRANCH_PL: BranchPL[] = [
+  { id: 'b1', name: 'Kantor Pusat Jakarta', code: 'HQ-001', revenue: 1200000000, cogs: 480000000, grossProfit: 720000000, opex: 420000000, netIncome: 300000000, margin: 25 },
+  { id: 'b2', name: 'Cabang Bandung', code: 'BR-002', revenue: 850000000, cogs: 340000000, grossProfit: 510000000, opex: 290000000, netIncome: 220000000, margin: 25.9 },
+  { id: 'b3', name: 'Cabang Surabaya', code: 'BR-003', revenue: 780000000, cogs: 312000000, grossProfit: 468000000, opex: 310000000, netIncome: 158000000, margin: 20.3 },
+  { id: 'b5', name: 'Cabang Bali', code: 'BR-005', revenue: 680000000, cogs: 272000000, grossProfit: 408000000, opex: 195000000, netIncome: 213000000, margin: 31.3 },
+];
+
 export default function ProfitLossReport() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
+  const { period } = useFinancePeriod();
   const [comparePeriod, setComparePeriod] = useState<'previous' | 'yoy'>('previous');
   const [industry, setIndustry] = useState('general');
-  const [summary, setSummary] = useState<PLSummary>(defaultPLSummary);
-  const [plItems, setPLItems] = useState<PLLineItem[]>([]);
-  const [branchPL, setBranchPL] = useState<BranchPL[]>([]);
+  const [summary, setSummary] = useState<PLSummary>(MOCK_PL_SUMMARY);
+  const [plItems, setPLItems] = useState<PLLineItem[]>(MOCK_PL_ITEMS);
+  const [branchPL, setBranchPL] = useState<BranchPL[]>(MOCK_BRANCH_PL);
   const [expandedSections, setExpandedSections] = useState<string[]>(['revenue', 'cogs', 'opex']);
   const [viewMode, setViewMode] = useState<'statement' | 'branch' | 'trend' | 'margins'>('statement');
 
@@ -103,6 +134,9 @@ export default function ProfitLossReport() {
       }
     } catch (error) {
       console.error('Error fetching P&L data:', error);
+      setSummary(MOCK_PL_SUMMARY);
+      setPLItems(MOCK_PL_ITEMS);
+      setBranchPL(MOCK_BRANCH_PL);
     } finally {
       setLoading(false);
     }
@@ -170,6 +204,11 @@ export default function ProfitLossReport() {
   ];
 
   return (
+    <PageGuard
+      anyPermission={['finance.view_pnl', 'reports.finance', 'finance.*']}
+      title="Laporan Laba Rugi"
+      description="Laporan keuangan P&L lintas cabang (data sensitif)."
+    >
     <HQLayout>
       <div className="space-y-6">
         {/* Header */}
@@ -179,22 +218,18 @@ export default function ProfitLossReport() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Profit & Loss Statement</h1>
-              <p className="text-gray-500">Laporan laba rugi konsolidasi</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.plTitle')}</h1>
+              <p className="text-gray-500">{t('finance.plSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            <select value={period} onChange={(e) => setPeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-              <option value="month">Bulan Ini</option>
-              <option value="quarter">Kuartal Ini</option>
-              <option value="year">Tahun Ini</option>
-            </select>
+            <PeriodSelector />
             <select value={comparePeriod} onChange={(e) => setComparePeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-              <option value="previous">vs Periode Sebelumnya</option>
-              <option value="yoy">vs Tahun Lalu</option>
+              <option value="previous">{t('finance.vsPreviousPeriod')}</option>
+              <option value="yoy">{t('finance.vsLastYear')}</option>
             </select>
             <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -213,7 +248,7 @@ export default function ProfitLossReport() {
         {/* Summary Cards */}
         <div className="grid grid-cols-5 gap-4">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
-            <p className="text-blue-100 text-sm">Total Revenue</p>
+            <p className="text-blue-100 text-sm">{t('finance.totalRevenue')}</p>
             <p className="text-2xl font-bold">{formatCurrency(summary.revenue)}</p>
             <div className="flex items-center gap-1 mt-2 text-sm text-blue-200">
               <ArrowUpRight className="w-4 h-4" />
@@ -222,13 +257,13 @@ export default function ProfitLossReport() {
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Gross Profit</p>
+            <p className="text-gray-500 text-sm">{t('finance.grossProfit')}</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.grossProfit)}</p>
             <p className="text-sm text-green-600 mt-2">Margin: {summary.grossMargin}%</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Operating Income</p>
+            <p className="text-gray-500 text-sm">{t('finance.operatingIncome')}</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.operatingIncome)}</p>
             <p className="text-sm text-green-600 mt-2">Margin: {summary.operatingMargin}%</p>
           </div>
@@ -240,7 +275,7 @@ export default function ProfitLossReport() {
           </div>
 
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 text-white">
-            <p className="text-green-100 text-sm">Net Income</p>
+            <p className="text-green-100 text-sm">{t('finance.netIncome')}</p>
             <p className="text-2xl font-bold">{formatCurrency(summary.netIncome)}</p>
             <div className="flex items-center gap-1 mt-2 text-sm text-green-200">
               <ArrowUpRight className="w-4 h-4" />
@@ -252,10 +287,10 @@ export default function ProfitLossReport() {
         {/* View Mode Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
           {([
-            { v: 'statement' as const, l: 'Statement', icon: FileText },
-            { v: 'branch' as const, l: 'By Branch', icon: Building2 },
-            { v: 'trend' as const, l: 'Trend', icon: TrendingUp },
-            { v: 'margins' as const, l: 'Margin Analysis', icon: PieChartIcon },
+            { v: 'statement' as const, l: t('finance.plStatement'), icon: FileText },
+            { v: 'branch' as const, l: t('finance.byBranch'), icon: Building2 },
+            { v: 'trend' as const, l: t('finance.plTrend'), icon: TrendingUp },
+            { v: 'margins' as const, l: t('finance.plMarginAnalysis'), icon: PieChartIcon },
           ]).map(t => (
             <button key={t.v} onClick={() => setViewMode(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${viewMode === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
               <t.icon className="w-4 h-4" />{t.l}
@@ -267,10 +302,10 @@ export default function ProfitLossReport() {
           <div className="bg-white rounded-xl border border-gray-200">
             <div className="p-4 border-b border-gray-200 bg-gray-50">
               <div className="grid grid-cols-5 gap-4 text-xs font-medium text-gray-500 uppercase">
-                <div className="col-span-2">Account</div>
-                <div className="text-right">Current Period</div>
-                <div className="text-right">Previous Period</div>
-                <div className="text-right">Change</div>
+                <div className="col-span-2">{t('finance.account')}</div>
+                <div className="text-right">{t('finance.currentPeriod')}</div>
+                <div className="text-right">{t('finance.previousPeriod')}</div>
+                <div className="text-right">{t('finance.change')}</div>
               </div>
             </div>
             <div className="divide-y divide-gray-100">
@@ -301,7 +336,7 @@ export default function ProfitLossReport() {
         {viewMode === 'branch' && (
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Revenue vs Net Income by Branch</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('finance.revenueVsNetIncomeByBranch')}</h3>
               <Chart options={branchPLOptions} series={branchPLSeries} type="bar" height={300} />
             </div>
 
@@ -310,13 +345,13 @@ export default function ProfitLossReport() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.branch')}</th>
+                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.revenue')}</th>
                       <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">COGS</th>
-                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Gross Profit</th>
+                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.grossProfit')}</th>
                       <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Opex</th>
-                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Net Income</th>
-                      <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Margin</th>
+                      <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.netIncome')}</th>
+                      <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('finance.margin')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -382,10 +417,10 @@ export default function ProfitLossReport() {
             </div>
             <div className="grid grid-cols-4 gap-4">
               {[
-                { label: 'Gross Margin', value: summary.grossMargin, benchmark: industry === 'fnb' ? 65 : industry === 'retail' ? 35 : 40, color: 'blue' },
-                { label: 'Operating Margin', value: summary.operatingMargin, benchmark: industry === 'fnb' ? 15 : industry === 'retail' ? 8 : 25, color: 'green' },
-                { label: 'EBITDA Margin', value: summary.revenue > 0 ? Math.round((summary.ebitda / summary.revenue) * 100) : 0, benchmark: industry === 'fnb' ? 18 : industry === 'retail' ? 10 : 28, color: 'purple' },
-                { label: 'Net Margin', value: summary.netMargin, benchmark: industry === 'fnb' ? 10 : industry === 'retail' ? 5 : 20, color: 'teal' },
+                { label: 'Margin Kotor', value: summary.grossMargin, benchmark: industry === 'fnb' ? 65 : industry === 'retail' ? 35 : 40, color: 'blue' },
+                { label: 'Margin Operasi', value: summary.operatingMargin, benchmark: industry === 'fnb' ? 15 : industry === 'retail' ? 8 : 25, color: 'green' },
+                { label: 'Margin EBITDA', value: summary.revenue > 0 ? Math.round((summary.ebitda / summary.revenue) * 100) : 0, benchmark: industry === 'fnb' ? 18 : industry === 'retail' ? 10 : 28, color: 'purple' },
+                { label: 'Margin Bersih', value: summary.netMargin, benchmark: industry === 'fnb' ? 10 : industry === 'retail' ? 5 : 20, color: 'teal' },
               ].map(m => {
                 const diff = m.value - m.benchmark;
                 return (
@@ -455,5 +490,6 @@ export default function ProfitLossReport() {
         )}
       </div>
     </HQLayout>
+    </PageGuard>
   );
 }

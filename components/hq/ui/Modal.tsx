@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -31,28 +32,31 @@ export default function Modal({
   closeOnOverlay = true
 }: ModalProps) {
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = prev;
     };
   }, [isOpen]);
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  const node = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" role="dialog" aria-modal="true">
       {/* Overlay */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={closeOnOverlay ? onClose : undefined}
+        aria-hidden="true"
       />
-      
+
       {/* Modal */}
-      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200`}>
+      <div
+        className={`relative z-[10000] bg-white rounded-2xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-200`}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         {(title || subtitle) && (
           <div className="flex items-start justify-between p-6 border-b border-gray-200">
@@ -61,6 +65,7 @@ export default function Modal({
               {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
             </div>
             <button
+              type="button"
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors -mr-2 -mt-2"
             >
@@ -83,6 +88,8 @@ export default function Modal({
       </div>
     </div>
   );
+
+  return createPortal(node, document.body);
 }
 
 // Confirm Dialog
@@ -122,6 +129,7 @@ export function ConfirmDialog({
         <p className="text-gray-600 mb-6">{message}</p>
         <div className="flex gap-3 justify-center">
           <button
+            type="button"
             onClick={onClose}
             disabled={loading}
             className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50"
@@ -129,6 +137,7 @@ export function ConfirmDialog({
             {cancelText}
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={loading}
             className={`px-4 py-2 text-white rounded-lg font-medium disabled:opacity-50 ${variantClasses[variant]}`}

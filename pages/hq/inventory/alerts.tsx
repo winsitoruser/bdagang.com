@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import HQLayout from '../../../components/hq/HQLayout';
 import {
@@ -50,6 +51,7 @@ interface StockAlert {
 }
 
 export default function InventoryAlerts() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<StockAlert[]>([]);
@@ -87,8 +89,8 @@ export default function InventoryAlerts() {
     const diffMs = now.getTime() - date.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     
-    if (diffHours < 1) return 'Baru saja';
-    if (diffHours < 24) return `${diffHours} jam lalu`;
+    if (diffHours < 1) return t('inventory.alJustNow');
+    if (diffHours < 24) return t('inventory.alHoursAgo').replace('{hours}', String(diffHours));
     return date.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
 
@@ -105,32 +107,32 @@ export default function InventoryAlerts() {
 
   const getAlertTypeLabel = (type: string) => {
     switch (type) {
-      case 'out_of_stock': return 'Out of Stock';
-      case 'low_stock': return 'Low Stock';
-      case 'overstock': return 'Overstock';
-      case 'expiring': return 'Expiring Soon';
-      case 'slow_moving': return 'Slow Moving';
+      case 'out_of_stock': return t('inventory.alTypeOutOfStock');
+      case 'low_stock': return t('inventory.alTypeLowStock');
+      case 'overstock': return t('inventory.alTypeOverstock');
+      case 'expiring': return t('inventory.alTypeExpiringSoon');
+      case 'slow_moving': return t('inventory.alTypeSlowMoving');
       default: return type;
     }
   };
 
   const getAlertTypeBadge = (type: string) => {
     switch (type) {
-      case 'out_of_stock': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">Out of Stock</span>;
-      case 'low_stock': return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">Low Stock</span>;
-      case 'overstock': return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">Overstock</span>;
-      case 'expiring': return <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">Expiring</span>;
-      case 'slow_moving': return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">Slow Moving</span>;
+      case 'out_of_stock': return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">{t('inventory.alTypeOutOfStock')}</span>;
+      case 'low_stock': return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">{t('inventory.alTypeLowStock')}</span>;
+      case 'overstock': return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">{t('inventory.alTypeOverstock')}</span>;
+      case 'expiring': return <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">{t('inventory.alTypeExpiring')}</span>;
+      case 'slow_moving': return <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">{t('inventory.alTypeSlowMoving')}</span>;
       default: return null;
     }
   };
 
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
-      case 'critical': return <span className="px-2 py-1 bg-red-500 text-white rounded text-xs">Critical</span>;
-      case 'high': return <span className="px-2 py-1 bg-orange-500 text-white rounded text-xs">High</span>;
-      case 'medium': return <span className="px-2 py-1 bg-yellow-500 text-white rounded text-xs">Medium</span>;
-      case 'low': return <span className="px-2 py-1 bg-gray-500 text-white rounded text-xs">Low</span>;
+      case 'critical': return <span className="px-2 py-1 bg-red-500 text-white rounded text-xs">{t('inventory.alPriorityCritical')}</span>;
+      case 'high': return <span className="px-2 py-1 bg-orange-500 text-white rounded text-xs">{t('inventory.alPriorityHigh')}</span>;
+      case 'medium': return <span className="px-2 py-1 bg-yellow-500 text-white rounded text-xs">{t('inventory.alPriorityMedium')}</span>;
+      case 'low': return <span className="px-2 py-1 bg-gray-500 text-white rounded text-xs">{t('inventory.alPriorityLow')}</span>;
       default: return null;
     }
   };
@@ -174,8 +176,8 @@ export default function InventoryAlerts() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Inventory Alerts</h1>
-              <p className="text-gray-500">Monitoring stok kritis dan peringatan inventory</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('inventory.alTitle')}</h1>
+              <p className="text-gray-500">{t('inventory.alSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -184,11 +186,11 @@ export default function InventoryAlerts() {
               className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
             >
               <CheckCircle className="w-4 h-4" />
-              Mark All Read
+              {t('inventory.alMarkAllRead')}
             </button>
             <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <RefreshCw className="w-4 h-4" />
-              Refresh
+              {t('inventory.alRefresh')}
             </button>
           </div>
         </div>
@@ -202,7 +204,7 @@ export default function InventoryAlerts() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-                <p className="text-sm text-gray-500">Total Alerts</p>
+                <p className="text-sm text-gray-500">{t('inventory.alStatTotal')}</p>
               </div>
             </div>
           </div>
@@ -213,7 +215,7 @@ export default function InventoryAlerts() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-red-700">{stats.critical}</p>
-                <p className="text-sm text-red-600">Critical</p>
+                <p className="text-sm text-red-600">{t('inventory.alStatCritical')}</p>
               </div>
             </div>
           </div>
@@ -224,7 +226,7 @@ export default function InventoryAlerts() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-orange-700">{stats.high}</p>
-                <p className="text-sm text-orange-600">High Priority</p>
+                <p className="text-sm text-orange-600">{t('inventory.alStatHigh')}</p>
               </div>
             </div>
           </div>
@@ -235,7 +237,7 @@ export default function InventoryAlerts() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-700">{stats.unread}</p>
-                <p className="text-sm text-blue-600">Unread</p>
+                <p className="text-sm text-blue-600">{t('inventory.alStatUnread')}</p>
               </div>
             </div>
           </div>
@@ -249,15 +251,15 @@ export default function InventoryAlerts() {
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <p className="font-semibold">{stats.critical} Alert Kritis Membutuhkan Tindakan Segera!</p>
-                <p className="text-red-100 text-sm">Produk habis stok di beberapa cabang</p>
+                <p className="font-semibold">{t('inventory.alCriticalBanner').replace('{count}', String(stats.critical))}</p>
+                <p className="text-red-100 text-sm">{t('inventory.alCriticalBannerDesc')}</p>
               </div>
             </div>
             <button
               onClick={() => { setTypeFilter('out_of_stock'); setPriorityFilter('critical'); }}
               className="px-4 py-2 bg-white text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium"
             >
-              Lihat Sekarang
+              {t('inventory.alViewNow')}
             </button>
           </div>
         )}
@@ -270,7 +272,7 @@ export default function InventoryAlerts() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Cari produk, SKU, atau cabang..."
+                  placeholder={t('inventory.alSearchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
@@ -282,23 +284,23 @@ export default function InventoryAlerts() {
               onChange={(e) => setTypeFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
             >
-              <option value="all">Semua Tipe</option>
-              <option value="out_of_stock">Out of Stock</option>
-              <option value="low_stock">Low Stock</option>
-              <option value="overstock">Overstock</option>
-              <option value="expiring">Expiring</option>
-              <option value="slow_moving">Slow Moving</option>
+              <option value="all">{t('inventory.alAllTypes')}</option>
+              <option value="out_of_stock">{t('inventory.alTypeOutOfStock')}</option>
+              <option value="low_stock">{t('inventory.alTypeLowStock')}</option>
+              <option value="overstock">{t('inventory.alTypeOverstock')}</option>
+              <option value="expiring">{t('inventory.alTypeExpiring')}</option>
+              <option value="slow_moving">{t('inventory.alTypeSlowMoving')}</option>
             </select>
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
             >
-              <option value="all">Semua Priority</option>
-              <option value="critical">Critical</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
+              <option value="all">{t('inventory.alAllPriority')}</option>
+              <option value="critical">{t('inventory.alPriorityCritical')}</option>
+              <option value="high">{t('inventory.alPriorityHigh')}</option>
+              <option value="medium">{t('inventory.alPriorityMedium')}</option>
+              <option value="low">{t('inventory.alPriorityLow')}</option>
             </select>
             <label className="flex items-center gap-2 text-sm text-gray-600">
               <input
@@ -307,7 +309,7 @@ export default function InventoryAlerts() {
                 onChange={(e) => setShowResolved(e.target.checked)}
                 className="rounded border-gray-300"
               />
-              Tampilkan Resolved
+              {t('inventory.alShowResolved')}
             </label>
           </div>
         </div>
@@ -343,7 +345,7 @@ export default function InventoryAlerts() {
                         {getPriorityBadge(alert.priority)}
                         {alert.isResolved && (
                           <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> Resolved
+                            <CheckCircle className="w-3 h-3" /> {t('inventory.alResolved')}
                           </span>
                         )}
                       </div>
@@ -364,16 +366,16 @@ export default function InventoryAlerts() {
                     </div>
                     <div className="flex items-center gap-4 text-sm">
                       <span className={`font-medium ${alert.currentStock === 0 ? 'text-red-600' : alert.currentStock < alert.minStock ? 'text-yellow-600' : 'text-gray-900'}`}>
-                        Stok: {alert.currentStock}
+                        {t('inventory.alStock')}: {alert.currentStock}
                       </span>
-                      <span className="text-gray-400">Min: {alert.minStock}</span>
-                      <span className="text-gray-400">Max: {alert.maxStock}</span>
+                      <span className="text-gray-400">{t('inventory.alMin')}: {alert.minStock}</span>
+                      <span className="text-gray-400">{t('inventory.alMax')}: {alert.maxStock}</span>
                     </div>
                   </div>
 
                   <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600">
-                      <span className="font-medium text-gray-700">Saran: </span>
+                      <span className="font-medium text-gray-700">{t('inventory.alSuggestion')}: </span>
                       {alert.suggestedAction}
                     </p>
                   </div>
@@ -387,14 +389,14 @@ export default function InventoryAlerts() {
                             className="flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200"
                           >
                             <ArrowRightLeft className="w-4 h-4" />
-                            Transfer
+                            {t('inventory.alTransfer')}
                           </Link>
                           <Link
                             href="/hq/purchase-orders"
                             className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm hover:bg-green-200"
                           >
                             <ShoppingCart className="w-4 h-4" />
-                            Buat PO
+                            {t('inventory.alCreatePO')}
                           </Link>
                         </>
                       )}
@@ -404,7 +406,7 @@ export default function InventoryAlerts() {
                           className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
                         >
                           <Eye className="w-4 h-4" />
-                          Mark Read
+                          {t('inventory.alMarkRead')}
                         </button>
                       )}
                       <button
@@ -412,7 +414,7 @@ export default function InventoryAlerts() {
                         className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
                       >
                         <Check className="w-4 h-4" />
-                        Resolve
+                        {t('inventory.alResolve')}
                       </button>
                     </div>
                   )}
@@ -426,8 +428,8 @@ export default function InventoryAlerts() {
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-8 h-8 text-gray-400" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Tidak Ada Alert</h3>
-              <p className="text-gray-500">Semua stok dalam kondisi baik atau alert sudah ditangani</p>
+              <h3 className="font-semibold text-gray-900 mb-2">{t('inventory.alNoAlerts')}</h3>
+              <p className="text-gray-500">{t('inventory.alNoAlertsDesc')}</p>
             </div>
           )}
         </div>

@@ -47,7 +47,7 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <>
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Loading...</span>
+          <span>Memuat...</span>
         </>
       ) : (
         <>

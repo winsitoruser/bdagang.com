@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import FuelTransactionModal from '../../../components/hq/fleet/FuelTransactionModal';
 import { 
   Fuel, 
@@ -20,6 +21,7 @@ import {
 import { mockFuelTransactions } from '../../../lib/mockData/fleetAdvanced';
 
 export default function FuelManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [transactions, setTransactions] = useState(mockFuelTransactions);
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,8 +110,8 @@ export default function FuelManagement() {
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Fuel Management</h1>
-          <p className="text-gray-600">Track fuel consumption, costs, and efficiency</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('fleet.fuelTitle')}</h1>
+          <p className="text-gray-600">{t('fleet.fuelSubtitle')}</p>
         </div>
 
         {/* Summary Cards */}
@@ -121,7 +123,7 @@ export default function FuelManagement() {
               </div>
               <TrendingUp className="w-5 h-5 text-green-600" />
             </div>
-            <p className="text-sm text-gray-600 mb-1">Total Fuel (Month)</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.totalFuelMonth')}</p>
             <p className="text-2xl font-bold text-gray-900">{totalFuelLiters.toLocaleString()} L</p>
           </div>
 
@@ -132,7 +134,7 @@ export default function FuelManagement() {
               </div>
               <TrendingDown className="w-5 h-5 text-red-600" />
             </div>
-            <p className="text-sm text-gray-600 mb-1">Total Cost (Month)</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.totalCostMonth')}</p>
             <p className="text-2xl font-bold text-gray-900">
               Rp {(totalFuelCost / 1000000).toFixed(1)}Jt
             </p>

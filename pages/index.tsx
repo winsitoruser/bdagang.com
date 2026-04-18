@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import toast from 'react-hot-toast';
+import { useTranslation } from '@/lib/i18n';
 
 // Import custom components
 import BurgerMenu from '../components/landing/BurgerMenu';
@@ -18,6 +19,7 @@ const Home: NextPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { t } = useTranslation();
 
   // Remove auto-redirect to allow users to see homepage with proper buttons
   // Users can manually click "Buka Dashboard" to access their dashboard
@@ -25,7 +27,7 @@ const Home: NextPage = () => {
   // Handle logout success message
   useEffect(() => {
     if (router.query.logout === 'success') {
-      toast.success('Anda berhasil logout', {
+      toast.success(t('auth.logoutSuccess'), {
         duration: 4000,
         position: 'top-center',
         style: {
@@ -56,8 +58,8 @@ const Home: NextPage = () => {
   return (
     <>
       <Head>
-        <title>BEDAGANG - Cloud POS System untuk Bisnis Modern | Free Trial 14 Hari</title>
-        <meta name="description" content="Sistem kasir cloud terlengkap untuk retail, F&B, dan bisnis jasa. Fitur POS, Inventory, CRM, Loyalty Program, Multi-outlet, dan Analytics. Coba gratis 14 hari tanpa kartu kredit!" />
+        <title>{t('landing.heroTitle')}</title>
+        <meta name="description" content={t('landing.heroDesc')} />
         <meta name="keywords" content="pos system, cloud pos, sistem kasir, inventory management, loyalty program, retail software, moka pos alternative" />
       </Head>
 

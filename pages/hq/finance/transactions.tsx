@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
+import { CanAccess, PageGuard } from '../../../components/permissions';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -19,8 +21,22 @@ import {
 } from 'lucide-react';
 import TransactionFormModal from '../../../components/hq/finance/TransactionFormModal';
 
+const MOCK_TRANSACTIONS = [
+  { id: 'txn1', transactionNumber: 'TXN-2026-0312-001', transactionDate: '2026-03-12', type: 'income', description: 'Penjualan Harian Cabang Jakarta', amount: 48500000, status: 'completed', branch: 'Kantor Pusat Jakarta', category: 'Sales', account_code: 'REV-001' },
+  { id: 'txn2', transactionNumber: 'TXN-2026-0312-002', transactionDate: '2026-03-12', type: 'expense', description: 'Pembelian Bahan Baku Kopi', amount: 15200000, status: 'completed', branch: 'Gudang Pusat Bekasi', category: 'COGS', account_code: 'EXP-001' },
+  { id: 'txn3', transactionNumber: 'TXN-2026-0312-003', transactionDate: '2026-03-12', type: 'income', description: 'Penjualan Harian Cabang Bandung', amount: 35200000, status: 'completed', branch: 'Cabang Bandung', category: 'Sales', account_code: 'REV-001' },
+  { id: 'txn4', transactionNumber: 'TXN-2026-0311-001', transactionDate: '2026-03-11', type: 'expense', description: 'Gaji Karyawan Maret 2026', amount: 125000000, status: 'pending', branch: 'All', category: 'Payroll', account_code: 'EXP-002' },
+  { id: 'txn5', transactionNumber: 'TXN-2026-0311-002', transactionDate: '2026-03-11', type: 'transfer', description: 'Transfer Dana ke Cabang Bali', amount: 50000000, status: 'completed', branch: 'Cabang Bali', category: 'Transfer', account_code: 'TRF-001' },
+  { id: 'txn6', transactionNumber: 'TXN-2026-0311-003', transactionDate: '2026-03-11', type: 'income', description: 'Penjualan Harian Cabang Surabaya', amount: 29800000, status: 'completed', branch: 'Cabang Surabaya', category: 'Sales', account_code: 'REV-001' },
+  { id: 'txn7', transactionNumber: 'TXN-2026-0310-001', transactionDate: '2026-03-10', type: 'expense', description: 'Biaya Listrik & Air Maret', amount: 18500000, status: 'completed', branch: 'All', category: 'Utilities', account_code: 'EXP-003' },
+  { id: 'txn8', transactionNumber: 'TXN-2026-0310-002', transactionDate: '2026-03-10', type: 'expense', description: 'Biaya Marketing Digital', amount: 8500000, status: 'approved', branch: 'Kantor Pusat Jakarta', category: 'Marketing', account_code: 'EXP-004' },
+];
+
+const MOCK_TXN_STATS = { totalIncome: 113500000, totalExpense: 167200000, totalTransfer: 50000000, netCashFlow: -53700000 };
+
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const { t } = useTranslation();
+  const [transactions, setTransactions] = useState<any[]>(MOCK_TRANSACTIONS);
   const [branches, setBranches] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,12 +54,7 @@ export default function TransactionsPage() {
   });
 
   // Stats
-  const [stats, setStats] = useState({
-    totalIncome: 0,
-    totalExpense: 0,
-    totalTransfer: 0,
-    netCashFlow: 0
-  });
+  const [stats, setStats] = useState(MOCK_TXN_STATS);
 
   // Pagination
   const [pagination, setPagination] = useState({
@@ -93,6 +104,8 @@ export default function TransactionsPage() {
       }
     } catch (error) {
       console.error('Error fetching transactions:', error);
+      setTransactions(MOCK_TRANSACTIONS);
+      setStats(MOCK_TXN_STATS);
     } finally {
       setLoading(false);
     }
@@ -273,14 +286,19 @@ export default function TransactionsPage() {
   };
 
   return (
+    <PageGuard
+      anyPermission={['finance.view', 'finance.*', 'finance_transactions.view']}
+      title="Transaksi Finance"
+    >
     <HQLayout>
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
-            <p className="text-gray-600 mt-1">Manage all financial transactions</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('finance.trxTitle')}</h1>
+            <p className="text-gray-600 mt-1">{t('finance.trxSubtitle')}</p>
           </div>
+          <CanAccess anyPermission={['finance_transactions.create', 'finance.*']}>
           <button
             onClick={() => {
               setSelectedTransaction(null);
@@ -289,8 +307,9 @@ export default function TransactionsPage() {
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg"
           >
             <Plus className="w-5 h-5" />
-            New Transaction
+            {t('finance.newTransaction')}
           </button>
+          </CanAccess>
         </div>
 
         {/* Stats Cards */}
@@ -298,7 +317,7 @@ export default function TransactionsPage() {
           <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-green-100 text-sm">Total Income</p>
+                <p className="text-green-100 text-sm">{t('finance.totalIncome')}</p>
                 <p className="text-2xl font-bold mt-1">{formatCurrency(stats.totalIncome)}</p>
               </div>
               <TrendingUp className="w-12 h-12 text-green-200" />
@@ -308,7 +327,7 @@ export default function TransactionsPage() {
           <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-red-100 text-sm">Total Expense</p>
+                <p className="text-red-100 text-sm">{t('finance.totalExpense')}</p>
                 <p className="text-2xl font-bold mt-1">{formatCurrency(stats.totalExpense)}</p>
               </div>
               <TrendingDown className="w-12 h-12 text-red-200" />
@@ -318,7 +337,7 @@ export default function TransactionsPage() {
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm">Total Transfer</p>
+                <p className="text-blue-100 text-sm">{t('finance.totalTransfer')}</p>
                 <p className="text-2xl font-bold mt-1">{formatCurrency(stats.totalTransfer)}</p>
               </div>
               <ArrowUpDown className="w-12 h-12 text-blue-200" />
@@ -328,7 +347,7 @@ export default function TransactionsPage() {
           <div className={`bg-gradient-to-br ${stats.netCashFlow >= 0 ? 'from-emerald-500 to-emerald-600' : 'from-orange-500 to-orange-600'} rounded-xl p-6 text-white shadow-lg`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-white/80 text-sm">Net Cash Flow</p>
+                <p className="text-white/80 text-sm">{t('finance.netCashFlow')}</p>
                 <p className="text-2xl font-bold mt-1">{formatCurrency(stats.netCashFlow)}</p>
               </div>
               <DollarSign className="w-12 h-12 text-white/60" />
@@ -342,7 +361,7 @@ export default function TransactionsPage() {
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Search className="w-4 h-4 inline mr-1" />
-                Search
+                {t('finance.search')}
               </label>
               <div className="flex gap-2">
                 <input
@@ -350,7 +369,7 @@ export default function TransactionsPage() {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  placeholder="Search by number or description..."
+                  placeholder={t('finance.trxSearch')}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <button
@@ -365,33 +384,33 @@ export default function TransactionsPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Tag className="w-4 h-4 inline mr-1" />
-                Type
+                {t('finance.type')}
               </label>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="all">All Types</option>
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-                <option value="transfer">Transfer</option>
+                <option value="all">{t('finance.allTypes')}</option>
+                <option value="income">{t('finance.income')}</option>
+                <option value="expense">{t('finance.expense')}</option>
+                <option value="transfer">{t('finance.transfer')}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Filter className="w-4 h-4 inline mr-1" />
-                Status
+                {t('finance.status')}
               </label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="all">All Status</option>
-                <option value="draft">Draft</option>
-                <option value="pending">Pending</option>
+                <option value="all">{t('finance.allStatus')}</option>
+                <option value="draft">{t('finance.draft')}</option>
+                <option value="pending">{t('finance.pending')}</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
@@ -477,7 +496,7 @@ export default function TransactionsPage() {
                     <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                       <div className="flex justify-center items-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                        <span className="ml-3">Loading transactions...</span>
+                        <span className="ml-3">Memuat transaksi...</span>
                       </div>
                     </td>
                   </tr>
@@ -485,8 +504,8 @@ export default function TransactionsPage() {
                   <tr>
                     <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                       <FileText className="w-12 h-12 mx-auto text-gray-400 mb-3" />
-                      <p>No transactions found</p>
-                      <p className="text-sm mt-1">Try adjusting your filters or create a new transaction</p>
+                      <p>Tidak ada transaksi ditemukan</p>
+                      <p className="text-sm mt-1">Coba sesuaikan filter atau buat transaksi baru</p>
                     </td>
                   </tr>
                 ) : (
@@ -519,24 +538,28 @@ export default function TransactionsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedTransaction(transaction);
-                              setShowModal(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Edit"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTransaction(transaction.id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete"
-                            disabled={transaction.status === 'completed'}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <CanAccess anyPermission={['finance_transactions.update', 'finance.*']}>
+                            <button
+                              onClick={() => {
+                                setSelectedTransaction(transaction);
+                                setShowModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800"
+                              title="Ubah"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          </CanAccess>
+                          <CanAccess anyPermission={['finance_transactions.delete', 'finance.*']}>
+                            <button
+                              onClick={() => handleDeleteTransaction(transaction.id)}
+                              className="text-red-600 hover:text-red-800"
+                              title="Hapus"
+                              disabled={transaction.status === 'completed'}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </CanAccess>
                         </div>
                       </td>
                     </tr>
@@ -586,5 +609,6 @@ export default function TransactionsPage() {
         accounts={accounts}
       />
     </HQLayout>
+    </PageGuard>
   );
 }

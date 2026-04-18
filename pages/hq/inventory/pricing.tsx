@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import HQLayout from '../../../components/hq/HQLayout';
 import {
@@ -54,16 +55,17 @@ interface ProductPrice {
   lockedBy: string | null;
 }
 
-const categories = ['Semua Kategori', 'Sembako', 'Minuman', 'Snack', 'Frozen', 'Non-Food'];
+const defaultCategories = ['Sembako', 'Minuman', 'Snack', 'Frozen', 'Non-Food'];
 
 export default function InventoryPricing() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'tiers' | 'products'>('tiers');
   const [priceTiers, setPriceTiers] = useState<PriceTier[]>([]);
   const [productPrices, setProductPrices] = useState<ProductPrice[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Semua Kategori');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [showLockedOnly, setShowLockedOnly] = useState(false);
   
   // Modals
@@ -176,12 +178,12 @@ export default function InventoryPricing() {
         body: JSON.stringify({ id: selectedTier.id, ...tierForm })
       });
       
-      setPriceTiers(prev => prev.map(t => 
-        t.id === selectedTier.id ? { ...t, ...tierForm } : t
+      setPriceTiers(prev => prev.map(pt => 
+        pt.id === selectedTier.id ? { ...pt, ...tierForm } : pt
       ));
     } catch (error) {
-      setPriceTiers(prev => prev.map(t => 
-        t.id === selectedTier.id ? { ...t, ...tierForm } : t
+      setPriceTiers(prev => prev.map(pt => 
+        pt.id === selectedTier.id ? { ...pt, ...tierForm } : pt
       ));
     }
     setSaving(false);
@@ -202,7 +204,7 @@ export default function InventoryPricing() {
     } catch (error) {
       console.error('Error deleting tier:', error);
     }
-    setPriceTiers(prev => prev.filter(t => t.id !== selectedTier.id));
+    setPriceTiers(prev => prev.filter(pt => pt.id !== selectedTier.id));
     setShowDeleteConfirm(false);
     setSelectedTier(null);
   };
@@ -231,8 +233,8 @@ export default function InventoryPricing() {
 
   const handleToggleTierStatus = async (tier: PriceTier) => {
     const newStatus = !tier.isActive;
-    setPriceTiers(prev => prev.map(t => 
-      t.id === tier.id ? { ...t, isActive: newStatus } : t
+    setPriceTiers(prev => prev.map(pt => 
+      pt.id === tier.id ? { ...pt, isActive: newStatus } : pt
     ));
   };
 
@@ -254,22 +256,22 @@ export default function InventoryPricing() {
     setShowTierModal(true);
   };
 
-  const filteredTiers = priceTiers.filter(t => 
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.code.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTiers = priceTiers.filter(pt => 
+    pt.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    pt.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredProducts = productPrices.filter(p => {
     const matchesSearch = p.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          p.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'Semua Kategori' || p.category === selectedCategory;
+    const matchesCategory = !selectedCategory || p.category === selectedCategory;
     const matchesLock = !showLockedOnly || p.isLocked;
     return matchesSearch && matchesCategory && matchesLock;
   });
 
   const stats = {
     totalTiers: priceTiers.length,
-    activeTiers: priceTiers.filter(t => t.isActive).length,
+    activeTiers: priceTiers.filter(pt => pt.isActive).length,
     totalProducts: productPrices.length,
     lockedProducts: productPrices.filter(p => p.isLocked).length
   };
@@ -284,8 +286,8 @@ export default function InventoryPricing() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Harga & Price Tier</h1>
-              <p className="text-gray-500">Kelola tier harga dan pricing produk</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('inventory.priceTitle')}</h1>
+              <p className="text-gray-500">{t('inventory.priceSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -295,11 +297,11 @@ export default function InventoryPricing() {
               className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
+              {t('inventory.priceRefresh')}
             </button>
             <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
-              Export
+              {t('inventory.priceExport')}
             </button>
           </div>
         </div>
@@ -313,7 +315,7 @@ export default function InventoryPricing() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalTiers}</p>
-                <p className="text-sm text-gray-500">Price Tiers</p>
+                <p className="text-sm text-gray-500">{t('inventory.priceTiers')}</p>
               </div>
             </div>
           </div>
@@ -324,7 +326,7 @@ export default function InventoryPricing() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.activeTiers}</p>
-                <p className="text-sm text-gray-500">Tier Aktif</p>
+                <p className="text-sm text-gray-500">{t('inventory.priceActiveTiers')}</p>
               </div>
             </div>
           </div>
@@ -335,7 +337,7 @@ export default function InventoryPricing() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalProducts}</p>
-                <p className="text-sm text-gray-500">Produk</p>
+                <p className="text-sm text-gray-500">{t('inventory.priceProducts')}</p>
               </div>
             </div>
           </div>
@@ -346,7 +348,7 @@ export default function InventoryPricing() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats.lockedProducts}</p>
-                <p className="text-sm text-gray-500">Harga Terkunci</p>
+                <p className="text-sm text-gray-500">{t('inventory.priceLockedProducts')}</p>
               </div>
             </div>
           </div>
@@ -362,7 +364,7 @@ export default function InventoryPricing() {
                   activeTab === 'tiers' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Price Tiers
+                {t('inventory.priceTabTiers')}
               </button>
               <button
                 onClick={() => { setActiveTab('products'); setSearchTerm(''); }}
@@ -370,7 +372,7 @@ export default function InventoryPricing() {
                   activeTab === 'products' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Harga Produk
+                {t('inventory.priceTabProducts')}
               </button>
             </div>
           </div>
@@ -383,7 +385,7 @@ export default function InventoryPricing() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder={activeTab === 'tiers' ? 'Cari tier...' : 'Cari produk...'}
+                    placeholder={activeTab === 'tiers' ? t('inventory.priceSearchTier') : t('inventory.priceSearchProduct')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-64 focus:ring-2 focus:ring-blue-500"
@@ -396,7 +398,8 @@ export default function InventoryPricing() {
                       onChange={(e) => setSelectedCategory(e.target.value)}
                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
-                      {categories.map(c => (
+                      <option value="">{t('inventory.priceAllCategories')}</option>
+                      {defaultCategories.map(c => (
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
@@ -407,7 +410,7 @@ export default function InventoryPricing() {
                         onChange={(e) => setShowLockedOnly(e.target.checked)}
                         className="rounded border-gray-300"
                       />
-                      Hanya Terkunci
+                      {t('inventory.priceLockedOnly')}
                     </label>
                   </>
                 )}
@@ -418,7 +421,7 @@ export default function InventoryPricing() {
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   <Plus className="w-4 h-4" />
-                  Tambah Tier
+                  {t('inventory.priceAddTier')}
                 </button>
               )}
             </div>
@@ -433,15 +436,15 @@ export default function InventoryPricing() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kode</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nama Tier</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Multiplier</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Markup</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Cabang</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Produk</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThCode')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThName')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThRegion')}</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThMultiplier')}</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThMarkup')}</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThBranch')}</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThProduct')}</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThStatus')}</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThAction')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -473,7 +476,7 @@ export default function InventoryPricing() {
                             onClick={() => handleToggleTierStatus(tier)}
                             className={`px-2 py-1 rounded text-xs ${tier.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}
                           >
-                            {tier.isActive ? 'Aktif' : 'Nonaktif'}
+                            {tier.isActive ? t('inventory.priceActive') : t('inventory.priceInactive')}
                           </button>
                         </td>
                         <td className="px-4 py-3">
@@ -503,16 +506,16 @@ export default function InventoryPricing() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produk</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Harga Pokok</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Harga Jual</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Margin</th>
-                      {priceTiers.filter(t => t.isActive).slice(0, 3).map(tier => (
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThProductName')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThCategory')}</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThCost')}</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThBase')}</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThMargin')}</th>
+                      {priceTiers.filter(pt => pt.isActive).slice(0, 3).map(tier => (
                         <th key={tier.id} className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{tier.name}</th>
                       ))}
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Lock</th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThLock')}</th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.priceThAction')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -530,7 +533,7 @@ export default function InventoryPricing() {
                             {product.margin.toFixed(1)}%
                           </span>
                         </td>
-                        {priceTiers.filter(t => t.isActive).slice(0, 3).map(tier => {
+                        {priceTiers.filter(pt => pt.isActive).slice(0, 3).map(tier => {
                           const tierPrice = product.tierPrices.find(tp => tp.tierId === tier.id);
                           return (
                             <td key={tier.id} className="px-4 py-3 text-right">
@@ -568,7 +571,7 @@ export default function InventoryPricing() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl w-full max-w-lg">
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">{isEditing ? 'Edit Price Tier' : 'Tambah Price Tier'}</h2>
+                <h2 className="text-xl font-bold text-gray-900">{isEditing ? t('inventory.priceEditTier') : t('inventory.priceAddTierModal')}</h2>
                 <button onClick={() => setShowTierModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
@@ -576,28 +579,28 @@ export default function InventoryPricing() {
               <div className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Kode *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.priceCodeLabel')}</label>
                     <input
                       type="text"
                       value={tierForm.code}
                       onChange={(e) => setTierForm(prev => ({ ...prev, code: e.target.value.toUpperCase() }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="STD, MALL"
+                      placeholder={t('inventory.priceCodePlaceholder')}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nama *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.priceNameLabel')}</label>
                     <input
                       type="text"
                       value={tierForm.name}
                       onChange={(e) => setTierForm(prev => ({ ...prev, name: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      placeholder="Harga Standar"
+                      placeholder={t('inventory.priceNamePlaceholder')}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.priceDescLabel')}</label>
                   <textarea
                     value={tierForm.description}
                     onChange={(e) => setTierForm(prev => ({ ...prev, description: e.target.value }))}
@@ -607,7 +610,7 @@ export default function InventoryPricing() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Multiplier</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.priceMultiplierLabel')}</label>
                     <input
                       type="number"
                       step="0.01"
@@ -617,7 +620,7 @@ export default function InventoryPricing() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Markup (%)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.priceMarkupLabel')}</label>
                     <input
                       type="number"
                       value={tierForm.markupPercent}
@@ -627,19 +630,19 @@ export default function InventoryPricing() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.priceRegionLabel')}</label>
                   <input
                     type="text"
                     value={tierForm.region}
                     onChange={(e) => setTierForm(prev => ({ ...prev, region: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    placeholder="Nasional"
+                    placeholder={t('inventory.priceRegionPlaceholder')}
                   />
                 </div>
               </div>
               <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
                 <button onClick={() => setShowTierModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                  Batal
+                  {t('inventory.priceCancel')}
                 </button>
                 <button
                   onClick={isEditing ? handleUpdateTier : handleCreateTier}
@@ -647,7 +650,7 @@ export default function InventoryPricing() {
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
-                  {saving ? 'Menyimpan...' : 'Simpan'}
+                  {saving ? t('inventory.priceSaving') : t('inventory.priceSave')}
                 </button>
               </div>
             </div>
@@ -659,7 +662,7 @@ export default function InventoryPricing() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl w-full max-w-lg">
               <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900">Edit Harga</h2>
+                <h2 className="text-xl font-bold text-gray-900">{t('inventory.priceEditPrice')}</h2>
                 <button onClick={() => setShowPriceModal(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                   <X className="w-5 h-5" />
                 </button>
@@ -682,7 +685,7 @@ export default function InventoryPricing() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Harga Pokok</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.priceCostLabel')}</label>
                     <input
                       type="number"
                       defaultValue={selectedProduct.costPrice}
@@ -691,7 +694,7 @@ export default function InventoryPricing() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Harga Jual Dasar</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventory.priceBaseLabel')}</label>
                     <input
                       type="number"
                       defaultValue={selectedProduct.basePrice}
@@ -702,9 +705,9 @@ export default function InventoryPricing() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Harga per Tier</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('inventory.priceTierPrices')}</label>
                   <div className="space-y-2">
-                    {priceTiers.filter(t => t.isActive).map(tier => {
+                    {priceTiers.filter(pt => pt.isActive).map(tier => {
                       const tierPrice = selectedProduct.tierPrices.find(tp => tp.tierId === tier.id);
                       return (
                         <div key={tier.id} className="flex items-center justify-between py-2 border-b border-gray-100">
@@ -727,20 +730,20 @@ export default function InventoryPricing() {
                 {selectedProduct.isLocked && (
                   <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg text-yellow-800">
                     <AlertTriangle className="w-5 h-5" />
-                    <span className="text-sm">Harga terkunci oleh {selectedProduct.lockedBy}. Unlock untuk mengedit.</span>
+                    <span className="text-sm">{t('inventory.priceLockedWarning').replace('{lockedBy}', selectedProduct.lockedBy || '')}</span>
                   </div>
                 )}
               </div>
               <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
                 <button onClick={() => setShowPriceModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                  Batal
+                  {t('inventory.priceCancel')}
                 </button>
                 <button
                   disabled={selectedProduct.isLocked}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
                   <Save className="w-4 h-4" />
-                  Simpan
+                  {t('inventory.priceSave')}
                 </button>
               </div>
             </div>
@@ -751,16 +754,16 @@ export default function InventoryPricing() {
         {showDeleteConfirm && selectedTier && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl w-full max-w-md p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Hapus Price Tier</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{t('inventory.priceDeleteTier')}</h3>
               <p className="text-gray-600 mb-6">
-                Apakah Anda yakin ingin menghapus tier "{selectedTier.name}"? Aksi ini tidak dapat dibatalkan.
+                {t('inventory.priceDeleteTierConfirm').replace('{name}', selectedTier.name)}
               </p>
               <div className="flex justify-end gap-3">
                 <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                  Batal
+                  {t('inventory.priceCancel')}
                 </button>
                 <button onClick={handleDeleteTier} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                  Hapus
+                  {t('inventory.priceDeleteBtn')}
                 </button>
               </div>
             </div>

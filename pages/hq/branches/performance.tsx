@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import HQLayout from '../../../components/hq/HQLayout';
 import { StatusBadge } from '../../../components/hq/ui/Badge';
 import { toast } from 'react-hot-toast';
@@ -55,7 +56,14 @@ const PIE_COLORS = ['#6366F1', '#3B82F6', '#F59E0B', '#10B981', '#EF4444', '#8B5
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
+const MOCK_BRANCH_PERF: BranchPerformance[] = [
+  { id: 'b1', code: 'HQ-001', name: 'Cabang Jakarta Pusat', type: 'flagship', city: 'Jakarta', manager: 'Budi Santoso', healthScore: 88, healthGrade: 'A', metrics: { salesTarget: 500000000, salesActual: 485000000, achievement: 97, transactions: 2150, avgTicket: 225000, grossProfit: 180000000, grossMargin: 37.1, netProfit: 95000000, netMargin: 19.6, employeeCount: 25, employeeProductivity: 19400000, customerSatisfaction: 4.5, stockTurnover: 8.2 }, growth: { sales: 12.5, transactions: 8.3, profit: 15.2 }, rank: 1, trend: 'up', monthlyData: [{ month: 'Jan', sales: 420000000, target: 450000000, profit: 82000000 }, { month: 'Feb', sales: 465000000, target: 480000000, profit: 90000000 }, { month: 'Mar', sales: 485000000, target: 500000000, profit: 95000000 }] },
+  { id: 'b2', code: 'BR-002', name: 'Cabang Bandung', type: 'standard', city: 'Bandung', manager: 'Siti Rahayu', healthScore: 75, healthGrade: 'B', metrics: { salesTarget: 350000000, salesActual: 312000000, achievement: 89.1, transactions: 1480, avgTicket: 210000, grossProfit: 115000000, grossMargin: 36.9, netProfit: 58000000, netMargin: 18.6, employeeCount: 18, employeeProductivity: 17333000, customerSatisfaction: 4.2, stockTurnover: 7.1 }, growth: { sales: 5.8, transactions: 3.2, profit: 7.5 }, rank: 2, trend: 'up', monthlyData: [{ month: 'Jan', sales: 280000000, target: 320000000, profit: 48000000 }, { month: 'Feb', sales: 295000000, target: 340000000, profit: 52000000 }, { month: 'Mar', sales: 312000000, target: 350000000, profit: 58000000 }] },
+  { id: 'b3', code: 'BR-003', name: 'Cabang Surabaya', type: 'standard', city: 'Surabaya', manager: 'Ahmad Wijaya', healthScore: 68, healthGrade: 'C', metrics: { salesTarget: 400000000, salesActual: 320000000, achievement: 80, transactions: 1250, avgTicket: 256000, grossProfit: 105000000, grossMargin: 32.8, netProfit: 42000000, netMargin: 13.1, employeeCount: 20, employeeProductivity: 16000000, customerSatisfaction: 3.9, stockTurnover: 6.5 }, growth: { sales: -2.1, transactions: -1.5, profit: -5.3 }, rank: 3, trend: 'down' },
+];
+
 export default function BranchPerformancePage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [branches, setBranches] = useState<BranchPerformance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,33 +72,46 @@ export default function BranchPerformancePage() {
   const [selectedBranch, setSelectedBranch] = useState<BranchPerformance | null>(null);
   const [subTab, setSubTab] = useState<'overview' | 'kpi' | 'comparison'>('overview');
   const [exporting, setExporting] = useState(false);
+  const [usingMock, setUsingMock] = useState(false);
 
   const fetchPerformance = async () => {
     setLoading(true);
     try {
-      // Try enhanced API first
       const res = await fetch(`/api/hq/branches/enhanced?action=performance&period=${period}&industry=${industry}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.data?.branches?.length > 0) {
           setBranches(json.data.branches);
+          setUsingMock(false);
           return;
         }
       }
-      // Fallback to original API
       const response = await fetch(`/api/hq/branches/performance?period=${period}`);
       if (response.ok) {
         const data = await response.json();
-        setBranches(data.data?.branches || data.branches || []);
+        const list = data.data?.branches || data.branches || [];
+        if (list.length > 0) {
+          setBranches(list);
+          setUsingMock(false);
+          return;
+        }
       }
+      setBranches(MOCK_BRANCH_PERF);
+      setUsingMock(true);
     } catch (error) {
       console.error('Error fetching performance:', error);
+      setBranches(MOCK_BRANCH_PERF);
+      setUsingMock(true);
     } finally {
       setLoading(false);
     }
   };
 
   const handleExport = async () => {
+    if (branches.length === 0) {
+      toast.error(t('branchPerformance.noData') || 'Tidak ada data');
+      return;
+    }
     setExporting(true);
     try {
       const rows = branches.map(b => ({
@@ -108,8 +129,8 @@ export default function BranchPerformancePage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = `branch-performance-${period}-${new Date().toISOString().slice(0,10)}.csv`; a.click();
       URL.revokeObjectURL(url);
-      toast.success('Data performa berhasil di-export');
-    } catch { toast.error('Gagal export'); } finally { setExporting(false); }
+      toast.success(t('branchPerformance.exportSuccess'));
+    } catch { toast.error(t('branchPerformance.exportFailed')); } finally { setExporting(false); }
   };
 
   useEffect(() => {
@@ -176,20 +197,28 @@ export default function BranchPerformancePage() {
 
   // Achievement distribution for PieChart
   const achievementDist = [
-    { name: 'Exceed (>110%)', value: branches.filter(b => b.metrics.achievement > 110).length },
-    { name: 'On Target (100-110%)', value: branches.filter(b => b.metrics.achievement >= 100 && b.metrics.achievement <= 110).length },
-    { name: 'Near (80-99%)', value: branches.filter(b => b.metrics.achievement >= 80 && b.metrics.achievement < 100).length },
-    { name: 'Below (<80%)', value: branches.filter(b => b.metrics.achievement < 80).length },
+    { name: t('branchPerformance.exceeded'), value: branches.filter(b => b.metrics.achievement > 110).length },
+    { name: t('branchPerformance.achieved'), value: branches.filter(b => b.metrics.achievement >= 100 && b.metrics.achievement <= 110).length },
+    { name: t('branchPerformance.almost'), value: branches.filter(b => b.metrics.achievement >= 80 && b.metrics.achievement < 100).length },
+    { name: t('branchPerformance.below'), value: branches.filter(b => b.metrics.achievement < 80).length },
   ].filter(d => d.value > 0);
 
   return (
-    <HQLayout title="Performa Cabang" subtitle="Analisis kinerja multi-industri">
+    <HQLayout title={t('branchPerformance.title')} subtitle={t('branchPerformance.subtitle')}>
       <div className="space-y-6">
+        {usingMock && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <strong>Mode Demo:</strong>
+            <span>menampilkan data sampel kinerja cabang. Sambungkan data transaksi untuk melihat metrik real.</span>
+          </div>
+        )}
+
         {/* Header with Period + Industry + Actions */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 bg-white rounded-lg p-1 border border-gray-200">
-              {([{ v: 'week', l: 'Minggu' }, { v: 'month', l: 'Bulan' }, { v: 'quarter', l: 'Kuartal' }, { v: 'year', l: 'Tahun' }] as { v: typeof period; l: string }[]).map(p => (
+              {([{ v: 'week', l: t('branchPerformance.week') }, { v: 'month', l: t('branchPerformance.month') }, { v: 'quarter', l: t('branchPerformance.quarter') }, { v: 'year', l: t('branchPerformance.year') }] as { v: typeof period; l: string }[]).map(p => (
                 <button key={p.v} onClick={() => setPeriod(p.v)} className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${period === p.v ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>{p.l}</button>
               ))}
             </div>
@@ -199,19 +228,19 @@ export default function BranchPerformancePage() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={fetchPerformance} disabled={loading} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('branchPerformance.refresh')}
             </button>
             <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
-              <Download className={`w-4 h-4 ${exporting ? 'animate-spin' : ''}`} /> Export
+              <Download className={`w-4 h-4 ${exporting ? 'animate-spin' : ''}`} /> {t('branchPerformance.export')}
             </button>
           </div>
         </div>
 
         {/* Sub-tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
-          {[{ v: 'overview' as const, l: 'Overview', icon: BarChart3 }, { v: 'kpi' as const, l: 'Industry KPI', icon: Gauge }, { v: 'comparison' as const, l: 'Comparison', icon: Activity }].map(t => (
-            <button key={t.v} onClick={() => setSubTab(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${subTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
-              <t.icon className="w-4 h-4" />{t.l}
+          {[{ v: 'overview' as const, l: t('branchPerformance.tabOverview'), icon: BarChart3 }, { v: 'kpi' as const, l: t('branchPerformance.tabKpi'), icon: Gauge }, { v: 'comparison' as const, l: t('branchPerformance.tabComparison'), icon: Activity }].map(tb => (
+            <button key={tb.v} onClick={() => setSubTab(tb.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${subTab === tb.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+              <tb.icon className="w-4 h-4" />{tb.l}
             </button>
           ))}
         </div>
@@ -219,29 +248,29 @@ export default function BranchPerformancePage() {
         {/* Summary Stats */}
         <div className="grid grid-cols-6 gap-4">
           <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><DollarSign className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Total Sales</span></div>
+            <div className="flex items-center gap-2 mb-2"><DollarSign className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">{t('branchPerformance.totalSales')}</span></div>
             <p className="text-xl font-bold">{formatCurrency(totalStats.totalSales)}</p>
-            <p className="text-xs opacity-70">Target: {formatCurrency(totalStats.totalTarget)}</p>
+            <p className="text-xs opacity-70">{t('branchPerformance.target')}: {formatCurrency(totalStats.totalTarget)}</p>
           </div>
           <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><Target className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Achievement</span></div>
+            <div className="flex items-center gap-2 mb-2"><Target className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">{t('branchPerformance.achievement')}</span></div>
             <p className="text-xl font-bold">{totalStats.avgAchievement.toFixed(1)}%</p>
-            <p className="text-xs opacity-70">{totalStats.onTarget}/{branches.length} on target</p>
+            <p className="text-xs opacity-70">{totalStats.onTarget}/{branches.length} {t('branchPerformance.reachTarget')}</p>
           </div>
           <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><Building2 className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Cabang</span></div>
+            <div className="flex items-center gap-2 mb-2"><Building2 className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">{t('branchPerformance.branches')}</span></div>
             <p className="text-xl font-bold">{branches.length}</p>
           </div>
           <div className="bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><ShoppingCart className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Transaksi</span></div>
+            <div className="flex items-center gap-2 mb-2"><ShoppingCart className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">{t('branchPerformance.transactions')}</span></div>
             <p className="text-xl font-bold">{branches.reduce((s, b) => s + b.metrics.transactions, 0).toLocaleString()}</p>
           </div>
           <div className="bg-gradient-to-br from-teal-500 to-teal-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><Star className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Satisfaction</span></div>
+            <div className="flex items-center gap-2 mb-2"><Star className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">{t('branchPerformance.satisfaction')}</span></div>
             <p className="text-xl font-bold">{totalStats.avgSatisfaction.toFixed(1)}/5</p>
           </div>
           <div className="bg-gradient-to-br from-pink-500 to-pink-700 rounded-xl p-4 text-white">
-            <div className="flex items-center gap-2 mb-2"><Heart className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">Avg Health</span></div>
+            <div className="flex items-center gap-2 mb-2"><Heart className="w-5 h-5 opacity-80" /><span className="text-sm opacity-80">{t('branchPerformance.avgHealth')}</span></div>
             <p className="text-xl font-bold">{branches.length > 0 ? Math.round(branches.reduce((s, b) => s + (b.healthScore || 0), 0) / branches.length) : 0}</p>
           </div>
         </div>
@@ -251,21 +280,21 @@ export default function BranchPerformancePage() {
           {/* Charts Row */}
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 col-span-2">
-              <h3 className="font-semibold text-gray-900 mb-3">Sales vs Target (Juta)</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">{t('branchPerformance.salesVsTarget')}</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={comparisonData}>
                     <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} />
                     <Tooltip formatter={(value: number) => [`Rp ${value.toFixed(0)} Jt`, '']} /><Legend />
-                    <Bar dataKey="sales" name="Aktual" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="target" name="Target" fill="#E5E7EB" radius={[4, 4, 0, 0]} />
-                    <Line type="monotone" dataKey="achievement" name="Achievement %" stroke="#10B981" strokeWidth={2} />
+                    <Bar dataKey="sales" name={t('branchPerformance.actual')} fill="#3B82F6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="target" name={t('branchPerformance.target')} fill="#E5E7EB" radius={[4, 4, 0, 0]} />
+                    <Line type="monotone" dataKey="achievement" name={t('branchPerformance.achievementPct')} stroke="#10B981" strokeWidth={2} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-3">Achievement Distribution</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">{t('branchPerformance.achievementDist')}</h3>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart><Pie data={achievementDist} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
@@ -278,14 +307,14 @@ export default function BranchPerformancePage() {
 
           {/* Radar */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-3">Radar Performa (Top 5)</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">{t('branchPerformance.radarTop5')}</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart data={radarData}>
                   <PolarGrid /><PolarAngleAxis dataKey="branch" tick={{ fontSize: 11 }} /><PolarRadiusAxis angle={30} domain={[0, 120]} tick={{ fontSize: 10 }} />
-                  <Radar name="Sales" dataKey="sales" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
-                  <Radar name="Profit" dataKey="profit" stroke="#10B981" fill="#10B981" fillOpacity={0.3} />
-                  <Radar name="Satisfaction" dataKey="satisfaction" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.3} />
+                  <Radar name={t('branchPerformance.sales')} dataKey="sales" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.3} />
+                  <Radar name={t('branchPerformance.profit')} dataKey="profit" stroke="#10B981" fill="#10B981" fillOpacity={0.3} />
+                  <Radar name={t('branchPerformance.satisfaction')} dataKey="satisfaction" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.3} />
                   <Legend />
                 </RadarChart>
               </ResponsiveContainer>
@@ -294,22 +323,22 @@ export default function BranchPerformancePage() {
 
           {/* Leaderboard */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-4 border-b border-gray-200"><h3 className="font-semibold text-gray-900">Ranking Performa Cabang</h3></div>
+            <div className="p-4 border-b border-gray-200"><h3 className="font-semibold text-gray-900">{t('branchPerformance.rankingTitle')}</h3></div>
             <div className="overflow-x-auto">
               {loading ? (
                 <div className="flex justify-center py-12"><RefreshCw className="w-8 h-8 animate-spin text-blue-600" /></div>
               ) : (
                 <table className="w-full">
                   <thead><tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="text-center py-3 px-3 font-medium text-gray-500 w-14">Rank</th>
-                    <th className="text-left py-3 px-3 font-medium text-gray-500">Cabang</th>
-                    <th className="text-right py-3 px-3 font-medium text-gray-500">Sales</th>
-                    <th className="text-center py-3 px-3 font-medium text-gray-500">Achievement</th>
-                    <th className="text-center py-3 px-3 font-medium text-gray-500">Growth</th>
-                    <th className="text-center py-3 px-3 font-medium text-gray-500">Margin</th>
-                    <th className="text-center py-3 px-3 font-medium text-gray-500">Satisfaction</th>
-                    <th className="text-center py-3 px-3 font-medium text-gray-500">Health</th>
-                    <th className="text-center py-3 px-3 font-medium text-gray-500">Trend</th>
+                    <th className="text-center py-3 px-3 font-medium text-gray-500 w-14">{t('branchPerformance.rank')}</th>
+                    <th className="text-left py-3 px-3 font-medium text-gray-500">{t('branchPerformance.branch')}</th>
+                    <th className="text-right py-3 px-3 font-medium text-gray-500">{t('branchPerformance.sales')}</th>
+                    <th className="text-center py-3 px-3 font-medium text-gray-500">{t('branchPerformance.achievement')}</th>
+                    <th className="text-center py-3 px-3 font-medium text-gray-500">{t('branchPerformance.growth')}</th>
+                    <th className="text-center py-3 px-3 font-medium text-gray-500">{t('branchPerformance.margin')}</th>
+                    <th className="text-center py-3 px-3 font-medium text-gray-500">{t('branchPerformance.satisfaction')}</th>
+                    <th className="text-center py-3 px-3 font-medium text-gray-500">{t('branchPerformance.health')}</th>
+                    <th className="text-center py-3 px-3 font-medium text-gray-500">{t('branchPerformance.trend')}</th>
                   </tr></thead>
                   <tbody>
                     {[...branches].sort((a, b) => a.rank - b.rank).map(branch => (
@@ -356,28 +385,28 @@ export default function BranchPerformancePage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h3 className="font-semibold text-gray-900">{selectedBranch.name} — Detail</h3>
-                  <p className="text-sm text-gray-500">Manager: {selectedBranch.manager} • Health: <span className={`font-bold ${getHealthColor(selectedBranch.healthScore || 0)}`}>{selectedBranch.healthGrade || '?'} ({selectedBranch.healthScore || 0})</span></p>
+                  <h3 className="font-semibold text-gray-900">{selectedBranch.name} — {t('branchPerformance.detail')}</h3>
+                  <p className="text-sm text-gray-500">{t('branchPerformance.manager')}: {selectedBranch.manager} • Health: <span className={`font-bold ${getHealthColor(selectedBranch.healthScore || 0)}`}>{selectedBranch.healthGrade || '?'} ({selectedBranch.healthScore || 0})</span></p>
                 </div>
-                <button onClick={() => setSelectedBranch(null)} className="text-sm text-gray-400 hover:text-gray-700">Tutup</button>
+                <button onClick={() => setSelectedBranch(null)} className="text-sm text-gray-400 hover:text-gray-700">{t('branchPerformance.close')}</button>
               </div>
               {selectedBranch.monthlyData && selectedBranch.monthlyData.length > 0 ? (
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={selectedBranch.monthlyData}>
                       <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="month" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} /><Tooltip /><Legend />
-                      <Area type="monotone" dataKey="sales" name="Sales" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.2} />
-                      <Line type="monotone" dataKey="target" name="Target" stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" />
-                      <Bar dataKey="profit" name="Profit" fill="#10B981" radius={[4, 4, 0, 0]} />
+                      <Area type="monotone" dataKey="sales" name={t('branchPerformance.sales')} stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.2} />
+                      <Line type="monotone" dataKey="target" name={t('branchPerformance.target')} stroke="#EF4444" strokeWidth={2} strokeDasharray="5 5" />
+                      <Bar dataKey="profit" name={t('branchPerformance.profit')} fill="#10B981" radius={[4, 4, 0, 0]} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
                 <div className="grid grid-cols-4 gap-3">
-                  <div className="bg-blue-50 rounded-lg p-3"><p className="text-xs text-blue-600">Sales</p><p className="text-lg font-bold text-blue-900">{formatCurrency(selectedBranch.metrics.salesActual)}</p></div>
-                  <div className="bg-green-50 rounded-lg p-3"><p className="text-xs text-green-600">Achievement</p><p className="text-lg font-bold text-green-900">{selectedBranch.metrics.achievement}%</p></div>
-                  <div className="bg-purple-50 rounded-lg p-3"><p className="text-xs text-purple-600">Margin</p><p className="text-lg font-bold text-purple-900">{selectedBranch.metrics.netMargin?.toFixed?.(1) || selectedBranch.metrics.netMargin}%</p></div>
-                  <div className="bg-orange-50 rounded-lg p-3"><p className="text-xs text-orange-600">Growth</p><p className="text-lg font-bold text-orange-900">{selectedBranch.growth.sales >= 0 ? '+' : ''}{selectedBranch.growth.sales}%</p></div>
+                  <div className="bg-blue-50 rounded-lg p-3"><p className="text-xs text-blue-600">{t('branchPerformance.salesLabel')}</p><p className="text-lg font-bold text-blue-900">{formatCurrency(selectedBranch.metrics.salesActual)}</p></div>
+                  <div className="bg-green-50 rounded-lg p-3"><p className="text-xs text-green-600">{t('branchPerformance.achievementLabel')}</p><p className="text-lg font-bold text-green-900">{selectedBranch.metrics.achievement}%</p></div>
+                  <div className="bg-purple-50 rounded-lg p-3"><p className="text-xs text-purple-600">{t('branchPerformance.marginLabel')}</p><p className="text-lg font-bold text-purple-900">{selectedBranch.metrics.netMargin?.toFixed?.(1) || selectedBranch.metrics.netMargin}%</p></div>
+                  <div className="bg-orange-50 rounded-lg p-3"><p className="text-xs text-orange-600">{t('branchPerformance.growthLabel')}</p><p className="text-lg font-bold text-orange-900">{selectedBranch.growth.sales >= 0 ? '+' : ''}{selectedBranch.growth.sales}%</p></div>
                 </div>
               )}
             </div>
@@ -388,12 +417,12 @@ export default function BranchPerformancePage() {
         {subTab === 'kpi' && (
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <p className="text-sm text-blue-700"><strong>Industry KPI — {INDUSTRY_OPTIONS.find(i => i.value === industry)?.label}</strong>: KPI di bawah ini disesuaikan dengan industri yang dipilih. Ubah industri di header untuk melihat KPI spesifik industri lain.</p>
+              <p className="text-sm text-blue-700"><strong>{t('branchPerformance.industryKpiTitle')} — {INDUSTRY_OPTIONS.find(i => i.value === industry)?.label}</strong>: {t('branchPerformance.industryKpiDesc')}</p>
             </div>
             {loading ? (
               <div className="flex justify-center py-12"><RefreshCw className="w-8 h-8 animate-spin text-blue-600" /></div>
             ) : branches.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">Tidak ada data</div>
+              <div className="text-center py-12 text-gray-400">{t('branchPerformance.noData')}</div>
             ) : (
               <div className="space-y-4">
                 {branches.map(branch => (
@@ -436,7 +465,7 @@ export default function BranchPerformancePage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-400">Pilih industri spesifik untuk melihat KPI.</p>
+                      <p className="text-sm text-gray-400">{t('branchPerformance.selectIndustryForKpi')}</p>
                     )}
                   </div>
                 ))}
@@ -451,28 +480,28 @@ export default function BranchPerformancePage() {
             <div className="grid grid-cols-2 gap-4">
               {/* Growth Comparison */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <h3 className="font-semibold text-gray-900 mb-3">Sales Growth Comparison (%)</h3>
+  <h3 className="font-semibold text-gray-900 mb-3">{t('branchPerformance.salesGrowthComparison')}</h3>
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={branches.map(b => ({ name: b.name.replace('Cabang ', '').substring(0, 12), sales: b.growth.sales, tx: b.growth.transactions, profit: b.growth.profit }))} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" /><XAxis type="number" /><YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 10 }} />
                       <Tooltip /><Legend />
-                      <Bar dataKey="sales" name="Sales %" fill="#3B82F6" radius={[0, 4, 4, 0]} />
-                      <Bar dataKey="profit" name="Profit %" fill="#10B981" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="sales" name={t('branchPerformance.salesPct')} fill="#3B82F6" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="profit" name={t('branchPerformance.profitPct')} fill="#10B981" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
               {/* Margin Comparison */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                <h3 className="font-semibold text-gray-900 mb-3">Margin & Efficiency</h3>
+<h3 className="font-semibold text-gray-900 mb-3">{t('branchPerformance.marginEfficiency')}</h3>
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={branches.map(b => ({ name: b.name.replace('Cabang ', '').substring(0, 12), gross: b.metrics.grossMargin, net: b.metrics.netMargin, turnover: b.metrics.stockTurnover }))}>
                       <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 10 }} />
                       <Tooltip /><Legend />
-                      <Bar dataKey="gross" name="Gross Margin %" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="net" name="Net Margin %" fill="#EC4899" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="gross" name={t('branchPerformance.grossMarginPct')} fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="net" name={t('branchPerformance.netMarginPct')} fill="#EC4899" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -480,18 +509,18 @@ export default function BranchPerformancePage() {
             </div>
             {/* Satisfaction & Health Matrix */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-3">Performance Matrix</h3>
+<h3 className="font-semibold text-gray-900 mb-3">{t('branchPerformance.perfMatrix')}</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="bg-gray-50 border-b">
-                    <th className="py-2 px-3 text-left font-medium text-gray-500">Cabang</th>
-                    <th className="py-2 px-3 text-center font-medium text-gray-500">Achievement</th>
-                    <th className="py-2 px-3 text-center font-medium text-gray-500">Growth</th>
-                    <th className="py-2 px-3 text-center font-medium text-gray-500">Gross %</th>
-                    <th className="py-2 px-3 text-center font-medium text-gray-500">Net %</th>
-                    <th className="py-2 px-3 text-center font-medium text-gray-500">Satisfaction</th>
-                    <th className="py-2 px-3 text-center font-medium text-gray-500">Turnover</th>
-                    <th className="py-2 px-3 text-center font-medium text-gray-500">Health</th>
+                    <th className="py-2 px-3 text-left font-medium text-gray-500">{t('branchPerformance.branch')}</th>
+                    <th className="py-2 px-3 text-center font-medium text-gray-500">{t('branchPerformance.achievement')}</th>
+                    <th className="py-2 px-3 text-center font-medium text-gray-500">{t('branchPerformance.growth')}</th>
+                    <th className="py-2 px-3 text-center font-medium text-gray-500">{t('branchPerformance.grossPct')}</th>
+                    <th className="py-2 px-3 text-center font-medium text-gray-500">{t('branchPerformance.netPct')}</th>
+                    <th className="py-2 px-3 text-center font-medium text-gray-500">{t('branchPerformance.satisfaction')}</th>
+                    <th className="py-2 px-3 text-center font-medium text-gray-500">{t('branchPerformance.turnover')}</th>
+                    <th className="py-2 px-3 text-center font-medium text-gray-500">{t('branchPerformance.health')}</th>
                   </tr></thead>
                   <tbody className="divide-y divide-gray-100">
                     {[...branches].sort((a, b) => a.rank - b.rank).map(b => (

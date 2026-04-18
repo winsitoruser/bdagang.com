@@ -24,6 +24,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../auth/[...nextauth]';
 import { withModuleGuard } from '../../../../lib/middleware/withModuleGuard';
 import { logAudit } from '../../../../lib/audit/auditLogger';
+import { ensureVisitLinkedTask, syncTaskStatusFromVisit } from '../../../../lib/sfa/visitTaskSync';
 
 let sequelize: any;
 try { sequelize = require('../../../../lib/sequelize'); } catch (e) {}
@@ -456,26 +457,56 @@ async function deleteActivity(_req: NextApiRequest, res: NextApiResponse, id: st
 // ════════════════════════════════════════════════════════════════
 async function getVisits(req: NextApiRequest, res: NextApiResponse, tenantId: string) {
   const { salesperson_id, status, date_from, date_to } = req.query;
-  let where = 'WHERE tenant_id = :tid';
+  let where = 'WHERE v.tenant_id = :tid';
   const params: any = { tid: tenantId };
-  if (salesperson_id) { where += ' AND salesperson_id = :sp'; params.sp = salesperson_id; }
-  if (status) { where += ' AND status = :status'; params.status = status; }
-  if (date_from) { where += ' AND visit_date >= :from'; params.from = date_from; }
-  if (date_to) { where += ' AND visit_date <= :to'; params.to = date_to; }
+  if (salesperson_id) { where += ' AND v.salesperson_id = :sp'; params.sp = salesperson_id; }
+  if (status) { where += ' AND v.status = :status'; params.status = status; }
+  if (date_from) { where += ' AND v.visit_date >= :from'; params.from = date_from; }
+  if (date_to) { where += ' AND v.visit_date <= :to'; params.to = date_to; }
 
-  const visits = await q(`SELECT * FROM sfa_visits ${where} ORDER BY visit_date DESC, check_in_time DESC LIMIT 200`, params);
+  const visits = await q(`
+    SELECT v.*,
+      u.name AS salesperson_name,
+      (SELECT ct.id::text FROM crm_tasks ct
+        WHERE ct.tenant_id = v.tenant_id AND ct.sfa_visit_id = v.id
+        ORDER BY ct.created_at DESC NULLS LAST LIMIT 1) AS linked_crm_task_id
+    FROM sfa_visits v
+    LEFT JOIN users u ON u.id = v.salesperson_id
+    ${where}
+    ORDER BY v.visit_date DESC, v.check_in_time DESC NULLS LAST
+    LIMIT 200`, params);
   return res.json({ success: true, data: visits });
 }
 
 async function createVisit(req: NextApiRequest, res: NextApiResponse, tenantId: string, session: any) {
   const { salesperson_id, lead_id, opportunity_id, customer_name, visit_type, purpose, visit_date } = req.body;
-  const ok = await qExec(`
+  const vdate = visit_date || new Date().toISOString().split('T')[0];
+  const sp = salesperson_id != null && salesperson_id !== '' ? Number(salesperson_id) : Number(session?.user?.id) || 0;
+  const rows = await q(`
     INSERT INTO sfa_visits (tenant_id, salesperson_id, lead_id, opportunity_id, customer_name, visit_type, purpose, visit_date, status)
     VALUES (:tenantId, :sp, :lead_id, :opp_id, :customer_name, :visit_type, :purpose, :visit_date, 'planned')
+    RETURNING id, customer_name, purpose, visit_date, salesperson_id
   `, {
-    tenantId, sp: salesperson_id || 0, lead_id: lead_id || null, opp_id: opportunity_id || null, customer_name: customer_name || '', visit_type: visit_type || 'regular', purpose: purpose || '', visit_date: visit_date || new Date().toISOString().split('T')[0]
+    tenantId, sp, lead_id: lead_id || null, opp_id: opportunity_id || null, customer_name: customer_name || '', visit_type: visit_type || 'regular', purpose: purpose || '', visit_date: vdate,
   });
-  return ok ? res.status(201).json({ success: true, message: 'Kunjungan dijadwalkan' }) : res.status(500).json({ success: false, error: 'Failed' });
+  const row = rows[0];
+  if (row?.id) {
+    await ensureVisitLinkedTask({
+      tenantId,
+      visit: {
+        id: row.id,
+        customer_name: row.customer_name || customer_name,
+        purpose: row.purpose || purpose,
+        visit_date: row.visit_date || vdate,
+        salesperson_id: row.salesperson_id ?? sp,
+      },
+      createdByUserId: session?.user?.id != null ? Number(session.user.id) : null,
+      assigneeUserId: sp || (session?.user?.id != null ? Number(session.user.id) : null),
+    });
+  }
+  return rows.length
+    ? res.status(201).json({ success: true, message: 'Kunjungan dijadwalkan', data: { id: row.id } })
+    : res.status(500).json({ success: false, error: 'Failed' });
 }
 
 async function checkinVisit(req: NextApiRequest, res: NextApiResponse, tenantId: string, session: any) {
@@ -484,9 +515,10 @@ async function checkinVisit(req: NextApiRequest, res: NextApiResponse, tenantId:
 
   const ok = await qExec(`
     UPDATE sfa_visits SET status = 'in_progress', check_in_time = NOW(), check_in_lat = :lat, check_in_lng = :lng, check_in_address = :address, check_in_photo_url = :photo
-    WHERE id = :visit_id
-  `, { visit_id, lat: lat || null, lng: lng || null, address: address || '', photo: photo_url || '' });
+    WHERE id = :visit_id AND tenant_id = :tid
+  `, { visit_id, lat: lat || null, lng: lng || null, address: address || '', photo: photo_url || '', tid: tenantId });
 
+  if (ok) await syncTaskStatusFromVisit(tenantId, visit_id);
   return ok ? res.json({ success: true, message: 'Check-in berhasil' }) : res.status(500).json({ success: false, error: 'Failed' });
 }
 
@@ -498,11 +530,12 @@ async function checkoutVisit(req: NextApiRequest, res: NextApiResponse, tenantId
     UPDATE sfa_visits SET status = 'completed', check_out_time = NOW(), check_out_lat = :lat, check_out_lng = :lng, check_out_address = :address, check_out_photo_url = :photo,
       outcome = :outcome, outcome_notes = :notes, order_taken = :order_taken, order_value = :order_value, feedback = :feedback, next_visit_date = :next_date,
       duration_minutes = EXTRACT(EPOCH FROM (NOW() - check_in_time))::integer / 60
-    WHERE id = :visit_id
+    WHERE id = :visit_id AND tenant_id = :tid
   `, {
-    visit_id, lat: lat || null, lng: lng || null, address: address || '', photo: photo_url || '', outcome: outcome || 'no_order', notes: outcome_notes || '', order_taken: order_taken || false, order_value: order_value || 0, feedback: feedback || '', next_date: next_visit_date || null
+    visit_id, tid: tenantId, lat: lat || null, lng: lng || null, address: address || '', photo: photo_url || '', outcome: outcome || 'no_order', notes: outcome_notes || '', order_taken: order_taken || false, order_value: order_value || 0, feedback: feedback || '', next_date: next_visit_date || null,
   });
 
+  if (ok) await syncTaskStatusFromVisit(tenantId, visit_id);
   return ok ? res.json({ success: true, message: 'Check-out berhasil' }) : res.status(500).json({ success: false, error: 'Failed' });
 }
 
@@ -515,7 +548,8 @@ async function updateVisit(req: NextApiRequest, res: NextApiResponse, tenantId: 
     if (data[key] !== undefined) { sets.push(`${key} = :${key}`); params[key] = data[key]; }
   }
   sets.push('updated_at = NOW()');
-  const ok = await qExec(`UPDATE sfa_visits SET ${sets.join(', ')} WHERE id = :id`, params);
+  const ok = await qExec(`UPDATE sfa_visits SET ${sets.join(', ')} WHERE id = :id AND tenant_id = :tid`, { ...params, tid: tenantId });
+  if (ok && data.status !== undefined) await syncTaskStatusFromVisit(tenantId, id);
   return ok ? res.json({ success: true }) : res.status(500).json({ success: false, error: 'Failed' });
 }
 

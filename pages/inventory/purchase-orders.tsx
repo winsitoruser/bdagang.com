@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,7 @@ interface PurchaseOrder {
 const PurchaseOrdersPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t, formatCurrency } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterPayment, setFilterPayment] = useState<string>('all');
@@ -213,23 +215,16 @@ const PurchaseOrdersPage: React.FC = () => {
     }
   ];
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      draft: { color: 'bg-gray-100 text-gray-700', label: 'Draft' },
-      pending: { color: 'bg-yellow-100 text-yellow-700', label: 'Pending Approval' },
-      approved: { color: 'bg-blue-100 text-blue-700', label: 'Approved' },
-      ordered: { color: 'bg-indigo-100 text-indigo-700', label: 'Ordered' },
-      partial: { color: 'bg-orange-100 text-orange-700', label: 'Partial Received' },
-      received: { color: 'bg-green-100 text-green-700', label: 'Received' },
-      cancelled: { color: 'bg-red-100 text-red-700', label: 'Cancelled' }
+      draft: { color: 'bg-gray-100 text-gray-700', label: 'Draf' },
+      pending: { color: 'bg-yellow-100 text-yellow-700', label: 'Menunggu Persetujuan' },
+      approved: { color: 'bg-blue-100 text-blue-700', label: 'Disetujui' },
+      ordered: { color: 'bg-indigo-100 text-indigo-700', label: 'Dipesan' },
+      partial: { color: 'bg-orange-100 text-orange-700', label: 'Diterima Sebagian' },
+      received: { color: 'bg-green-100 text-green-700', label: 'Diterima' },
+      cancelled: { color: 'bg-red-100 text-red-700', label: 'Dibatalkan' }
     };
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
     return <Badge className={config.color}>{config.label}</Badge>;
@@ -237,10 +232,10 @@ const PurchaseOrdersPage: React.FC = () => {
 
   const getPaymentBadge = (status: string) => {
     const statusConfig = {
-      unpaid: { color: 'bg-red-100 text-red-700', label: 'Unpaid' },
-      partial: { color: 'bg-yellow-100 text-yellow-700', label: 'Partial' },
-      paid: { color: 'bg-green-100 text-green-700', label: 'Paid' },
-      overdue: { color: 'bg-red-100 text-red-700 animate-pulse', label: 'Overdue' }
+      unpaid: { color: 'bg-red-100 text-red-700', label: 'Belum Dibayar' },
+      partial: { color: 'bg-yellow-100 text-yellow-700', label: 'Sebagian' },
+      paid: { color: 'bg-green-100 text-green-700', label: 'Lunas' },
+      overdue: { color: 'bg-red-100 text-red-700 animate-pulse', label: 'Jatuh Tempo' }
     };
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.unpaid;
     return <Badge className={config.color}>{config.label}</Badge>;
@@ -277,7 +272,7 @@ const PurchaseOrdersPage: React.FC = () => {
   return (
     <DashboardLayout>
       <Head>
-        <title>Purchase Orders Management | BEDAGANG Cloud POS</title>
+        <title>{t('inventory.purchaseOrders.title')} | BEDAGANG Cloud POS</title>
       </Head>
 
       <div className="space-y-6">
@@ -293,8 +288,8 @@ const PurchaseOrdersPage: React.FC = () => {
                     <FaFileInvoice className="w-7 h-7" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold">Purchase Orders Management</h1>
-                    <p className="text-blue-100 text-sm">Kelola pesanan pembelian, tracking, dan pembayaran</p>
+                    <h1 className="text-3xl font-bold">{t('inventory.purchaseOrders.title')}</h1>
+                    <p className="text-blue-100 text-sm">{t('inventory.purchaseOrders.subtitle')}</p>
                   </div>
                 </div>
               </div>
@@ -303,38 +298,38 @@ const PurchaseOrdersPage: React.FC = () => {
                 className="bg-white/20 hover:bg-white/30 backdrop-blur-sm"
               >
                 <FaPlus className="mr-2" />
-                Create New PO
+                {t('inventory.purchaseOrders.createNew')}
               </Button>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <p className="text-xs text-blue-100">Total PO</p>
+                <p className="text-xs text-blue-100">{t('inventory.purchaseOrders.totalPO')}</p>
                 <p className="text-2xl font-bold">{stats.total}</p>
               </div>
               <div className="bg-yellow-500/30 backdrop-blur-sm rounded-lg p-3 border border-yellow-400/30">
-                <p className="text-xs text-yellow-100">Pending</p>
+                <p className="text-xs text-yellow-100">{t('inventory.purchaseOrders.pending')}</p>
                 <p className="text-2xl font-bold">{stats.pending}</p>
               </div>
               <div className="bg-indigo-500/30 backdrop-blur-sm rounded-lg p-3 border border-indigo-400/30">
-                <p className="text-xs text-indigo-100">Ordered</p>
+                <p className="text-xs text-indigo-100">{t('inventory.purchaseOrders.ordered')}</p>
                 <p className="text-2xl font-bold">{stats.ordered}</p>
               </div>
               <div className="bg-green-500/30 backdrop-blur-sm rounded-lg p-3 border border-green-400/30">
-                <p className="text-xs text-green-100">Received</p>
+                <p className="text-xs text-green-100">{t('inventory.purchaseOrders.received')}</p>
                 <p className="text-2xl font-bold">{stats.received}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <p className="text-xs text-blue-100">Total Value</p>
+                <p className="text-xs text-blue-100">{t('inventory.purchaseOrders.totalValue')}</p>
                 <p className="text-lg font-bold">{formatCurrency(stats.totalValue)}</p>
               </div>
               <div className="bg-orange-500/30 backdrop-blur-sm rounded-lg p-3 border border-orange-400/30">
-                <p className="text-xs text-orange-100">Unpaid</p>
+                <p className="text-xs text-orange-100">{t('inventory.purchaseOrders.unpaid')}</p>
                 <p className="text-lg font-bold">{formatCurrency(stats.unpaidValue)}</p>
               </div>
               <div className="bg-red-500/30 backdrop-blur-sm rounded-lg p-3 border border-red-400/30">
-                <p className="text-xs text-red-100">Overdue</p>
+                <p className="text-xs text-red-100">{t('inventory.purchaseOrders.overdue')}</p>
                 <p className="text-2xl font-bold">{stats.overdue}</p>
               </div>
             </div>
@@ -349,7 +344,7 @@ const PurchaseOrdersPage: React.FC = () => {
                 <div className="relative">
                   <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <Input
-                    placeholder="Cari PO Number atau Supplier..."
+                    placeholder={t('inventory.purchaseOrders.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -362,23 +357,23 @@ const PurchaseOrdersPage: React.FC = () => {
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="ordered">Ordered</option>
-                  <option value="partial">Partial</option>
-                  <option value="received">Received</option>
+                  <option value="all">{t('inventory.purchaseOrders.allStatus')}</option>
+                  <option value="pending">{t('inventory.purchaseOrders.pending')}</option>
+                  <option value="approved">{t('inventory.purchaseOrders.approved')}</option>
+                  <option value="ordered">{t('inventory.purchaseOrders.ordered')}</option>
+                  <option value="partial">{t('inventory.purchaseOrders.partial')}</option>
+                  <option value="received">{t('inventory.purchaseOrders.received')}</option>
                 </select>
                 <select
                   value={filterPayment}
                   onChange={(e) => setFilterPayment(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="all">All Payment</option>
-                  <option value="unpaid">Unpaid</option>
-                  <option value="partial">Partial</option>
-                  <option value="paid">Paid</option>
-                  <option value="overdue">Overdue</option>
+                  <option value="all">{t('inventory.purchaseOrders.allPayment')}</option>
+                  <option value="unpaid">{t('inventory.purchaseOrders.unpaid')}</option>
+                  <option value="partial">{t('inventory.purchaseOrders.partial')}</option>
+                  <option value="paid">{t('inventory.purchaseOrders.paid')}</option>
+                  <option value="overdue">{t('inventory.purchaseOrders.overdue')}</option>
                 </select>
               </div>
             </div>
@@ -388,22 +383,22 @@ const PurchaseOrdersPage: React.FC = () => {
         {/* Orders Table */}
         <Card className="shadow-lg border-0">
           <CardHeader>
-            <CardTitle className="text-xl">Purchase Orders List</CardTitle>
+            <CardTitle className="text-xl">{t('inventory.purchaseOrders.list')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">PO Number</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Supplier</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Order Date</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-700">Expected</th>
-                    <th className="text-center p-4 text-sm font-semibold text-gray-700">Status</th>
-                    <th className="text-right p-4 text-sm font-semibold text-gray-700">Total</th>
-                    <th className="text-right p-4 text-sm font-semibold text-gray-700">Paid</th>
-                    <th className="text-center p-4 text-sm font-semibold text-gray-700">Payment</th>
-                    <th className="text-center p-4 text-sm font-semibold text-gray-700">Actions</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700">{t('inventory.purchaseOrders.poNumber')}</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700">{t('inventory.purchaseOrders.supplier')}</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700">{t('inventory.purchaseOrders.orderDate')}</th>
+                    <th className="text-left p-4 text-sm font-semibold text-gray-700">{t('inventory.purchaseOrders.expected')}</th>
+                    <th className="text-center p-4 text-sm font-semibold text-gray-700">{t('inventory.purchaseOrders.status')}</th>
+                    <th className="text-right p-4 text-sm font-semibold text-gray-700">{t('inventory.purchaseOrders.total')}</th>
+                    <th className="text-right p-4 text-sm font-semibold text-gray-700">{t('inventory.purchaseOrders.paid')}</th>
+                    <th className="text-center p-4 text-sm font-semibold text-gray-700">{t('inventory.purchaseOrders.payment')}</th>
+                    <th className="text-center p-4 text-sm font-semibold text-gray-700">{t('inventory.purchaseOrders.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -415,7 +410,7 @@ const PurchaseOrdersPage: React.FC = () => {
                       <td className="p-4">
                         <div>
                           <p className="font-semibold text-gray-900">{order.poNumber}</p>
-                          <p className="text-xs text-gray-500">{order.items.length} items</p>
+                          <p className="text-xs text-gray-500">{order.items.length} {t('inventory.purchaseOrders.items')}</p>
                         </div>
                       </td>
                       <td className="p-4">
@@ -440,14 +435,14 @@ const PurchaseOrdersPage: React.FC = () => {
                         <p className="font-semibold text-green-600">{formatCurrency(order.paidAmount)}</p>
                         {order.paidAmount < order.totalAmount && (
                           <p className="text-xs text-gray-500">
-                            Sisa: {formatCurrency(order.totalAmount - order.paidAmount)}
+                            {t('inventory.purchaseOrders.remaining')}: {formatCurrency(order.totalAmount - order.paidAmount)}
                           </p>
                         )}
                       </td>
                       <td className="p-4 text-center">
                         {getPaymentBadge(order.paymentStatus)}
                         {order.paymentStatus === 'overdue' && (
-                          <p className="text-xs text-red-600 mt-1">Due: {order.dueDate}</p>
+                          <p className="text-xs text-red-600 mt-1">{t('inventory.purchaseOrders.dueDate')}: {order.dueDate}</p>
                         )}
                       </td>
                       <td className="p-4">
@@ -485,7 +480,7 @@ const PurchaseOrdersPage: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Order Details - {selectedOrder.poNumber}</h2>
+                <h2 className="text-2xl font-bold">{t('inventory.purchaseOrders.orderDetails')} - {selectedOrder.poNumber}</h2>
                 <button
                   onClick={() => setShowDetailModal(false)}
                   className="text-gray-500 hover:text-gray-700"
@@ -497,31 +492,31 @@ const PurchaseOrdersPage: React.FC = () => {
             <div className="p-6">
               <div className="grid grid-cols-2 gap-6 mb-6">
                 <div>
-                  <h3 className="font-semibold text-gray-700 mb-2">Supplier Information</h3>
+                  <h3 className="font-semibold text-gray-700 mb-2">{t('inventory.purchaseOrders.supplierInfo')}</h3>
                   <p className="text-lg font-bold">{selectedOrder.supplier.name}</p>
                   <p className="text-sm text-gray-600">{selectedOrder.supplier.contact}</p>
                   <p className="text-sm text-gray-600">{selectedOrder.supplier.address}</p>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-700 mb-2">Order Information</h3>
+                  <h3 className="font-semibold text-gray-700 mb-2">{t('inventory.purchaseOrders.orderInfo')}</h3>
                   <div className="space-y-1">
-                    <p className="text-sm"><span className="text-gray-600">Order Date:</span> {selectedOrder.orderDate}</p>
-                    <p className="text-sm"><span className="text-gray-600">Expected:</span> {selectedOrder.expectedDelivery}</p>
-                    <p className="text-sm"><span className="text-gray-600">Due Date:</span> {selectedOrder.dueDate}</p>
-                    <p className="text-sm"><span className="text-gray-600">Status:</span> {getStatusBadge(selectedOrder.status)}</p>
+                    <p className="text-sm"><span className="text-gray-600">{t('inventory.purchaseOrders.orderDate')}:</span> {selectedOrder.orderDate}</p>
+                    <p className="text-sm"><span className="text-gray-600">{t('inventory.purchaseOrders.expected')}:</span> {selectedOrder.expectedDelivery}</p>
+                    <p className="text-sm"><span className="text-gray-600">{t('inventory.purchaseOrders.dueDate')}:</span> {selectedOrder.dueDate}</p>
+                    <p className="text-sm"><span className="text-gray-600">{t('inventory.purchaseOrders.status')}:</span> {getStatusBadge(selectedOrder.status)}</p>
                   </div>
                 </div>
               </div>
 
-              <h3 className="font-semibold text-gray-700 mb-3">Order Items</h3>
+              <h3 className="font-semibold text-gray-700 mb-3">{t('inventory.purchaseOrders.orderItems')}</h3>
               <table className="w-full mb-6">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left p-3 text-sm">Product</th>
-                    <th className="text-center p-3 text-sm">Qty</th>
-                    <th className="text-center p-3 text-sm">Received</th>
-                    <th className="text-right p-3 text-sm">Unit Cost</th>
-                    <th className="text-right p-3 text-sm">Subtotal</th>
+                    <th className="text-left p-3 text-sm">{t('inventory.purchaseOrders.product')}</th>
+                    <th className="text-center p-3 text-sm">{t('inventory.purchaseOrders.qty')}</th>
+                    <th className="text-center p-3 text-sm">{t('inventory.purchaseOrders.received')}</th>
+                    <th className="text-right p-3 text-sm">{t('inventory.purchaseOrders.unitCost')}</th>
+                    <th className="text-right p-3 text-sm">{t('inventory.purchaseOrders.subtotal')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -546,22 +541,22 @@ const PurchaseOrdersPage: React.FC = () => {
 
               <div className="border-t pt-4 space-y-2">
                 <div className="flex justify-between text-lg">
-                  <span className="font-semibold">Total Amount:</span>
+                  <span className="font-semibold">{t('inventory.purchaseOrders.totalAmount')}:</span>
                   <span className="font-bold">{formatCurrency(selectedOrder.totalAmount)}</span>
                 </div>
                 <div className="flex justify-between text-lg text-green-600">
-                  <span className="font-semibold">Paid Amount:</span>
+                  <span className="font-semibold">{t('inventory.purchaseOrders.paidAmount')}:</span>
                   <span className="font-bold">{formatCurrency(selectedOrder.paidAmount)}</span>
                 </div>
                 <div className="flex justify-between text-lg text-red-600">
-                  <span className="font-semibold">Outstanding:</span>
+                  <span className="font-semibold">{t('inventory.purchaseOrders.outstanding')}:</span>
                   <span className="font-bold">{formatCurrency(selectedOrder.totalAmount - selectedOrder.paidAmount)}</span>
                 </div>
               </div>
 
               {selectedOrder.notes && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600"><span className="font-semibold">Notes:</span> {selectedOrder.notes}</p>
+                  <p className="text-sm text-gray-600"><span className="font-semibold">{t('inventory.purchaseOrders.notes')}:</span> {selectedOrder.notes}</p>
                 </div>
               )}
             </div>

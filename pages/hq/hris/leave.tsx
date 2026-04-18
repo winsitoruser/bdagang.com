@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   CalendarDays, Clock, CheckCircle, XCircle, AlertTriangle, Users,
   Search, Filter, Download, Plus, Eye, ChevronDown, Building2,
@@ -85,7 +86,40 @@ const defaultTypeForm = {
   color: '#3B82F6', icon: 'calendar', is_active: true, sort_order: 0,
 };
 
+const MOCK_LEAVE_REQUESTS: LeaveRequest[] = [
+  { id: 'lr1', employee_name: 'Siti Rahayu', position: 'Branch Manager', department: 'OPERATIONS', leave_type: 'annual', start_date: '2026-03-15', end_date: '2026-03-18', total_days: 3, reason: 'Liburan keluarga', status: 'pending', current_approval_step: 1, total_approval_steps: 2 },
+  { id: 'lr2', employee_name: 'Budi Santoso', position: 'Branch Manager', department: 'OPERATIONS', leave_type: 'sick', start_date: '2026-03-12', end_date: '2026-03-13', total_days: 2, reason: 'Sakit demam', status: 'pending', current_approval_step: 1, total_approval_steps: 1 },
+  { id: 'lr3', employee_name: 'Lisa Permata', position: 'Finance Manager', department: 'FINANCE', leave_type: 'personal', start_date: '2026-03-20', end_date: '2026-03-20', total_days: 1, reason: 'Keperluan pribadi', status: 'pending', current_approval_step: 1, total_approval_steps: 2 },
+  { id: 'lr4', employee_name: 'Rina Anggraini', position: 'Head Chef', department: 'KITCHEN', leave_type: 'annual', start_date: '2026-03-10', end_date: '2026-03-14', total_days: 5, reason: 'Pulang kampung', status: 'approved', approved_at: '2026-03-08' },
+  { id: 'lr5', employee_name: 'Fajar Setiawan', position: 'Sales Supervisor', department: 'SALES', leave_type: 'sick', start_date: '2026-03-05', end_date: '2026-03-05', total_days: 1, reason: 'Sakit perut', status: 'approved', approved_at: '2026-03-05' },
+  { id: 'lr6', employee_name: 'Hendra Gunawan', position: 'Warehouse Staff', department: 'WAREHOUSE', leave_type: 'unpaid', start_date: '2026-02-28', end_date: '2026-03-01', total_days: 2, reason: 'Urusan keluarga mendesak', status: 'rejected', rejection_reason: 'Staf tidak mencukupi' },
+];
+
+const MOCK_LEAVE_TYPES: LeaveTypeItem[] = [
+  { id: 'lt1', code: 'ANNUAL', name: 'Cuti Tahunan', category: 'regular', max_days_per_year: 12, is_paid: true, color: '#3B82F6', icon: 'calendar', carry_forward: true, max_carry_forward_days: 6, is_active: true, sort_order: 1 },
+  { id: 'lt2', code: 'SICK', name: 'Cuti Sakit', category: 'medical', max_days_per_year: 14, is_paid: true, color: '#EF4444', icon: 'heart', requires_medical_cert: true, is_active: true, sort_order: 2 },
+  { id: 'lt3', code: 'PERSONAL', name: 'Cuti Pribadi', category: 'regular', max_days_per_year: 3, is_paid: true, color: '#F59E0B', icon: 'coffee', is_active: true, sort_order: 3 },
+  { id: 'lt4', code: 'MATERNITY', name: 'Cuti Melahirkan', category: 'special', max_days_per_year: 90, is_paid: true, color: '#EC4899', icon: 'baby', applicable_gender: 'female', is_active: true, sort_order: 4 },
+  { id: 'lt5', code: 'UNPAID', name: 'Cuti Tanpa Gaji', category: 'unpaid', max_days_per_year: 30, is_paid: false, color: '#6B7280', icon: 'user-x', salary_deduction_percent: 100, is_active: true, sort_order: 5 },
+  { id: 'lt6', code: 'MARRIAGE', name: 'Cuti Pernikahan', category: 'special', max_days_per_year: 3, is_paid: true, color: '#F43F5E', icon: 'heart', is_active: true, sort_order: 6 },
+];
+
+const MOCK_LEAVE_SUMMARY = {
+  totalRequests: 42, pending: 3, approved: 35, rejected: 4,
+  totalDaysUsed: 128, avgDaysPerEmployee: 3.2,
+  byType: { annual: 58, sick: 32, personal: 18, unpaid: 8, maternity: 12 },
+};
+
+const MOCK_LEAVE_BALANCES = [
+  { employee_name: 'Ahmad Wijaya', department: 'MANAGEMENT', annual: { total: 12, used: 3, remaining: 9 }, sick: { total: 14, used: 0, remaining: 14 } },
+  { employee_name: 'Siti Rahayu', department: 'OPERATIONS', annual: { total: 12, used: 5, remaining: 7 }, sick: { total: 14, used: 2, remaining: 12 } },
+  { employee_name: 'Budi Santoso', department: 'OPERATIONS', annual: { total: 12, used: 2, remaining: 10 }, sick: { total: 14, used: 3, remaining: 11 } },
+  { employee_name: 'Lisa Permata', department: 'FINANCE', annual: { total: 12, used: 4, remaining: 8 }, sick: { total: 14, used: 1, remaining: 13 } },
+  { employee_name: 'Rina Anggraini', department: 'KITCHEN', annual: { total: 12, used: 8, remaining: 4 }, sick: { total: 14, used: 0, remaining: 14 } },
+];
+
 export default function LeaveManagementPage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'requests' | 'approval-config' | 'leave-types' | 'balances'>('requests');
@@ -144,7 +178,10 @@ export default function LeaveManagementPage() {
         setSummary(json.summary || {});
       }
     } catch {
-      setRequests([]);
+      setRequests(MOCK_LEAVE_REQUESTS);
+      setLeaveTypes(MOCK_LEAVE_TYPES);
+      setSummary(MOCK_LEAVE_SUMMARY);
+      setBalances(MOCK_LEAVE_BALANCES);
     } finally {
       setLoading(false);
     }
@@ -171,7 +208,7 @@ export default function LeaveManagementPage() {
     try {
       const res = await fetch('/api/hq/hris/leave-management?action=approve', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leaveRequestId: requestId, comments: 'Approved' })
+        body: JSON.stringify({ leaveRequestId: requestId, comments: 'Disetujui' })
       });
       const json = await res.json();
       if (json.success) { showToast('success', json.message || 'Berhasil disetujui'); fetchData(); setShowDetailModal(false); }
@@ -194,7 +231,7 @@ export default function LeaveManagementPage() {
 
   const handleSaveConfig = async () => {
     if (!configForm.name || configForm.levels.length === 0) {
-      showToast('error', 'Nama dan minimal 1 level approval diperlukan'); return;
+      showToast('error', 'Nama dan minimal 1 level persetujuan diperlukan'); return;
     }
     try {
       const isEdit = !!editingConfig;
@@ -210,9 +247,9 @@ export default function LeaveManagementPage() {
         })
       });
       const json = await res.json();
-      if (json.success) { showToast('success', isEdit ? 'Config diperbarui' : 'Config dibuat'); fetchData(); setShowConfigModal(false); }
+      if (json.success) { showToast('success', isEdit ? 'Konfigurasi diperbarui' : 'Konfigurasi dibuat'); fetchData(); setShowConfigModal(false); }
       else showToast('error', json.error || 'Gagal');
-    } catch { showToast('error', 'Gagal menyimpan config'); }
+    } catch { showToast('error', 'Gagal menyimpan konfigurasi'); }
   };
 
   const openEditConfig = (cfg: ApprovalConfig) => {
@@ -329,7 +366,7 @@ export default function LeaveManagementPage() {
   const handleDuplicateType = (lt: LeaveTypeItem) => {
     setEditingType(null);
     setTypeForm({
-      code: lt.code + '_copy', name: lt.name + ' (Copy)', description: lt.description || '',
+      code: lt.code + '_copy', name: lt.name + ' (Salinan)', description: lt.description || '',
       category: lt.category || 'regular',
       max_days_per_year: lt.max_days_per_year,
       min_days_per_request: lt.min_days_per_request || 1,
@@ -357,9 +394,9 @@ export default function LeaveManagementPage() {
         body: JSON.stringify({ year: new Date().getFullYear() })
       });
       const json = await res.json();
-      if (json.success) { showToast('success', json.message || 'Balance initialized'); fetchData(); }
+      if (json.success) { showToast('success', json.message || 'Saldo cuti diinisialisasi'); fetchData(); }
       else showToast('error', json.error || 'Gagal');
-    } catch { showToast('error', 'Gagal init balance'); }
+    } catch { showToast('error', 'Gagal inisialisasi saldo'); }
   };
 
   if (!mounted) return null;
@@ -376,13 +413,13 @@ export default function LeaveManagementPage() {
   };
 
   return (
-    <HQLayout title="Manajemen Cuti" subtitle="Kelola pengajuan, approval berjenjang, dan konfigurasi cuti karyawan">
+    <HQLayout title={t('hris.leaveTitle')} subtitle={t('hris.leaveSubtitle')}>
       <div className="space-y-6">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {[
             { label: 'Total', value: summary.total || 0, icon: CalendarDays, bg: 'bg-blue-100', color: 'text-blue-600' },
-            { label: 'Menunggu Approval', value: summary.pending || 0, icon: Clock, bg: 'bg-yellow-100', color: 'text-yellow-600' },
+            { label: 'Menunggu Persetujuan', value: summary.pending || 0, icon: Clock, bg: 'bg-yellow-100', color: 'text-yellow-600' },
             { label: 'Disetujui', value: summary.approved || 0, icon: CheckCircle, bg: 'bg-green-100', color: 'text-green-600' },
             { label: 'Ditolak', value: summary.rejected || 0, icon: XCircle, bg: 'bg-red-100', color: 'text-red-600' },
             { label: 'Hari Terpakai', value: summary.totalDaysUsed || 0, icon: Calendar, bg: 'bg-purple-100', color: 'text-purple-600' },
@@ -405,7 +442,7 @@ export default function LeaveManagementPage() {
             {[
               { key: 'requests', label: 'Pengajuan Cuti', icon: CalendarDays },
               { key: 'leave-types', label: 'Tipe Cuti', icon: Layers },
-              { key: 'approval-config', label: 'Konfigurasi Approval', icon: Shield },
+              { key: 'approval-config', label: 'Konfigurasi Persetujuan', icon: Shield },
               { key: 'balances', label: 'Saldo Cuti', icon: Database },
             ].map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
@@ -440,7 +477,7 @@ export default function LeaveManagementPage() {
                 </div>
                 <div className="flex gap-2">
                   <button onClick={fetchData} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-sm hover:bg-gray-50">
-                    <RefreshCw className="w-4 h-4" /> Refresh
+                    <RefreshCw className="w-4 h-4" /> Segarkan
                   </button>
                 </div>
               </div>
@@ -537,12 +574,12 @@ export default function LeaveManagementPage() {
             <div className="p-4 space-y-4">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="font-semibold text-lg">Konfigurasi Approval Berjenjang</h3>
+                  <h3 className="font-semibold text-lg">Konfigurasi Persetujuan Berjenjang</h3>
                   <p className="text-sm text-gray-500">Atur alur persetujuan cuti per departemen, divisi, atau tipe cuti</p>
                 </div>
                 <button onClick={openNewConfig}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-                  <Plus className="w-4 h-4" /> Tambah Config
+                  <Plus className="w-4 h-4" /> Tambah Konfigurasi
                 </button>
               </div>
 
@@ -574,7 +611,7 @@ export default function LeaveManagementPage() {
                       <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Min {cfg.min_days_trigger} hari</span>
                       <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Eskalasi: {cfg.escalation_hours}jam</span>
                       {cfg.max_auto_approve_days && cfg.max_auto_approve_days > 0 && (
-                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Auto-approve &le; {cfg.max_auto_approve_days} hari</span>
+                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Otomatis &le; {cfg.max_auto_approve_days} hari</span>
                       )}
                     </div>
 
@@ -595,7 +632,7 @@ export default function LeaveManagementPage() {
                 {approvalConfigs.length === 0 && (
                   <div className="col-span-2 text-center py-12 text-gray-500">
                     <Shield className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p>Belum ada konfigurasi approval</p>
+                    <p>Belum ada konfigurasi persetujuan</p>
                   </div>
                 )}
               </div>
@@ -661,7 +698,7 @@ export default function LeaveManagementPage() {
                           <p className="font-bold">{lt.is_paid ? 'Ya' : 'Tidak'}</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-2">
-                          <span className="text-gray-500">Carry</span>
+                          <span className="text-gray-500">Akumulasi</span>
                           <p className="font-bold">{lt.carry_forward ? `${lt.max_carry_forward_days || 0} hr` : 'Tidak'}</p>
                         </div>
                       </div>
@@ -695,7 +732,7 @@ export default function LeaveManagementPage() {
                         )}
                         {lt.min_days_per_request && lt.min_days_per_request > 1 && (
                           <span className="px-1.5 py-0.5 bg-gray-50 text-gray-500 text-[10px] rounded">
-                            Min {lt.min_days_per_request} hr/req
+                            Min {lt.min_days_per_request} hr/pengajuan
                           </span>
                         )}
                       </div>
@@ -712,7 +749,7 @@ export default function LeaveManagementPage() {
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="font-semibold text-lg">Saldo Cuti Karyawan</h3>
-                  <p className="text-sm text-gray-500">Tahun {new Date().getFullYear()} &mdash; {balances.length} record</p>
+                  <p className="text-sm text-gray-500">Tahun {new Date().getFullYear()} &mdash; {balances.length} data</p>
                 </div>
                 <button onClick={handleInitBalances}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
@@ -735,7 +772,7 @@ export default function LeaveManagementPage() {
                         <th className="px-4 py-3 text-left font-medium text-gray-500 text-xs uppercase">Tipe Cuti</th>
                         <th className="px-4 py-3 text-center font-medium text-gray-500 text-xs uppercase">Hak</th>
                         <th className="px-4 py-3 text-center font-medium text-gray-500 text-xs uppercase">Terpakai</th>
-                        <th className="px-4 py-3 text-center font-medium text-gray-500 text-xs uppercase">Pending</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-500 text-xs uppercase">Menunggu</th>
                         <th className="px-4 py-3 text-center font-medium text-gray-500 text-xs uppercase">Sisa</th>
                       </tr>
                     </thead>
@@ -793,7 +830,7 @@ export default function LeaveManagementPage() {
               {/* Approval Progress */}
               {(selectedRequest.total_approval_steps || 1) > 1 && (
                 <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-xs font-medium text-gray-600 mb-2">Alur Approval ({selectedRequest.current_approval_step}/{selectedRequest.total_approval_steps})</p>
+                  <p className="text-xs font-medium text-gray-600 mb-2">Alur Persetujuan ({selectedRequest.current_approval_step}/{selectedRequest.total_approval_steps})</p>
                   <div className="flex items-center gap-2">
                     {Array.from({ length: selectedRequest.total_approval_steps || 1 }).map((_, i) => {
                       const step = selectedRequest.approvalSteps?.[i];

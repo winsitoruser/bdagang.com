@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Calendar, Clock, UserCheck, UserX, Users, Building2, Search,
   Download, Filter, ChevronLeft, ChevronRight, CheckCircle, XCircle,
@@ -25,9 +26,18 @@ interface DailyRecord {
 }
 
 
+const MOCK_DAILY_RECORDS: DailyRecord[] = [
+  { id: 'dr1', employeeName: 'Budi Santoso', employeeId: 'EMP-001', position: 'IT Manager', branchName: 'Kantor Pusat Jakarta', clockIn: '08:05', clockOut: '17:15', status: 'present', lateMinutes: 5, earlyLeaveMinutes: 0, overtimeMinutes: 15, workHours: 8.17, source: 'gps', isOutsideGeofence: false },
+  { id: 'dr2', employeeName: 'Siti Rahayu', employeeId: 'EMP-002', position: 'Finance Staff', branchName: 'Kantor Pusat Jakarta', clockIn: '08:22', clockOut: '17:00', status: 'late', lateMinutes: 22, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 7.63, source: 'face_recognition', isOutsideGeofence: false },
+  { id: 'dr3', employeeName: 'Ahmad Wijaya', employeeId: 'EMP-003', position: 'Operations Lead', branchName: 'Cabang Bandung', clockIn: '07:55', clockOut: '17:30', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 30, workHours: 8.58, source: 'fingerprint', isOutsideGeofence: false },
+  { id: 'dr4', employeeName: 'Dewi Lestari', employeeId: 'EMP-004', position: 'Barista Senior', branchName: 'Cabang Surabaya', clockIn: null, clockOut: null, status: 'absent', lateMinutes: 0, earlyLeaveMinutes: 0, overtimeMinutes: 0, workHours: 0, source: '', isOutsideGeofence: false },
+  { id: 'dr5', employeeName: 'Eko Prasetyo', employeeId: 'EMP-005', position: 'Warehouse Staff', branchName: 'Cabang Bandung', clockIn: '08:00', clockOut: '16:45', status: 'present', lateMinutes: 0, earlyLeaveMinutes: 15, overtimeMinutes: 0, workHours: 7.75, source: 'gps', isOutsideGeofence: true },
+];
+
 export default function DailyAttendancePage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
-  const [records, setRecords] = useState<DailyRecord[]>([]);
+  const [records, setRecords] = useState<DailyRecord[]>(MOCK_DAILY_RECORDS);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,7 +57,7 @@ export default function DailyAttendancePage() {
         setRecords([]);
       }
     } catch {
-      setRecords([]);
+      setRecords(MOCK_DAILY_RECORDS);
     } finally {
       setLoading(false);
     }
@@ -100,6 +110,30 @@ export default function DailyAttendancePage() {
     return map[status] || map.absent;
   };
 
+  const handleExport = () => {
+    const headers = ['ID Karyawan', 'Nama', 'Posisi', 'Cabang', 'Clock In', 'Clock Out', 'Jam Kerja', 'Status', 'Sumber', 'Telat (mnt)', 'Pulang Awal (mnt)', 'Lembur (mnt)', 'Di Luar Geofence'];
+    const rows = filtered.map(r => [
+      r.employeeId, r.employeeName, r.position, r.branchName,
+      r.clockIn ? formatTime(r.clockIn) : '-',
+      r.clockOut ? formatTime(r.clockOut) : '-',
+      r.workHours.toFixed(2),
+      r.status,
+      r.source || '-',
+      r.lateMinutes, r.earlyLeaveMinutes, r.overtimeMinutes,
+      r.isOutsideGeofence ? 'Ya' : 'Tidak'
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `rekap-absensi-harian-${selectedDate}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const getSourceIcon = (source: string) => {
     const map: Record<string, { icon: any; label: string }> = {
       fingerprint: { icon: Fingerprint, label: 'Fingerprint' },
@@ -113,7 +147,7 @@ export default function DailyAttendancePage() {
   };
 
   return (
-    <HQLayout title="Absensi Harian" subtitle="Monitor kehadiran real-time per hari">
+    <HQLayout title={t('hris.dailyAttendanceTitle')} subtitle={t('hris.dailyAttendanceSubtitle')}>
       <div className="space-y-6">
         {/* Date Navigator + Stats */}
         <div className="bg-white rounded-xl shadow-sm border p-4">
@@ -185,8 +219,8 @@ export default function DailyAttendancePage() {
               <option value="gps_mobile">Mobile/GPS</option>
               <option value="manual">Manual</option>
             </select>
-            <button className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
-              <Download className="w-4 h-4" /> Export
+            <button onClick={handleExport} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+              <Download className="w-4 h-4" /> Export CSV
             </button>
           </div>
         </div>

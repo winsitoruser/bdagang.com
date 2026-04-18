@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from "@/components/layouts/DashboardLayout";
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ interface SelectedLocation {
 const CreateStockOpnamePage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
@@ -80,7 +82,7 @@ const CreateStockOpnamePage: React.FC = () => {
 
   const handleAddLocation = () => {
     if (!selectedWarehouse) {
-      alert('Pilih gudang terlebih dahulu!');
+      alert(t('inventory.stockOpname.selectWarehouseFirst'));
       return;
     }
 
@@ -88,7 +90,7 @@ const CreateStockOpnamePage: React.FC = () => {
     const locationId = locationSelect?.value;
     
     if (!locationId) {
-      alert('Pilih lokasi/rak terlebih dahulu!');
+      alert(t('inventory.stockOpname.selectLocationFirst'));
       return;
     }
 
@@ -99,7 +101,7 @@ const CreateStockOpnamePage: React.FC = () => {
 
     // Check if already added
     if (selectedLocations.some(sl => sl.location_id === location.id)) {
-      alert('Lokasi sudah ditambahkan!');
+      alert(t('inventory.stockOpname.locationAlreadyAdded'));
       return;
     }
 
@@ -123,7 +125,7 @@ const CreateStockOpnamePage: React.FC = () => {
     e.preventDefault();
     
     if (selectedLocations.length === 0) {
-      alert('Tambahkan minimal 1 lokasi untuk stock opname!');
+      alert(t('inventory.stockOpname.addMinLocation'));
       return;
     }
 
@@ -148,14 +150,14 @@ const CreateStockOpnamePage: React.FC = () => {
       const result = await response.json();
       
       if (result.success) {
-        alert(`✅ Stock Opname berhasil dibuat!\n\nNomor: ${result.data.opname_number}`);
+        alert(`✅ ${t('inventory.stockOpname.createSuccess')}\n\n${t('inventory.stockOpname.number')}: ${result.data.opname_number}`);
         router.push(`/inventory/stock-opname/${result.data.id}`);
       } else {
-        alert('Gagal membuat stock opname: ' + result.message);
+        alert(t('inventory.stockOpname.createFailed') + ': ' + result.message);
       }
     } catch (error) {
       console.error('Error creating stock opname:', error);
-      alert('Gagal membuat stock opname. Pastikan backend sudah running.');
+      alert(t('inventory.stockOpname.createError'));
     } finally {
       setLoading(false);
     }
@@ -164,7 +166,7 @@ const CreateStockOpnamePage: React.FC = () => {
   return (
     <DashboardLayout>
       <Head>
-        <title>Buat Stock Opname Baru - Manajemen Inventory</title>
+        <title>{t('inventory.stockOpname.createPageTitle')}</title>
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-6">
@@ -174,16 +176,16 @@ const CreateStockOpnamePage: React.FC = () => {
             <Link href="/inventory/stock-opname">
               <Button variant="outline" size="sm" className="bg-white/20 hover:bg-white/30 text-white border-white/30">
                 <FaArrowLeft className="mr-2" />
-                Kembali
+                {t('common.back')}
               </Button>
             </Link>
             <div>
               <h1 className="text-3xl font-bold mb-2 flex items-center">
                 <FaClipboardList className="mr-3" />
-                Buat Stock Opname Baru
+                {t('inventory.stockOpname.createNew')}
               </h1>
               <p className="text-indigo-100">
-                Isi form untuk memulai penghitungan fisik stok barang
+                {t('inventory.stockOpname.createSubtitle')}
               </p>
             </div>
           </div>
@@ -193,14 +195,14 @@ const CreateStockOpnamePage: React.FC = () => {
           {/* Form Stock Opname */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Informasi Stock Opname</CardTitle>
+              <CardTitle>{t('inventory.stockOpname.info')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <FaClipboardList className="inline mr-2" />
-                    Nomor Stock Opname
+                    {t('inventory.stockOpname.number')}
                   </label>
                   <Input
                     type="text"
@@ -214,7 +216,7 @@ const CreateStockOpnamePage: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <FaCalendar className="inline mr-2" />
-                    Tanggal Terjadwal
+                    {t('inventory.stockOpname.scheduledDate')}
                   </label>
                   <Input
                     type="date"
@@ -227,23 +229,23 @@ const CreateStockOpnamePage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tipe Stock Opname
+                    {t('inventory.stockOpname.opnameType')}
                   </label>
                   <select
                     value={formData.opname_type}
                     onChange={(e) => setFormData({...formData, opname_type: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="full">Full Count (Penuh)</option>
-                    <option value="cycle">Cycle Count (Berkala)</option>
-                    <option value="spot">Spot Check (Sampling)</option>
+                    <option value="full">{t('inventory.stockOpname.fullCount')}</option>
+                    <option value="cycle">{t('inventory.stockOpname.cycleCount')}</option>
+                    <option value="spot">{t('inventory.stockOpname.spotCheck')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <FaUser className="inline mr-2" />
-                    Dilakukan Oleh
+                    {t('inventory.stockOpname.performedBy')}
                   </label>
                   <Input
                     type="text"
@@ -257,26 +259,26 @@ const CreateStockOpnamePage: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <FaUser className="inline mr-2" />
-                    Disupervisi Oleh
+                    {t('inventory.stockOpname.supervisedBy')}
                   </label>
                   <Input
                     type="text"
                     value={formData.supervised_by}
                     onChange={(e) => setFormData({...formData, supervised_by: e.target.value})}
-                    placeholder="Nama Supervisor (opsional)"
+                    placeholder={t('inventory.stockOpname.supervisorPlaceholder')}
                     className="w-full"
                   />
                 </div>
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Catatan
+                    {t('inventory.stockOpname.notesLabel')}
                   </label>
                   <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({...formData, notes: e.target.value})}
                     rows={3}
-                    placeholder="Catatan tambahan..."
+                    placeholder={t('inventory.stockOpname.notesPlaceholder')}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -287,9 +289,9 @@ const CreateStockOpnamePage: React.FC = () => {
           {/* Lokasi Selection */}
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle>Pilih Lokasi Stock Opname</CardTitle>
+              <CardTitle>{t('inventory.stockOpname.selectLocations')}</CardTitle>
               <p className="text-sm text-gray-600 mt-1">
-                Anda dapat menambahkan beberapa lokasi/rak dalam satu dokumen stock opname
+                {t('inventory.stockOpname.selectLocationsDesc')}
               </p>
             </CardHeader>
             <CardContent>
@@ -297,7 +299,7 @@ const CreateStockOpnamePage: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <FaWarehouse className="inline mr-2" />
-                    Gudang
+                    {t('inventory.stockOpname.warehouse')}
                   </label>
                   <select
                     value={selectedWarehouse}
@@ -307,7 +309,7 @@ const CreateStockOpnamePage: React.FC = () => {
                     }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                   >
-                    <option value="">Pilih Gudang</option>
+                    <option value="">{t('inventory.stockOpname.selectWarehouse')}</option>
                     {warehouses.map((warehouse) => (
                       <option key={warehouse.id} value={warehouse.id}>
                         {warehouse.name}
@@ -319,14 +321,14 @@ const CreateStockOpnamePage: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <FaMapMarkerAlt className="inline mr-2" />
-                    Lokasi/Rak
+                    {t('inventory.stockOpname.locationRack')}
                   </label>
                   <select
                     id="location-select"
                     disabled={!selectedWarehouse}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
                   >
-                    <option value="">Pilih Lokasi</option>
+                    <option value="">{t('inventory.stockOpname.selectLocation')}</option>
                     {locations.map((location) => (
                       <option key={location.id} value={location.id}>
                         {location.code} - {location.name}
@@ -343,7 +345,7 @@ const CreateStockOpnamePage: React.FC = () => {
                     className="w-full bg-indigo-600 hover:bg-indigo-700"
                   >
                     <FaPlus className="mr-2" />
-                    Tambah Lokasi
+                    {t('inventory.stockOpname.addLocation')}
                   </Button>
                 </div>
               </div>
@@ -352,7 +354,7 @@ const CreateStockOpnamePage: React.FC = () => {
               {selectedLocations.length > 0 && (
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-3">
-                    Lokasi yang Dipilih ({selectedLocations.length})
+                    {t('inventory.stockOpname.selectedLocations')} ({selectedLocations.length})
                   </h4>
                   <div className="space-y-2">
                     {selectedLocations.map((sl) => (
@@ -385,10 +387,10 @@ const CreateStockOpnamePage: React.FC = () => {
                 <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                   <FaMapMarkerAlt className="mx-auto text-4xl text-gray-400 mb-2" />
                   <p className="text-gray-600">
-                    Belum ada lokasi yang dipilih
+                    {t('inventory.stockOpname.noLocationsSelected')}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Pilih gudang dan lokasi, lalu klik "Tambah Lokasi"
+                    {t('inventory.stockOpname.noLocationsHint')}
                   </p>
                 </div>
               )}
@@ -399,7 +401,7 @@ const CreateStockOpnamePage: React.FC = () => {
           <div className="flex justify-end space-x-4">
             <Link href="/inventory/stock-opname">
               <Button type="button" variant="outline">
-                Batal
+                {t('common.cancel')}
               </Button>
             </Link>
             <Button
@@ -408,7 +410,7 @@ const CreateStockOpnamePage: React.FC = () => {
               className="bg-indigo-600 hover:bg-indigo-700"
             >
               <FaSave className="mr-2" />
-              {loading ? 'Menyimpan...' : 'Buat Stock Opname'}
+              {loading ? t('common.saving') : t('inventory.stockOpname.createNew')}
             </Button>
           </div>
         </form>

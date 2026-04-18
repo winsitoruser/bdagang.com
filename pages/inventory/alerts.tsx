@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import InventoryAlerts from '@/components/inventory/InventoryAlerts';
 import { Button } from '@/components/ui/button';
 import { FaBell, FaArrowLeft, FaHome } from 'react-icons/fa';
@@ -10,6 +11,7 @@ import { FaBell, FaArrowLeft, FaHome } from 'react-icons/fa';
 const InventoryAlertsPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
 
   React.useEffect(() => {
     if (status === "unauthenticated") {
@@ -18,13 +20,13 @@ const InventoryAlertsPage: React.FC = () => {
   }, [session, status, router]);
 
   if (status === "loading") {
-    return <div>Loading...</div>;
+    return <div>{t('common.loading')}</div>;
   }
 
   return (
     <DashboardLayout>
       <Head>
-        <title>Alert & Rekomendasi Inventory | BEDAGANG Cloud POS</title>
+        <title>{t('inventory.alertsPageTitle')}</title>
       </Head>
 
       <div className="space-y-6">
@@ -38,16 +40,16 @@ const InventoryAlertsPage: React.FC = () => {
               className="flex items-center space-x-2"
             >
               <FaArrowLeft />
-              <span>Kembali</span>
+              <span>{t('common.back')}</span>
             </Button>
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <FaHome className="text-gray-400" />
               <span>/</span>
               <button onClick={() => router.push('/inventory')} className="hover:text-green-600 transition-colors">
-                Inventory
+                {t('inventory.title')}
               </button>
               <span>/</span>
-              <span className="text-gray-900 font-semibold">Alert & Rekomendasi</span>
+              <span className="text-gray-900 font-semibold">{t('inventory.alerts.breadcrumb')}</span>
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -58,7 +60,7 @@ const InventoryAlertsPage: React.FC = () => {
               className="flex items-center space-x-2"
             >
               <FaHome />
-              <span>Dashboard Inventory</span>
+              <span>{t('inventory.alerts.dashboardInventory')}</span>
             </Button>
           </div>
         </div>
@@ -73,8 +75,8 @@ const InventoryAlertsPage: React.FC = () => {
                 <FaBell className="w-7 h-7" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold">Alert & Rekomendasi Inventory</h1>
-                <p className="text-yellow-100 text-sm">Monitoring produk expired, overstock, perubahan harga, dan saran pricing</p>
+                <h1 className="text-3xl font-bold">{t('inventory.alerts.title')}</h1>
+                <p className="text-yellow-100 text-sm">{t('inventory.alerts.subtitle')}</p>
               </div>
             </div>
           </div>

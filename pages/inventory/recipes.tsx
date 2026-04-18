@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +58,7 @@ interface Recipe {
 const RecipesManagementPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t, formatCurrency } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [showRecipeModal, setShowRecipeModal] = useState(false);
@@ -151,19 +153,12 @@ const RecipesManagementPage: React.FC = () => {
     // Will use mockRawMaterials defined above
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const getStatusBadge = (status: string) => {
     const config = {
-      active: { color: 'bg-green-100 text-green-700', label: 'Aktif' },
-      draft: { color: 'bg-yellow-100 text-yellow-700', label: 'Draft' },
-      archived: { color: 'bg-gray-100 text-gray-700', label: 'Arsip' }
+      active: { color: 'bg-green-100 text-green-700', label: t('inventory.recipes.statusActive') },
+      draft: { color: 'bg-yellow-100 text-yellow-700', label: t('inventory.recipes.statusDraft') },
+      archived: { color: 'bg-gray-100 text-gray-700', label: t('inventory.recipes.statusArchived') }
     };
     const statusConfig = config[status as keyof typeof config] || config.draft;
     return <Badge className={statusConfig.color}>{statusConfig.label}</Badge>;
@@ -357,7 +352,7 @@ const RecipesManagementPage: React.FC = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin h-12 w-12 mx-auto border-4 border-purple-600 border-t-transparent rounded-full mb-4"></div>
-            <p className="text-gray-600">Memuat data resep...</p>
+            <p className="text-gray-600">{t('inventory.recipes.loading')}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -367,7 +362,7 @@ const RecipesManagementPage: React.FC = () => {
   return (
     <DashboardLayout>
       <Head>
-        <title>Manajemen Resep & Formula | BEDAGANG Cloud POS</title>
+        <title>{t('inventory.recipes.pageTitle')}</title>
       </Head>
 
       <div className="space-y-6">
@@ -383,8 +378,8 @@ const RecipesManagementPage: React.FC = () => {
                     <FaFlask className="w-7 h-7" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold">Manajemen Resep & Formula</h1>
-                    <p className="text-purple-100 text-sm">Sistem manajemen peracikan & formula bahan baku untuk FMCG</p>
+                    <h1 className="text-3xl font-bold">{t('inventory.recipes.title')}</h1>
+                    <p className="text-purple-100 text-sm">{t('inventory.recipes.subtitle')}</p>
                   </div>
                 </div>
               </div>
@@ -394,21 +389,21 @@ const RecipesManagementPage: React.FC = () => {
                   className="bg-white/20 hover:bg-white/30 backdrop-blur-sm"
                 >
                   <FaClipboardList className="mr-2" />
-                  Riwayat
+                  {t('inventory.recipes.history')}
                 </Button>
                 <Button
                   onClick={() => router.push('/inventory/recipes/archived')}
                   className="bg-white/20 hover:bg-white/30 backdrop-blur-sm"
                 >
                   <FaBoxOpen className="mr-2" />
-                  Arsip
+                  {t('inventory.recipes.archive')}
                 </Button>
                 <Button
                   onClick={() => router.push('/inventory/recipes/new')}
                   className="bg-white/20 hover:bg-white/30 backdrop-blur-sm"
                 >
                   <FaPlus className="mr-2" />
-                  Buat Resep Baru
+                  {t('inventory.recipes.createNew')}
                 </Button>
               </div>
             </div>
@@ -416,19 +411,19 @@ const RecipesManagementPage: React.FC = () => {
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <p className="text-xs text-purple-100">Total Resep</p>
+                <p className="text-xs text-purple-100">{t('inventory.recipes.totalRecipes')}</p>
                 <p className="text-2xl font-bold">{stats.totalRecipes}</p>
               </div>
               <div className="bg-green-500/30 backdrop-blur-sm rounded-lg p-3 border border-green-400/30">
-                <p className="text-xs text-green-100">Aktif</p>
+                <p className="text-xs text-green-100">{t('inventory.recipes.statusActive')}</p>
                 <p className="text-2xl font-bold">{stats.activeRecipes}</p>
               </div>
               <div className="bg-blue-500/30 backdrop-blur-sm rounded-lg p-3 border border-blue-400/30">
-                <p className="text-xs text-blue-100">Bahan Baku</p>
+                <p className="text-xs text-blue-100">{t('inventory.recipes.rawMaterials')}</p>
                 <p className="text-2xl font-bold">{stats.totalMaterials}</p>
               </div>
               <div className="bg-red-500/30 backdrop-blur-sm rounded-lg p-3 border border-red-400/30">
-                <p className="text-xs text-red-100">Stok Rendah</p>
+                <p className="text-xs text-red-100">{t('inventory.recipes.lowStockLabel')}</p>
                 <p className="text-2xl font-bold">{stats.lowStockMaterials}</p>
               </div>
             </div>
@@ -446,7 +441,7 @@ const RecipesManagementPage: React.FC = () => {
             }`}
           >
             <FaFlask className="inline mr-2" />
-            Resep & Formula
+            {t('inventory.recipes.recipesFormula')}
           </button>
           <button
             onClick={() => setActiveTab('materials')}
@@ -457,7 +452,7 @@ const RecipesManagementPage: React.FC = () => {
             }`}
           >
             <FaBoxOpen className="inline mr-2" />
-            Bahan Baku
+            {t('inventory.recipes.rawMaterials')}
           </button>
         </div>
 
@@ -467,7 +462,7 @@ const RecipesManagementPage: React.FC = () => {
             <div className="relative">
               <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <Input
-                placeholder={activeTab === 'recipes' ? 'Cari resep atau SKU...' : 'Cari bahan baku...'}
+                placeholder={activeTab === 'recipes' ? t('inventory.recipes.searchRecipe') : t('inventory.recipes.searchMaterial')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -497,19 +492,19 @@ const RecipesManagementPage: React.FC = () => {
                   {/* Recipe Info */}
                   <div className="grid grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="text-xs text-gray-500">Ukuran Batch</p>
+                      <p className="text-xs text-gray-500">{t('inventory.recipes.batchSize')}</p>
                       <p className="font-semibold text-gray-900">{recipe.batchSize} {recipe.batchUnit}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Waktu Persiapan</p>
+                      <p className="text-xs text-gray-500">{t('inventory.recipes.prepTime')}</p>
                       <p className="font-semibold text-gray-900">{recipe.preparationTime} min</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Total Biaya</p>
+                      <p className="text-xs text-gray-500">{t('inventory.recipes.totalCost')}</p>
                       <p className="font-semibold text-green-600">{formatCurrency(recipe.totalCost)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Biaya per Unit</p>
+                      <p className="text-xs text-gray-500">{t('inventory.recipes.costPerUnit')}</p>
                       <p className="font-semibold text-blue-600">{formatCurrency(recipe.costPerUnit)}</p>
                     </div>
                   </div>
@@ -518,7 +513,7 @@ const RecipesManagementPage: React.FC = () => {
                   <div className="mb-4">
                     <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
                       <FaClipboardList className="mr-2 text-purple-600" />
-                      Bahan ({recipe.ingredients.length})
+                      {t('inventory.recipes.ingredients')} ({recipe.ingredients.length})
                     </h4>
                     <div className="space-y-2">
                       {recipe.ingredients.map((ingredient, idx) => (
@@ -547,7 +542,7 @@ const RecipesManagementPage: React.FC = () => {
                         }}
                       >
                         <FaEdit className="mr-2" />
-                        Ubah
+                        {t('common.edit')}
                       </Button>
                       <Button
                         size="sm"
@@ -577,7 +572,7 @@ const RecipesManagementPage: React.FC = () => {
                       onClick={() => handleViewHistory(recipe.id)}
                     >
                       <FaClipboardList className="mr-2" />
-                      Riwayat (v{recipe.version || 1})
+                      {t('inventory.recipes.history')} (v{recipe.version || 1})
                     </Button>
                   </div>
                 </CardContent>
@@ -591,13 +586,13 @@ const RecipesManagementPage: React.FC = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200 bg-gray-50">
-                      <th className="text-left p-3 text-sm font-semibold text-gray-700">Nama Bahan</th>
+                      <th className="text-left p-3 text-sm font-semibold text-gray-700">{t('inventory.recipes.materialName')}</th>
                       <th className="text-left p-3 text-sm font-semibold text-gray-700">SKU</th>
-                      <th className="text-left p-3 text-sm font-semibold text-gray-700">Kategori</th>
-                      <th className="text-center p-3 text-sm font-semibold text-gray-700">Stok</th>
-                      <th className="text-right p-3 text-sm font-semibold text-gray-700">Biaya/Unit</th>
-                      <th className="text-center p-3 text-sm font-semibold text-gray-700">Status</th>
-                      <th className="text-center p-3 text-sm font-semibold text-gray-700">Aksi</th>
+                      <th className="text-left p-3 text-sm font-semibold text-gray-700">{t('inventory.recipes.categoryLabel')}</th>
+                      <th className="text-center p-3 text-sm font-semibold text-gray-700">{t('inventory.recipes.stockLabel')}</th>
+                      <th className="text-right p-3 text-sm font-semibold text-gray-700">{t('inventory.recipes.costPerUnit')}</th>
+                      <th className="text-center p-3 text-sm font-semibold text-gray-700">{t('common.status')}</th>
+                      <th className="text-center p-3 text-sm font-semibold text-gray-700">{t('inventory.recipes.actions')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -628,12 +623,12 @@ const RecipesManagementPage: React.FC = () => {
                             {isLowStock ? (
                               <Badge className="bg-red-100 text-red-700">
                                 <FaExclamationTriangle className="mr-1" />
-                                Stok Rendah
+                                {t('inventory.recipes.lowStockLabel')}
                               </Badge>
                             ) : (
                               <Badge className="bg-green-100 text-green-700">
                                 <FaCheckCircle className="mr-1" />
-                                Tersedia
+                                {t('inventory.recipes.available')}
                               </Badge>
                             )}
                           </td>

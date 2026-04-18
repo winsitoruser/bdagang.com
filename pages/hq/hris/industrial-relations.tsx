@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import { Shield, FileText, AlertTriangle, Users, CheckSquare, Plus, Edit, Trash2, Eye, Search, ChevronDown, X, Clock, AlertCircle, Download } from 'lucide-react';
 
@@ -11,14 +12,42 @@ interface Checklist { id: string; name: string; category: string; description: s
 
 type TabKey = 'regulations' | 'warnings' | 'cases' | 'terminations' | 'compliance';
 
+const MOCK_IR_OVERVIEW = { activeRegulations: 12, activeWarnings: 3, openCases: 2, pendingTerminations: 1, pendingChecklists: 4, complianceScore: 92 };
+
+const MOCK_REGULATIONS: Regulation[] = [
+  { id: 'reg1', title: 'Peraturan Perusahaan 2026', regulation_number: 'PP-2026-001', category: 'company_rule', description: 'Peraturan perusahaan tahun 2026', content: '', effective_date: '2026-01-01', expiry_date: '2028-12-31', status: 'active', version: 3, tags: ['umum', 'wajib'] },
+  { id: 'reg2', title: 'SOP Keselamatan Kerja (K3)', regulation_number: 'SOP-K3-001', category: 'safety', description: 'Standard operating procedure K3', content: '', effective_date: '2025-06-01', expiry_date: '2027-05-31', status: 'active', version: 2, tags: ['k3', 'safety'] },
+  { id: 'reg3', title: 'Kode Etik Karyawan', regulation_number: 'KE-2026-001', category: 'ethics', description: 'Kode etik dan perilaku karyawan', content: '', effective_date: '2026-01-01', expiry_date: '2028-12-31', status: 'active', version: 1, tags: ['etika'] },
+];
+
+const MOCK_WARNINGS: Warning[] = [
+  { id: 'w1', employee_id: 15, warning_type: 'SP1', letter_number: 'SP1-2026-003', issue_date: '2026-03-05', expiry_date: '2026-09-05', violation_type: 'discipline', violation_description: 'Terlambat masuk kerja lebih dari 5 kali dalam 1 bulan', status: 'active', acknowledged: true, notes: '' },
+  { id: 'w2', employee_id: 22, warning_type: 'SP2', letter_number: 'SP2-2026-001', issue_date: '2026-02-20', expiry_date: '2026-08-20', violation_type: 'misconduct', violation_description: 'Tidak mengikuti SOP keamanan', status: 'active', acknowledged: true, notes: '' },
+];
+
+const MOCK_IR_CASES: IrCase[] = [
+  { id: 'c1', case_number: 'CASE-2026-005', title: 'Investigasi pelanggaran SOP gudang', category: 'misconduct', priority: 'high', status: 'investigating', reported_by: 3, reported_date: '2026-03-08', description: 'Dugaan pelanggaran prosedur penyimpanan bahan baku', involved_employees: [{ id: 18, name: 'Rudi Hartono' }], resolution: '' },
+  { id: 'c2', case_number: 'CASE-2026-004', title: 'Keluhan lingkungan kerja', category: 'grievance', priority: 'medium', status: 'open', reported_by: 10, reported_date: '2026-03-05', description: 'Keluhan mengenai fasilitas kerja di cabang Bandung', involved_employees: [], resolution: '' },
+];
+
+const MOCK_TERMINATIONS: Termination[] = [
+  { id: 't1', employee_id: 30, termination_type: 'resignation', reason: 'Pindah ke perusahaan lain', effective_date: '2026-04-01', status: 'pending_approval', clearance_status: { it: false, finance: false, hr: true, asset: false }, exit_interview_done: false, severance_amount: 0 },
+];
+
+const MOCK_CHECKLISTS: Checklist[] = [
+  { id: 'ch1', name: 'Audit Kepatuhan K3 Q1 2026', category: 'safety', description: 'Checklist audit K3 kuartal 1', items: [{ name: 'APAR tersedia', status: 'completed' }, { name: 'Jalur evakuasi jelas', status: 'completed' }, { name: 'P3K lengkap', status: 'pending' }], status: 'in_progress', completion_percent: 67, due_date: '2026-03-31', period: 'Q1 2026' },
+  { id: 'ch2', name: 'Review Kontrak Karyawan', category: 'compliance', description: 'Review kontrak yang akan berakhir', items: [{ name: 'List kontrak expired', status: 'completed' }, { name: 'Evaluasi perpanjangan', status: 'pending' }], status: 'in_progress', completion_percent: 50, due_date: '2026-03-25', period: 'Maret 2026' },
+];
+
 export default function IndustrialRelationsPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('regulations');
-  const [regulations, setRegulations] = useState<Regulation[]>([]);
-  const [warnings, setWarnings] = useState<Warning[]>([]);
-  const [cases, setCases] = useState<IrCase[]>([]);
-  const [terminations, setTerminations] = useState<Termination[]>([]);
-  const [checklists, setChecklists] = useState<Checklist[]>([]);
-  const [overview, setOverview] = useState<any>({});
+  const [regulations, setRegulations] = useState<Regulation[]>(MOCK_REGULATIONS);
+  const [warnings, setWarnings] = useState<Warning[]>(MOCK_WARNINGS);
+  const [cases, setCases] = useState<IrCase[]>(MOCK_IR_CASES);
+  const [terminations, setTerminations] = useState<Termination[]>(MOCK_TERMINATIONS);
+  const [checklists, setChecklists] = useState<Checklist[]>(MOCK_CHECKLISTS);
+  const [overview, setOverview] = useState<any>(MOCK_IR_OVERVIEW);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
@@ -52,7 +81,15 @@ export default function IndustrialRelationsPage() {
       setCases(cs.data || []);
       setTerminations(terms.data || []);
       setChecklists(cls.data || []);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setOverview(MOCK_IR_OVERVIEW);
+      setRegulations(MOCK_REGULATIONS);
+      setWarnings(MOCK_WARNINGS);
+      setCases(MOCK_IR_CASES);
+      setTerminations(MOCK_TERMINATIONS);
+      setChecklists(MOCK_CHECKLISTS);
+    }
     setLoading(false);
   }, [api]);
 
@@ -81,20 +118,20 @@ export default function IndustrialRelationsPage() {
         if (editingItem) await api('termination', 'PUT', termForm, `&id=${editingItem.id}`);
         else await api('termination', 'POST', termForm);
       }
-      showToast(editingItem ? 'Updated successfully' : 'Created successfully');
+      showToast(editingItem ? 'Berhasil diperbarui' : 'Berhasil dibuat');
       setShowModal(false); loadData();
-    } catch (e) { showToast('Error saving', 'error'); }
+    } catch (e) { showToast('Gagal menyimpan', 'error'); }
   };
 
   const handleDelete = async (action: string, id: string) => {
     if (!confirm('Hapus data ini?')) return;
     await api(action, 'DELETE', null, `&id=${id}`);
-    showToast('Deleted'); loadData();
+    showToast('Dihapus'); loadData();
   };
 
   const handleChecklistItem = async (checklistId: string, itemIndex: number, status: string) => {
     await api('update-checklist-item', 'POST', { id: checklistId, itemIndex, status });
-    showToast('Checklist item updated'); loadData();
+    showToast('Item checklist diperbarui'); loadData();
   };
 
   const tabs: { key: TabKey; label: string; icon: any; count?: number }[] = [
@@ -102,7 +139,7 @@ export default function IndustrialRelationsPage() {
     { key: 'warnings', label: 'Surat Peringatan', icon: AlertTriangle, count: overview.activeWarnings },
     { key: 'cases', label: 'Kasus & Investigasi', icon: Shield, count: overview.openCases },
     { key: 'terminations', label: 'PHK', icon: Users, count: overview.pendingTerminations },
-    { key: 'compliance', label: 'Compliance', icon: CheckSquare, count: overview.pendingChecklists },
+    { key: 'compliance', label: 'Kepatuhan', icon: CheckSquare, count: overview.pendingChecklists },
   ];
 
   const statusColor = (s: string) => {
@@ -120,7 +157,7 @@ export default function IndustrialRelationsPage() {
   };
 
   return (
-    <HQLayout title="Industrial Relations & Legal Compliance">
+    <HQLayout title={t('hris.industrialRelationsTitle')}>
     <div className="p-6 max-w-7xl mx-auto">
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>
@@ -129,7 +166,7 @@ export default function IndustrialRelationsPage() {
       )}
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Industrial Relations & Legal Compliance</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Hubungan Industrial & Kepatuhan Hukum</h1>
         <p className="text-gray-500 mt-1">Manajemen hubungan industrial, peraturan perusahaan, dan kepatuhan hukum</p>
       </div>
 
@@ -156,7 +193,7 @@ export default function IndustrialRelationsPage() {
         ))}
       </div>
 
-      {loading && <div className="text-center py-10 text-gray-400">Loading...</div>}
+      {loading && <div className="text-center py-10 text-gray-400">Memuat...</div>}
 
       {/* REGULATIONS TAB */}
       {!loading && tab === 'regulations' && (
@@ -253,7 +290,7 @@ export default function IndustrialRelationsPage() {
                           options={{
                             includeSignature: true,
                             signatureFields: [
-                              { label: 'HRD Manager', position: 'Mengetahui' },
+                              { label: 'Manajer HRD', position: 'Mengetahui' },
                               { label: 'Yang Bersangkutan', position: 'Karyawan' },
                             ],
                           }}
@@ -352,7 +389,7 @@ export default function IndustrialRelationsPage() {
                         includeSignature: true,
                         signatureFields: [
                           { label: 'Direktur', position: 'Perusahaan' },
-                          { label: 'HRD Manager', position: 'Mengetahui' },
+                          { label: 'Manajer HRD', position: 'Mengetahui' },
                           { label: 'Karyawan', position: 'Yang Bersangkutan' },
                         ],
                       }}
@@ -387,7 +424,7 @@ export default function IndustrialRelationsPage() {
       {!loading && tab === 'compliance' && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Compliance Monitoring</h2>
+            <h2 className="text-lg font-semibold">Pemantauan Kepatuhan</h2>
           </div>
           <div className="space-y-4">
             {checklists.map(cl => (
@@ -427,7 +464,7 @@ export default function IndustrialRelationsPage() {
                 </div>
               </div>
             ))}
-            {checklists.length === 0 && <p className="text-center text-gray-400 py-8">Belum ada checklist compliance</p>}
+            {checklists.length === 0 && <p className="text-center text-gray-400 py-8">Belum ada checklist kepatuhan</p>}
           </div>
         </div>
       )}
@@ -446,14 +483,14 @@ export default function IndustrialRelationsPage() {
                 <div><label className="text-sm font-medium text-gray-700">Nomor Peraturan</label><input value={regForm.regulationNumber} onChange={e => setRegForm({ ...regForm, regulationNumber: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>
                 <div><label className="text-sm font-medium text-gray-700">Kategori</label>
                   <select value={regForm.category} onChange={e => setRegForm({ ...regForm, category: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
-                    <option value="company_rule">Peraturan Perusahaan</option><option value="ethics">Kode Etik</option><option value="safety">K3</option><option value="compliance">Compliance</option><option value="labor_law">UU Ketenagakerjaan</option>
+                    <option value="company_rule">Peraturan Perusahaan</option><option value="ethics">Kode Etik</option><option value="safety">K3</option><option value="compliance">Kepatuhan</option><option value="labor_law">UU Ketenagakerjaan</option>
                   </select>
                 </div>
                 <div><label className="text-sm font-medium text-gray-700">Deskripsi</label><textarea value={regForm.description} onChange={e => setRegForm({ ...regForm, description: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" rows={3} /></div>
                 <div><label className="text-sm font-medium text-gray-700">Tanggal Berlaku</label><input type="date" value={regForm.effectiveDate} onChange={e => setRegForm({ ...regForm, effectiveDate: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>
                 <div><label className="text-sm font-medium text-gray-700">Status</label>
                   <select value={regForm.status} onChange={e => setRegForm({ ...regForm, status: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
-                    <option value="draft">Draft</option><option value="active">Active</option><option value="expired">Expired</option><option value="revised">Revised</option>
+                    <option value="draft">Draf</option><option value="active">Aktif</option><option value="expired">Kedaluwarsa</option><option value="revised">Direvisi</option>
                   </select>
                 </div>
               </>)}
@@ -482,7 +519,7 @@ export default function IndustrialRelationsPage() {
                   </div>
                   <div><label className="text-sm font-medium text-gray-700">Prioritas</label>
                     <select value={caseForm.priority} onChange={e => setCaseForm({ ...caseForm, priority: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm">
-                      <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option>
+                      <option value="low">Rendah</option><option value="medium">Sedang</option><option value="high">Tinggi</option><option value="critical">Kritis</option>
                     </select>
                   </div>
                 </div>
@@ -498,7 +535,7 @@ export default function IndustrialRelationsPage() {
                 </div>
                 <div><label className="text-sm font-medium text-gray-700">Alasan</label><textarea value={termForm.reason} onChange={e => setTermForm({ ...termForm, reason: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" rows={3} /></div>
                 <div><label className="text-sm font-medium text-gray-700">Tanggal Efektif</label><input type="date" value={termForm.effectiveDate} onChange={e => setTermForm({ ...termForm, effectiveDate: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>
-                <div><label className="text-sm font-medium text-gray-700">Notice Period (hari)</label><input type="number" value={termForm.noticePeriodDays} onChange={e => setTermForm({ ...termForm, noticePeriodDays: parseInt(e.target.value) || 30 })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>
+                <div><label className="text-sm font-medium text-gray-700">Masa Pemberitahuan (hari)</label><input type="number" value={termForm.noticePeriodDays} onChange={e => setTermForm({ ...termForm, noticePeriodDays: parseInt(e.target.value) || 30 })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>
               </>)}
             </div>
             <div className="flex justify-end gap-2 p-5 border-t">

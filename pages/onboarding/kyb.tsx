@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
+import { useTranslation } from '@/lib/i18n';
 import { useSession } from 'next-auth/react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -205,6 +206,7 @@ const SelectField = ({ label, name, options, required = false, placeholder = 'Pi
 
 export default function KybForm() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: session, status: sessionStatus, update: updateSession } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

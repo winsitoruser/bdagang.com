@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   MapPin, 
   Plus,
@@ -15,10 +16,21 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+const MOCK_ROUTES = [
+  { id: 'rt1', name: 'Jakarta - Bandung', origin: 'Jakarta', destination: 'Bandung', distance: 150, estimatedDuration: 180, status: 'active', vehicleCount: 3 },
+  { id: 'rt2', name: 'Jakarta - Surabaya', origin: 'Jakarta', destination: 'Surabaya', distance: 780, estimatedDuration: 720, status: 'active', vehicleCount: 2 },
+  { id: 'rt3', name: 'Jakarta - Semarang', origin: 'Jakarta', destination: 'Semarang', distance: 450, estimatedDuration: 420, status: 'active', vehicleCount: 2 },
+];
+const MOCK_ASSIGNMENTS = [
+  { id: 'ra1', routeId: 'rt1', vehicleId: 'v1', driverId: 'd1', scheduledDate: new Date().toISOString().split('T')[0], status: 'in_progress', departureTime: '06:00', estimatedArrival: '09:00' },
+  { id: 'ra2', routeId: 'rt2', vehicleId: 'v2', driverId: 'd2', scheduledDate: new Date().toISOString().split('T')[0], status: 'completed', departureTime: '05:00', estimatedArrival: '17:00' },
+];
+
 export default function RouteManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
-  const [routes, setRoutes] = useState<any[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
+  const [routes, setRoutes] = useState<any[]>(MOCK_ROUTES);
+  const [assignments, setAssignments] = useState<any[]>(MOCK_ASSIGNMENTS);
   const [activeTab, setActiveTab] = useState<'routes' | 'assignments'>('routes');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -37,7 +49,7 @@ export default function RouteManagement() {
       ]);
       if (routesRes.ok) { const d = await routesRes.json(); setRoutes(d.data || []); }
       if (assignRes.ok) { const d = await assignRes.json(); setAssignments(d.data || []); }
-    } catch (e) { console.error('Failed to fetch fleet routes:', e); }
+    } catch (e) { console.error('Failed to fetch fleet routes:', e); setRoutes(MOCK_ROUTES); setAssignments(MOCK_ASSIGNMENTS); }
     setLoading(false);
   };
 
@@ -53,8 +65,8 @@ export default function RouteManagement() {
       <div className="p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Route Management (Ritasi)</h1>
-          <p className="text-gray-600">Manage delivery routes and assignments</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('fleet.routesTitle')}</h1>
+          <p className="text-gray-600">{t('fleet.routesSubtitle')}</p>
         </div>
 
         {/* Summary Cards */}
@@ -65,7 +77,7 @@ export default function RouteManagement() {
                 <MapPin className="w-6 h-6 text-blue-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Active Routes</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.activeRoutes')}</p>
             <p className="text-2xl font-bold text-gray-900">{activeRoutes}</p>
           </div>
 
@@ -75,7 +87,7 @@ export default function RouteManagement() {
                 <Calendar className="w-6 h-6 text-green-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Assignments Today</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.assignmentsToday')}</p>
             <p className="text-2xl font-bold text-gray-900">{todayAssignments.length}</p>
           </div>
 
@@ -85,7 +97,7 @@ export default function RouteManagement() {
                 <TrendingUp className="w-6 h-6 text-purple-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">In Progress</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.inProgress')}</p>
             <p className="text-2xl font-bold text-gray-900">{inProgress}</p>
           </div>
 
@@ -95,7 +107,7 @@ export default function RouteManagement() {
                 <CheckCircle className="w-6 h-6 text-orange-600" />
               </div>
             </div>
-            <p className="text-sm text-gray-600 mb-1">Completed Today</p>
+            <p className="text-sm text-gray-600 mb-1">{t('fleet.completedToday')}</p>
             <p className="text-2xl font-bold text-gray-900">{completedToday}</p>
           </div>
         </div>

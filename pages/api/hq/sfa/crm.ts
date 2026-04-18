@@ -39,7 +39,7 @@ function generateNumber(prefix: string): string {
   return `${prefix}-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${Math.random().toString(36).substring(2,6).toUpperCase()}`;
 }
 
-async function handler(req: NextApiRequest, res: NextApiResponse) {
+export async function crmApiHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const session = await getServerSession(req, res, authOptions);
     if (!session?.user) return res.status(401).json({ success: false, error: 'Unauthorized' });
@@ -136,6 +136,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       fireAudit();
       switch (action) {
         case 'create-customer': return createCustomer(req, res, tenantId, userId);
+        case 'import-customers-csv':
+          if (!isManager) return res.status(403).json({ success: false, error: 'Hanya Manager/Admin yang dapat import bulk.' });
+          return importCustomersCsv(req, res, tenantId, userId);
         case 'create-contact': return createContact(req, res, tenantId, userId);
         case 'create-interaction': return createInteraction(req, res, tenantId, userId);
         case 'create-communication': return createCommunication(req, res, tenantId, userId);
@@ -383,7 +386,10 @@ async function getForecastAnalytics(_req: NextApiRequest, res: NextApiResponse, 
 // ██  SERVICE / TICKETING
 // ════════════════════════════════════════════════════════════════
 async function getTickets(_req: NextApiRequest, res: NextApiResponse, tenantId: string) {
-  const data = await q(`SELECT tk.*, c.display_name as customer_name, (SELECT COUNT(*) FROM crm_ticket_comments tc WHERE tc.ticket_id=tk.id) as comment_count FROM crm_tickets tk LEFT JOIN crm_customers c ON c.id = tk.customer_id WHERE tk.tenant_id = :tid ORDER BY CASE WHEN tk.status='open' THEN 0 WHEN tk.status='in_progress' THEN 1 WHEN tk.status='waiting' THEN 2 ELSE 3 END, tk.priority='critical' DESC, tk.created_at DESC LIMIT 200`, { tid: tenantId });
+  const data = await q(`SELECT tk.*, c.display_name as customer_name,
+    (SELECT COUNT(*) FROM crm_ticket_comments tc WHERE tc.ticket_id=tk.id) as comment_count,
+    (SELECT COUNT(*)::int FROM crm_tasks ct WHERE ct.ticket_id=tk.id AND ct.task_type IN ('field_visit','visit')) as field_task_count
+    FROM crm_tickets tk LEFT JOIN crm_customers c ON c.id = tk.customer_id WHERE tk.tenant_id = :tid ORDER BY CASE WHEN tk.status='open' THEN 0 WHEN tk.status='in_progress' THEN 1 WHEN tk.status='waiting' THEN 2 ELSE 3 END, tk.priority='critical' DESC, tk.created_at DESC LIMIT 200`, { tid: tenantId });
   return res.json({ success: true, data });
 }
 
@@ -392,7 +398,25 @@ async function getTicketDetail(req: NextApiRequest, res: NextApiResponse, tenant
   if (!id) return res.status(400).json({ success: false, error: 'id required' });
   const ticket = await qOne(`SELECT tk.*, c.display_name as customer_name FROM crm_tickets tk LEFT JOIN crm_customers c ON c.id = tk.customer_id WHERE tk.id = :id AND tk.tenant_id = :tid`, { id, tid: tenantId });
   const comments = await q(`SELECT * FROM crm_ticket_comments WHERE ticket_id = :id ORDER BY created_at ASC`, { id });
-  return res.json({ success: true, data: { ticket, comments } });
+  const linkedTasksRaw = await q(`
+    SELECT t.*, c.display_name as customer_name, u.name as assigned_user_name
+    FROM crm_tasks t
+    LEFT JOIN crm_customers c ON c.id = t.customer_id
+    LEFT JOIN users u ON u.id = t.assigned_to
+    WHERE t.tenant_id = :tid AND t.ticket_id = :id
+    ORDER BY t.created_at DESC
+  `, { tid: tenantId, id });
+  const visitIds = [...new Set((linkedTasksRaw || []).map((row: any) => row.sfa_visit_id).filter(Boolean))];
+  const visitMap: Record<string, { status?: string; visit_date?: string; purpose?: string }> = {};
+  for (const vid of visitIds) {
+    const v = await qOne(`SELECT id, status, visit_date, purpose FROM sfa_visits WHERE id = :id AND tenant_id = :tid`, { id: vid, tid: tenantId });
+    if (v?.id) visitMap[String(v.id)] = { status: v.status, visit_date: v.visit_date, purpose: v.purpose };
+  }
+  const linkedTasks = (linkedTasksRaw || []).map((row: any) => {
+    const vm = row.sfa_visit_id ? visitMap[String(row.sfa_visit_id)] : null;
+    return vm ? { ...row, visit_status: vm.status, visit_date: vm.visit_date, visit_purpose: vm.purpose } : row;
+  });
+  return res.json({ success: true, data: { ticket, comments, linkedTasks } });
 }
 
 async function getSlaPolicies(_req: NextApiRequest, res: NextApiResponse, tenantId: string) {
@@ -445,6 +469,87 @@ async function getDocumentTemplates(_req: NextApiRequest, res: NextApiResponse, 
 // ════════════════════════════════════════════════════════════════
 // ██  CREATE OPERATIONS
 // ════════════════════════════════════════════════════════════════
+function parseCsvLineSimple(line: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (!inQ && ch === ',') {
+      out.push(cur.trim());
+      cur = '';
+    } else cur += ch;
+  }
+  out.push(cur.trim());
+  return out.map((s) => s.replace(/^"|"$/g, ''));
+}
+
+async function importCustomersCsv(req: NextApiRequest, res: NextApiResponse, tenantId: string, userId: number) {
+  const csv = String(req.body?.csv || '').trim();
+  if (!csv) return res.status(400).json({ success: false, error: 'Field csv wajib (teks CSV).' });
+  const lines = csv.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return res.status(400).json({ success: false, error: 'Minimal baris header + 1 data.' });
+  const header = parseCsvLineSimple(lines[0]).map((h) => h.toLowerCase().replace(/\s+/g, '_'));
+  const idx = (name: string) => header.indexOf(name);
+  let inserted = 0;
+  const errors: string[] = [];
+  for (let r = 1; r < lines.length; r++) {
+    const cells = parseCsvLineSimple(lines[r]);
+    const get = (aliases: string[]) => {
+      for (const a of aliases) {
+        const i = idx(a);
+        if (i >= 0 && cells[i] !== undefined && cells[i] !== '') return cells[i];
+      }
+      return '';
+    };
+    const display_name = get(['display_name', 'nama', 'name', 'nama_toko', 'outlet']);
+    const company_name = get(['company_name', 'perusahaan', 'pt']);
+    if (!display_name && !company_name) {
+      errors.push(`Baris ${r + 1}: isi display_name atau company_name`);
+      continue;
+    }
+    const num = generateNumber('CUS');
+    const row = {
+      tenantId,
+      num,
+      display_name: display_name || company_name,
+      company_name: company_name || null,
+      customer_type: get(['customer_type', 'tipe']) || 'company',
+      address: get(['address', 'alamat']) || null,
+      city: get(['city', 'kota']) || null,
+      province: get(['province', 'provinsi']) || null,
+      postal_code: get(['postal_code', 'kode_pos']) || null,
+      segment: get(['segment', 'tier', 'kelas']) || null,
+      lifecycle_stage: get(['lifecycle_stage', 'tahap']) || 'prospect',
+      customer_status: get(['customer_status', 'status']) || 'active',
+      notes: get(['notes', 'catatan']) || null,
+      userId,
+    };
+    const okIns = await qExec(
+      `INSERT INTO crm_customers (tenant_id, customer_number, display_name, company_name, customer_type, address, city, province, postal_code, lifecycle_stage, customer_status, segment, notes, tags, custom_fields, created_by)
+       VALUES (:tenantId, :num, :display_name, :company_name, :customer_type, :address, :city, :province, :postal_code, :lifecycle_stage, :customer_status, :segment, :notes, '[]', '{}', :userId)`,
+      {
+        ...row,
+        customer_type: row.customer_type || 'company',
+      },
+    );
+    if (okIns) {
+      errors.push(`Baris ${r + 1}: ${okIns}`);
+    } else {
+      inserted++;
+    }
+  }
+  return res.json({
+    success: true,
+    message: `${inserted} pelanggan diimpor`,
+    inserted,
+    errors: errors.slice(0, 50),
+  });
+}
+
 async function createCustomer(req: NextApiRequest, res: NextApiResponse, tenantId: string, userId: number) {
   const b = req.body;
   const num = generateNumber('CUS');
@@ -487,8 +592,22 @@ async function createFollowUp(req: NextApiRequest, res: NextApiResponse, tenantI
 async function createTask(req: NextApiRequest, res: NextApiResponse, tenantId: string, userId: number) {
   const b = req.body;
   const num = generateNumber('TSK');
-  const ok = await qExec(`INSERT INTO crm_tasks (tenant_id, task_number, title, description, task_type, priority, status, due_date, start_date, customer_id, contact_id, lead_id, opportunity_id, ticket_id, assigned_to, assigned_team, estimated_hours, tags, checklist, created_by) VALUES (:tenantId, :num, :title, :description, :task_type, :priority, :status, :due_date, :start_date, :customer_id, :contact_id, :lead_id, :opportunity_id, :ticket_id, :assigned_to, :assigned_team, :estimated_hours, :tags, :checklist, :userId)`,
-    { tenantId, num, title: b.title||null, description: b.description||null, task_type: b.task_type||'follow_up', priority: b.priority||'medium', status: b.status||'open', due_date: b.due_date||null, start_date: b.start_date||null, customer_id: b.customer_id||null, contact_id: b.contact_id||null, lead_id: b.lead_id||null, opportunity_id: b.opportunity_id||null, ticket_id: b.ticket_id||null, assigned_to: b.assigned_to||null, assigned_team: b.assigned_team||null, estimated_hours: b.estimated_hours||null, tags: JSON.stringify(b.tags||[]), checklist: JSON.stringify(b.checklist||[]), userId });
+  const base = {
+    tenantId, num, title: b.title||null, description: b.description||null, task_type: b.task_type||'follow_up', priority: b.priority||'medium', status: b.status||'open', due_date: b.due_date||null, start_date: b.start_date||null, customer_id: b.customer_id||null, contact_id: b.contact_id||null, lead_id: b.lead_id||null, opportunity_id: b.opportunity_id||null, ticket_id: b.ticket_id||null, assigned_to: b.assigned_to||null, assigned_team: b.assigned_team||null, estimated_hours: b.estimated_hours||null, tags: JSON.stringify(b.tags||[]), checklist: JSON.stringify(b.checklist||[]), userId,
+  };
+  let ok = await qExec(
+    `INSERT INTO crm_tasks (tenant_id, task_number, title, description, task_type, priority, status, due_date, start_date, customer_id, contact_id, lead_id, opportunity_id, ticket_id, assigned_to, assigned_team, estimated_hours, tags, checklist, purpose, sfa_visit_id, created_by) VALUES (:tenantId, :num, :title, :description, :task_type, :priority, :status, :due_date, :start_date, :customer_id, :contact_id, :lead_id, :opportunity_id, :ticket_id, :assigned_to, :assigned_team, :estimated_hours, :tags, :checklist, :purpose, :sfa_visit_id, :userId)`,
+    { ...base, purpose: b.purpose||null, sfa_visit_id: b.sfa_visit_id||null },
+  );
+  if (ok) {
+    const err = String(ok).toLowerCase();
+    if (err.includes('purpose') || err.includes('sfa_visit_id')) {
+      ok = await qExec(
+        `INSERT INTO crm_tasks (tenant_id, task_number, title, description, task_type, priority, status, due_date, start_date, customer_id, contact_id, lead_id, opportunity_id, ticket_id, assigned_to, assigned_team, estimated_hours, tags, checklist, created_by) VALUES (:tenantId, :num, :title, :description, :task_type, :priority, :status, :due_date, :start_date, :customer_id, :contact_id, :lead_id, :opportunity_id, :ticket_id, :assigned_to, :assigned_team, :estimated_hours, :tags, :checklist, :userId)`,
+        base,
+      );
+    }
+  }
   return ok ? res.status(500).json({ success: false, error: ok }) : res.json({ success: true, data: { task_number: num } });
 }
 
@@ -689,4 +808,4 @@ async function deleteCrmEntity(res: NextApiResponse, table: string, id: string, 
   return ok ? res.status(500).json({ success: false, error: ok }) : res.json({ success: true, message: 'Data berhasil dihapus' });
 }
 
-export default withModuleGuard('crm', handler);
+export default withModuleGuard('crm', crmApiHandler);

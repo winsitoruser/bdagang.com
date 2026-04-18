@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import HQLayout from '@/components/hq/HQLayout';
 import { MapPin, ShoppingCart, Eye, Swords, ClipboardList, CheckCircle, Navigation, DollarSign, Plus, RefreshCw, ChevronRight, AlertTriangle, TrendingUp, Users, Calendar, Search, Filter, BarChart3, Star, Shield, X } from 'lucide-react';
+import { rowsOr, MOCK_SFA_ADVANCED } from '@/lib/hq/mock-data';
 
 type Tab = 'overview' | 'coverage' | 'field-orders' | 'merchandising' | 'competitor' | 'survey' | 'approvals' | 'geofence' | 'commission';
 
@@ -40,20 +41,20 @@ export default function SFAAdvancedPage() {
 
   // Data states
   const [dashboard, setDashboard] = useState<any>(null);
-  const [coveragePlans, setCoveragePlans] = useState<any[]>([]);
-  const [coverageAssignments, setCoverageAssignments] = useState<any[]>([]);
-  const [compliance, setCompliance] = useState<any[]>([]);
-  const [fieldOrders, setFieldOrders] = useState<any[]>([]);
-  const [displayAudits, setDisplayAudits] = useState<any[]>([]);
-  const [competitors, setCompetitors] = useState<any[]>([]);
-  const [competitorSummary, setCompetitorSummary] = useState<any[]>([]);
-  const [surveyTemplates, setSurveyTemplates] = useState<any[]>([]);
-  const [surveyResponses, setSurveyResponses] = useState<any[]>([]);
-  const [approvalWorkflows, setApprovalWorkflows] = useState<any[]>([]);
-  const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
-  const [geofences, setGeofences] = useState<any[]>([]);
-  const [commissions, setCommissions] = useState<any[]>([]);
-  const [inventoryProducts, setInventoryProducts] = useState<any[]>([]);
+  const [coveragePlans, setCoveragePlans] = useState<any[]>(MOCK_SFA_ADVANCED.coveragePlans);
+  const [coverageAssignments, setCoverageAssignments] = useState<any[]>(MOCK_SFA_ADVANCED.coverageAssignments);
+  const [compliance, setCompliance] = useState<any[]>(MOCK_SFA_ADVANCED.compliance);
+  const [fieldOrders, setFieldOrders] = useState<any[]>(MOCK_SFA_ADVANCED.fieldOrders);
+  const [displayAudits, setDisplayAudits] = useState<any[]>(MOCK_SFA_ADVANCED.displayAudits);
+  const [competitors, setCompetitors] = useState<any[]>(MOCK_SFA_ADVANCED.competitors);
+  const [competitorSummary, setCompetitorSummary] = useState<any[]>(MOCK_SFA_ADVANCED.competitorSummary);
+  const [surveyTemplates, setSurveyTemplates] = useState<any[]>(MOCK_SFA_ADVANCED.surveyTemplates);
+  const [surveyResponses, setSurveyResponses] = useState<any[]>(MOCK_SFA_ADVANCED.surveyResponses);
+  const [approvalWorkflows, setApprovalWorkflows] = useState<any[]>(MOCK_SFA_ADVANCED.approvalWorkflows);
+  const [approvalRequests, setApprovalRequests] = useState<any[]>(MOCK_SFA_ADVANCED.approvalRequests);
+  const [geofences, setGeofences] = useState<any[]>(MOCK_SFA_ADVANCED.geofences);
+  const [commissions, setCommissions] = useState<any[]>(MOCK_SFA_ADVANCED.commissions);
+  const [inventoryProducts, setInventoryProducts] = useState<any[]>(MOCK_SFA_ADVANCED.inventoryProducts);
 
   // Form states
   const [foForm, setFoForm] = useState<any>({ customer_name: '', items: [] });
@@ -72,34 +73,34 @@ export default function SFAAdvancedPage() {
         if (r.success) setDashboard(r.data?.summary);
       } else if (tab === 'coverage') {
         const [r1, r2, r3] = await Promise.all([api('coverage-plans'), api('coverage-assignments'), api('coverage-compliance')]);
-        if (r1.success) setCoveragePlans(r1.data);
-        if (r2.success) setCoverageAssignments(r2.data);
-        if (r3.success) setCompliance(r3.data);
+        if (r1.success) setCoveragePlans(rowsOr(r1.data, MOCK_SFA_ADVANCED.coveragePlans));
+        if (r2.success) setCoverageAssignments(rowsOr(r2.data, MOCK_SFA_ADVANCED.coverageAssignments));
+        if (r3.success) setCompliance(rowsOr(r3.data, MOCK_SFA_ADVANCED.compliance));
       } else if (tab === 'field-orders') {
         const r = await api('field-orders');
-        if (r.success) setFieldOrders(r.data);
+        if (r.success) setFieldOrders(rowsOr(r.data, MOCK_SFA_ADVANCED.fieldOrders));
       } else if (tab === 'merchandising') {
         const r = await api('display-audits');
-        if (r.success) setDisplayAudits(r.data);
+        if (r.success) setDisplayAudits(rowsOr(r.data, MOCK_SFA_ADVANCED.displayAudits));
       } else if (tab === 'competitor') {
         const [r1, r2] = await Promise.all([api('competitor-activities'), api('competitor-summary')]);
-        if (r1.success) setCompetitors(r1.data);
-        if (r2.success) setCompetitorSummary(r2.data);
+        if (r1.success) setCompetitors(rowsOr(r1.data, MOCK_SFA_ADVANCED.competitors));
+        if (r2.success) setCompetitorSummary(rowsOr(r2.data, MOCK_SFA_ADVANCED.competitorSummary));
       } else if (tab === 'survey') {
         const [r1, r2] = await Promise.all([api('survey-templates'), api('survey-responses')]);
-        if (r1.success) setSurveyTemplates(r1.data);
-        if (r2.success) setSurveyResponses(r2.data);
+        if (r1.success) setSurveyTemplates(rowsOr(r1.data, MOCK_SFA_ADVANCED.surveyTemplates));
+        if (r2.success) setSurveyResponses(rowsOr(r2.data, MOCK_SFA_ADVANCED.surveyResponses));
       } else if (tab === 'approvals') {
         const [r1, r2] = await Promise.all([api('approval-workflows'), api('approval-requests')]);
-        if (r1.success) setApprovalWorkflows(r1.data);
-        if (r2.success) setApprovalRequests(r2.data);
+        if (r1.success) setApprovalWorkflows(rowsOr(r1.data, MOCK_SFA_ADVANCED.approvalWorkflows));
+        if (r2.success) setApprovalRequests(rowsOr(r2.data, MOCK_SFA_ADVANCED.approvalRequests));
       } else if (tab === 'geofence') {
         const r = await api('geofences');
-        if (r.success) setGeofences(r.data);
+        if (r.success) setGeofences(rowsOr(r.data, MOCK_SFA_ADVANCED.geofences));
       } else if (tab === 'commission') {
         const [r, rp] = await Promise.all([api('product-commissions'), api('inventory-products')]);
-        if (r.success) setCommissions(r.data);
-        if (rp.success) setInventoryProducts(rp.data || []);
+        if (r.success) setCommissions(rowsOr(r.data, MOCK_SFA_ADVANCED.commissions));
+        if (rp.success) setInventoryProducts(rowsOr(rp.data, MOCK_SFA_ADVANCED.inventoryProducts));
       }
     } catch (e) { console.error(e); }
     setLoading(false);

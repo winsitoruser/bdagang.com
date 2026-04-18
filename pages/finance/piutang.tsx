@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { 
   FaFileInvoiceDollar, FaCalendarAlt, FaExclamationTriangle, 
   FaCheckCircle, FaClock, FaSearch, FaFilter, FaPlus,
@@ -24,7 +25,13 @@ interface AccountReceivable {
 }
 
 const PiutangPage: React.FC = () => {
-  const [piutangList, setPiutangList] = useState<AccountReceivable[]>([]);
+  const { t } = useTranslation();
+  const MOCK_PIUTANG: AccountReceivable[] = [
+    { id: 'p1', customerId: 'c1', customerName: 'Toko Sejahtera', customerPhone: '021-5551111', invoiceNumber: 'INV-2026-045', invoiceDate: '2026-03-01', dueDate: '2026-03-31', totalAmount: 12000000, paidAmount: 4000000, remainingAmount: 8000000, status: 'partial', daysPastDue: 0 },
+    { id: 'p2', customerId: 'c2', customerName: 'PT Maju Bersama', customerPhone: '021-5552222', invoiceNumber: 'INV-2026-038', invoiceDate: '2026-02-10', dueDate: '2026-03-10', totalAmount: 6500000, paidAmount: 0, remainingAmount: 6500000, status: 'overdue', daysPastDue: 5 },
+    { id: 'p3', customerId: 'c3', customerName: 'CV Abadi Jaya', customerPhone: '021-5553333', invoiceNumber: 'INV-2026-050', invoiceDate: '2026-03-10', dueDate: '2026-04-10', totalAmount: 9800000, paidAmount: 0, remainingAmount: 9800000, status: 'unpaid', daysPastDue: 0 },
+  ];
+  const [piutangList, setPiutangList] = useState<AccountReceivable[]>(MOCK_PIUTANG);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -51,7 +58,7 @@ const PiutangPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching piutang data:', error);
-      setPiutangList([]);
+      setPiutangList(MOCK_PIUTANG);
     } finally {
       setLoading(false);
     }

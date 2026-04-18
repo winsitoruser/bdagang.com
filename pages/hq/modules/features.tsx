@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import {
   Sliders, Package, CheckCircle, XCircle, Settings,
   Search, Filter, Plus, Edit, Save, X
@@ -29,6 +30,7 @@ interface TenantFeatureConfig {
 
 export default function FeatureManagement() {
   const { data: session } = useSession();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [features, setFeatures] = useState<ModuleFeature[]>([]);
   const [selectedModule, setSelectedModule] = useState<string>('all');
@@ -54,23 +56,23 @@ export default function FeatureManagement() {
   const handleToggleFeature = async (featureId: string, isActive: boolean) => {
     try {
       // In production, call API to toggle feature
-      toast.success(`Feature ${!isActive ? 'activated' : 'deactivated'}`);
+      toast.success(!isActive ? t('mp.features.featureActivated') : t('mp.features.featureDeactivated'));
       
       setFeatures(features.map(f => 
         f.id === featureId ? { ...f, isActive: !isActive } : f
       ));
     } catch (error) {
-      toast.error('Failed to toggle feature');
+      toast.error(t('mp.features.failedToToggle'));
     }
   };
   
   const handleSaveFeature = async (featureId: string) => {
     try {
       // In production, call API to save feature
-      toast.success('Feature updated successfully');
+      toast.success(t('mp.features.featureUpdated'));
       setEditingFeature(null);
     } catch (error) {
-      toast.error('Failed to update feature');
+      toast.error(t('mp.features.failedToUpdate'));
     }
   };
   
@@ -89,13 +91,13 @@ export default function FeatureManagement() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Feature Management</h1>
-            <p className="text-gray-600 mt-1">Configure module features and toggles</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('mp.features.title')}</h1>
+            <p className="text-gray-600 mt-1">{t('mp.features.subtitle')}</p>
           </div>
           
           <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2">
             <Plus className="w-5 h-5" />
-            Add Feature
+            {t('mp.features.addFeature')}
           </button>
         </div>
         
@@ -107,7 +109,7 @@ export default function FeatureManagement() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search features..."
+                placeholder={t('mp.features.searchFeatures')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -120,7 +122,7 @@ export default function FeatureManagement() {
               onChange={(e) => setSelectedModule(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="all">All Modules</option>
+              <option value="all">{t('mp.features.allModules')}</option>
               {modules.map(module => (
                 <option key={module.id} value={module.id}>{module.name}</option>
               ))}
@@ -131,8 +133,8 @@ export default function FeatureManagement() {
         {/* Features Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Module Features</h2>
-            <p className="text-sm text-gray-600 mt-1">Manage feature flags and configurations</p>
+            <h2 className="text-lg font-semibold text-gray-900">{t('mp.features.moduleFeatures')}</h2>
+            <p className="text-sm text-gray-600 mt-1">{t('mp.features.featureFlags')}</p>
           </div>
           
           <div className="overflow-x-auto">
@@ -140,22 +142,22 @@ export default function FeatureManagement() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Feature
+                    {t('mp.features.colFeature')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Module
+                    {t('mp.features.colModule')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Business Types
+                    {t('mp.features.colBusinessTypes')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Default
+                    {t('mp.features.colDefault')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    {t('mp.features.colStatus')}
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    {t('mp.features.colActions')}
                   </th>
                 </tr>
               </thead>
@@ -245,7 +247,7 @@ export default function FeatureManagement() {
         {filteredFeatures.length === 0 && !loading && (
           <div className="text-center py-12">
             <Sliders className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-500">No features found</p>
+            <p className="text-gray-500">{t('mp.features.noFeaturesFound')}</p>
           </div>
         )}
       </div>

@@ -66,15 +66,25 @@ const LoyaltyProgramPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   // State for data from API
-  const [tiers, setTiers] = useState<Tier[]>([]);
-  const [topMembers, setTopMembers] = useState<Member[]>([]);
-  const [rewards, setRewards] = useState<Reward[]>([]);
-  const [stats, setStats] = useState<Stats>({
-    totalMembers: 0,
-    pointsRedeemedThisMonth: 0,
-    rewardsClaimed: 0,
-    engagementRate: 0
-  });
+  const MOCK_LOYALTY_TIERS: Tier[] = [
+    { id: 't1', name: 'Bronze', minPoints: 0, maxPoints: 999, benefits: ['Diskon 5%', 'Poin 1x'], members: 320, color: 'bg-orange-500', pointMultiplier: 1, discountPercentage: 5 },
+    { id: 't2', name: 'Silver', minPoints: 1000, maxPoints: 4999, benefits: ['Diskon 10%', 'Poin 1.5x', 'Free delivery'], members: 145, color: 'bg-gray-400', pointMultiplier: 1.5, discountPercentage: 10 },
+    { id: 't3', name: 'Gold', minPoints: 5000, maxPoints: null, benefits: ['Diskon 15%', 'Poin 2x', 'Free delivery', 'Priority service'], members: 42, color: 'bg-yellow-500', pointMultiplier: 2, discountPercentage: 15 },
+  ];
+  const MOCK_LOYALTY_MEMBERS: Member[] = [
+    { id: 'm1', name: 'Budi Santoso', email: 'budi@email.com', tier: 'Gold', points: 8500, totalSpent: 25000000, transactions: 85 },
+    { id: 'm2', name: 'Siti Rahayu', email: 'siti@email.com', tier: 'Silver', points: 3200, totalSpent: 12000000, transactions: 52 },
+    { id: 'm3', name: 'Ahmad Wijaya', email: 'ahmad@email.com', tier: 'Silver', points: 2800, totalSpent: 9500000, transactions: 38 },
+  ];
+  const MOCK_LOYALTY_REWARDS: Reward[] = [
+    { id: 'rw1', name: 'Voucher Rp 50.000', points: 500, stock: 100, claimed: 45, type: 'voucher', value: 50000, description: 'Voucher belanja' },
+    { id: 'rw2', name: 'Free Delivery', points: 200, stock: 200, claimed: 120, type: 'benefit', description: 'Gratis ongkir' },
+  ];
+  const MOCK_LOYALTY_STATS: Stats = { totalMembers: 507, pointsRedeemedThisMonth: 45000, rewardsClaimed: 165, engagementRate: 72 };
+  const [tiers, setTiers] = useState<Tier[]>(MOCK_LOYALTY_TIERS);
+  const [topMembers, setTopMembers] = useState<Member[]>(MOCK_LOYALTY_MEMBERS);
+  const [rewards, setRewards] = useState<Reward[]>(MOCK_LOYALTY_REWARDS);
+  const [stats, setStats] = useState<Stats>(MOCK_LOYALTY_STATS);
 
   // Modal states
   const [showTierModal, setShowTierModal] = useState(false);
@@ -133,6 +143,9 @@ const LoyaltyProgramPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setStats(MOCK_LOYALTY_STATS);
+      setTiers(MOCK_LOYALTY_TIERS);
+      setTopMembers(MOCK_LOYALTY_MEMBERS);
     } finally {
       setLoading(false);
     }
@@ -148,6 +161,7 @@ const LoyaltyProgramPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching rewards:', error);
+      setRewards(MOCK_LOYALTY_REWARDS);
     }
   };
 
@@ -388,10 +402,10 @@ const LoyaltyProgramPage: React.FC = () => {
   };
 
   const statsDisplay = [
-    { label: 'Total Member', value: stats.totalMembers.toLocaleString(), icon: FaUsers, color: 'bg-blue-500', change: '+12%' },
+    { label: 'Total Anggota', value: stats.totalMembers.toLocaleString(), icon: FaUsers, color: 'bg-blue-500', change: '+12%' },
     { label: 'Poin Ditukar Bulan Ini', value: stats.pointsRedeemedThisMonth.toLocaleString(), icon: FaCoins, color: 'bg-green-500', change: '+8%' },
-    { label: 'Reward Diklaim', value: stats.rewardsClaimed.toLocaleString(), icon: FaGift, color: 'bg-purple-500', change: '+15%' },
-    { label: 'Engagement Rate', value: `${stats.engagementRate}%`, icon: FaChartLine, color: 'bg-orange-500', change: '+5%' },
+    { label: 'Hadiah Diklaim', value: stats.rewardsClaimed.toLocaleString(), icon: FaGift, color: 'bg-purple-500', change: '+15%' },
+    { label: 'Tingkat Keterlibatan', value: `${stats.engagementRate}%`, icon: FaChartLine, color: 'bg-orange-500', change: '+5%' },
   ];
 
   const formatCurrency = (amount: number) => {
@@ -825,7 +839,7 @@ const LoyaltyProgramPage: React.FC = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <h3 className="text-lg font-bold mb-4">
-                {selectedTier ? 'Edit Tier' : 'Tambah Tier Baru'}
+                {selectedTier ? 'Ubah Tingkatan' : 'Tambah Tingkatan Baru'}
               </h3>
               <form onSubmit={selectedTier ? handleEditTier : handleAddTier}>
                 <div className="space-y-4">
@@ -979,7 +993,7 @@ const LoyaltyProgramPage: React.FC = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
               <h3 className="text-lg font-bold mb-4">
-                {selectedReward ? 'Edit Reward' : 'Tambah Reward Baru'}
+                {selectedReward ? 'Ubah Hadiah' : 'Tambah Hadiah Baru'}
               </h3>
               <form onSubmit={selectedReward ? handleEditReward : handleAddReward}>
                 <div className="space-y-4">

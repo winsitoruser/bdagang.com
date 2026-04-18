@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@/lib/i18n';
 import {
   DollarSign, TrendingUp, TrendingDown, Building2, CreditCard, Wallet,
   PieChart as PieChartIcon, BarChart3, Calendar, ArrowUpRight, ArrowDownRight,
@@ -16,11 +17,11 @@ const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
 
 const INDUSTRY_OPTIONS = [
   { value: 'general', label: 'Umum' }, { value: 'fnb', label: 'F&B' },
-  { value: 'retail', label: 'Retail' }, { value: 'logistics', label: 'Logistik' },
-  { value: 'hospitality', label: 'Hospitality' }, { value: 'manufacturing', label: 'Manufaktur' },
-  { value: 'finance', label: 'Finance' }, { value: 'workshop', label: 'Bengkel' },
+  { value: 'retail', label: 'Ritel' }, { value: 'logistics', label: 'Logistik' },
+  { value: 'hospitality', label: 'Perhotelan' }, { value: 'manufacturing', label: 'Manufaktur' },
+  { value: 'finance', label: 'Keuangan' }, { value: 'workshop', label: 'Bengkel' },
   { value: 'pharmacy', label: 'Farmasi' }, { value: 'distributor', label: 'Distributor' },
-  { value: 'rental', label: 'Rental' }, { value: 'property', label: 'Property' },
+  { value: 'rental', label: 'Penyewaan' }, { value: 'property', label: 'Properti' },
 ];
 
 interface FinanceSummary {
@@ -90,6 +91,58 @@ interface RecentTransaction {
 
 const defaultFinSummary: FinanceSummary = { totalRevenue: 0, totalExpenses: 0, grossProfit: 0, netProfit: 0, grossMargin: 0, netMargin: 0, cashOnHand: 0, accountsReceivable: 0, accountsPayable: 0, pendingInvoices: 0, overdueInvoices: 0, monthlyGrowth: 0, yearlyGrowth: 0 };
 
+const MOCK_FIN_SUMMARY: FinanceSummary = {
+  totalRevenue: 7290000000, totalExpenses: 5103000000, grossProfit: 2916000000, netProfit: 1458000000,
+  grossMargin: 40, netMargin: 20, ebitda: 1822500000, ebitdaMargin: 25,
+  cashOnHand: 3200000000, accountsReceivable: 1850000000, accountsPayable: 920000000,
+  pendingInvoices: 23, overdueInvoices: 4, monthlyGrowth: 8.5, yearlyGrowth: 15.2,
+  operatingCashFlow: 1600000000, freeCashFlow: 1200000000, workingCapital: 2280000000,
+  currentRatio: 2.4, quickRatio: 1.8, debtToEquity: 0.35, returnOnEquity: 22, returnOnAssets: 15
+};
+
+const MOCK_BRANCH_FINANCE: BranchFinance[] = [
+  { id: '1', name: 'Kantor Pusat Jakarta', code: 'HQ-001', revenue: 1350000000, expenses: 945000000, profit: 405000000, margin: 30, growth: 8.5, status: 'excellent' },
+  { id: '5', name: 'Cabang Bali', code: 'BR-005', revenue: 1050000000, expenses: 735000000, profit: 315000000, margin: 30, growth: 12.3, status: 'excellent' },
+  { id: '2', name: 'Cabang Bandung', code: 'BR-002', revenue: 980000000, expenses: 715000000, profit: 265000000, margin: 27, growth: 5.2, status: 'good' },
+  { id: '3', name: 'Cabang Surabaya', code: 'BR-003', revenue: 820000000, expenses: 615000000, profit: 205000000, margin: 25, growth: -2.1, status: 'warning' },
+  { id: '7', name: 'Cabang Semarang', code: 'BR-007', revenue: 760000000, expenses: 555000000, profit: 205000000, margin: 27, growth: 3.8, status: 'good' },
+  { id: '4', name: 'Cabang Medan', code: 'BR-004', revenue: 710000000, expenses: 533000000, profit: 177000000, margin: 25, growth: 1.4, status: 'good' },
+  { id: '12', name: 'Cabang Yogyakarta', code: 'BR-008', revenue: 620000000, expenses: 440000000, profit: 180000000, margin: 29, growth: 6.7, status: 'good' },
+  { id: '6', name: 'Cabang Makassar', code: 'BR-006', revenue: 520000000, expenses: 416000000, profit: 104000000, margin: 20, growth: -8.5, status: 'critical' },
+  { id: '10', name: 'Kiosk Kelapa Gading', code: 'KS-001', revenue: 480000000, expenses: 312000000, profit: 168000000, margin: 35, growth: 15.2, status: 'excellent' },
+];
+
+const MOCK_TRANSACTIONS: RecentTransaction[] = [
+  { id: 't1', date: '2026-03-12', description: 'Penjualan Harian - Pusat Jakarta', branch: 'HQ-001', type: 'income', category: 'Penjualan', amount: 48500000, status: 'completed' },
+  { id: 't2', date: '2026-03-12', description: 'Pembelian Stok Bahan Baku', branch: 'BR-002', type: 'expense', category: 'COGS', amount: 28000000, status: 'completed' },
+  { id: 't3', date: '2026-03-12', description: 'Transfer Dana Operasional', branch: 'BR-003', type: 'transfer', category: 'Transfer', amount: 50000000, status: 'completed' },
+  { id: 't4', date: '2026-03-11', description: 'Gaji Karyawan Februari', branch: 'HQ-001', type: 'expense', category: 'Payroll', amount: 185000000, status: 'completed' },
+  { id: 't5', date: '2026-03-11', description: 'Penjualan Online Marketplace', branch: 'KS-001', type: 'income', category: 'Penjualan', amount: 18900000, status: 'completed' },
+  { id: 't6', date: '2026-03-11', description: 'Pembayaran Listrik & Air', branch: 'BR-005', type: 'expense', category: 'Utilities', amount: 12500000, status: 'pending' },
+  { id: 't7', date: '2026-03-10', description: 'Invoice Klien Korporat #INV-2026-089', branch: 'BR-004', type: 'income', category: 'Piutang', amount: 75000000, status: 'pending' },
+  { id: 't8', date: '2026-03-10', description: 'Biaya Marketing Digital', branch: 'HQ-001', type: 'expense', category: 'Marketing', amount: 15000000, status: 'completed' },
+];
+
+const MOCK_FIN_HEALTH: FinancialHealth = {
+  score: 82, grade: 'B+',
+  factors: [
+    { name: 'Profitabilitas', score: 18, max: 25, detail: 'Net margin 20% - sangat baik' },
+    { name: 'Likuiditas', score: 20, max: 25, detail: 'Current ratio 2.4x - sehat' },
+    { name: 'Efisiensi', score: 16, max: 20, detail: 'OPEX ratio dalam target' },
+    { name: 'Pertumbuhan', score: 14, max: 15, detail: 'Revenue growth +8.5%' },
+    { name: 'Solvabilitas', score: 14, max: 15, detail: 'D/E ratio 0.35 - rendah' },
+  ]
+};
+
+const MOCK_INDUSTRY_KPIS: IndustryKPI[] = [
+  { key: 'grossMargin', label: 'Margin Kotor', unit: '%', target: 35, actual: 40, previousPeriod: 38, trend: 5.3 },
+  { key: 'netMargin', label: 'Margin Bersih', unit: '%', target: 15, actual: 20, previousPeriod: 18.5, trend: 8.1 },
+  { key: 'currentRatio', label: 'Rasio Lancar', unit: 'x', target: 2.0, actual: 2.4, previousPeriod: 2.2, trend: 9.1 },
+  { key: 'roa', label: 'Return on Assets', unit: '%', target: 12, actual: 15, previousPeriod: 13.5, trend: 11.1 },
+  { key: 'roe', label: 'Return on Equity', unit: '%', target: 18, actual: 22, previousPeriod: 20, trend: 10.0 },
+  { key: 'inventoryTurnover', label: 'Inventory Turnover', unit: 'x', target: 8, actual: 10.5, previousPeriod: 9.8, trend: 7.1 },
+];
+
 const formatCurrency = (value: number) => {
   if (value >= 1000000000) {
     return `Rp ${(value / 1000000000).toFixed(1)}M`;
@@ -104,6 +157,7 @@ const formatFullCurrency = (value: number) => {
 };
 
 export default function HQFinanceDashboard() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'quarter' | 'year'>('month');
@@ -132,6 +186,7 @@ export default function HQFinanceDashboard() {
       }
     } catch (error) {
       console.error('Error fetching branches:', error);
+      setAllBranches(MOCK_BRANCH_FINANCE.map(b => ({ id: b.id, name: b.name, code: b.code })));
     }
   };
 
@@ -188,6 +243,11 @@ export default function HQFinanceDashboard() {
       }
     } catch (error) {
       console.error('Error fetching finance data:', error);
+      setSummary(MOCK_FIN_SUMMARY);
+      setBranchFinance(MOCK_BRANCH_FINANCE);
+      setTransactions(MOCK_TRANSACTIONS);
+      setHealth(MOCK_FIN_HEALTH);
+      setIndustryKpis(MOCK_INDUSTRY_KPIS);
     } finally {
       setLoading(false);
     }
@@ -312,14 +372,14 @@ export default function HQFinanceDashboard() {
   };
 
   const quickLinks = [
-    { icon: TrendingUp, label: 'Revenue Analysis', href: '/hq/finance/revenue', color: 'bg-blue-500' },
-    { icon: TrendingDown, label: 'Expense Management', href: '/hq/finance/expenses', color: 'bg-red-500' },
-    { icon: FileText, label: 'Profit & Loss', href: '/hq/finance/profit-loss', color: 'bg-green-500' },
-    { icon: ArrowRightLeft, label: 'Cash Flow', href: '/hq/finance/cash-flow', color: 'bg-purple-500' },
-    { icon: Receipt, label: 'Invoices', href: '/hq/finance/invoices', color: 'bg-orange-500' },
-    { icon: Banknote, label: 'Accounts', href: '/hq/finance/accounts', color: 'bg-cyan-500' },
-    { icon: Calculator, label: 'Budget', href: '/hq/finance/budget', color: 'bg-indigo-500' },
-    { icon: Target, label: 'Tax Reports', href: '/hq/finance/tax', color: 'bg-pink-500' }
+    { icon: TrendingUp, label: t('finance.qlRevenue'), href: '/hq/finance/revenue', color: 'bg-blue-500' },
+    { icon: TrendingDown, label: t('finance.qlExpenses'), href: '/hq/finance/expenses', color: 'bg-red-500' },
+    { icon: FileText, label: t('finance.qlProfitLoss'), href: '/hq/finance/profit-loss', color: 'bg-green-500' },
+    { icon: ArrowRightLeft, label: t('finance.qlCashFlow'), href: '/hq/finance/cash-flow', color: 'bg-purple-500' },
+    { icon: Receipt, label: t('finance.qlInvoices'), href: '/hq/finance/invoices', color: 'bg-orange-500' },
+    { icon: Banknote, label: t('finance.qlAccounts'), href: '/hq/finance/accounts', color: 'bg-cyan-500' },
+    { icon: Calculator, label: t('finance.qlBudget'), href: '/hq/finance/budget', color: 'bg-indigo-500' },
+    { icon: Target, label: t('finance.qlTax'), href: '/hq/finance/tax', color: 'bg-pink-500' }
   ];
 
   return (
@@ -328,29 +388,29 @@ export default function HQFinanceDashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Finance Dashboard</h1>
-            <p className="text-gray-500">Overview keuangan multi-industri dengan KPI & rasio</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t('finance.title')}</h1>
+            <p className="text-gray-500">{t('finance.subtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
             <select value={industry} onChange={(e) => setIndustry(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
               {INDUSTRY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <select value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-              <option value="all">Semua Cabang</option>
+              <option value="all">{t('finance.allBranches')}</option>
               {(allBranches.length > 0 ? allBranches : branchFinance).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
             <select value={period} onChange={(e) => setPeriod(e.target.value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-              <option value="day">Hari Ini</option>
-              <option value="week">Minggu Ini</option>
-              <option value="month">Bulan Ini</option>
-              <option value="quarter">Kuartal Ini</option>
-              <option value="year">Tahun Ini</option>
+              <option value="day">{t('finance.today')}</option>
+              <option value="week">{t('finance.thisWeek')}</option>
+              <option value="month">{t('finance.thisMonth')}</option>
+              <option value="quarter">{t('finance.thisQuarter')}</option>
+              <option value="year">{t('finance.thisYear')}</option>
             </select>
             <button onClick={fetchData} className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50">
-              <Download className="w-4 h-4" /> Export
+              <Download className="w-4 h-4" /> {t('finance.export')}
             </button>
           </div>
         </div>
@@ -358,10 +418,10 @@ export default function HQFinanceDashboard() {
         {/* Sub-tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
           {([
-            { v: 'overview' as const, l: 'Overview', icon: Layers },
-            { v: 'ratios' as const, l: 'Industry KPIs', icon: Activity },
-            { v: 'comparison' as const, l: 'Branch Comparison', icon: Building2 },
-            { v: 'forecast' as const, l: 'Forecast', icon: Target },
+            { v: 'overview' as const, l: t('finance.tabOverview'), icon: Layers },
+            { v: 'ratios' as const, l: t('finance.tabKpis'), icon: Activity },
+            { v: 'comparison' as const, l: t('finance.tabComparison'), icon: Building2 },
+            { v: 'forecast' as const, l: t('finance.tabForecast'), icon: Target },
           ]).map(t => (
             <button key={t.v} onClick={() => setSubTab(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${subTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
               <t.icon className="w-4 h-4" />{t.l}
@@ -392,7 +452,7 @@ export default function HQFinanceDashboard() {
               <DollarSign className="w-7 h-7 opacity-80" />
               <span className="flex items-center text-xs bg-white/20 px-2 py-0.5 rounded-full"><ArrowUpRight className="w-3 h-3 mr-0.5" />{summary.monthlyGrowth}%</span>
             </div>
-            <p className="text-blue-100 text-xs">Total Revenue</p>
+            <p className="text-blue-100 text-xs">{t('finance.totalRevenue')}</p>
             <p className="text-xl font-bold">{formatCurrency(summary.totalRevenue)}</p>
             <p className="text-blue-200 text-[10px] mt-0.5">YoY: +{summary.yearlyGrowth}%</p>
           </div>
@@ -401,7 +461,7 @@ export default function HQFinanceDashboard() {
               <TrendingUp className="w-7 h-7 opacity-80" />
               <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{summary.netMargin}%</span>
             </div>
-            <p className="text-green-100 text-xs">Net Profit</p>
+            <p className="text-green-100 text-xs">{t('finance.netProfit')}</p>
             <p className="text-xl font-bold">{formatCurrency(summary.netProfit)}</p>
             <p className="text-green-200 text-[10px] mt-0.5">Gross: {formatCurrency(summary.grossProfit)}</p>
           </div>
@@ -410,7 +470,7 @@ export default function HQFinanceDashboard() {
               <Wallet className="w-7 h-7 opacity-80" />
               <CheckCircle className="w-4 h-4 opacity-80" />
             </div>
-            <p className="text-purple-100 text-xs">Cash on Hand</p>
+            <p className="text-purple-100 text-xs">{t('finance.cashOnHand')}</p>
             <p className="text-xl font-bold">{formatCurrency(summary.cashOnHand)}</p>
             <p className="text-purple-200 text-[10px] mt-0.5">FCF: {formatCurrency(summary.freeCashFlow || 0)}</p>
           </div>
@@ -419,9 +479,9 @@ export default function HQFinanceDashboard() {
               <Receipt className="w-7 h-7 opacity-80" />
               {summary.overdueInvoices > 0 && <span className="flex items-center text-xs bg-red-500 px-2 py-0.5 rounded-full"><AlertTriangle className="w-3 h-3 mr-0.5" />{summary.overdueInvoices}</span>}
             </div>
-            <p className="text-orange-100 text-xs">Pending Invoices</p>
+            <p className="text-orange-100 text-xs">{t('finance.pendingInvoices')}</p>
             <p className="text-xl font-bold">{summary.pendingInvoices}</p>
-            <p className="text-orange-200 text-[10px] mt-0.5">{summary.overdueInvoices} overdue</p>
+            <p className="text-orange-200 text-[10px] mt-0.5">{summary.overdueInvoices} {t('finance.overdue')}</p>
           </div>
           {health && (
             <div className={`rounded-xl p-4 border-2 ${health.score >= 85 ? 'border-green-300 bg-green-50' : health.score >= 70 ? 'border-blue-300 bg-blue-50' : health.score >= 55 ? 'border-yellow-300 bg-yellow-50' : 'border-red-300 bg-red-50'}`}>
@@ -429,7 +489,7 @@ export default function HQFinanceDashboard() {
                 <Heart className={`w-7 h-7 ${getHealthColor(health.score)}`} />
                 <span className={`text-2xl font-black ${getHealthColor(health.score)}`}>{health.grade}</span>
               </div>
-              <p className="text-xs text-gray-500">Financial Health</p>
+              <p className="text-xs text-gray-500">{t('finance.financialHealth')}</p>
               <p className={`text-xl font-bold ${getHealthColor(health.score)}`}>{health.score}/100</p>
               <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
                 <div className={`h-1.5 rounded-full ${health.score >= 85 ? 'bg-green-500' : health.score >= 70 ? 'bg-blue-500' : health.score >= 55 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${health.score}%` }} />
@@ -441,14 +501,14 @@ export default function HQFinanceDashboard() {
         {/* Secondary Metrics */}
         <div className="grid grid-cols-8 gap-3">
           {[
-            { label: 'Expenses', value: formatCurrency(summary.totalExpenses), icon: TrendingDown, bg: 'bg-red-100', ic: 'text-red-600' },
-            { label: 'A/R (Piutang)', value: formatCurrency(summary.accountsReceivable), icon: ArrowUpRight, bg: 'bg-green-100', ic: 'text-green-600' },
-            { label: 'A/P (Hutang)', value: formatCurrency(summary.accountsPayable), icon: ArrowDownRight, bg: 'bg-red-100', ic: 'text-red-600' },
-            { label: 'Gross Margin', value: `${summary.grossMargin}%`, icon: PieChartIcon, bg: 'bg-blue-100', ic: 'text-blue-600' },
-            { label: 'Net Margin', value: `${summary.netMargin}%`, icon: BarChart3, bg: 'bg-purple-100', ic: 'text-purple-600' },
-            { label: 'EBITDA', value: formatCurrency(summary.ebitda || 0), icon: Zap, bg: 'bg-teal-100', ic: 'text-teal-600' },
-            { label: 'Current Ratio', value: `${summary.currentRatio || 0}x`, icon: Shield, bg: 'bg-indigo-100', ic: 'text-indigo-600' },
-            { label: 'ROE', value: `${summary.returnOnEquity || 0}%`, icon: Star, bg: 'bg-yellow-100', ic: 'text-yellow-600' },
+            { label: t('finance.expenses'), value: formatCurrency(summary.totalExpenses), icon: TrendingDown, bg: 'bg-red-100', ic: 'text-red-600' },
+            { label: t('finance.arReceivable'), value: formatCurrency(summary.accountsReceivable), icon: ArrowUpRight, bg: 'bg-green-100', ic: 'text-green-600' },
+            { label: t('finance.apPayable'), value: formatCurrency(summary.accountsPayable), icon: ArrowDownRight, bg: 'bg-red-100', ic: 'text-red-600' },
+            { label: t('finance.grossMargin'), value: `${summary.grossMargin}%`, icon: PieChartIcon, bg: 'bg-blue-100', ic: 'text-blue-600' },
+            { label: t('finance.netMarginLabel'), value: `${summary.netMargin}%`, icon: BarChart3, bg: 'bg-purple-100', ic: 'text-purple-600' },
+            { label: t('finance.ebitda'), value: formatCurrency(summary.ebitda || 0), icon: Zap, bg: 'bg-teal-100', ic: 'text-teal-600' },
+            { label: t('finance.currentRatio'), value: `${summary.currentRatio || 0}x`, icon: Shield, bg: 'bg-indigo-100', ic: 'text-indigo-600' },
+            { label: t('finance.roe'), value: `${summary.returnOnEquity || 0}%`, icon: Star, bg: 'bg-yellow-100', ic: 'text-yellow-600' },
           ].map((m, i) => {
             const Icon = m.icon;
             return (
@@ -469,14 +529,14 @@ export default function HQFinanceDashboard() {
         <div className="grid grid-cols-2 gap-6">
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Revenue & Profit Trend</h3>
+              <h3 className="font-semibold text-gray-900">{t('finance.revenueProfitTrend')}</h3>
               <Link href="/hq/finance/revenue" className="text-sm text-blue-600 hover:underline flex items-center">Detail <ChevronRight className="w-4 h-4" /></Link>
             </div>
             <Chart options={revenueChartOptions} series={revenueChartSeries} type="area" height={260} />
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Expense Breakdown</h3>
+              <h3 className="font-semibold text-gray-900">{t('finance.expenseBreakdown')}</h3>
               <Link href="/hq/finance/expenses" className="text-sm text-blue-600 hover:underline flex items-center">Detail <ChevronRight className="w-4 h-4" /></Link>
             </div>
             <Chart options={expenseChartOptions} series={expenseChartSeries} type="donut" height={260} />
@@ -485,14 +545,14 @@ export default function HQFinanceDashboard() {
         <div className="grid grid-cols-2 gap-6">
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Revenue by Branch</h3>
-              <Link href="/hq/branches" className="text-sm text-blue-600 hover:underline flex items-center">All Branches <ChevronRight className="w-4 h-4" /></Link>
+              <h3 className="font-semibold text-gray-900">{t('finance.revenueByBranch')}</h3>
+              <Link href="/hq/branches" className="text-sm text-blue-600 hover:underline flex items-center">{t('finance.allBranchesLink')} <ChevronRight className="w-4 h-4" /></Link>
             </div>
             <Chart options={branchChartOptions} series={branchChartSeries} type="bar" height={260} />
           </div>
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Weekly Cash Flow</h3>
+              <h3 className="font-semibold text-gray-900">{t('finance.weeklyCashFlow')}</h3>
               <Link href="/hq/finance/cash-flow" className="text-sm text-blue-600 hover:underline flex items-center">Detail <ChevronRight className="w-4 h-4" /></Link>
             </div>
             <Chart options={cashFlowOptions} series={cashFlowSeries} type="bar" height={260} />
@@ -502,7 +562,7 @@ export default function HQFinanceDashboard() {
         {/* Health Score Breakdown */}
         {health && (
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Financial Health Score Breakdown</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.healthScoreBreakdown')}</h3>
             <div className="grid grid-cols-5 gap-4">
               {health.factors.map(f => (
                 <div key={f.name} className="text-center">
@@ -525,8 +585,8 @@ export default function HQFinanceDashboard() {
         <div className="bg-white rounded-xl border border-gray-200">
           <div className="p-5 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Recent Transactions</h3>
-              <Link href="/hq/finance/transactions" className="text-sm text-blue-600 hover:underline flex items-center">View All <ChevronRight className="w-4 h-4" /></Link>
+              <h3 className="font-semibold text-gray-900">{t('finance.recentTransactions')}</h3>
+              <Link href="/hq/finance/transactions" className="text-sm text-blue-600 hover:underline flex items-center">{t('finance.viewAll')} <ChevronRight className="w-4 h-4" /></Link>
             </div>
           </div>
           <div className="divide-y divide-gray-200">
@@ -572,7 +632,7 @@ export default function HQFinanceDashboard() {
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="text-sm font-medium text-gray-900">{kpi.label}</h4>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isGood ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {isGood ? 'On Target' : 'Below Target'}
+                        {isGood ? t('finance.onTarget') : t('finance.belowTarget')}
                       </span>
                     </div>
                     <div className="flex items-baseline gap-2 mb-2">
@@ -601,7 +661,7 @@ export default function HQFinanceDashboard() {
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-gray-200">
               <div className="p-5 border-b border-gray-200">
-                <h3 className="font-semibold text-gray-900">Branch Financial Comparison</h3>
+                <h3 className="font-semibold text-gray-900">{t('finance.branchComparison')}</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -646,7 +706,7 @@ export default function HQFinanceDashboard() {
             </div>
             {/* Branch Revenue Comparison Chart */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Branch Revenue Comparison</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('finance.branchRevenueComparison')}</h3>
               <Chart options={branchChartOptions} series={branchChartSeries} type="bar" height={300} />
             </div>
           </div>
@@ -661,7 +721,7 @@ export default function HQFinanceDashboard() {
             {forecast.length > 0 ? (
               <>
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
-                  <h3 className="font-semibold text-gray-900 mb-4">Revenue Forecast vs Actual</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('finance.revenueForecastVsActual')}</h3>
                   <Chart
                     options={{
                       chart: { type: 'area', toolbar: { show: false } },
@@ -683,7 +743,7 @@ export default function HQFinanceDashboard() {
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200">
                   <div className="p-5 border-b border-gray-200">
-                    <h3 className="font-semibold text-gray-900">Monthly Forecast Table</h3>
+                    <h3 className="font-semibold text-gray-900">{t('finance.monthlyForecastTable')}</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full">
@@ -720,7 +780,7 @@ export default function HQFinanceDashboard() {
             ) : (
               <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-500">
                 <Target className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>Loading forecast data...</p>
+                <p>{t('finance.loadingForecast')}</p>
               </div>
             )}
           </div>

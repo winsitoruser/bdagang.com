@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import HQLayout from '../../../components/hq/HQLayout';
 import { toast } from 'react-hot-toast';
@@ -26,6 +27,7 @@ const api = async (action: string, method = 'GET', body?: any) => {
 };
 
 export default function SmartWarehousePage() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<MainTab>('dashboard');
@@ -153,8 +155,8 @@ export default function SmartWarehousePage() {
       const r = await api('ai-forecast', 'POST', { weeks: 8 });
       setForecasts(r.data?.forecasts || []);
       setForecastStats(r.data?.stats || null);
-      toast.success(`${r.data?.forecasts?.length || 0} forecasts generated`);
-    } catch { toast.error('Failed to generate forecasts'); }
+      toast.success(t('inventory.swForecastsGenerated').replace('{count}', String(r.data?.forecasts?.length || 0)));
+    } catch { toast.error(t('inventory.swForecastFailed')); }
     setAiGenerating(false);
   };
 
@@ -163,40 +165,40 @@ export default function SmartWarehousePage() {
     try {
       const r = await api('ai-reorder', 'POST', { action: 'generate' });
       setReorderRecs(r.data?.recommendations || []);
-      toast.success(`${r.data?.recommendations?.length || 0} reorder recommendations generated`);
-    } catch { toast.error('Failed to generate reorders'); }
+      toast.success(t('inventory.swReorderRecsGenerated').replace('{count}', String(r.data?.recommendations?.length || 0)));
+    } catch { toast.error(t('inventory.swReorderFailed')); }
     setAiGenerating(false);
   };
 
   const handleExecuteRule = async (ruleId: number) => {
     try {
       await api('automation-execute', 'POST', { ruleId });
-      toast.success('Automation rule executed');
+      toast.success(t('inventory.swAutoRuleExecuted'));
       fetchAutomation();
-    } catch { toast.error('Execution failed'); }
+    } catch { toast.error(t('inventory.swExecutionFailed')); }
   };
 
   const handleToggleRule = async (ruleId: number, isActive: boolean) => {
     try {
       await api('automation-rules', 'PUT', { id: ruleId, isActive: !isActive });
-      toast.success(`Rule ${isActive ? 'disabled' : 'enabled'}`);
+      toast.success(isActive ? t('inventory.swRuleDisabled') : t('inventory.swRuleEnabled'));
       fetchAutomation();
-    } catch { toast.error('Toggle failed'); }
+    } catch { toast.error(t('inventory.swToggleFailed')); }
   };
 
   const handleOptimizePick = async (taskId: number) => {
     try {
       const r = await api('pick-optimize', 'POST', { taskId });
-      toast.success(`Route optimized: ${r.data?.timeSaved} time saved`);
-    } catch { toast.error('Optimization failed'); }
+      toast.success(t('inventory.swRouteOptimized').replace('{time}', r.data?.timeSaved || ''));
+    } catch { toast.error(t('inventory.swOptFailed')); }
   };
 
   const handleGenerateBinOpt = async () => {
     try {
       const r = await api('bin-optimization', 'POST', { action: 'generate' });
       setBinProposal(r.data);
-      toast.success('Bin optimization generated');
-    } catch { toast.error('Generation failed'); }
+      toast.success(t('inventory.swBinOptGenerated'));
+    } catch { toast.error(t('inventory.swGenFailed')); }
   };
 
   const handleExport = async (type: string) => {
@@ -208,8 +210,8 @@ export default function SmartWarehousePage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = `smart-warehouse-${type}-${new Date().toISOString().split('T')[0]}.csv`; a.click();
       URL.revokeObjectURL(url);
-      toast.success('Export berhasil');
-    } catch { toast.error('Export gagal'); }
+      toast.success(t('inventory.swExportSuccess'));
+    } catch { toast.error(t('inventory.swExportFailed')); }
     setExporting(false);
   };
 
@@ -225,13 +227,13 @@ export default function SmartWarehousePage() {
   const fmtN = (v: number) => v?.toLocaleString('id-ID') || '0';
 
   const TABS: { id: MainTab; label: string; icon: any }[] = [
-    { id: 'dashboard', label: 'Smart Dashboard', icon: Gauge },
-    { id: 'ai-insights', label: 'AI Engine', icon: Brain },
-    { id: 'iot-monitor', label: 'IoT Monitor', icon: Radio },
-    { id: 'automation', label: 'Automation', icon: Zap },
-    { id: 'pick-pack', label: 'Pick & Pack', icon: ScanLine },
-    { id: 'quality', label: 'Quality Control', icon: Shield },
-    { id: 'bin-opt', label: 'Bin Optimization', icon: Move },
+    { id: 'dashboard', label: t('inventory.swTabDashboard'), icon: Gauge },
+    { id: 'ai-insights', label: t('inventory.swTabAI'), icon: Brain },
+    { id: 'iot-monitor', label: t('inventory.swTabIoT'), icon: Radio },
+    { id: 'automation', label: t('inventory.swTabAutomation'), icon: Zap },
+    { id: 'pick-pack', label: t('inventory.swTabPickPack'), icon: ScanLine },
+    { id: 'quality', label: t('inventory.swTabQuality'), icon: Shield },
+    { id: 'bin-opt', label: t('inventory.swTabBinOpt'), icon: Move },
   ];
 
   const colorMap: Record<string, { bg: string; text: string; iconBg: string }> = {
@@ -258,25 +260,25 @@ export default function SmartWarehousePage() {
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
                 <Brain className="w-5 h-5 text-white" />
               </div>
-              Smart Warehouse Management
+              {t('inventory.swTitle')}
             </h1>
-            <p className="text-gray-500 mt-1">AI-Powered Inventory Intelligence & Automation Platform</p>
+            <p className="text-gray-500 mt-1">{t('inventory.swSubtitle')}</p>
           </div>
           <div className="flex items-center gap-2">
             <Link href="/hq/inventory" className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm flex items-center gap-2">
-              <Package className="w-4 h-4" /> Inventory Classic
+              <Package className="w-4 h-4" /> {t('inventory.swInventoryClassic')}
             </Link>
             <button onClick={() => handleExport('sensors')} disabled={exporting} className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2 disabled:opacity-50">
-              <Download className="w-4 h-4" /> Export
+              <Download className="w-4 h-4" /> {t('inventory.swExport')}
             </button>
           </div>
         </div>
 
         {/* Main Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 overflow-x-auto">
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${tab === t.id ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
-              <t.icon className="w-4 h-4" />{t.label}
+          {TABS.map(tb => (
+            <button key={tb.id} onClick={() => setTab(tb.id)} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${tab === tb.id ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+              <tb.icon className="w-4 h-4" />{tb.label}
             </button>
           ))}
         </div>
@@ -287,25 +289,25 @@ export default function SmartWarehousePage() {
           <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 rounded-2xl p-6 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm font-medium">Warehouse Intelligence Score</p>
+                <p className="text-blue-100 text-sm font-medium">{t('inventory.swScoreTitle')}</p>
                 <p className="text-5xl font-black mt-2">{dashboard.smartScore}<span className="text-2xl font-normal text-blue-200">/100</span></p>
-                <p className="text-blue-200 text-sm mt-2">Composite score: IoT uptime + Automation success + Quality pass rate + Stock health + Pick efficiency</p>
+                <p className="text-blue-200 text-sm mt-2">{t('inventory.swScoreDesc')}</p>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
                   <Radio className="w-6 h-6 mx-auto mb-1" />
                   <p className="text-2xl font-bold">{dashboard.iot.online}/{dashboard.iot.totalSensors}</p>
-                  <p className="text-xs text-blue-200">IoT Online</p>
+                  <p className="text-xs text-blue-200">{t('inventory.swIoTOnline')}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
                   <Zap className="w-6 h-6 mx-auto mb-1" />
                   <p className="text-2xl font-bold">{dashboard.automation.activeRules}</p>
-                  <p className="text-xs text-blue-200">Active Rules</p>
+                  <p className="text-xs text-blue-200">{t('inventory.swActiveRules')}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
                   <Shield className="w-6 h-6 mx-auto mb-1" />
                   <p className="text-2xl font-bold">{dashboard.quality.passRate}%</p>
-                  <p className="text-xs text-blue-200">QC Pass Rate</p>
+                  <p className="text-xs text-blue-200">{t('inventory.swQCPassRate')}</p>
                 </div>
               </div>
             </div>
@@ -314,12 +316,12 @@ export default function SmartWarehousePage() {
           {/* KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {[
-              { label: 'Warehouses', value: dashboard.inventory.warehouseCount, icon: Warehouse, color: 'blue' },
-              { label: 'Products', value: fmtN(dashboard.inventory.productCount), icon: Package, color: 'green' },
-              { label: 'Total Stock', value: fmtN(dashboard.inventory.totalStock), icon: Box, color: 'purple' },
-              { label: 'Low Stock', value: dashboard.inventory.lowStock, icon: AlertTriangle, color: 'orange' },
-              { label: 'Pending Picks', value: dashboard.pickPack.pendingPicks, icon: ScanLine, color: 'cyan' },
-              { label: 'AI Reorders', value: dashboard.aiReorder.pending, icon: ShoppingCart, color: 'pink' },
+              { label: t('inventory.swWarehouses'), value: dashboard.inventory.warehouseCount, icon: Warehouse, color: 'blue' },
+              { label: t('inventory.swProducts'), value: fmtN(dashboard.inventory.productCount), icon: Package, color: 'green' },
+              { label: t('inventory.swTotalStock'), value: fmtN(dashboard.inventory.totalStock), icon: Box, color: 'purple' },
+              { label: t('inventory.swLowStock'), value: dashboard.inventory.lowStock, icon: AlertTriangle, color: 'orange' },
+              { label: t('inventory.swPendingPicks'), value: dashboard.pickPack.pendingPicks, icon: ScanLine, color: 'cyan' },
+              { label: t('inventory.swAIReorders'), value: dashboard.aiReorder.pending, icon: ShoppingCart, color: 'pink' },
             ].map((kpi, i) => (
               <div key={i} className="bg-white rounded-xl border border-gray-200 p-4">
                 <div className={`w-8 h-8 ${colorMap[kpi.color]?.bg || 'bg-gray-100'} rounded-lg flex items-center justify-center mb-2`}>
@@ -334,7 +336,7 @@ export default function SmartWarehousePage() {
           {/* Warehouse Health Cards */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-600" /> Warehouse Health Monitor
+              <Activity className="w-5 h-5 text-blue-600" /> {t('inventory.swHealthTitle')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {whHealth.map((wh: any) => (
@@ -350,16 +352,16 @@ export default function SmartWarehousePage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-xs">
-                      <span className="text-gray-500">Utilization</span>
+                      <span className="text-gray-500">{t('inventory.swUtilization')}</span>
                       <span className="font-medium">{wh.utilizationPct}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-1.5">
                       <div className={`h-1.5 rounded-full ${wh.utilizationPct > 90 ? 'bg-red-500' : wh.utilizationPct > 75 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${Math.min(wh.utilizationPct, 100)}%` }} />
                     </div>
                     <div className="grid grid-cols-3 gap-2 mt-2 text-center">
-                      <div><p className="text-lg font-bold text-gray-900">{fmtN(wh.products)}</p><p className="text-xs text-gray-400">Products</p></div>
-                      <div><p className="text-lg font-bold text-gray-900">{wh.locations}</p><p className="text-xs text-gray-400">Locations</p></div>
-                      <div><p className="text-lg font-bold text-gray-900">{wh.sensorsOnline}/{wh.sensors}</p><p className="text-xs text-gray-400">Sensors</p></div>
+                      <div><p className="text-lg font-bold text-gray-900">{fmtN(wh.products)}</p><p className="text-xs text-gray-400">{t('inventory.swProducts')}</p></div>
+                      <div><p className="text-lg font-bold text-gray-900">{wh.locations}</p><p className="text-xs text-gray-400">{t('inventory.swLocationsLabel')}</p></div>
+                      <div><p className="text-lg font-bold text-gray-900">{wh.sensorsOnline}/{wh.sensors}</p><p className="text-xs text-gray-400">{t('inventory.swSensorsLabel')}</p></div>
                     </div>
                     <div className="flex items-center gap-2 mt-2">
                       {wh.iotEnabled && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">IoT</span>}
@@ -374,7 +376,7 @@ export default function SmartWarehousePage() {
           {/* Inventory Trend (from snapshots) */}
           {snapshots.length > 1 && (
             <div className="bg-white rounded-xl border border-gray-200 p-5">
-              <h3 className="font-semibold text-gray-900 mb-4">Inventory Trend (14 Days)</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">{t('inventory.swTrendTitle')}</h3>
               <Chart
                 options={{
                   chart: { type: 'area', toolbar: { show: false } },
@@ -383,15 +385,15 @@ export default function SmartWarehousePage() {
                   colors: ['#3B82F6', '#10B981', '#EF4444'],
                   xaxis: { categories: [...snapshots].reverse().map((s: any) => s.snapshot_date?.slice(5) || '') },
                   yaxis: [
-                    { title: { text: 'Quantity' }, labels: { formatter: (v: number) => fmtN(v) } },
-                    { opposite: true, title: { text: 'Rate %' }, labels: { formatter: (v: number) => `${v}%` } }
+                    { title: { text: t('inventory.swQuantity') }, labels: { formatter: (v: number) => fmtN(v) } },
+                    { opposite: true, title: { text: t('inventory.swRatePercent') }, labels: { formatter: (v: number) => `${v}%` } }
                   ],
                   legend: { position: 'top' }, dataLabels: { enabled: false }
                 }}
                 series={[
-                  { name: 'Total Stock', data: [...snapshots].reverse().map((s: any) => s.total_quantity) },
-                  { name: 'Fill Rate', data: [...snapshots].reverse().map((s: any) => parseFloat(s.fill_rate || 95)) },
-                  { name: 'Low Stock Items', data: [...snapshots].reverse().map((s: any) => s.low_stock_count) },
+                  { name: t('inventory.swTotalStockSeries'), data: [...snapshots].reverse().map((s: any) => s.total_quantity) },
+                  { name: t('inventory.swFillRate'), data: [...snapshots].reverse().map((s: any) => parseFloat(s.fill_rate || 95)) },
+                  { name: t('inventory.swLowStockItems'), data: [...snapshots].reverse().map((s: any) => s.low_stock_count) },
                 ]}
                 type="area" height={300}
               />
@@ -403,26 +405,26 @@ export default function SmartWarehousePage() {
             <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 text-white">
               <ScanLine className="w-6 h-6 mb-2" />
               <p className="text-2xl font-bold">{dashboard.pickPack.completedToday}</p>
-              <p className="text-green-100 text-sm">Picks Completed Today</p>
-              <p className="text-xs text-green-200 mt-1">Avg {dashboard.pickPack.avgPickTimeMin} min/pick</p>
+              <p className="text-green-100 text-sm">{t('inventory.swPicksToday')}</p>
+              <p className="text-xs text-green-200 mt-1">{t('inventory.swAvgPickTime').replace('{time}', String(dashboard.pickPack.avgPickTimeMin))}</p>
             </div>
             <div className="bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl p-4 text-white">
               <Zap className="w-6 h-6 mb-2" />
               <p className="text-2xl font-bold">{dashboard.automation.totalTriggers}</p>
-              <p className="text-purple-100 text-sm">Automation Triggers</p>
-              <p className="text-xs text-purple-200 mt-1">{dashboard.automation.successRate}% success rate</p>
+              <p className="text-purple-100 text-sm">{t('inventory.swAutoTriggers')}</p>
+              <p className="text-xs text-purple-200 mt-1">{t('inventory.swSuccessRate').replace('{rate}', String(dashboard.automation.successRate))}</p>
             </div>
             <div className="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl p-4 text-white">
               <Radio className="w-6 h-6 mb-2" />
               <p className="text-2xl font-bold">{dashboard.iot.totalSensors}</p>
-              <p className="text-cyan-100 text-sm">IoT Sensors Active</p>
-              <p className="text-xs text-cyan-200 mt-1">{dashboard.iot.error > 0 ? `${dashboard.iot.error} sensor error` : 'All healthy'}</p>
+              <p className="text-cyan-100 text-sm">{t('inventory.swIoTSensorsActive')}</p>
+              <p className="text-xs text-cyan-200 mt-1">{dashboard.iot.error > 0 ? t('inventory.swSensorError').replace('{count}', String(dashboard.iot.error)) : t('inventory.swAllHealthy')}</p>
             </div>
             <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-xl p-4 text-white">
               <AlertTriangle className="w-6 h-6 mb-2" />
               <p className="text-2xl font-bold">{dashboard.aiReorder.critical}</p>
-              <p className="text-orange-100 text-sm">Critical Reorders</p>
-              <p className="text-xs text-orange-200 mt-1">{dashboard.aiReorder.pending} total pending</p>
+              <p className="text-orange-100 text-sm">{t('inventory.swCriticalReorders')}</p>
+              <p className="text-xs text-orange-200 mt-1">{t('inventory.swTotalPending').replace('{count}', String(dashboard.aiReorder.pending))}</p>
             </div>
           </div>
         </>)}
@@ -431,13 +433,13 @@ export default function SmartWarehousePage() {
         {tab === 'ai-insights' && (<>
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
             {[
-              { v: 'insights' as const, l: 'AI Insights', ic: Lightbulb },
-              { v: 'forecast' as const, l: 'Demand Forecast', ic: TrendingUp },
-              { v: 'reorder' as const, l: 'Smart Reorder', ic: ShoppingCart },
-              { v: 'anomaly' as const, l: 'Anomaly Detection', ic: AlertTriangle },
-            ].map(t => (
-              <button key={t.v} onClick={() => setAiSubTab(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${aiSubTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
-                <t.ic className="w-4 h-4" />{t.l}
+              { v: 'insights' as const, l: t('inventory.swAIInsights'), ic: Lightbulb },
+              { v: 'forecast' as const, l: t('inventory.swDemandForecast'), ic: TrendingUp },
+              { v: 'reorder' as const, l: t('inventory.swSmartReorder'), ic: ShoppingCart },
+              { v: 'anomaly' as const, l: t('inventory.swAnomalyDetection'), ic: AlertTriangle },
+            ].map(st => (
+              <button key={st.v} onClick={() => setAiSubTab(st.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${aiSubTab === st.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+                <st.ic className="w-4 h-4" />{st.l}
               </button>
             ))}
           </div>
@@ -446,7 +448,7 @@ export default function SmartWarehousePage() {
           {aiSubTab === 'insights' && (
             <div className="space-y-4">
               <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-4">
-                <p className="text-sm text-purple-700"><strong>AI Insights Engine</strong>: Rekomendasi cerdas berdasarkan analisis data gudang, pergerakan stok, pola demand, dan kondisi lingkungan.</p>
+                <p className="text-sm text-purple-700"><strong>{t('inventory.swAIInsightsEngine')}</strong>: {t('inventory.swAIInsightsDesc')}</p>
               </div>
               {insights.map((ins: any) => (
                 <div key={ins.id} className={`bg-white rounded-xl border p-5 ${ins.impact === 'critical' ? 'border-red-200' : ins.impact === 'high' ? 'border-orange-200' : 'border-gray-200'}`}>
@@ -462,7 +464,7 @@ export default function SmartWarehousePage() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${urgencyColor(ins.impact)}`}>{ins.impact}</span>
-                      <span className="text-xs text-gray-500">{ins.confidence}% confidence</span>
+                      <span className="text-xs text-gray-500">{ins.confidence}% {t('inventory.swConfidence')}</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
@@ -483,24 +485,24 @@ export default function SmartWarehousePage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex-1 mr-3">
-                  <p className="text-sm text-amber-700"><strong>AI Demand Forecast</strong>: Prediksi permintaan 8 minggu ke depan menggunakan model Prophet v3 dengan analisis seasonality dan trend.</p>
+                  <p className="text-sm text-amber-700"><strong>{t('inventory.swAIDemandForecast')}</strong>: {t('inventory.swDemandForecastDesc')}</p>
                 </div>
                 <button onClick={handleGenerateForecast} disabled={aiGenerating} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm flex items-center gap-2 disabled:opacity-50">
-                  <Brain className={`w-4 h-4 ${aiGenerating ? 'animate-pulse' : ''}`} /> {aiGenerating ? 'Generating...' : 'Generate Forecast'}
+                  <Brain className={`w-4 h-4 ${aiGenerating ? 'animate-pulse' : ''}`} /> {aiGenerating ? t('inventory.swGenerating') : t('inventory.swGenerateForecast')}
                 </button>
               </div>
 
               {forecastStats && (
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-gray-900">{fmtN(forecastStats.count)}</p><p className="text-xs text-gray-500">Forecast Points</p></div>
-                  <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-gray-900">{forecastStats.avgConfidence}%</p><p className="text-xs text-gray-500">Avg Confidence</p></div>
-                  <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-gray-900">{fmtN(forecastStats.totalDemand || 0)}</p><p className="text-xs text-gray-500">Total Predicted Demand</p></div>
+                  <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-gray-900">{fmtN(forecastStats.count)}</p><p className="text-xs text-gray-500">{t('inventory.swForecastPoints')}</p></div>
+                  <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-gray-900">{forecastStats.avgConfidence}%</p><p className="text-xs text-gray-500">{t('inventory.swAvgConfidence')}</p></div>
+                  <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-gray-900">{fmtN(forecastStats.totalDemand || 0)}</p><p className="text-xs text-gray-500">{t('inventory.swTotalPredictedDemand')}</p></div>
                 </div>
               )}
 
               {forecasts.length > 0 && (
                 <div className="bg-white rounded-xl border p-5">
-                  <h3 className="font-semibold text-gray-900 mb-4">Demand Forecast by Product</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('inventory.swForecastByProduct')}</h3>
                   <Chart
                     options={{
                       chart: { type: 'line', toolbar: { show: false } },
@@ -526,10 +528,10 @@ export default function SmartWarehousePage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex-1 mr-3">
-                  <p className="text-sm text-green-700"><strong>Smart Reorder Engine</strong>: AI menghitung EOQ, safety stock, dan lead time untuk menghasilkan rekomendasi reorder optimal.</p>
+                  <p className="text-sm text-green-700"><strong>{t('inventory.swSmartReorderEngine')}</strong>: {t('inventory.swSmartReorderDesc')}</p>
                 </div>
                 <button onClick={handleGenerateReorder} disabled={aiGenerating} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex items-center gap-2 disabled:opacity-50">
-                  <Brain className={`w-4 h-4 ${aiGenerating ? 'animate-pulse' : ''}`} /> {aiGenerating ? 'Generating...' : 'Generate Reorders'}
+                  <Brain className={`w-4 h-4 ${aiGenerating ? 'animate-pulse' : ''}`} /> {aiGenerating ? t('inventory.swGenerating') : t('inventory.swGenerateReorders')}
                 </button>
               </div>
               {reorderRecs.length > 0 && (
@@ -537,13 +539,13 @@ export default function SmartWarehousePage() {
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Current</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Min</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Recommended</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Urgency</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Stockout</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Est. Cost</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.swThProduct')}</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.swThCurrent')}</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.swThMin')}</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.swThRecommended')}</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.swThUrgency')}</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.swThStockout')}</th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.swThEstCost')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -569,14 +571,14 @@ export default function SmartWarehousePage() {
           {aiSubTab === 'anomaly' && (
             <div className="space-y-4">
               <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                <p className="text-sm text-red-700"><strong>Anomaly Detection</strong>: AI secara real-time mendeteksi anomali stok, suhu, penyusutan, dan pola tidak normal lainnya.</p>
+                <p className="text-sm text-red-700"><strong>{t('inventory.swAnomalyTitle')}</strong>: {t('inventory.swAnomalyDesc')}</p>
               </div>
               <div className="grid grid-cols-4 gap-3">
                 {[
-                  { label: 'Total Anomalies', value: anomalies.length, color: 'blue' },
-                  { label: 'Critical', value: anomalies.filter(a => a.severity === 'critical').length, color: 'red' },
-                  { label: 'High', value: anomalies.filter(a => a.severity === 'high').length, color: 'orange' },
-                  { label: 'Active', value: anomalies.filter(a => a.status === 'active').length, color: 'yellow' },
+                  { label: t('inventory.swTotalAnomalies'), value: anomalies.length, color: 'blue' },
+                  { label: t('inventory.swCritical'), value: anomalies.filter(a => a.severity === 'critical').length, color: 'red' },
+                  { label: t('inventory.swHigh'), value: anomalies.filter(a => a.severity === 'high').length, color: 'orange' },
+                  { label: t('inventory.swActive'), value: anomalies.filter(a => a.status === 'active').length, color: 'yellow' },
                 ].map((s, i) => (
                   <div key={i} className="bg-white rounded-xl border p-4">
                     <p className={`text-2xl font-bold ${colorMap[s.color]?.text || 'text-gray-600'}`}>{s.value}</p>
@@ -591,7 +593,7 @@ export default function SmartWarehousePage() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${a.severity === 'critical' ? 'bg-red-600 text-white' : a.severity === 'high' ? 'bg-orange-600 text-white' : 'bg-yellow-500 text-white'}`}>{a.severity}</span>
                         <span className="text-xs text-gray-500">{a.type.replace(/_/g, ' ')}</span>
-                        <span className="text-xs text-gray-400">{a.confidence}% confidence</span>
+                        <span className="text-xs text-gray-400">{a.confidence}% {t('inventory.swConfidence')}</span>
                       </div>
                       <p className="font-semibold text-gray-900">{a.product}</p>
                       <p className="text-sm text-gray-600 mt-1">{a.description}</p>
@@ -599,7 +601,7 @@ export default function SmartWarehousePage() {
                     <span className={`px-2 py-1 rounded text-xs ${a.status === 'active' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>{a.status}</span>
                   </div>
                   <div className="mt-3 pt-2 border-t border-current/10 flex items-center justify-between">
-                    <p className="text-sm"><strong>Recommendation:</strong> {a.recommendation}</p>
+                    <p className="text-sm"><strong>{t('inventory.swRecommendation')}:</strong> {a.recommendation}</p>
                     <span className="text-xs text-gray-400">{new Date(a.detectedAt).toLocaleString('id-ID')}</span>
                   </div>
                 </div>
@@ -612,12 +614,12 @@ export default function SmartWarehousePage() {
         {tab === 'iot-monitor' && (<>
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
             {[
-              { v: 'overview' as const, l: 'Overview', ic: Gauge },
-              { v: 'sensors' as const, l: 'Sensor List', ic: Radio },
-              { v: 'charts' as const, l: 'Live Charts', ic: BarChart3 },
-            ].map(t => (
-              <button key={t.v} onClick={() => setIotSubTab(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${iotSubTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
-                <t.ic className="w-4 h-4" />{t.l}
+              { v: 'overview' as const, l: t('inventory.swOverview'), ic: Gauge },
+              { v: 'sensors' as const, l: t('inventory.swSensorList'), ic: Radio },
+              { v: 'charts' as const, l: t('inventory.swLiveCharts'), ic: BarChart3 },
+            ].map(st => (
+              <button key={st.v} onClick={() => setIotSubTab(st.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${iotSubTab === st.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+                <st.ic className="w-4 h-4" />{st.l}
               </button>
             ))}
           </div>
@@ -638,7 +640,7 @@ export default function SmartWarehousePage() {
 
               {iotDash.recentAlerts?.length > 0 && (
                 <div className="bg-white rounded-xl border p-5">
-                  <h3 className="font-semibold text-gray-900 mb-3">Recent IoT Alerts</h3>
+                  <h3 className="font-semibold text-gray-900 mb-3">{t('inventory.swRecentIoTAlerts')}</h3>
                   {iotDash.recentAlerts.map((a: any) => (
                     <div key={a.id} className={`flex items-center gap-3 p-3 rounded-lg mb-2 ${a.severity === 'critical' ? 'bg-red-50' : a.severity === 'warning' ? 'bg-yellow-50' : 'bg-blue-50'}`}>
                       <AlertTriangle className={`w-4 h-4 flex-shrink-0 ${a.severity === 'critical' ? 'text-red-600' : a.severity === 'warning' ? 'text-yellow-600' : 'text-blue-600'}`} />
@@ -658,12 +660,12 @@ export default function SmartWarehousePage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sensor</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Warehouse</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Last Reading</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Battery</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.swThSensor')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.swThType')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.swThWarehouse')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.swThStatus')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.swThLastReading')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.swThBattery')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -699,7 +701,7 @@ export default function SmartWarehousePage() {
           {iotSubTab === 'charts' && iotDash && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="bg-white rounded-xl border p-5">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Thermometer className="w-5 h-5 text-red-500" /> Temperature (24h)</h3>
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Thermometer className="w-5 h-5 text-red-500" /> {t('inventory.swTemperature24h')}</h3>
                 <Chart
                   options={{ chart: { type: 'line', toolbar: { show: false } }, stroke: { curve: 'smooth', width: 2 }, colors: ['#EF4444', '#F59E0B', '#3B82F6'], xaxis: { categories: iotDash.temperatureTrend?.map((t: any) => t.hour) || [], labels: { show: true, rotate: -45, style: { fontSize: '10px' } }, tickAmount: 12 }, yaxis: { title: { text: '°C' } }, legend: { position: 'top' }, dataLabels: { enabled: false } }}
                   series={[ { name: 'Zone A', data: iotDash.temperatureTrend?.map((t: any) => +t.zone_a.toFixed(1)) || [] }, { name: 'Zone B', data: iotDash.temperatureTrend?.map((t: any) => +t.zone_b.toFixed(1)) || [] }, { name: 'Cold Storage', data: iotDash.temperatureTrend?.map((t: any) => +t.cold_storage.toFixed(1)) || [] } ]}
@@ -707,7 +709,7 @@ export default function SmartWarehousePage() {
                 />
               </div>
               <div className="bg-white rounded-xl border p-5">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Droplets className="w-5 h-5 text-blue-500" /> Humidity (24h)</h3>
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2"><Droplets className="w-5 h-5 text-blue-500" /> {t('inventory.swHumidity24h')}</h3>
                 <Chart
                   options={{ chart: { type: 'area', toolbar: { show: false } }, stroke: { curve: 'smooth', width: 2 }, fill: { type: 'gradient', gradient: { opacityFrom: 0.3, opacityTo: 0.05 } }, colors: ['#3B82F6', '#10B981', '#8B5CF6'], xaxis: { categories: iotDash.humidityTrend?.map((t: any) => t.hour) || [], labels: { show: true, rotate: -45, style: { fontSize: '10px' } }, tickAmount: 12 }, yaxis: { title: { text: '%' } }, legend: { position: 'top' }, dataLabels: { enabled: false } }}
                   series={[ { name: 'Zone A', data: iotDash.humidityTrend?.map((t: any) => +t.zone_a.toFixed(1)) || [] }, { name: 'Zone B', data: iotDash.humidityTrend?.map((t: any) => +t.zone_b.toFixed(1)) || [] }, { name: 'Cold Storage', data: iotDash.humidityTrend?.map((t: any) => +t.cold_storage.toFixed(1)) || [] } ]}
@@ -722,11 +724,11 @@ export default function SmartWarehousePage() {
         {tab === 'automation' && (<>
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
             {[
-              { v: 'rules' as const, l: 'Automation Rules', ic: Settings },
-              { v: 'logs' as const, l: 'Execution Logs', ic: Clock },
-            ].map(t => (
-              <button key={t.v} onClick={() => setAutoSubTab(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${autoSubTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
-                <t.ic className="w-4 h-4" />{t.l}
+              { v: 'rules' as const, l: t('inventory.swAutomationRules'), ic: Settings },
+              { v: 'logs' as const, l: t('inventory.swExecutionLogs'), ic: Clock },
+            ].map(st => (
+              <button key={st.v} onClick={() => setAutoSubTab(st.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${autoSubTab === st.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+                <st.ic className="w-4 h-4" />{st.l}
               </button>
             ))}
           </div>
@@ -747,15 +749,15 @@ export default function SmartWarehousePage() {
                           <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">{r.trigger_type}</span>
                         </div>
                         <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                          <span>Triggered: {r.trigger_count}x</span>
-                          <span>Success: {r.success_count} ({r.trigger_count > 0 ? ((r.success_count/r.trigger_count)*100).toFixed(0) : 0}%)</span>
-                          <span>Cooldown: {r.cooldown_minutes}min</span>
-                          {r.last_triggered_at && <span>Last: {new Date(r.last_triggered_at).toLocaleString('id-ID')}</span>}
+                          <span>{t('inventory.swTriggered')}: {r.trigger_count}x</span>
+                          <span>{t('inventory.swSuccess')}: {r.success_count} ({r.trigger_count > 0 ? ((r.success_count/r.trigger_count)*100).toFixed(0) : 0}%)</span>
+                          <span>{t('inventory.swCooldown')}: {r.cooldown_minutes}min</span>
+                          {r.last_triggered_at && <span>{t('inventory.swLast')}: {new Date(r.last_triggered_at).toLocaleString('id-ID')}</span>}
                         </div>
                       </div>
                     </div>
                     <button onClick={() => handleExecuteRule(r.id)} className="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-xs flex items-center gap-1">
-                      <Play className="w-3 h-3" /> Execute
+                      <Play className="w-3 h-3" /> {t('inventory.swExecute')}
                     </button>
                   </div>
                 </div>
@@ -768,10 +770,10 @@ export default function SmartWarehousePage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rule</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Time (ms)</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Executed At</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.swThRule')}</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('inventory.swThStatus')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('inventory.swThTimems')}</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('inventory.swThExecutedAt')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -796,10 +798,10 @@ export default function SmartWarehousePage() {
           <div className="space-y-4">
             <div className="grid grid-cols-4 gap-3">
               {[
-                { label: 'Pending', value: pickTasks.filter(t => t.status === 'pending').length, color: 'yellow' },
-                { label: 'In Progress', value: pickTasks.filter(t => t.status === 'in_progress').length, color: 'blue' },
-                { label: 'Completed', value: pickTasks.filter(t => t.status === 'completed').length, color: 'green' },
-                { label: 'Avg Time', value: `${pickTasks.filter(t => t.actual_time_min).reduce((s, t) => s + t.actual_time_min, 0) / Math.max(pickTasks.filter(t => t.actual_time_min).length, 1) || 0} min`, color: 'purple' },
+                { label: t('inventory.swPending'), value: pickTasks.filter(pk => pk.status === 'pending').length, color: 'yellow' },
+                { label: t('inventory.swInProgress'), value: pickTasks.filter(pk => pk.status === 'in_progress').length, color: 'blue' },
+                { label: t('inventory.swCompleted'), value: pickTasks.filter(pk => pk.status === 'completed').length, color: 'green' },
+                { label: t('inventory.swAvgTime'), value: `${pickTasks.filter(pk => pk.actual_time_min).reduce((s, pk) => s + pk.actual_time_min, 0) / Math.max(pickTasks.filter(pk => pk.actual_time_min).length, 1) || 0} min`, color: 'purple' },
               ].map((s, i) => (
                 <div key={i} className="bg-white rounded-xl border p-4">
                   <p className={`text-2xl font-bold ${colorMap[s.color]?.text || 'text-gray-600'}`}>{s.value}</p>
@@ -807,32 +809,32 @@ export default function SmartWarehousePage() {
                 </div>
               ))}
             </div>
-            {pickTasks.map((t: any) => (
-              <div key={t.id} className={`bg-white rounded-xl border p-4 ${t.priority === 'urgent' ? 'border-red-300' : t.priority === 'high' ? 'border-orange-200' : 'border-gray-200'}`}>
+            {pickTasks.map((pk: any) => (
+              <div key={pk.id} className={`bg-white rounded-xl border p-4 ${pk.priority === 'urgent' ? 'border-red-300' : pk.priority === 'high' ? 'border-orange-200' : 'border-gray-200'}`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${t.priority === 'urgent' ? 'bg-red-600 text-white' : t.priority === 'high' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}>{t.priority}</span>
+                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${pk.priority === 'urgent' ? 'bg-red-600 text-white' : pk.priority === 'high' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}>{pk.priority}</span>
                     <div>
-                      <p className="font-semibold text-gray-900">{t.task_number}</p>
-                      <p className="text-xs text-gray-500">{t.task_type} | {t.warehouse_name}</p>
+                      <p className="font-semibold text-gray-900">{pk.task_number}</p>
+                      <p className="text-xs text-gray-500">{pk.task_type} | {pk.warehouse_name}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.status === 'completed' ? 'bg-green-100 text-green-700' : t.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>{t.status}</span>
-                    {t.status !== 'completed' && (
-                      <button onClick={() => handleOptimizePick(t.id)} className="px-2 py-1 bg-blue-600 text-white rounded text-xs">Optimize Route</button>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${pk.status === 'completed' ? 'bg-green-100 text-green-700' : pk.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>{pk.status}</span>
+                    {pk.status !== 'completed' && (
+                      <button onClick={() => handleOptimizePick(pk.id)} className="px-2 py-1 bg-blue-600 text-white rounded text-xs">{t('inventory.swOptimizeRoute')}</button>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-4 text-xs text-gray-500">
-                  {t.assigned_to && <span>Assigned: <strong>{t.assigned_to}</strong></span>}
-                  <span>Items: {Array.isArray(t.items) ? t.items.length : 0}</span>
-                  {t.estimated_time_min && <span>Est: {t.estimated_time_min}min</span>}
-                  {t.actual_time_min && <span>Actual: {t.actual_time_min}min</span>}
+                  {pk.assigned_to && <span>{t('inventory.swAssigned')}: <strong>{pk.assigned_to}</strong></span>}
+                  <span>{t('inventory.swItems')}: {Array.isArray(pk.items) ? pk.items.length : 0}</span>
+                  {pk.estimated_time_min && <span>{t('inventory.swEst')}: {pk.estimated_time_min}min</span>}
+                  {pk.actual_time_min && <span>{t('inventory.swActual')}: {pk.actual_time_min}min</span>}
                 </div>
-                {Array.isArray(t.items) && t.items.length > 0 && (
+                {Array.isArray(pk.items) && pk.items.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {t.items.map((item: any, idx: number) => (
+                    {pk.items.map((item: any, idx: number) => (
                       <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">{item.productName} x{item.qty} @ {item.location}</span>
                     ))}
                   </div>
@@ -846,11 +848,11 @@ export default function SmartWarehousePage() {
         {tab === 'quality' && (<>
           <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
             {[
-              { v: 'dashboard' as const, l: 'QC Dashboard', ic: BarChart3 },
-              { v: 'inspections' as const, l: 'Inspections', ic: ClipboardCheck },
-            ].map(t => (
-              <button key={t.v} onClick={() => setQcSubTab(t.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${qcSubTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
-                <t.ic className="w-4 h-4" />{t.l}
+              { v: 'dashboard' as const, l: t('inventory.swQCDashboard'), ic: BarChart3 },
+              { v: 'inspections' as const, l: t('inventory.swInspections'), ic: ClipboardCheck },
+            ].map(st => (
+              <button key={st.v} onClick={() => setQcSubTab(st.v)} className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium ${qcSubTab === st.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+                <st.ic className="w-4 h-4" />{st.l}
               </button>
             ))}
           </div>
@@ -858,15 +860,15 @@ export default function SmartWarehousePage() {
           {qcSubTab === 'dashboard' && qualityData && (
             <div className="space-y-4">
               <div className="grid grid-cols-4 gap-3">
-                <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-gray-900">{qualityData.summary.totalInspections}</p><p className="text-xs text-gray-500">Total Inspections</p></div>
-                <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-green-600">{qualityData.summary.passed}</p><p className="text-xs text-gray-500">Passed</p></div>
-                <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-red-600">{qualityData.summary.failed}</p><p className="text-xs text-gray-500">Failed</p></div>
-                <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-blue-600">{qualityData.summary.passRate}%</p><p className="text-xs text-gray-500">Pass Rate</p></div>
+                <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-gray-900">{qualityData.summary.totalInspections}</p><p className="text-xs text-gray-500">{t('inventory.swTotalInspections')}</p></div>
+                <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-green-600">{qualityData.summary.passed}</p><p className="text-xs text-gray-500">{t('inventory.swPassed')}</p></div>
+                <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-red-600">{qualityData.summary.failed}</p><p className="text-xs text-gray-500">{t('inventory.swFailed')}</p></div>
+                <div className="bg-white rounded-xl border p-4"><p className="text-2xl font-bold text-blue-600">{qualityData.summary.passRate}%</p><p className="text-xs text-gray-500">{t('inventory.swPassRate')}</p></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white rounded-xl border p-5">
-                  <h3 className="font-semibold text-gray-900 mb-4">Pass Rate Trend</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('inventory.swPassRateTrend')}</h3>
                   <Chart
                     options={{ chart: { type: 'line', toolbar: { show: false } }, stroke: { curve: 'smooth', width: 3 }, colors: ['#10B981'], xaxis: { categories: qualityData.trend?.map((t: any) => t.month) || [] }, yaxis: { min: 80, max: 100, labels: { formatter: (v: number) => `${v}%` } }, dataLabels: { enabled: false } }}
                     series={[{ name: 'Pass Rate', data: qualityData.trend?.map((t: any) => t.rate) || [] }]}
@@ -874,7 +876,7 @@ export default function SmartWarehousePage() {
                   />
                 </div>
                 <div className="bg-white rounded-xl border p-5">
-                  <h3 className="font-semibold text-gray-900 mb-4">Inspections by Type</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('inventory.swInspectionsByType')}</h3>
                   <Chart
                     options={{ chart: { type: 'donut' }, labels: qualityData.byType?.map((t: any) => t.type) || [], colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'], legend: { position: 'bottom' } }}
                     series={qualityData.byType?.map((t: any) => t.total) || []}
@@ -885,7 +887,7 @@ export default function SmartWarehousePage() {
 
               {qualityData.topIssues?.length > 0 && (
                 <div className="bg-white rounded-xl border p-5">
-                  <h3 className="font-semibold text-gray-900 mb-3">Top Quality Issues</h3>
+                  <h3 className="font-semibold text-gray-900 mb-3">{t('inventory.swTopQualityIssues')}</h3>
                   {qualityData.topIssues.map((issue: any, i: number) => (
                     <div key={i} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
                       <div className="flex items-center gap-2">
@@ -929,21 +931,21 @@ export default function SmartWarehousePage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex-1 mr-3">
-                <p className="text-sm text-indigo-700"><strong>AI Bin Optimization</strong>: Optimasi penempatan produk berdasarkan analisis pick frequency, ABC class, dan product affinity untuk mengurangi jarak dan waktu picking.</p>
+                <p className="text-sm text-indigo-700"><strong>{t('inventory.swAIBinOpt')}</strong>: {t('inventory.swBinOptDesc')}</p>
               </div>
               <button onClick={handleGenerateBinOpt} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm flex items-center gap-2">
-                <Brain className="w-4 h-4" /> Generate Optimization
+                <Brain className="w-4 h-4" /> {t('inventory.swGenerateOpt')}
               </button>
             </div>
 
             {binProposal && (
               <div className="bg-white rounded-xl border border-indigo-200 p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-900">New Optimization Proposal</h3>
+                  <h3 className="font-semibold text-gray-900">{t('inventory.swNewOptProposal')}</h3>
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs">{binProposal.optimizationType}</span>
-                    <span className="text-sm text-green-600 font-medium">Est. savings: {binProposal.estimatedSavingsPct}%</span>
-                    <span className="text-xs text-gray-500">{binProposal.aiConfidence}% AI confidence</span>
+                    <span className="text-sm text-green-600 font-medium">{t('inventory.swEstSavings')}: {binProposal.estimatedSavingsPct}%</span>
+                    <span className="text-xs text-gray-500">{binProposal.aiConfidence}% {t('inventory.swAIConfidenceLabel')}</span>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -965,7 +967,7 @@ export default function SmartWarehousePage() {
 
             {/* History */}
             <div className="bg-white rounded-xl border p-5">
-              <h3 className="font-semibold text-gray-900 mb-3">Optimization History</h3>
+              <h3 className="font-semibold text-gray-900 mb-3">{t('inventory.swOptHistory')}</h3>
               {binOpts.map((opt: any) => (
                 <div key={opt.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
                   <div>
@@ -973,10 +975,10 @@ export default function SmartWarehousePage() {
                       <span className="text-sm font-medium text-gray-900">{opt.optimization_type}</span>
                       <span className={`px-2 py-0.5 rounded text-xs ${opt.status === 'completed' ? 'bg-green-100 text-green-700' : opt.status === 'proposed' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>{opt.status}</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{opt.total_moves} moves | AI confidence: {opt.ai_confidence}%</p>
+                    <p className="text-xs text-gray-500 mt-1">{opt.total_moves} {t('inventory.swMoves')} | {t('inventory.swAIConfidenceLabel')}: {opt.ai_confidence}%</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-green-600">{opt.actual_savings_pct || opt.estimated_savings_pct}% savings</p>
+                    <p className="text-sm font-medium text-green-600">{opt.actual_savings_pct || opt.estimated_savings_pct}% {t('inventory.swSavings')}</p>
                     <p className="text-xs text-gray-400">{new Date(opt.created_at).toLocaleDateString('id-ID')}</p>
                   </div>
                 </div>
@@ -988,7 +990,7 @@ export default function SmartWarehousePage() {
         {loading && (
           <div className="flex items-center justify-center py-8">
             <RefreshCw className="w-6 h-6 animate-spin text-blue-600 mr-2" />
-            <span className="text-gray-500">Loading...</span>
+            <span className="text-gray-500">{t('inventory.swLoading')}</span>
           </div>
         )}
       </div>

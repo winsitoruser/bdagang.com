@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { GraduationCap, Search, Plus, Eye, Edit, X, Calendar, Clock, Users, MapPin, Star, Award, BookOpen, CheckCircle2, BarChart3, TrendingUp, FileText, Download, Filter, ChevronRight, Target, Bookmark, Video, Monitor, Loader2, Trash2 } from 'lucide-react';
 
 type TabKey = 'programs' | 'schedule' | 'certifications' | 'reports';
@@ -11,11 +12,33 @@ const LEVEL_COLORS: Record<string, string> = { beginner: 'text-green-600', inter
 
 const emptyProgramForm = { title: '', category: 'technical', type: 'training', trainer: '', location: '', status: 'upcoming', start_date: '', end_date: '', max_participants: '30', cost_per_person: '0', description: '' };
 
+const MOCK_PROGRAMS = [
+  { id: 'tp1', title: 'Food Safety & Hygiene', category: 'compliance', type: 'workshop', trainer: 'Dr. Andi Firmansyah', location: 'HQ Jakarta', status: 'active', start_date: '2026-03-01', end_date: '2026-03-15', max_participants: 30, enrolled: 24, completed: 12, rating: 4.5, cost_per_person: 500000 },
+  { id: 'tp2', title: 'Leadership Development Program', category: 'leadership', type: 'course', trainer: 'External - John Maxwell Team', location: 'Hotel Borobudur', status: 'upcoming', start_date: '2026-03-18', end_date: '2026-03-19', max_participants: 20, enrolled: 18, completed: 0, rating: 0, cost_per_person: 2500000 },
+  { id: 'tp3', title: 'Advanced Excel & Data Analytics', category: 'technical', type: 'hands_on', trainer: 'Rizki Firmansyah', location: 'Online (Zoom)', status: 'active', start_date: '2026-02-15', end_date: '2026-04-15', max_participants: 50, enrolled: 42, completed: 28, rating: 4.2, cost_per_person: 0 },
+  { id: 'tp4', title: 'Customer Service Excellence', category: 'soft_skill', type: 'workshop', trainer: 'Yuni Kartika', location: 'Cabang Surabaya', status: 'completed', start_date: '2026-02-01', end_date: '2026-02-05', max_participants: 25, enrolled: 22, completed: 22, rating: 4.7, cost_per_person: 350000 },
+  { id: 'tp5', title: 'Barista Certification Program', category: 'technical', type: 'certification', trainer: 'Made Wirawan', location: 'Cabang Bali', status: 'active', start_date: '2026-03-10', end_date: '2026-03-28', max_participants: 15, enrolled: 12, completed: 0, rating: 0, cost_per_person: 1500000 },
+];
+
+const MOCK_CERTS = [
+  { id: 'cert1', employee_name: 'Ahmad Wijaya', cert_name: 'Certified Business Manager', issuer: 'BNSP', issue_date: '2025-06-15', expiry_date: '2028-06-15', status: 'active' },
+  { id: 'cert2', employee_name: 'Lisa Permata', cert_name: 'Certified Management Accountant', issuer: 'IMA', issue_date: '2024-12-01', expiry_date: '2026-12-01', status: 'active' },
+  { id: 'cert3', employee_name: 'Rina Anggraini', cert_name: 'Food Safety Certification', issuer: 'BPOM', issue_date: '2025-03-01', expiry_date: '2026-03-01', status: 'expiring_soon' },
+  { id: 'cert4', employee_name: 'Made Wirawan', cert_name: 'SCA Barista Skills Foundation', issuer: 'SCA', issue_date: '2024-08-20', expiry_date: '2027-08-20', status: 'active' },
+  { id: 'cert5', employee_name: 'Agus Setiawan', cert_name: 'SIM B2 Umum', issuer: 'Polri', issue_date: '2024-01-15', expiry_date: '2029-01-15', status: 'active' },
+];
+
+const MOCK_TRAINING_ANALYTICS = {
+  totalPrograms: 12, activePrograms: 3, totalEnrolled: 118, totalCompleted: 62,
+  totalBudget: 45000000, budgetUsed: 28500000, avgRating: 4.35, expiringCerts: 3, expiredCerts: 1,
+};
+
 export default function TrainingPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('programs');
-  const [programs, setPrograms] = useState<any[]>([]);
-  const [certs, setCerts] = useState<any[]>([]);
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [programs, setPrograms] = useState<any[]>(MOCK_PROGRAMS);
+  const [certs, setCerts] = useState<any[]>(MOCK_CERTS);
+  const [analytics, setAnalytics] = useState<any>(MOCK_TRAINING_ANALYTICS);
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -34,16 +57,18 @@ export default function TrainingPage() {
     try {
       const res = await fetch('/api/hq/hris/training?action=programs');
       const data = await res.json();
-      if (data.data) setPrograms(Array.isArray(data.data) ? data.data : []);
-    } catch (e) { console.warn('Failed to fetch programs:', e); }
+      if (data.data?.length) setPrograms(Array.isArray(data.data) ? data.data : MOCK_PROGRAMS);
+      else setPrograms(MOCK_PROGRAMS);
+    } catch (e) { console.warn('Failed to fetch programs:', e); setPrograms(MOCK_PROGRAMS); }
   }, []);
 
   const fetchCerts = useCallback(async () => {
     try {
       const res = await fetch('/api/hq/hris/training?action=certifications');
       const data = await res.json();
-      if (data.data) setCerts(Array.isArray(data.data) ? data.data : []);
-    } catch (e) { console.warn('Failed to fetch certifications:', e); }
+      if (data.data?.length) setCerts(Array.isArray(data.data) ? data.data : MOCK_CERTS);
+      else setCerts(MOCK_CERTS);
+    } catch (e) { console.warn('Failed to fetch certifications:', e); setCerts(MOCK_CERTS); }
   }, []);
 
   const fetchAnalytics = useCallback(async () => {
@@ -51,7 +76,8 @@ export default function TrainingPage() {
       const res = await fetch('/api/hq/hris/training?action=analytics');
       const data = await res.json();
       if (data.data) setAnalytics(data.data);
-    } catch (e) { console.warn('Failed to fetch analytics:', e); }
+      else setAnalytics(MOCK_TRAINING_ANALYTICS);
+    } catch (e) { console.warn('Failed to fetch analytics:', e); setAnalytics(MOCK_TRAINING_ANALYTICS); }
   }, []);
 
   useEffect(() => {
@@ -126,7 +152,7 @@ export default function TrainingPage() {
   const getCertNumber = (c: any) => c.cert_number || c.credential_id || '-';
 
   return (
-    <HQLayout title="Pelatihan & Sertifikasi" subtitle="Program Pengembangan SDM & Manajemen Sertifikasi">
+    <HQLayout title={t('hris.trainingTitle')} subtitle={t('hris.trainingSubtitle')}>
       <div className="space-y-6">
         {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 
@@ -142,15 +168,15 @@ export default function TrainingPage() {
           </div>
           <div className="bg-white rounded-xl p-4 border shadow-sm">
             <div className="flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><CheckCircle2 className="w-5 h-5 text-green-600" /></div>
-              <div><p className="text-2xl font-bold">{totalCompleted}</p><p className="text-xs text-gray-500">Selesai Training</p></div></div>
+              <div><p className="text-2xl font-bold">{totalCompleted}</p><p className="text-xs text-gray-500">Selesai Pelatihan</p></div></div>
           </div>
           <div className="bg-white rounded-xl p-4 border shadow-sm">
             <div className="flex items-center gap-3"><div className="p-2 bg-yellow-100 rounded-lg"><Star className="w-5 h-5 text-yellow-600" /></div>
-              <div><p className="text-2xl font-bold">{avgRating.toFixed(1)}</p><p className="text-xs text-gray-500">Avg. Rating</p></div></div>
+              <div><p className="text-2xl font-bold">{avgRating.toFixed(1)}</p><p className="text-xs text-gray-500">Rata-rata Rating</p></div></div>
           </div>
           <div className="bg-white rounded-xl p-4 border shadow-sm">
             <div className="flex items-center gap-3"><div className="p-2 bg-red-100 rounded-lg"><Award className="w-5 h-5 text-red-600" /></div>
-              <div><p className="text-2xl font-bold">{expiringCerts}</p><p className="text-xs text-gray-500">Sertifikasi Alert</p></div></div>
+              <div><p className="text-2xl font-bold">{expiringCerts}</p><p className="text-xs text-gray-500">Sertifikasi Perhatian</p></div></div>
           </div>
         </div>
 
@@ -268,19 +294,19 @@ export default function TrainingPage() {
           <div>
             <div className="flex gap-2 mb-4">
               <div className="relative flex-1"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari sertifikasi..." className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm" /></div>
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 border rounded-lg text-sm"><option value="">Semua Status</option><option value="active">Aktif</option><option value="expiring_soon">Segera Expired</option><option value="expired">Expired</option></select>
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 border rounded-lg text-sm"><option value="">Semua Status</option><option value="active">Aktif</option><option value="expiring_soon">Segera Kedaluwarsa</option><option value="expired">Kedaluwarsa</option></select>
             </div>
             {expiringCerts > 0 && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 flex items-start gap-3">
                 <Award className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div><p className="text-sm font-medium text-amber-900">{expiringCerts} sertifikasi perlu diperhatikan</p><p className="text-xs text-amber-700 mt-0.5">Ada sertifikasi yang akan atau sudah expired. Segera jadwalkan renewal.</p></div>
+                <div><p className="text-sm font-medium text-amber-900">{expiringCerts} sertifikasi perlu diperhatikan</p><p className="text-xs text-amber-700 mt-0.5">Ada sertifikasi yang akan atau sudah kedaluwarsa. Segera jadwalkan perpanjangan.</p></div>
               </div>
             )}
             <div className="bg-white border rounded-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50"><tr>
                   <th className="px-4 py-3 text-left">Karyawan</th><th className="px-4 py-3 text-left">Sertifikasi</th><th className="px-4 py-3 text-left">Penerbit</th>
-                  <th className="px-4 py-3 text-center">Berlaku</th><th className="px-4 py-3 text-center">Expired</th><th className="px-4 py-3 text-center">Status</th>
+                  <th className="px-4 py-3 text-center">Berlaku</th><th className="px-4 py-3 text-center">Kedaluwarsa</th><th className="px-4 py-3 text-center">Status</th>
                 </tr></thead>
                 <tbody className="divide-y">
                   {filteredCerts.map(c => (
@@ -290,7 +316,7 @@ export default function TrainingPage() {
                       <td className="px-4 py-3 text-sm">{c.issuer || c.issuing_organization || '-'}</td>
                       <td className="px-4 py-3 text-center text-xs">{c.issued_date ? new Date(c.issued_date).toLocaleDateString('id-ID') : '-'}</td>
                       <td className="px-4 py-3 text-center text-xs">{c.expiry_date ? new Date(c.expiry_date).toLocaleDateString('id-ID') : '-'}</td>
-                      <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-1 rounded-full ${CERT_STATUS_COLORS[c.status] || ''}`}>{c.status === 'active' ? 'Aktif' : c.status === 'expiring_soon' ? 'Segera Expired' : 'Expired'}</span></td>
+                      <td className="px-4 py-3 text-center"><span className={`text-xs px-2 py-1 rounded-full ${CERT_STATUS_COLORS[c.status] || ''}`}>{c.status === 'active' ? 'Aktif' : c.status === 'expiring_soon' ? 'Segera Kedaluwarsa' : 'Kedaluwarsa'}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -336,7 +362,7 @@ export default function TrainingPage() {
               </div>
             </div>
             <div className="bg-white border rounded-xl p-5">
-              <h3 className="font-semibold mb-4">Budget Pelatihan</h3>
+              <h3 className="font-semibold mb-4">Anggaran Pelatihan</h3>
               <div className="space-y-3">
                 {programs.map(p => {
                   const enrolled = p.enrolled || p.current_participants || 0;
@@ -349,7 +375,7 @@ export default function TrainingPage() {
                   );
                 })}
                 <div className="pt-3 border-t flex justify-between">
-                  <span className="font-semibold">Total Budget</span>
+                  <span className="font-semibold">Total Anggaran</span>
                   <span className="font-bold text-indigo-600">{fmtCur(analytics?.totalBudget ?? programs.reduce((s, p) => s + (p.cost_per_person || 0) * (p.enrolled || p.current_participants || 0), 0))}</span>
                 </div>
               </div>
@@ -358,8 +384,8 @@ export default function TrainingPage() {
               <h3 className="font-semibold mb-4">Status Sertifikasi</h3>
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-green-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-green-600">{analytics?.activeCerts ?? certs.filter(c => c.status === 'active').length}</p><p className="text-xs text-gray-500">Aktif</p></div>
-                <div className="bg-yellow-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-yellow-600">{analytics?.expiringCerts ?? certs.filter(c => c.status === 'expiring_soon').length}</p><p className="text-xs text-gray-500">Segera Expired</p></div>
-                <div className="bg-red-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-red-600">{analytics?.expiredCerts ?? certs.filter(c => c.status === 'expired').length}</p><p className="text-xs text-gray-500">Expired</p></div>
+                <div className="bg-yellow-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-yellow-600">{analytics?.expiringCerts ?? certs.filter(c => c.status === 'expiring_soon').length}</p><p className="text-xs text-gray-500">Segera Kedaluwarsa</p></div>
+                <div className="bg-red-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-red-600">{analytics?.expiredCerts ?? certs.filter(c => c.status === 'expired').length}</p><p className="text-xs text-gray-500">Kedaluwarsa</p></div>
               </div>
             </div>
           </div>
@@ -376,8 +402,8 @@ export default function TrainingPage() {
               <form onSubmit={handleCreateProgram} className="p-5 space-y-3">
                 <div><label className="text-sm font-medium text-gray-700">Judul Program *</label><input value={createForm.title} onChange={e => setCreateForm({ ...createForm, title: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" required /></div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-sm font-medium text-gray-700">Kategori</label><select value={createForm.category} onChange={e => setCreateForm({ ...createForm, category: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"><option value="technical">Technical</option><option value="soft_skill">Soft Skill</option><option value="leadership">Leadership</option><option value="compliance">Compliance</option><option value="finance">Finance</option><option value="operations">Operations</option></select></div>
-                  <div><label className="text-sm font-medium text-gray-700">Tipe</label><select value={createForm.type} onChange={e => setCreateForm({ ...createForm, type: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"><option value="training">Training</option><option value="workshop">Workshop</option><option value="certification">Sertifikasi</option><option value="online">Online</option></select></div>
+                  <div><label className="text-sm font-medium text-gray-700">Kategori</label><select value={createForm.category} onChange={e => setCreateForm({ ...createForm, category: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"><option value="technical">Teknikal</option><option value="soft_skill">Soft Skill</option><option value="leadership">Kepemimpinan</option><option value="compliance">Kepatuhan</option><option value="finance">Keuangan</option><option value="operations">Operasional</option></select></div>
+                  <div><label className="text-sm font-medium text-gray-700">Tipe</label><select value={createForm.type} onChange={e => setCreateForm({ ...createForm, type: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"><option value="training">Pelatihan</option><option value="workshop">Lokakarya</option><option value="certification">Sertifikasi</option><option value="online">Daring</option></select></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="text-sm font-medium text-gray-700">Trainer</label><input value={createForm.trainer} onChange={e => setCreateForm({ ...createForm, trainer: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>

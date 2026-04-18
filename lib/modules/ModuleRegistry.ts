@@ -515,6 +515,50 @@ export class ModuleRegistry {
       ]
     });
 
+    // ─── Help Desk Module (pluggable; shares CRM ticket storage) ───
+    this.registerModule({
+      id: 'helpdesk',
+      code: 'HELPDESK',
+      name: 'Service & Help Desk',
+      description: 'Tiket pelanggan, SLA, survei kepuasan, antrian agen, integrasi CRM/POS/WhatsApp',
+      category: 'addon',
+      version: '1.0.0',
+      dependencies: [],
+      optionalDependencies: ['CRM', 'SFA'],
+      businessTypeConfig: {
+        fine_dining: { isRequired: false, isRecommended: false, isOptional: true, features: ['tickets', 'sla'], defaultConfig: {} },
+        retail: { isRequired: false, isRecommended: true, isOptional: true, features: ['tickets', 'sla', 'csat'], defaultConfig: {} },
+        distribution: { isRequired: false, isRecommended: true, isOptional: true, features: ['tickets', 'sla', 'csat', 'automation'], defaultConfig: {} },
+        services: { isRequired: false, isRecommended: true, isOptional: false, features: ['tickets', 'sla', 'csat'], defaultConfig: {} },
+        manufacturing: { isRequired: false, isRecommended: true, isOptional: true, features: ['tickets', 'sla'], defaultConfig: {} },
+        cloud_kitchen: { isRequired: false, isRecommended: false, isOptional: true, features: ['tickets'], defaultConfig: {} },
+        qsr: { isRequired: false, isRecommended: false, isOptional: true, features: ['tickets'], defaultConfig: {} },
+        cafe: { isRequired: false, isRecommended: false, isOptional: true, features: ['tickets'], defaultConfig: {} }
+      },
+      integrationPoints: {
+        provides: [
+          { name: 'helpdesk.ticket.updated', type: 'event', description: 'Ticket status or assignment changed', schema: {} },
+          { name: 'helpdesk.satisfaction.recorded', type: 'event', description: 'CSAT/NPS response captured', schema: {} }
+        ],
+        consumes: [
+          { name: 'crm.customer.data', type: 'data', description: 'Customer records for ticket linking', schema: {} },
+          { name: 'order.created', type: 'event', description: 'POS orders for warranty / delivery issues', schema: {} }
+        ]
+      },
+      features: [
+        { code: 'tickets', name: 'Ticket queue', description: 'Multi-channel ticket intake and lifecycle', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'sla', name: 'SLA policies', description: 'Response and resolution targets with breach tracking', isDefault: true, businessTypes: ['all'], config: {} },
+        { code: 'csat', name: 'CSAT & NPS', description: 'Satisfaction surveys linked to CRM customers', isDefault: false, businessTypes: ['retail', 'distribution', 'services'], config: {} }
+      ],
+      routes: [
+        { path: '/api/hq/helpdesk', method: 'ALL', handler: 'helpdeskCrmPassThrough' }
+      ],
+      models: ['CrmTicket', 'CrmTicketComment', 'CrmSlaPolicy', 'CrmSatisfaction'],
+      components: [
+        { name: 'HelpdeskPage', path: '/pages/hq/helpdesk/index', type: 'page' }
+      ]
+    });
+
     // ─── SFA Module (pluggable) ───
     this.registerModule({
       id: 'sfa',

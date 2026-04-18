@@ -2,6 +2,7 @@ import { NextPage } from "next";
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import FinanceLayout from "@/components/layouts/finance-layout";
+import { useTranslation } from '@/lib/i18n';
 import TransfersComponent from "@/components/finance/TransfersComponent";
 import { useAuth } from "@/hooks/useAuth";
 import { checkAccess, getRedirectPathByRole } from "@/middleware/auth";
@@ -10,6 +11,7 @@ import { Toaster } from "react-hot-toast";
 const FinanceTransfersPage: NextPage = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
   
   // Check user access to finance module
   useEffect(() => {
@@ -29,7 +31,7 @@ const FinanceTransfersPage: NextPage = () => {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto mb-4"></div>
-            <p className="text-gray-500">Loading...</p>
+            <p className="text-gray-500">Memuat...</p>
           </div>
         </div>
       </FinanceLayout>

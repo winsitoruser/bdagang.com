@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,6 +58,7 @@ interface TransferStats {
 const TransfersManagementPage: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t, formatCurrency, formatDate } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedTransfer, setSelectedTransfer] = useState<TransferOrder | null>(null);
@@ -106,7 +108,7 @@ const TransfersManagementPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error fetching transfers:', error);
-      toast.error(error.response?.data?.message || 'Gagal memuat data transfer');
+      toast.error(error.response?.data?.message || t('inventory.transfers.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -137,14 +139,14 @@ const TransfersManagementPage: React.FC = () => {
       );
 
       if (response.data.success) {
-        toast.success('Transfer berhasil disetujui!');
+        toast.success(t('inventory.transfers.approveSuccess'));
         setShowApproveModal(false);
         setApprovalNotes('');
         fetchTransfers();
         fetchStats();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal menyetujui transfer');
+      toast.error(error.response?.data?.message || t('inventory.transfers.approveFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -152,7 +154,7 @@ const TransfersManagementPage: React.FC = () => {
 
   const handleReject = async () => {
     if (!selectedTransfer || !rejectionReason) {
-      toast.error('Alasan penolakan harus diisi');
+      toast.error(t('inventory.transfers.rejectReasonRequired'));
       return;
     }
     
@@ -166,14 +168,14 @@ const TransfersManagementPage: React.FC = () => {
       );
 
       if (response.data.success) {
-        toast.success('Transfer ditolak');
+        toast.success(t('inventory.transfers.rejectSuccess'));
         setShowRejectModal(false);
         setRejectionReason('');
         fetchTransfers();
         fetchStats();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal menolak transfer');
+      toast.error(error.response?.data?.message || t('inventory.transfers.rejectFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -181,7 +183,7 @@ const TransfersManagementPage: React.FC = () => {
 
   const handleShip = async () => {
     if (!selectedTransfer || !trackingNumber || !courier) {
-      toast.error('Nomor resi dan kurir harus diisi');
+      toast.error(t('inventory.transfers.trackingRequired'));
       return;
     }
     
@@ -198,7 +200,7 @@ const TransfersManagementPage: React.FC = () => {
       );
 
       if (response.data.success) {
-        toast.success('Transfer berhasil dikirim!');
+        toast.success(t('inventory.transfers.shipSuccess'));
         setShowShipModal(false);
         setTrackingNumber('');
         setCourier('');
@@ -206,7 +208,7 @@ const TransfersManagementPage: React.FC = () => {
         fetchStats();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal mengirim transfer');
+      toast.error(error.response?.data?.message || t('inventory.transfers.shipFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -234,14 +236,14 @@ const TransfersManagementPage: React.FC = () => {
       );
 
       if (response.data.success) {
-        toast.success('Transfer berhasil diterima!');
+        toast.success(t('inventory.transfers.receiveSuccess'));
         setShowReceiveModal(false);
         setReceiptNotes('');
         fetchTransfers();
         fetchStats();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Gagal menerima transfer');
+      toast.error(error.response?.data?.message || t('inventory.transfers.receiveFailed'));
     } finally {
       setActionLoading(false);
     }
@@ -255,7 +257,7 @@ const TransfersManagementPage: React.FC = () => {
         setShowDetailModal(true);
       }
     } catch (error: any) {
-      toast.error('Gagal memuat detail transfer');
+      toast.error(t('inventory.transfers.detailLoadFailed'));
     }
   };
 
@@ -332,21 +334,14 @@ const TransfersManagementPage: React.FC = () => {
     }
   ];
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const getStatusBadge = (status: string) => {
     const config = {
-      requested: { color: 'bg-yellow-100 text-yellow-700', label: 'Diminta' },
-      approved: { color: 'bg-blue-100 text-blue-700', label: 'Disetujui' },
-      in_transit: { color: 'bg-indigo-100 text-indigo-700', label: 'Dalam Perjalanan' },
-      received: { color: 'bg-green-100 text-green-700', label: 'Diterima' },
-      rejected: { color: 'bg-red-100 text-red-700', label: 'Ditolak' }
+      requested: { color: 'bg-yellow-100 text-yellow-700', label: t('inventory.transfers.requested') },
+      approved: { color: 'bg-blue-100 text-blue-700', label: t('inventory.transfers.approved') },
+      in_transit: { color: 'bg-indigo-100 text-indigo-700', label: t('inventory.transfers.inTransit') },
+      received: { color: 'bg-green-100 text-green-700', label: t('inventory.transfers.received') },
+      rejected: { color: 'bg-red-100 text-red-700', label: t('inventory.transfers.rejected') }
     };
     const statusConfig = config[status as keyof typeof config] || config.requested;
     return <Badge className={statusConfig.color}>{statusConfig.label}</Badge>;
@@ -370,7 +365,7 @@ const TransfersManagementPage: React.FC = () => {
         <div className="flex items-center justify-center min-h-screen">
           <div className="text-center">
             <FaSpinner className="animate-spin text-4xl text-indigo-600 mx-auto mb-4" />
-            <p className="text-gray-600">Memuat data transfer...</p>
+            <p className="text-gray-600">{t('inventory.transfers.loading')}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -381,7 +376,7 @@ const TransfersManagementPage: React.FC = () => {
     <DashboardLayout>
       <Toaster position="top-right" />
       <Head>
-        <title>Transfer Antar Lokasi | BEDAGANG Cloud POS</title>
+        <title>{t('inventory.transfers.pageTitle')}</title>
       </Head>
 
       <div className="space-y-6">
@@ -397,8 +392,8 @@ const TransfersManagementPage: React.FC = () => {
                     <FaExchangeAlt className="w-7 h-7" />
                   </div>
                   <div>
-                    <h1 className="text-3xl font-bold">Transfer Antar Lokasi</h1>
-                    <p className="text-indigo-100 text-sm">Kelola transfer stok antar toko dan gudang</p>
+                    <h1 className="text-3xl font-bold">{t('inventory.transfers.title')}</h1>
+                    <p className="text-indigo-100 text-sm">{t('inventory.transfers.subtitle')}</p>
                   </div>
                 </div>
               </div>
@@ -407,30 +402,30 @@ const TransfersManagementPage: React.FC = () => {
                 className="bg-white/20 hover:bg-white/30 backdrop-blur-sm"
               >
                 <FaPlus className="mr-2" />
-                Buat Transfer Baru
+                {t('inventory.transfers.createNew')}
               </Button>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <p className="text-xs text-indigo-100">Total Transfer</p>
+                <p className="text-xs text-indigo-100">{t('inventory.transfers.totalTransfer')}</p>
                 <p className="text-2xl font-bold">{displayStats.total}</p>
               </div>
               <div className="bg-yellow-500/30 backdrop-blur-sm rounded-lg p-3 border border-yellow-400/30">
-                <p className="text-xs text-yellow-100">Diminta</p>
+                <p className="text-xs text-yellow-100">{t('inventory.transfers.requested')}</p>
                 <p className="text-2xl font-bold">{displayStats.requested}</p>
               </div>
               <div className="bg-blue-500/30 backdrop-blur-sm rounded-lg p-3 border border-blue-400/30">
-                <p className="text-xs text-blue-100">Dalam Perjalanan</p>
+                <p className="text-xs text-blue-100">{t('inventory.transfers.inTransit')}</p>
                 <p className="text-2xl font-bold">{displayStats.inTransit}</p>
               </div>
               <div className="bg-green-500/30 backdrop-blur-sm rounded-lg p-3 border border-green-400/30">
-                <p className="text-xs text-green-100">Selesai</p>
+                <p className="text-xs text-green-100">{t('inventory.transfers.completed')}</p>
                 <p className="text-2xl font-bold">{displayStats.completed}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <p className="text-xs text-indigo-100">Total Nilai</p>
+                <p className="text-xs text-indigo-100">{t('inventory.transfers.totalValue')}</p>
                 <p className="text-lg font-bold">{formatCurrency(displayStats.totalValue)}</p>
               </div>
             </div>
@@ -445,7 +440,7 @@ const TransfersManagementPage: React.FC = () => {
                 <div className="relative">
                   <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <Input
-                    placeholder="Cari nomor transfer atau lokasi..."
+                    placeholder={t('inventory.transfers.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -458,12 +453,12 @@ const TransfersManagementPage: React.FC = () => {
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="all">Semua Status</option>
-                  <option value="requested">Diminta</option>
-                  <option value="approved">Disetujui</option>
-                  <option value="in_transit">Dalam Perjalanan</option>
-                  <option value="received">Diterima</option>
-                  <option value="rejected">Ditolak</option>
+                  <option value="all">{t('inventory.transfers.allStatus')}</option>
+                  <option value="requested">{t('inventory.transfers.requested')}</option>
+                  <option value="approved">{t('inventory.transfers.approved')}</option>
+                  <option value="in_transit">{t('inventory.transfers.inTransit')}</option>
+                  <option value="received">{t('inventory.transfers.received')}</option>
+                  <option value="rejected">{t('inventory.transfers.rejected')}</option>
                 </select>
               </div>
             </div>
@@ -473,21 +468,21 @@ const TransfersManagementPage: React.FC = () => {
         {/* Transfers List */}
         <Card className="shadow-lg border-0">
           <CardHeader>
-            <CardTitle>Daftar Transfer</CardTitle>
+            <CardTitle>{t('inventory.transfers.transferList')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="text-left p-3 text-sm font-semibold text-gray-700">No. Transfer</th>
-                    <th className="text-left p-3 text-sm font-semibold text-gray-700">Dari</th>
-                    <th className="text-left p-3 text-sm font-semibold text-gray-700">Ke</th>
-                    <th className="text-left p-3 text-sm font-semibold text-gray-700">Tanggal</th>
+                    <th className="text-left p-3 text-sm font-semibold text-gray-700">{t('inventory.transfers.transferNo')}</th>
+                    <th className="text-left p-3 text-sm font-semibold text-gray-700">{t('inventory.transfers.from')}</th>
+                    <th className="text-left p-3 text-sm font-semibold text-gray-700">{t('inventory.transfers.to')}</th>
+                    <th className="text-left p-3 text-sm font-semibold text-gray-700">{t('inventory.transfers.date')}</th>
                     <th className="text-center p-3 text-sm font-semibold text-gray-700">Items</th>
-                    <th className="text-right p-3 text-sm font-semibold text-gray-700">Total Nilai</th>
+                    <th className="text-right p-3 text-sm font-semibold text-gray-700">{t('inventory.transfers.totalValue')}</th>
                     <th className="text-center p-3 text-sm font-semibold text-gray-700">Status</th>
-                    <th className="text-center p-3 text-sm font-semibold text-gray-700">Aksi</th>
+                    <th className="text-center p-3 text-sm font-semibold text-gray-700">{t('inventory.transfers.action')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -510,9 +505,9 @@ const TransfersManagementPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="p-3">
-                        <p className="text-sm text-gray-900">{new Date(transfer.request_date).toLocaleDateString('id-ID')}</p>
+                        <p className="text-sm text-gray-900">{formatDate(transfer.request_date)}</p>
                         {transfer.shipment_date && (
-                          <p className="text-xs text-gray-500">Kirim: {new Date(transfer.shipment_date).toLocaleDateString('id-ID')}</p>
+                          <p className="text-xs text-gray-500">{t('inventory.transfers.shipDate')}: {formatDate(transfer.shipment_date)}</p>
                         )}
                       </td>
                       <td className="p-3 text-center">
@@ -568,7 +563,7 @@ const TransfersManagementPage: React.FC = () => {
                               }}
                             >
                               <FaTruck className="mr-1" />
-                              Kirim
+                              {t('inventory.transfers.ship')}
                             </Button>
                           )}
                           {transfer.status === 'in_transit' && (
@@ -581,7 +576,7 @@ const TransfersManagementPage: React.FC = () => {
                               }}
                             >
                               <FaClipboardCheck className="mr-1" />
-                              Terima
+                              {t('inventory.transfers.receive')}
                             </Button>
                           )}
                         </div>
@@ -601,7 +596,7 @@ const TransfersManagementPage: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Detail Transfer - {selectedTransfer.transfer_number}</h2>
+                <h2 className="text-2xl font-bold">{t('inventory.transfers.detailTitle')} - {selectedTransfer.transfer_number}</h2>
                 <button
                   onClick={() => setShowDetailModal(false)}
                   className="text-gray-500 hover:text-gray-700"
@@ -613,38 +608,38 @@ const TransfersManagementPage: React.FC = () => {
             <div className="p-6">
               <div className="grid grid-cols-2 gap-6 mb-6">
                 <div>
-                  <h3 className="font-semibold text-gray-700 mb-2">Informasi Transfer</h3>
+                  <h3 className="font-semibold text-gray-700 mb-2">{t('inventory.transfers.transferInfo')}</h3>
                   <div className="space-y-1 text-sm">
-                    <p><span className="text-gray-600">Dari:</span> {selectedTransfer.from_location || `Location ${selectedTransfer.from_location_id}`}</p>
-                    <p><span className="text-gray-600">Ke:</span> {selectedTransfer.to_location || `Location ${selectedTransfer.to_location_id}`}</p>
-                    <p><span className="text-gray-600">Tanggal Permintaan:</span> {new Date(selectedTransfer.request_date).toLocaleDateString('id-ID')}</p>
+                    <p><span className="text-gray-600">{t('inventory.transfers.from')}:</span> {selectedTransfer.from_location || `Location ${selectedTransfer.from_location_id}`}</p>
+                    <p><span className="text-gray-600">{t('inventory.transfers.to')}:</span> {selectedTransfer.to_location || `Location ${selectedTransfer.to_location_id}`}</p>
+                    <p><span className="text-gray-600">{t('inventory.transfers.requestDate')}:</span> {formatDate(selectedTransfer.request_date)}</p>
                     {selectedTransfer.shipment_date && (
-                      <p><span className="text-gray-600">Tanggal Kirim:</span> {new Date(selectedTransfer.shipment_date).toLocaleDateString('id-ID')}</p>
+                      <p><span className="text-gray-600">{t('inventory.transfers.shipDate')}:</span> {formatDate(selectedTransfer.shipment_date)}</p>
                     )}
                     {selectedTransfer.received_date && (
-                      <p><span className="text-gray-600">Tanggal Terima:</span> {new Date(selectedTransfer.received_date).toLocaleDateString('id-ID')}</p>
+                      <p><span className="text-gray-600">{t('inventory.transfers.receiveDate')}:</span> {formatDate(selectedTransfer.received_date)}</p>
                     )}
                     <p><span className="text-gray-600">Status:</span> {getStatusBadge(selectedTransfer.status)}</p>
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-700 mb-2">Detail Approval</h3>
+                  <h3 className="font-semibold text-gray-700 mb-2">{t('inventory.transfers.approvalDetail')}</h3>
                   <div className="space-y-1 text-sm">
-                    <p><span className="text-gray-600">Diminta oleh:</span> {selectedTransfer.requested_by}</p>
+                    <p><span className="text-gray-600">{t('inventory.transfers.requestedBy')}:</span> {selectedTransfer.requested_by}</p>
                     {selectedTransfer.approved_by && (
-                      <p><span className="text-gray-600">Disetujui oleh:</span> {selectedTransfer.approved_by}</p>
+                      <p><span className="text-gray-600">{t('inventory.transfers.approvedBy')}:</span> {selectedTransfer.approved_by}</p>
                     )}
                   </div>
                 </div>
               </div>
 
-              <h3 className="font-semibold text-gray-700 mb-3">Items Transfer</h3>
+              <h3 className="font-semibold text-gray-700 mb-3">{t('inventory.transfers.transferItems')}</h3>
               <table className="w-full mb-6">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="text-left p-3 text-sm">Produk</th>
+                    <th className="text-left p-3 text-sm">{t('inventory.transfers.product')}</th>
                     <th className="text-center p-3 text-sm">Qty</th>
-                    <th className="text-right p-3 text-sm">Biaya Unit</th>
+                    <th className="text-right p-3 text-sm">{t('inventory.transfers.unitCost')}</th>
                     <th className="text-right p-3 text-sm">Subtotal</th>
                   </tr>
                 </thead>
@@ -670,11 +665,11 @@ const TransfersManagementPage: React.FC = () => {
                     <span className="font-semibold">{formatCurrency(selectedTransfer.total_cost)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Ongkos Kirim:</span>
+                    <span className="text-gray-600">{t('inventory.transfers.shippingCost')}:</span>
                     <span className="font-semibold">{formatCurrency(selectedTransfer.shipping_cost)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Biaya Handling:</span>
+                    <span className="text-gray-600">{t('inventory.transfers.handlingFee')}:</span>
                     <span className="font-semibold">{formatCurrency(selectedTransfer.handling_fee || 0)}</span>
                   </div>
                   <div className="flex justify-between py-3 bg-indigo-50 px-4 rounded-lg">
@@ -688,7 +683,7 @@ const TransfersManagementPage: React.FC = () => {
 
               {selectedTransfer.notes && (
                 <div className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
-                  <p className="text-sm text-gray-700"><span className="font-semibold">Catatan:</span> {selectedTransfer.notes}</p>
+                  <p className="text-sm text-gray-700"><span className="font-semibold">{t('inventory.transfers.notes')}:</span> {selectedTransfer.notes}</p>
                 </div>
               )}
             </div>
@@ -701,22 +696,22 @@ const TransfersManagementPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Setujui Transfer</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t('inventory.transfers.approveTransfer')}</h2>
             </div>
             <div className="p-6">
               <p className="text-gray-600 mb-4">
-                Anda akan menyetujui transfer <strong>{selectedTransfer.transfer_number}</strong>
+                {t('inventory.transfers.approveConfirm')} <strong>{selectedTransfer.transfer_number}</strong>
               </p>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Catatan Persetujuan (Opsional)
+                  {t('inventory.transfers.approvalNotes')}
                 </label>
                 <textarea
                   value={approvalNotes}
                   onChange={(e) => setApprovalNotes(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   rows={3}
-                  placeholder="Tambahkan catatan..."
+                  placeholder={t('inventory.transfers.addNotesPlaceholder')}
                 />
               </div>
               <div className="flex gap-3">
@@ -729,7 +724,7 @@ const TransfersManagementPage: React.FC = () => {
                   className="flex-1"
                   disabled={actionLoading}
                 >
-                  Batal
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={handleApprove}
@@ -739,12 +734,12 @@ const TransfersManagementPage: React.FC = () => {
                   {actionLoading ? (
                     <>
                       <FaSpinner className="animate-spin mr-2" />
-                      Memproses...
+                      {t('inventory.transfers.processing')}
                     </>
                   ) : (
                     <>
                       <FaCheck className="mr-2" />
-                      Setujui
+                      {t('inventory.transfers.approve')}
                     </>
                   )}
                 </Button>
@@ -759,22 +754,22 @@ const TransfersManagementPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Tolak Transfer</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t('inventory.transfers.rejectTransfer')}</h2>
             </div>
             <div className="p-6">
               <p className="text-gray-600 mb-4">
-                Anda akan menolak transfer <strong>{selectedTransfer.transfer_number}</strong>
+                {t('inventory.transfers.rejectConfirm')} <strong>{selectedTransfer.transfer_number}</strong>
               </p>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Alasan Penolakan <span className="text-red-500">*</span>
+                  {t('inventory.transfers.rejectReason')} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   rows={3}
-                  placeholder="Jelaskan alasan penolakan..."
+                  placeholder={t('inventory.transfers.rejectReasonPlaceholder')}
                   required
                 />
               </div>
@@ -788,7 +783,7 @@ const TransfersManagementPage: React.FC = () => {
                   className="flex-1"
                   disabled={actionLoading}
                 >
-                  Batal
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={handleReject}
@@ -798,12 +793,12 @@ const TransfersManagementPage: React.FC = () => {
                   {actionLoading ? (
                     <>
                       <FaSpinner className="animate-spin mr-2" />
-                      Memproses...
+                      {t('inventory.transfers.processing')}
                     </>
                   ) : (
                     <>
                       <FaTimes className="mr-2" />
-                      Tolak
+                      {t('inventory.transfers.reject')}
                     </>
                   )}
                 </Button>
@@ -818,27 +813,27 @@ const TransfersManagementPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Kirim Transfer</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t('inventory.transfers.shipTransfer')}</h2>
             </div>
             <div className="p-6">
               <p className="text-gray-600 mb-4">
-                Tandai transfer <strong>{selectedTransfer.transfer_number}</strong> sebagai dikirim
+                {t('inventory.transfers.shipConfirm')} <strong>{selectedTransfer.transfer_number}</strong>
               </p>
               <div className="space-y-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nomor Resi <span className="text-red-500">*</span>
+                    {t('inventory.transfers.trackingNo')} <span className="text-red-500">*</span>
                   </label>
                   <Input
                     value={trackingNumber}
                     onChange={(e) => setTrackingNumber(e.target.value)}
-                    placeholder="Masukkan nomor resi..."
+                    placeholder={t('inventory.transfers.trackingPlaceholder')}
                     required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Kurir <span className="text-red-500">*</span>
+                    {t('inventory.transfers.courier')} <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={courier}
@@ -846,7 +841,7 @@ const TransfersManagementPage: React.FC = () => {
                     className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   >
-                    <option value="">Pilih Kurir</option>
+                    <option value="">{t('inventory.transfers.selectCourier')}</option>
                     <option value="JNE">JNE</option>
                     <option value="J&T">J&T Express</option>
                     <option value="SiCepat">SiCepat</option>
@@ -854,7 +849,7 @@ const TransfersManagementPage: React.FC = () => {
                     <option value="Ninja Express">Ninja Express</option>
                     <option value="Gosend">Gosend</option>
                     <option value="Grab Express">Grab Express</option>
-                    <option value="Internal">Internal/Kendaraan Sendiri</option>
+                    <option value="Internal">{t('inventory.transfers.internalVehicle')}</option>
                   </select>
                 </div>
               </div>
@@ -869,7 +864,7 @@ const TransfersManagementPage: React.FC = () => {
                   className="flex-1"
                   disabled={actionLoading}
                 >
-                  Batal
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={handleShip}
@@ -879,12 +874,12 @@ const TransfersManagementPage: React.FC = () => {
                   {actionLoading ? (
                     <>
                       <FaSpinner className="animate-spin mr-2" />
-                      Memproses...
+                      {t('inventory.transfers.processing')}
                     </>
                   ) : (
                     <>
                       <FaTruck className="mr-2" />
-                      Kirim
+                      {t('inventory.transfers.ship')}
                     </>
                   )}
                 </Button>
@@ -899,22 +894,22 @@ const TransfersManagementPage: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">Terima Transfer</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t('inventory.transfers.receiveTransfer')}</h2>
             </div>
             <div className="p-6">
               <p className="text-gray-600 mb-4">
-                Konfirmasi penerimaan transfer <strong>{selectedTransfer.transfer_number}</strong>
+                {t('inventory.transfers.receiveConfirm')} <strong>{selectedTransfer.transfer_number}</strong>
               </p>
               
               <div className="mb-4">
-                <h3 className="font-semibold text-gray-700 mb-2">Items yang Diterima:</h3>
+                <h3 className="font-semibold text-gray-700 mb-2">{t('inventory.transfers.receivedItems')}:</h3>
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="text-left p-3 text-sm">Produk</th>
-                        <th className="text-center p-3 text-sm">Qty Dikirim</th>
-                        <th className="text-center p-3 text-sm">Kondisi</th>
+                        <th className="text-left p-3 text-sm">{t('inventory.transfers.product')}</th>
+                        <th className="text-center p-3 text-sm">{t('inventory.transfers.qtySent')}</th>
+                        <th className="text-center p-3 text-sm">{t('inventory.transfers.condition')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -928,7 +923,7 @@ const TransfersManagementPage: React.FC = () => {
                             {item.quantity_shipped || item.quantity_approved || 0}
                           </td>
                           <td className="p-3 text-center">
-                            <Badge className="bg-green-100 text-green-700">Baik</Badge>
+                            <Badge className="bg-green-100 text-green-700">{t('inventory.transfers.good')}</Badge>
                           </td>
                         </tr>
                       ))}
@@ -939,14 +934,14 @@ const TransfersManagementPage: React.FC = () => {
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Catatan Penerimaan (Opsional)
+                  {t('inventory.transfers.receiptNotes')}
                 </label>
                 <textarea
                   value={receiptNotes}
                   onChange={(e) => setReceiptNotes(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   rows={3}
-                  placeholder="Tambahkan catatan penerimaan..."
+                  placeholder={t('inventory.transfers.receiptNotesPlaceholder')}
                 />
               </div>
 
@@ -960,7 +955,7 @@ const TransfersManagementPage: React.FC = () => {
                   className="flex-1"
                   disabled={actionLoading}
                 >
-                  Batal
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   onClick={handleReceive}
@@ -970,12 +965,12 @@ const TransfersManagementPage: React.FC = () => {
                   {actionLoading ? (
                     <>
                       <FaSpinner className="animate-spin mr-2" />
-                      Memproses...
+                      {t('inventory.transfers.processing')}
                     </>
                   ) : (
                     <>
                       <FaClipboardCheck className="mr-2" />
-                      Konfirmasi Terima
+                      {t('inventory.transfers.confirmReceive')}
                     </>
                   )}
                 </Button>

@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
+import { CanAccess, PageGuard } from '../../../components/permissions';
 import TransactionFormModal from '../../../components/hq/finance/TransactionFormModal';
 import Link from 'next/link';
+import { useFinancePeriod, PeriodSelector } from '../../../contexts/FinancePeriodContext';
+import { FinancePageSkeleton } from '../../../components/finance/FinanceSkeleton';
+import FinanceErrorModal from '../../../components/finance/FinanceErrorModal';
+import { rowsOr, MOCK_HQ_BRANCHES, MOCK_HQ_ACCOUNTS } from '@/lib/hq/mock-data';
 import {
   TrendingDown,
   ArrowUpRight,
@@ -108,19 +114,53 @@ const getCategoryIcon = (icon: string) => {
   }
 };
 
+const MOCK_EXP_SUMMARY: ExpenseSummary = {
+  totalExpenses: 1650000000, previousExpenses: 1520000000, growth: 8.6,
+  cogs: 580000000, payroll: 520000000, utilities: 145000000, marketing: 185000000,
+  logistics: 120000000, maintenance: 65000000, other: 35000000,
+  pendingApprovals: 4, budgetUsed: 1650000000, budgetTotal: 2500000000,
+};
+
+const MOCK_EXP_CATEGORIES: ExpenseCategory[] = [
+  { id: '1', name: 'COGS', icon: 'shopping-cart', amount: 580000000, budget: 800000000, percentage: 35, trend: 3.2, color: '#3B82F6' },
+  { id: '2', name: 'Payroll', icon: 'users', amount: 520000000, budget: 650000000, percentage: 32, trend: 2.0, color: '#10B981' },
+  { id: '3', name: 'Utilities', icon: 'zap', amount: 145000000, budget: 180000000, percentage: 9, trend: 8.5, color: '#F59E0B' },
+  { id: '4', name: 'Marketing', icon: 'megaphone', amount: 185000000, budget: 250000000, percentage: 11, trend: -2.6, color: '#EF4444' },
+  { id: '5', name: 'Logistics', icon: 'truck', amount: 120000000, budget: 200000000, percentage: 7, trend: -14.3, color: '#8B5CF6' },
+  { id: '6', name: 'Maintenance', icon: 'wrench', amount: 65000000, budget: 100000000, percentage: 4, trend: 5.0, color: '#EC4899' },
+];
+
+const MOCK_EXP_ITEMS: ExpenseItem[] = [
+  { id: 'e1', date: '2026-03-12', description: 'Pembelian Bahan Baku Kopi', category: 'COGS', branch: 'Gudang Pusat Bekasi', amount: 15200000, status: 'approved', approver: 'Ahmad Wijaya', vendor: 'PT Sumber Makmur' },
+  { id: 'e2', date: '2026-03-11', description: 'Gaji Karyawan Maret 2026', category: 'Payroll', branch: 'All', amount: 125000000, status: 'pending', approver: '-', vendor: '-' },
+  { id: 'e3', date: '2026-03-10', description: 'Biaya Listrik & Air Maret', category: 'Utilities', branch: 'All', amount: 18500000, status: 'approved', approver: 'Ahmad Wijaya', vendor: 'PLN & PDAM' },
+  { id: 'e4', date: '2026-03-10', description: 'Campaign Google Ads Maret', category: 'Marketing', branch: 'HQ Jakarta', amount: 8500000, status: 'approved', approver: 'Siti Rahayu', vendor: 'Google' },
+  { id: 'e5', date: '2026-03-09', description: 'Servis AC Cabang Bandung', category: 'Maintenance', branch: 'Cabang Bandung', amount: 3200000, status: 'approved', approver: 'Siti Rahayu', vendor: 'CV Teknik Sejuk' },
+  { id: 'e6', date: '2026-03-08', description: 'Pengiriman ke Cabang Bali', category: 'Logistics', branch: 'Cabang Bali', amount: 4800000, status: 'pending', approver: '-', vendor: 'JNE Cargo' },
+];
+
+const MOCK_BRANCH_EXP: BranchExpense[] = [
+  { id: 'b1', name: 'Kantor Pusat Jakarta', code: 'HQ-001', totalExpenses: 420000000, cogs: 150000000, payroll: 180000000, utilities: 45000000, other: 45000000, budgetUsed: 65 },
+  { id: 'b2', name: 'Cabang Bandung', code: 'BR-002', totalExpenses: 290000000, cogs: 105000000, payroll: 120000000, utilities: 32000000, other: 33000000, budgetUsed: 76 },
+  { id: 'b3', name: 'Cabang Surabaya', code: 'BR-003', totalExpenses: 310000000, cogs: 115000000, payroll: 110000000, utilities: 38000000, other: 47000000, budgetUsed: 89 },
+  { id: 'b5', name: 'Cabang Bali', code: 'BR-005', totalExpenses: 195000000, cogs: 80000000, payroll: 75000000, utilities: 22000000, other: 18000000, budgetUsed: 65 },
+];
+
 export default function ExpenseManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'quarter' | 'year'>('month');
-  const [summary, setSummary] = useState<ExpenseSummary>(defaultExpSummary);
-  const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [branchExpenses, setBranchExpenses] = useState<BranchExpense[]>([]);
+  const { period } = useFinancePeriod();
+  const [apiError, setApiError] = useState<{ show: boolean; message: string; details?: string }>({ show: false, message: '' });
+  const [summary, setSummary] = useState<ExpenseSummary>(MOCK_EXP_SUMMARY);
+  const [categories, setCategories] = useState<ExpenseCategory[]>(MOCK_EXP_CATEGORIES);
+  const [expenses, setExpenses] = useState<ExpenseItem[]>(MOCK_EXP_ITEMS);
+  const [branchExpenses, setBranchExpenses] = useState<BranchExpense[]>(MOCK_BRANCH_EXP);
   const [viewMode, setViewMode] = useState<'list' | 'category' | 'branch'>('list');
   const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [branches, setBranches] = useState([]);
-  const [accounts, setAccounts] = useState([]);
+  const [branches, setBranches] = useState<any[]>(MOCK_HQ_BRANCHES);
+  const [accounts, setAccounts] = useState<any[]>(MOCK_HQ_ACCOUNTS);
   
   // Fetch branches and accounts for modal
   useEffect(() => {
@@ -134,13 +174,13 @@ export default function ExpenseManagement() {
         if (branchRes.ok) {
           const branchJson = await branchRes.json();
           const branchPayload = branchJson.data || branchJson;
-          setBranches(branchPayload.branches || []);
+          setBranches(rowsOr(branchPayload.branches, MOCK_HQ_BRANCHES));
         }
         
         if (accountRes.ok) {
           const accountJson = await accountRes.json();
           const accountPayload = accountJson.data || accountJson;
-          setAccounts(accountPayload.accounts || accountPayload.receivables || []);
+          setAccounts(rowsOr(accountPayload.accounts || accountPayload.receivables, MOCK_HQ_ACCOUNTS));
         }
       } catch (error) {
         console.error('Error fetching branches/accounts:', error);
@@ -226,6 +266,10 @@ export default function ExpenseManagement() {
       }
     } catch (error) {
       console.error('Error fetching expense data:', error);
+      setSummary(MOCK_EXP_SUMMARY);
+      setCategories(MOCK_EXP_CATEGORIES);
+      setExpenses(MOCK_EXP_ITEMS);
+      setBranchExpenses(MOCK_BRANCH_EXP);
     } finally {
       setLoading(false);
     }
@@ -295,6 +339,10 @@ export default function ExpenseManagement() {
     : expenses.filter(e => e.status === filterStatus);
 
   return (
+    <PageGuard
+      anyPermission={['finance.view', 'finance.*', 'finance_expenses.view']}
+      title="Manajemen Pengeluaran"
+    >
     <HQLayout>
       <div className="space-y-6">
         {/* Header */}
@@ -304,35 +352,27 @@ export default function ExpenseManagement() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Expense Management</h1>
-              <p className="text-gray-500">Kelola dan monitor pengeluaran perusahaan</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.expTitle')}</h1>
+              <p className="text-gray-500">{t('finance.expSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              <option value="day">Hari Ini</option>
-              <option value="week">Minggu Ini</option>
-              <option value="month">Bulan Ini</option>
-              <option value="quarter">Kuartal Ini</option>
-              <option value="year">Tahun Ini</option>
-            </select>
+            <PeriodSelector />
             <button
               onClick={fetchData}
               className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              Add Expense
-            </button>
+            <CanAccess anyPermission={['finance_expenses.create', 'finance.*']}>
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                {t('finance.add')} {t('finance.expenses')}
+              </button>
+            </CanAccess>
             
             {/* Transaction Form Modal */}
             <TransactionFormModal
@@ -368,7 +408,7 @@ export default function ExpenseManagement() {
             />
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
-              Export
+              {t('finance.export')}
             </button>
           </div>
         </div>
@@ -383,7 +423,7 @@ export default function ExpenseManagement() {
                 {Math.abs(summary.growth)}%
               </span>
             </div>
-            <p className="text-red-100 text-sm">Total Expenses</p>
+            <p className="text-red-100 text-sm">{t('finance.totalExpenses')}</p>
             <p className="text-2xl font-bold">{formatCurrency(summary.totalExpenses)}</p>
             <p className="text-red-200 text-xs mt-1">vs {formatCurrency(summary.previousExpenses)} prev</p>
           </div>
@@ -421,7 +461,7 @@ export default function ExpenseManagement() {
                 </span>
               )}
             </div>
-            <p className="text-gray-500 text-sm">Budget Used</p>
+            <p className="text-gray-500 text-sm">{t('finance.budgetUsed')}</p>
             <p className="text-2xl font-bold text-gray-900">{summary.budgetUsed}%</p>
             <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
               <div 
@@ -461,19 +501,19 @@ export default function ExpenseManagement() {
         {/* Charts Row */}
         <div className="grid grid-cols-2 gap-6">
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Expense Trend</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.expenseTrend')}</h3>
             <Chart options={expenseTrendOptions} series={expenseTrendSeries} type="area" height={280} />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Expense by Category</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.expenseByCategory')}</h3>
             <Chart options={categoryPieOptions} series={categoryPieSeries} type="donut" height={280} />
           </div>
         </div>
 
         {/* Monthly Comparison */}
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">Monthly Expense Comparison by Category</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t('finance.monthlyExpenseComparison')}</h3>
           <Chart options={monthlyCompareOptions} series={monthlyCompareSeries} type="bar" height={320} />
         </div>
 
@@ -486,14 +526,14 @@ export default function ExpenseManagement() {
                   onClick={() => setViewMode('list')}
                   className={`px-4 py-2 rounded-lg font-medium ${viewMode === 'list' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
                 >
-                  All Expenses
+                  {t('finance.allExpenses')}
                 </button>
                 <button
                   onClick={() => setViewMode('branch')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'branch' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
                 >
                   <Building2 className="w-4 h-4" />
-                  By Branch
+                  {t('finance.byBranch')}
                 </button>
               </div>
               <div className="flex items-center gap-2">
@@ -502,16 +542,16 @@ export default function ExpenseManagement() {
                   onChange={(e) => setFilterStatus(e.target.value as any)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 >
-                  <option value="all">All Status</option>
-                  <option value="approved">Approved</option>
-                  <option value="pending">Pending</option>
-                  <option value="rejected">Rejected</option>
+                  <option value="all">{t('finance.allStatus')}</option>
+                  <option value="approved">{t('finance.approved')}</option>
+                  <option value="pending">{t('finance.pending')}</option>
+                  <option value="rejected">{t('finance.rejected')}</option>
                 </select>
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search expenses..."
+                    placeholder={t('finance.search')}
                     className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm"
                   />
                 </div>
@@ -524,13 +564,13 @@ export default function ExpenseManagement() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.date')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.description')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.category')}</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.branch')}</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.amount')}</th>
+                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('finance.status')}</th>
+                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('finance.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -572,13 +612,13 @@ export default function ExpenseManagement() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total Expenses</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('finance.branch')}</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.totalExpenses')}</th>
                     <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">COGS</th>
                     <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Payroll</th>
-                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Utilities</th>
-                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">Other</th>
-                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">Budget Used</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.utilities')}</th>
+                    <th className="px-5 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('finance.other')}</th>
+                    <th className="px-5 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('finance.budgetUsed')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -614,5 +654,6 @@ export default function ExpenseManagement() {
 
       </div>
     </HQLayout>
+    </PageGuard>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import {
   Target,
@@ -66,13 +67,35 @@ const formatCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
+const MOCK_BUDGET_SUMMARY: BudgetSummary = {
+  totalBudget: 2500000000, totalSpent: 1650000000, totalRemaining: 850000000,
+  utilizationRate: 66, onTrackCategories: 5, overBudgetCategories: 1, underBudgetCategories: 2,
+};
+
+const MOCK_BUDGET_CATEGORIES: BudgetCategory[] = [
+  { id: '1', name: 'COGS / Bahan Baku', budget: 800000000, spent: 580000000, remaining: 220000000, utilization: 73, status: 'on_track', variance: -5, lastMonth: 560000000 },
+  { id: '2', name: 'Gaji & Tunjangan', budget: 650000000, spent: 520000000, remaining: 130000000, utilization: 80, status: 'on_track', variance: 2, lastMonth: 510000000 },
+  { id: '3', name: 'Utilitas', budget: 180000000, spent: 145000000, remaining: 35000000, utilization: 81, status: 'warning', variance: 8, lastMonth: 135000000 },
+  { id: '4', name: 'Marketing', budget: 250000000, spent: 185000000, remaining: 65000000, utilization: 74, status: 'on_track', variance: -3, lastMonth: 190000000 },
+  { id: '5', name: 'Logistik', budget: 200000000, spent: 120000000, remaining: 80000000, utilization: 60, status: 'under_budget', variance: -12, lastMonth: 140000000 },
+  { id: '6', name: 'IT & Teknologi', budget: 150000000, spent: 160000000, remaining: -10000000, utilization: 107, status: 'over_budget', variance: 15, lastMonth: 140000000 },
+];
+
+const MOCK_BRANCH_BUDGETS: BranchBudget[] = [
+  { id: 'b1', name: 'Kantor Pusat Jakarta', code: 'HQ-001', totalBudget: 650000000, spent: 420000000, utilization: 65, status: 'on_track' },
+  { id: 'b2', name: 'Cabang Bandung', code: 'BR-002', totalBudget: 380000000, spent: 290000000, utilization: 76, status: 'on_track' },
+  { id: 'b3', name: 'Cabang Surabaya', code: 'BR-003', totalBudget: 350000000, spent: 310000000, utilization: 89, status: 'warning' },
+  { id: 'b5', name: 'Cabang Bali', code: 'BR-005', totalBudget: 300000000, spent: 195000000, utilization: 65, status: 'on_track' },
+];
+
 export default function BudgetManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
-  const [summary, setSummary] = useState<BudgetSummary>(defaultBudgetSummary);
-  const [categories, setCategories] = useState<BudgetCategory[]>([]);
-  const [branchBudgets, setBranchBudgets] = useState<BranchBudget[]>([]);
+  const [summary, setSummary] = useState<BudgetSummary>(MOCK_BUDGET_SUMMARY);
+  const [categories, setCategories] = useState<BudgetCategory[]>(MOCK_BUDGET_CATEGORIES);
+  const [branchBudgets, setBranchBudgets] = useState<BranchBudget[]>(MOCK_BRANCH_BUDGETS);
   const [viewMode, setViewMode] = useState<'category' | 'branch' | 'trend'>('category');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newBudget, setNewBudget] = useState({
@@ -115,6 +138,9 @@ export default function BudgetManagement() {
       }
     } catch (error) {
       console.error('Error fetching budget data:', error);
+      setSummary(MOCK_BUDGET_SUMMARY);
+      setCategories(MOCK_BUDGET_CATEGORIES);
+      setBranchBudgets(MOCK_BRANCH_BUDGETS);
     } finally {
       setLoading(false);
     }
@@ -204,8 +230,8 @@ export default function BudgetManagement() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Budget Management</h1>
-              <p className="text-gray-500">Perencanaan dan monitoring anggaran</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.budTitle')}</h1>
+              <p className="text-gray-500">{t('finance.budSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -214,20 +240,20 @@ export default function BudgetManagement() {
               onChange={(e) => setPeriod(e.target.value as any)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
             >
-              <option value="month">Bulan Ini</option>
-              <option value="quarter">Kuartal Ini</option>
-              <option value="year">Tahun Ini</option>
+              <option value="month">{t('finance.thisMonth')}</option>
+              <option value="quarter">{t('finance.thisQuarter')}</option>
+              <option value="year">{t('finance.thisYear')}</option>
             </select>
             <button 
               onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
-              Create Budget
+              {t('finance.createBudget')}
             </button>
             <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
               <Download className="w-4 h-4" />
-              Export
+              {t('finance.export')}
             </button>
           </div>
         </div>
@@ -237,20 +263,20 @@ export default function BudgetManagement() {
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <Target className="w-5 h-5 opacity-80" />
-              <p className="text-blue-100 text-sm">Total Budget</p>
+              <p className="text-blue-100 text-sm">{t('finance.totalBudget')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.totalBudget)}</p>
             <p className="text-blue-200 text-xs mt-1">Fiscal Period: Feb 2026</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Total Spent</p>
+            <p className="text-gray-500 text-sm">{t('finance.totalSpent')}</p>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.totalSpent)}</p>
             <p className="text-xs text-gray-500 mt-1">{summary.utilizationRate}% utilized</p>
           </div>
 
           <div className="bg-white rounded-xl p-5 border border-gray-200">
-            <p className="text-gray-500 text-sm">Remaining</p>
+            <p className="text-gray-500 text-sm">{t('finance.remaining')}</p>
             <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.totalRemaining)}</p>
             <p className="text-xs text-gray-500 mt-1">{100 - summary.utilizationRate}% available</p>
           </div>
@@ -258,7 +284,7 @@ export default function BudgetManagement() {
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-sm">Category Status</p>
+                <p className="text-gray-500 text-sm">{t('finance.categoryStatus')}</p>
                 <div className="flex items-center gap-3 mt-2">
                   <span className="flex items-center gap-1 text-green-600 text-sm">
                     <CheckCircle className="w-4 h-4" /> {summary.onTrackCategories}
@@ -278,12 +304,12 @@ export default function BudgetManagement() {
         {/* Charts Row */}
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-2 bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Budget vs Actual by Category</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.budgetVsActual')}</h3>
             <Chart options={budgetVsActualOptions} series={budgetVsActualSeries} type="bar" height={300} />
           </div>
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-semibold text-gray-900 mb-4">Overall Utilization</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('finance.overallUtilization')}</h3>
             <Chart options={utilizationGaugeOptions} series={[summary.utilizationRate]} type="radialBar" height={280} />
           </div>
         </div>
@@ -294,21 +320,21 @@ export default function BudgetManagement() {
             onClick={() => setViewMode('category')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'category' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
           >
-            By Category
+            {t('finance.byCategory')}
           </button>
           <button
             onClick={() => setViewMode('branch')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'branch' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
           >
             <Building2 className="w-4 h-4" />
-            By Branch
+            {t('finance.byBranch')}
           </button>
           <button
             onClick={() => setViewMode('trend')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${viewMode === 'trend' ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}`}
           >
             <TrendingUp className="w-4 h-4" />
-            Trend
+            {t('finance.plTrend')}
           </button>
         </div>
 

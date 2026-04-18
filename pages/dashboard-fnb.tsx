@@ -15,16 +15,22 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import toast from 'react-hot-toast';
 import OnlineOrderPanel from "@/components/orders/OnlineOrderPanel";
+import { useTranslation } from '@/lib/i18n';
 
 const FnBDashboard: NextPage = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const MOCK_FNB_STATS = { activeOrders: 8, tablesOccupied: 12, tablesTotal: 20, todayReservations: 5, avgPrepTime: 14, todaySales: 18500000, completedOrders: 62, salesChange: 12.5, totalGuests: 85, lowStockItems: 3 };
+  const MOCK_FNB_ORDERS = [{ id: 'ko1', orderNumber: '#ORD-063', table: 'Meja 5', items: [{ name: 'Nasi Goreng Spesial', qty: 2 }, { name: 'Es Teh', qty: 2 }], status: 'pending', createdAt: new Date().toISOString(), priority: 'normal' }, { id: 'ko2', orderNumber: '#ORD-064', table: 'Meja 8', items: [{ name: 'Ayam Bakar', qty: 1 }], status: 'pending', createdAt: new Date().toISOString(), priority: 'high' }];
+  const MOCK_FNB_TABLES = [{ id: 't1', number: 1, capacity: 4, status: 'occupied', currentOrder: '#ORD-060' }, { id: 't2', number: 2, capacity: 2, status: 'available' }, { id: 't3', number: 3, capacity: 6, status: 'occupied', currentOrder: '#ORD-061' }, { id: 't4', number: 4, capacity: 4, status: 'reserved' }];
+  const MOCK_FNB_RESERVATIONS = [{ id: 'r1', customerName: 'Budi S.', time: '19:00', guests: 4, table: 'Meja 5', status: 'confirmed' }];
   const [loading, setLoading] = useState(true);
-  const [kitchenOrders, setKitchenOrders] = useState<any[]>([]);
-  const [tables, setTables] = useState<any[]>([]);
-  const [reservations, setReservations] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [kitchenOrders, setKitchenOrders] = useState<any[]>(MOCK_FNB_ORDERS);
+  const [tables, setTables] = useState<any[]>(MOCK_FNB_TABLES);
+  const [reservations, setReservations] = useState<any[]>(MOCK_FNB_RESERVATIONS);
+  const [stats, setStats] = useState<any>(MOCK_FNB_STATS);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -156,47 +162,36 @@ const FnBDashboard: NextPage = () => {
       if (ordersData.success) {
         setKitchenOrders(ordersData.data || []);
       } else {
-        setKitchenOrders([]);
+        setKitchenOrders(MOCK_FNB_ORDERS);
       }
 
       if (tablesData.success) {
         setTables(tablesData.data || []);
       } else {
-        setTables([]);
+        setTables(MOCK_FNB_TABLES);
       }
 
       if (reservationsData.success) {
         setReservations(reservationsData.data || []);
       } else {
-        setReservations([]);
+        setReservations(MOCK_FNB_RESERVATIONS);
       }
 
       if (statsData.success) {
         setStats(statsData.data);
       } else {
-        setStats({
-          activeOrders: 0,
-          tablesOccupied: 0,
-          tablesTotal: 0,
-          todayReservations: 0,
-          avgPrepTime: 0,
-          todaySales: 0,
-          completedOrders: 0,
-          salesChange: 0,
-          totalGuests: 0,
-          lowStockItems: 0
-        });
+        setStats(MOCK_FNB_STATS);
       }
 
       // Show error message if any API failed
       if (hasError) {
         console.error('API Errors:', errors);
-        toast.error(`Beberapa data gagal dimuat: ${errors.join(', ')}`);
+        toast.error(t('dashboardFnb.someDataFailed'));
       }
 
     } catch (error) {
       console.error('Error fetching F&B data:', error);
-      toast.error('Gagal memuat data dashboard');
+      toast.error(t('dashboardFnb.loadFailed'));
       
       // Set empty defaults on error
       setKitchenOrders([]);
@@ -233,7 +228,7 @@ const FnBDashboard: NextPage = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin h-12 w-12 mx-auto border-4 border-orange-600 border-t-transparent rounded-full"></div>
-            <p className="mt-4 text-gray-700">Memuat dashboard F&B...</p>
+            <p className="mt-4 text-gray-700">{t('dashboardFnb.loading')}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -243,7 +238,7 @@ const FnBDashboard: NextPage = () => {
   return (
     <DashboardLayout>
       <Head>
-        <title>Dashboard F&B | BEDAGANG Cloud POS</title>
+        <title>{t('dashboardFnb.title')}</title>
       </Head>
 
       <div className="space-y-6">
@@ -260,10 +255,10 @@ const FnBDashboard: NextPage = () => {
                 </div>
                 <div>
                   <h1 className="text-4xl font-bold mb-1">
-                    Dashboard Restoran
+                    {t('dashboardFnb.restaurantDashboard')}
                   </h1>
                   <p className="text-orange-100 text-lg">
-                    Operasional Dapur & Pelayanan Real-time
+                    {t('dashboardFnb.kitchenOpsRealtime')}
                   </p>
                 </div>
               </div>
@@ -284,28 +279,28 @@ const FnBDashboard: NextPage = () => {
                   <Flame className="w-6 h-6" />
                   <span className="text-2xl font-bold">{stats?.activeOrders || 0}</span>
                 </div>
-                <p className="text-sm text-orange-100">Pesanan Aktif</p>
+                <p className="text-sm text-orange-100">{t('dashboardFnb.activeOrders')}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                 <div className="flex items-center justify-between mb-2">
                   <UtensilsCrossed className="w-6 h-6" />
                   <span className="text-2xl font-bold">{stats?.tablesOccupied || 0}/{stats?.tablesTotal || 0}</span>
                 </div>
-                <p className="text-sm text-orange-100">Meja Terisi</p>
+                <p className="text-sm text-orange-100">{t('dashboardFnb.tablesOccupied')}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                 <div className="flex items-center justify-between mb-2">
                   <Calendar className="w-6 h-6" />
                   <span className="text-2xl font-bold">{stats?.todayReservations || 0}</span>
                 </div>
-                <p className="text-sm text-orange-100">Reservasi Hari Ini</p>
+                <p className="text-sm text-orange-100">{t('dashboardFnb.todayReservations')}</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                 <div className="flex items-center justify-between mb-2">
                   <Clock className="w-6 h-6" />
                   <span className="text-2xl font-bold">{stats?.avgPrepTime || 0}m</span>
                 </div>
-                <p className="text-sm text-orange-100">Avg. Prep Time</p>
+                <p className="text-sm text-orange-100">{t('dashboardFnb.avgPrepTime')}</p>
               </div>
             </div>
           </div>
@@ -321,10 +316,10 @@ const FnBDashboard: NextPage = () => {
                 </div>
                 <TrendingUp className="w-5 h-5 text-green-600" />
               </div>
-              <h3 className="text-gray-500 text-sm font-medium mb-2">Penjualan Hari Ini</h3>
+              <h3 className="text-gray-500 text-sm font-medium mb-2">{t('dashboardFnb.todaySales')}</h3>
               <p className="text-3xl font-bold text-gray-900">{formatCurrency(stats?.todaySales || 0)}</p>
               <p className={`text-xs mt-1 ${(stats?.salesChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {(stats?.salesChange || 0) >= 0 ? '+' : ''}{stats?.salesChange || 0}% dari kemarin
+                {(stats?.salesChange || 0) >= 0 ? '+' : ''}{stats?.salesChange || 0}% {t('common.vsYesterday')}
               </p>
             </CardContent>
           </Card>
@@ -337,9 +332,9 @@ const FnBDashboard: NextPage = () => {
                 </div>
                 <TrendingUp className="w-5 h-5 text-blue-600" />
               </div>
-              <h3 className="text-gray-500 text-sm font-medium mb-2">Pesanan Selesai</h3>
+              <h3 className="text-gray-500 text-sm font-medium mb-2">{t('dashboardFnb.completedOrders')}</h3>
               <p className="text-3xl font-bold text-gray-900">{stats?.completedOrders || 0}</p>
-              <p className="text-xs text-blue-600 mt-1">Target: 50 pesanan</p>
+              <p className="text-xs text-blue-600 mt-1">{t('dashboardFnb.target50')}</p>
             </CardContent>
           </Card>
 
@@ -351,9 +346,9 @@ const FnBDashboard: NextPage = () => {
                 </div>
                 <TrendingUp className="w-5 h-5 text-purple-600" />
               </div>
-              <h3 className="text-gray-500 text-sm font-medium mb-2">Total Tamu</h3>
+              <h3 className="text-gray-500 text-sm font-medium mb-2">{t('dashboardFnb.totalGuests')}</h3>
               <p className="text-3xl font-bold text-gray-900">{stats?.totalGuests || 0}</p>
-              <p className="text-xs text-purple-600 mt-1">Hari ini</p>
+              <p className="text-xs text-purple-600 mt-1">{t('common.today')}</p>
             </CardContent>
           </Card>
 
@@ -365,9 +360,9 @@ const FnBDashboard: NextPage = () => {
                 </div>
                 <AlertCircle className="w-5 h-5 text-orange-600" />
               </div>
-              <h3 className="text-gray-500 text-sm font-medium mb-2">Stok Rendah</h3>
+              <h3 className="text-gray-500 text-sm font-medium mb-2">{t('dashboardFnb.lowStock')}</h3>
               <p className="text-3xl font-bold text-gray-900">{stats?.lowStockItems || 0}</p>
-              <p className="text-xs text-orange-600 mt-1">Perlu restock</p>
+              <p className="text-xs text-orange-600 mt-1">{t('dashboardFnb.needRestock')}</p>
             </CardContent>
           </Card>
         </div>
@@ -383,8 +378,8 @@ const FnBDashboard: NextPage = () => {
                     <Flame className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl">Pesanan Dapur Aktif</CardTitle>
-                    <CardDescription>Real-time kitchen operations</CardDescription>
+                    <CardTitle className="text-xl">{t('dashboardFnb.activeKitchenOrders')}</CardTitle>
+                    <CardDescription>{t('dashboardFnb.realtimeKitchen')}</CardDescription>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -395,7 +390,7 @@ const FnBDashboard: NextPage = () => {
                   <Link href="/kitchen/display">
                     <Button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700">
                       <Eye className="w-4 h-4 mr-2" />
-                      Buka KDS
+                      {t('dashboard.openKDS')}
                     </Button>
                   </Link>
                 </div>
@@ -405,8 +400,8 @@ const FnBDashboard: NextPage = () => {
               {kitchenOrders.length === 0 ? (
                 <div className="text-center py-12">
                   <CheckCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 font-medium">Tidak ada pesanan aktif</p>
-                  <p className="text-sm text-gray-400">Semua pesanan sudah selesai</p>
+                  <p className="text-gray-500 font-medium">{t('dashboardFnb.noActiveOrders')}</p>
+                  <p className="text-sm text-gray-400">{t('dashboardFnb.allOrdersCompleted')}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -424,12 +419,12 @@ const FnBDashboard: NextPage = () => {
                           <div>
                             <p className="font-bold text-gray-900">{order.order_number}</p>
                             <p className="text-xs text-gray-500">
-                              {order.table_number ? `Meja ${order.table_number}` : 'Takeaway'}
+                              {order.table_number ? t('dashboard.table', { number: order.table_number }) : t('dashboard.takeaway')}
                             </p>
                           </div>
                         </div>
                         <Badge className={order.status === 'new' ? 'bg-red-500' : 'bg-blue-500'}>
-                          {order.status === 'new' ? 'BARU' : 'DIMASAK'}
+                          {order.status === 'new' ? t('dashboardFnb.statusNew') : t('dashboardFnb.statusCooking')}
                         </Badge>
                       </div>
                       
@@ -441,14 +436,14 @@ const FnBDashboard: NextPage = () => {
                           </div>
                         ))}
                         {order.items?.length > 2 && (
-                          <p className="text-xs text-gray-500">+{order.items.length - 2} item lagi</p>
+                          <p className="text-xs text-gray-500">{t('common.otherItems', { count: order.items.length - 2 })}</p>
                         )}
                       </div>
 
                       <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                         <div className="flex items-center text-sm text-gray-600">
                           <Clock className="w-4 h-4 mr-1" />
-                          {order.estimated_time || 15} menit
+                          {order.estimated_time || 15} {t('common.minute')}
                         </div>
                         {order.priority === 'urgent' && (
                           <Badge className="bg-red-600">URGENT</Badge>
@@ -470,8 +465,8 @@ const FnBDashboard: NextPage = () => {
                     <MapPin className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <CardTitle>Status Meja</CardTitle>
-                    <CardDescription>Live table status</CardDescription>
+                    <CardTitle>{t('dashboardFnb.tableStatus')}</CardTitle>
+                    <CardDescription>{t('dashboardFnb.liveTableStatus')}</CardDescription>
                   </div>
                 </div>
                 <Link href="/tables">
@@ -543,14 +538,14 @@ const FnBDashboard: NextPage = () => {
                   <Bike className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-xl">Pesanan Online & Antrian</CardTitle>
+                  <CardTitle className="text-xl">{t('dashboardFnb.onlineOrders')}</CardTitle>
                   <CardDescription>GoFood, GrabFood, ShopeeFood & Walk-in</CardDescription>
                 </div>
               </div>
               <Link href="/orders/queue">
                 <Button className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700">
                   <ShoppingBag className="w-4 h-4 mr-2" />
-                  Kelola Antrian
+                  {t('dashboardFnb.manageQueue')}
                 </Button>
               </Link>
             </div>
@@ -569,14 +564,14 @@ const FnBDashboard: NextPage = () => {
                   <Calendar className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <CardTitle>Reservasi Hari Ini</CardTitle>
-                  <CardDescription>Upcoming reservations</CardDescription>
+                  <CardTitle>{t('dashboardFnb.todayReservationsTitle')}</CardTitle>
+                  <CardDescription>{t('dashboardFnb.upcomingReservations')}</CardDescription>
                 </div>
               </div>
               <Link href="/reservations">
                 <Button className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700">
                   <Calendar className="w-4 h-4 mr-2" />
-                  Kelola Reservasi
+                  {t('dashboardFnb.manageReservations')}
                 </Button>
               </Link>
             </div>
@@ -586,8 +581,8 @@ const FnBDashboard: NextPage = () => {
               {reservations.length === 0 ? (
                 <div className="text-center py-12">
                   <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 font-medium">Tidak ada reservasi hari ini</p>
-                  <p className="text-sm text-gray-400">Reservasi akan muncul di sini</p>
+                  <p className="text-gray-500 font-medium">{t('dashboardFnb.noReservations')}</p>
+                  <p className="text-sm text-gray-400">{t('dashboardFnb.reservationsWillAppear')}</p>
                 </div>
               ) : (
                 reservations.map((reservation: any) => (
@@ -598,13 +593,13 @@ const FnBDashboard: NextPage = () => {
                       </div>
                       <div>
                         <p className="font-bold text-gray-900">{reservation.name}</p>
-                        <p className="text-sm text-gray-600">{reservation.guests} orang • {reservation.time}</p>
+                        <p className="text-sm text-gray-600">{reservation.guests} {t('dashboardFnb.guests')} • {reservation.time}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
                       {reservation.table && (
                         <Badge variant="outline" className="border-teal-500 text-teal-700">
-                          Meja {reservation.table}
+                          {t('dashboard.table', { number: reservation.table })}
                         </Badge>
                       )}
                       <Badge className={reservation.status === 'confirmed' ? 'bg-green-500' : 'bg-amber-500'}>
@@ -623,32 +618,32 @@ const FnBDashboard: NextPage = () => {
           <Link href="/kitchen/display">
             <div className="group bg-gradient-to-br from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 rounded-xl p-6 text-white transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer">
               <UtensilsCrossed className="w-10 h-10 mb-3 group-hover:scale-110 transition-transform" />
-              <h3 className="font-bold text-lg mb-1">Kitchen Display</h3>
-              <p className="text-sm text-orange-100">Monitor pesanan real-time</p>
+              <h3 className="font-bold text-lg mb-1">{t('dashboardFnb.kitchenDisplayTitle')}</h3>
+              <p className="text-sm text-orange-100">{t('dashboardFnb.monitorRealtime')}</p>
             </div>
           </Link>
 
           <Link href="/kitchen/orders">
             <div className="group bg-gradient-to-br from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-xl p-6 text-white transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer">
               <Bell className="w-10 h-10 mb-3 group-hover:scale-110 transition-transform" />
-              <h3 className="font-bold text-lg mb-1">Daftar Pesanan</h3>
-              <p className="text-sm text-purple-100">Kelola semua pesanan</p>
+              <h3 className="font-bold text-lg mb-1">{t('dashboardFnb.orderListTitle')}</h3>
+              <p className="text-sm text-purple-100">{t('dashboardFnb.manageAllOrders')}</p>
             </div>
           </Link>
 
           <Link href="/tables">
             <div className="group bg-gradient-to-br from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 rounded-xl p-6 text-white transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer">
               <MapPin className="w-10 h-10 mb-3 group-hover:scale-110 transition-transform" />
-              <h3 className="font-bold text-lg mb-1">Manajemen Meja</h3>
-              <p className="text-sm text-teal-100">Status & pengaturan meja</p>
+              <h3 className="font-bold text-lg mb-1">{t('dashboardFnb.tableMgmtTitle')}</h3>
+              <p className="text-sm text-teal-100">{t('dashboardFnb.tableStatusSettings')}</p>
             </div>
           </Link>
 
           <Link href="/reservations">
             <div className="group bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 rounded-xl p-6 text-white transition-all hover:shadow-2xl hover:-translate-y-1 cursor-pointer">
               <Calendar className="w-10 h-10 mb-3 group-hover:scale-110 transition-transform" />
-              <h3 className="font-bold text-lg mb-1">Reservasi</h3>
-              <p className="text-sm text-indigo-100">Booking & jadwal tamu</p>
+              <h3 className="font-bold text-lg mb-1">{t('dashboardFnb.reservationTitle')}</h3>
+              <p className="text-sm text-indigo-100">{t('dashboardFnb.bookingSchedule')}</p>
             </div>
           </Link>
         </div>

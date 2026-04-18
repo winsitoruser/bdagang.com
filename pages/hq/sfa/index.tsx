@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/router';
+import { useTranslation, formatCurrencyValue, formatDateValue, localeMap, Language, Currency } from '@/lib/i18n';
 import HQLayout from '@/components/hq/HQLayout';
 import dynamic from 'next/dynamic';
 import {
@@ -7,82 +9,139 @@ import {
   Navigation, Loader2, DollarSign, ArrowRight, RefreshCw, UserPlus,
   ShoppingCart, Eye, Swords, ClipboardList, CheckCircle, Shield, Settings,
   Award, Phone, Mail, Trash2, Globe, Activity, Calendar, AlertTriangle, Percent,
-  Heart, MessageCircle, Briefcase, FileText, Zap, Clock,
+  Heart, MessageCircle, Briefcase, FileText, Zap, Clock, Camera,
   Bot, LayoutList, CalendarDays, Headphones,
   Download, Upload, FileUp, Table2, ArrowDownToLine, Filter,
   History, ArrowRightLeft, Link2, Brain, Cpu, Sparkles, Building2
 } from 'lucide-react';
 
 const TaskCalendarModule = dynamic(() => import('@/components/sfa/TaskCalendarModule'), { ssr: false, loading: () => <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-amber-500" /></div> });
+const SalesManagementModule = dynamic(() => import('@/components/sfa/SalesManagementModule'), { ssr: false, loading: () => <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-amber-500" /></div> });
+const SfaExportModal = dynamic(() => import('@/components/sfa/SfaExportModal'), { ssr: false });
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
+import {
+  rowsOr,
+  MOCK_SFA_DASHBOARD,
+  MOCK_SFA_LEADS,
+  MOCK_SFA_OPPORTUNITIES,
+  MOCK_SFA_TEAMS,
+  MOCK_SFA_TERRITORIES,
+  MOCK_SFA_VISITS,
+  MOCK_SFA_COVERAGE_PLANS,
+  MOCK_SFA_COMPLIANCE,
+  MOCK_SFA_FIELD_ORDERS,
+  MOCK_SFA_QUOTATIONS,
+  MOCK_SFA_TARGET_GROUPS,
+  MOCK_SFA_INCENTIVE_SCHEMES,
+  MOCK_SFA_COMMISSIONS,
+  MOCK_SFA_INV_PRODUCTS,
+  MOCK_SFA_COMM_GROUPS,
+  MOCK_SFA_OUTLET_TARGETS,
+  MOCK_SFA_SALES_STRATEGIES,
+  MOCK_SFA_DISPLAY_AUDITS,
+  MOCK_SFA_COMPETITORS,
+  MOCK_SFA_COMPETITOR_SUMMARY,
+  MOCK_SFA_SURVEY_TEMPLATES,
+  MOCK_SFA_SURVEY_RESPONSES,
+  MOCK_SFA_APPROVAL_WORKFLOWS,
+  MOCK_SFA_APPROVAL_REQUESTS,
+  MOCK_SFA_GEOFENCES,
+  MOCK_SFA_PARAMETERS,
+  MOCK_SFA_PLAFON,
+  MOCK_SFA_CURRENCIES,
+  MOCK_SFA_EXCHANGE_RATES,
+  MOCK_SFA_TAX_SETTINGS,
+  MOCK_SFA_NUMBERING,
+  MOCK_SFA_PAYMENT_TERMS,
+  MOCK_SFA_BIZ_SETTINGS,
+  MOCK_SFA_CRM_CUSTOMERS,
+  MOCK_SFA_CRM_COMMS,
+  MOCK_SFA_CRM_FOLLOWUPS,
+  MOCK_SFA_CRM_TASKS,
+  MOCK_SFA_CRM_CALENDAR,
+  MOCK_SFA_CRM_FORECASTS,
+  MOCK_SFA_CRM_FORECAST_ANALYTICS,
+  MOCK_SFA_CRM_AUTOMATION_RULES,
+  MOCK_SFA_CRM_AUTOMATION_LOGS,
+  MOCK_SFA_INT_LEADS,
+  MOCK_SFA_INT_VISITS,
+  MOCK_SFA_INT_PIPELINE,
+  MOCK_SFA_AUDIT_TIMELINE,
+  MOCK_SFA_HRIS_DEPTS,
+  MOCK_SFA_HRIS_USERS,
+  MOCK_SFA_AI_MODELS,
+  MOCK_SFA_AI_CATALOG,
+  MOCK_SFA_AI_WORKFLOWS,
+  MOCK_SFA_AI_WF_TEMPLATES,
+  MOCK_SFA_AI_EXECUTIONS,
+} from '@/lib/hq/mock-data';
 
 // ══════════════════════════════════════════════════════
 // Types & Constants
 // ══════════════════════════════════════════════════════
-type Tab = 'dashboard' | 'leads' | 'pipeline' | 'teams' | 'visits' | 'orders' | 'targets' | 'incentives' | 'merchandising' | 'competitor' | 'survey' | 'approval' | 'settings' | 'customers' | 'communications' | 'tasks' | 'forecasting' | 'tickets' | 'automation' | 'import-export' | 'integration' | 'audit-trail' | 'ai-workflow';
+type Tab = 'dashboard' | 'leads' | 'pipeline' | 'teams' | 'visits' | 'field-tasks' | 'orders' | 'sales-mgmt' | 'targets' | 'incentives' | 'merchandising' | 'competitor' | 'survey' | 'approval' | 'settings' | 'customers' | 'communications' | 'tasks' | 'forecasting' | 'automation' | 'import-export' | 'integration' | 'audit-trail' | 'ai-workflow';
 
-const TAB_GROUPS: { label: string; tabs: { id: Tab; label: string; icon: any; modules?: ('crm' | 'sfa')[] }[] }[] = [
-  { label: 'Utama', tabs: [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-    { id: 'leads', label: 'Leads', icon: UserPlus, modules: ['sfa'] },
-    { id: 'pipeline', label: 'Pipeline', icon: TrendingUp, modules: ['sfa'] },
+const TAB_GROUPS: { tKey: string; tabs: { id: Tab; tKey: string; icon: any; modules?: ('crm' | 'sfa')[] }[] }[] = [
+  { tKey: 'groupMain', tabs: [
+    { id: 'dashboard', tKey: 'tabDashboard', icon: BarChart3 },
+    { id: 'leads', tKey: 'tabLeads', icon: UserPlus, modules: ['sfa'] },
+    { id: 'pipeline', tKey: 'tabPipeline', icon: TrendingUp, modules: ['sfa'] },
   ]},
-  { label: 'Customer', tabs: [
-    { id: 'customers', label: 'Customer 360°', icon: Heart, modules: ['crm'] },
-    { id: 'communications', label: 'Komunikasi', icon: MessageCircle, modules: ['crm'] },
+  { tKey: 'groupCustomers', tabs: [
+    { id: 'customers', tKey: 'tabCustomers360', icon: Heart, modules: ['crm'] },
+    { id: 'communications', tKey: 'tabCommunications', icon: MessageCircle, modules: ['crm'] },
   ]},
-  { label: 'Produktivitas', tabs: [
-    { id: 'tasks', label: 'Task & Kalender', icon: LayoutList, modules: ['crm'] },
-    { id: 'forecasting', label: 'Forecasting', icon: TrendingUp, modules: ['crm'] },
+  { tKey: 'groupProductivity', tabs: [
+    { id: 'tasks', tKey: 'tabTasksCalendar', icon: LayoutList, modules: ['crm'] },
+    { id: 'forecasting', tKey: 'tabForecasting', icon: TrendingUp, modules: ['crm'] },
+    { id: 'automation', tKey: 'tabAutomation', icon: Zap, modules: ['crm'] },
   ]},
-  { label: 'Service', tabs: [
-    { id: 'tickets', label: 'Tiket & SLA', icon: Headphones, modules: ['crm'] },
-    { id: 'automation', label: 'Automasi', icon: Zap, modules: ['crm'] },
+  { tKey: 'groupFieldForce', tabs: [
+    { id: 'teams', tKey: 'tabTeamsTerritory', icon: Users, modules: ['sfa'] },
+    { id: 'visits', tKey: 'tabVisitsCoverage', icon: Navigation, modules: ['sfa'] },
+    { id: 'field-tasks', tKey: 'tabVisitPlanTasks', icon: CalendarDays, modules: ['sfa'] },
+    { id: 'orders', tKey: 'tabOrdersQuotations', icon: ShoppingCart, modules: ['sfa'] },
   ]},
-  { label: 'Field Force', tabs: [
-    { id: 'teams', label: 'Tim & Territory', icon: Users, modules: ['sfa'] },
-    { id: 'visits', label: 'Kunjungan & Coverage', icon: Navigation, modules: ['sfa'] },
-    { id: 'orders', label: 'Order & Quotation', icon: ShoppingCart, modules: ['sfa'] },
+  { tKey: 'groupPerformance', tabs: [
+    { id: 'sales-mgmt', tKey: 'tabSalesManagement', icon: ShoppingCart, modules: ['sfa'] },
+    { id: 'targets', tKey: 'tabTargetsAchievement', icon: Target, modules: ['sfa'] },
+    { id: 'incentives', tKey: 'tabIncentivesCommissions', icon: Award, modules: ['sfa'] },
   ]},
-  { label: 'Kinerja', tabs: [
-    { id: 'targets', label: 'Target & Achievement', icon: Target, modules: ['sfa'] },
-    { id: 'incentives', label: 'Insentif & Komisi', icon: Award, modules: ['sfa'] },
+  { tKey: 'groupIntelligence', tabs: [
+    { id: 'merchandising', tKey: 'tabMerchandising', icon: Eye, modules: ['sfa'] },
+    { id: 'competitor', tKey: 'tabCompetitor', icon: Swords, modules: ['sfa'] },
+    { id: 'survey', tKey: 'tabSurvey', icon: ClipboardList, modules: ['sfa'] },
+    { id: 'ai-workflow', tKey: 'tabAiWorkflow', icon: Brain },
   ]},
-  { label: 'Intelligence', tabs: [
-    { id: 'merchandising', label: 'Merchandising', icon: Eye, modules: ['sfa'] },
-    { id: 'competitor', label: 'Kompetitor', icon: Swords, modules: ['sfa'] },
-    { id: 'survey', label: 'Survey', icon: ClipboardList, modules: ['sfa'] },
-    { id: 'ai-workflow', label: 'AI Workflow', icon: Brain },
-  ]},
-  { label: 'Admin', tabs: [
-    { id: 'approval', label: 'Approval', icon: CheckCircle, modules: ['sfa'] },
-    { id: 'integration', label: 'Integrasi CRM↔SFA', icon: ArrowRightLeft, modules: ['crm', 'sfa'] },
-    { id: 'audit-trail', label: 'Audit Trail', icon: History },
-    { id: 'settings', label: 'Pengaturan', icon: Settings },
-    { id: 'import-export', label: 'Import / Export', icon: ArrowDownToLine },
+  { tKey: 'groupAdmin', tabs: [
+    { id: 'approval', tKey: 'tabApproval', icon: CheckCircle, modules: ['sfa'] },
+    { id: 'integration', tKey: 'tabIntegration', icon: ArrowRightLeft, modules: ['crm', 'sfa'] },
+    { id: 'audit-trail', tKey: 'tabAuditTrail', icon: History },
+    { id: 'settings', tKey: 'tabSettings', icon: Settings },
+    { id: 'import-export', tKey: 'tabImportExport', icon: ArrowDownToLine },
   ]},
 ];
 
-const LEAD_STATUS: Record<string, { label: string; color: string; ring: string }> = {
-  new: { label: 'Baru', color: 'bg-blue-50 text-blue-700', ring: 'ring-blue-200' },
-  contacted: { label: 'Dihubungi', color: 'bg-sky-50 text-sky-700', ring: 'ring-sky-200' },
-  qualified: { label: 'Qualified', color: 'bg-indigo-50 text-indigo-700', ring: 'ring-indigo-200' },
-  proposal: { label: 'Proposal', color: 'bg-violet-50 text-violet-700', ring: 'ring-violet-200' },
-  negotiation: { label: 'Negosiasi', color: 'bg-amber-50 text-amber-700', ring: 'ring-amber-200' },
-  converted: { label: 'Converted', color: 'bg-emerald-50 text-emerald-700', ring: 'ring-emerald-200' },
-  lost: { label: 'Lost', color: 'bg-red-50 text-red-700', ring: 'ring-red-200' },
+const LEAD_STATUS: Record<string, { tKey: string; color: string; ring: string }> = {
+  new: { tKey: 'leadNew', color: 'bg-blue-50 text-blue-700', ring: 'ring-blue-200' },
+  contacted: { tKey: 'leadContacted', color: 'bg-sky-50 text-sky-700', ring: 'ring-sky-200' },
+  qualified: { tKey: 'leadQualified', color: 'bg-indigo-50 text-indigo-700', ring: 'ring-indigo-200' },
+  proposal: { tKey: 'leadProposal', color: 'bg-violet-50 text-violet-700', ring: 'ring-violet-200' },
+  negotiation: { tKey: 'leadNegotiation', color: 'bg-amber-50 text-amber-700', ring: 'ring-amber-200' },
+  converted: { tKey: 'leadConverted', color: 'bg-emerald-50 text-emerald-700', ring: 'ring-emerald-200' },
+  lost: { tKey: 'leadLost', color: 'bg-red-50 text-red-700', ring: 'ring-red-200' },
 };
 
-const OPP_STAGES: Record<string, { label: string; color: string; gradient: string; prob: number }> = {
-  qualification: { label: 'Kualifikasi', color: 'bg-blue-500', gradient: 'from-blue-500 to-blue-600', prob: 10 },
-  needs_analysis: { label: 'Analisis', color: 'bg-indigo-500', gradient: 'from-indigo-500 to-indigo-600', prob: 25 },
-  proposal: { label: 'Proposal', color: 'bg-violet-500', gradient: 'from-violet-500 to-violet-600', prob: 40 },
-  negotiation: { label: 'Negosiasi', color: 'bg-amber-500', gradient: 'from-amber-500 to-amber-600', prob: 70 },
-  closed_won: { label: 'Won', color: 'bg-emerald-500', gradient: 'from-emerald-500 to-emerald-600', prob: 100 },
-  closed_lost: { label: 'Lost', color: 'bg-red-500', gradient: 'from-red-500 to-red-600', prob: 0 },
+const OPP_STAGES: Record<string, { tKey: string; color: string; gradient: string; prob: number }> = {
+  qualification: { tKey: 'stageQualification', color: 'bg-blue-500', gradient: 'from-blue-500 to-blue-600', prob: 10 },
+  needs_analysis: { tKey: 'stageAnalysis', color: 'bg-indigo-500', gradient: 'from-indigo-500 to-indigo-600', prob: 25 },
+  proposal: { tKey: 'stageProposal', color: 'bg-violet-500', gradient: 'from-violet-500 to-violet-600', prob: 40 },
+  negotiation: { tKey: 'stageNegotiation', color: 'bg-amber-500', gradient: 'from-amber-500 to-amber-600', prob: 70 },
+  closed_won: { tKey: 'stageWon', color: 'bg-emerald-500', gradient: 'from-emerald-500 to-emerald-600', prob: 100 },
+  closed_lost: { tKey: 'stageLost', color: 'bg-red-500', gradient: 'from-red-500 to-red-600', prob: 0 },
 };
 
 const Badge = ({ children, color = 'blue' }: { children: React.ReactNode; color?: string }) => {
@@ -137,9 +196,9 @@ const FI = ({ label, required, children, span }: { label: string; required?: boo
   </div>
 );
 
-const fmtCur = (n: number) => `Rp ${(n || 0).toLocaleString('id-ID')}`;
-const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
-const fmt = (n: number) => new Intl.NumberFormat('id-ID').format(n || 0);
+const makeFmtCur = (currency: Currency) => (n: number) => formatCurrencyValue(n || 0, currency);
+const makeFmtDate = (language: Language) => (d: string) => d ? formatDateValue(d, language, 'short') : '-';
+const makeFmt = (language: Language) => (n: number) => new Intl.NumberFormat(localeMap[language]).format(n || 0);
 
 const CHART_COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#84cc16', '#14b8a6', '#f97316', '#6366f1', '#a855f7'];
 const LEAD_COLORS: Record<string, string> = { new: '#3b82f6', contacted: '#06b6d4', qualified: '#6366f1', proposal: '#8b5cf6', negotiation: '#f59e0b', converted: '#10b981', lost: '#ef4444' };
@@ -180,7 +239,7 @@ const ChartLegendItem = ({ color, label, value, total, suffix = '' }: { color: s
     <span className="w-3 h-3 rounded-md shadow-sm shrink-0" style={{ background: color }} />
     <span className="text-xs text-gray-600 flex-1 truncate">{label}</span>
     <div className="flex items-center gap-2 shrink-0">
-      <span className="text-xs font-bold text-gray-900">{fmt(value)}{suffix}</span>
+      <span className="text-xs font-bold text-gray-900">{(value || 0).toLocaleString()}{suffix}</span>
       {total != null && total > 0 && <span className="text-[10px] text-gray-400 w-10 text-right">{((value / total) * 100).toFixed(0)}%</span>}
     </div>
   </div>
@@ -217,7 +276,19 @@ const apiIE = async (action: string, method = 'GET', body?: any, query = '') => 
 // Main Component
 // ══════════════════════════════════════════════════════
 export default function SFAUnifiedPage() {
+  const router = useRouter();
   const { data: session } = useSession();
+  const { t, language, currency } = useTranslation();
+  const fmtCur = useMemo(() => makeFmtCur(currency), [currency]);
+  const fmtDate = useMemo(() => makeFmtDate(language), [language]);
+  const fmtDateTime = useMemo(
+    () => (d: string | null | undefined) => (d != null && String(d).trim() !== '' ? formatDateValue(d, language, 'datetime') : '—'),
+    [language]
+  );
+  const fmt = useMemo(() => makeFmt(language), [language]);
+  const localeDateLong = useMemo(() => {
+    try { return new Date().toLocaleDateString(localeMap[language], { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); } catch { return ''; }
+  }, [language]);
 
   // ── Role-Based Access Control ──
   const userRole = (session?.user as any)?.role || 'staff';
@@ -282,71 +353,79 @@ export default function SFAUnifiedPage() {
   const [tab, setTab] = useState<Tab>('dashboard');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState('');
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [modal, setModal] = useState<string | null>(null);
   const [form, setForm] = useState<any>({});
+  const [customerImportOpen, setCustomerImportOpen] = useState(false);
+  const [customerImportCsv, setCustomerImportCsv] = useState('');
+  const [customerImportBusy, setCustomerImportBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
   // Data states - organized by feature area
-  const [dashboard, setDashboard] = useState<any>(null);
+  const [dashboard, setDashboard] = useState<any>(MOCK_SFA_DASHBOARD);
   // Sales
-  const [leads, setLeads] = useState<any[]>([]);
-  const [opportunities, setOpportunities] = useState<any[]>([]);
+  const [leads, setLeads] = useState<any[]>(MOCK_SFA_LEADS);
+  const [opportunities, setOpportunities] = useState<any[]>(MOCK_SFA_OPPORTUNITIES);
   const [pipelineData, setPipelineData] = useState<any>(null);
   // Field Force
-  const [teams, setTeams] = useState<any[]>([]);
-  const [territories, setTerritories] = useState<any[]>([]);
-  const [visits, setVisits] = useState<any[]>([]);
-  const [coveragePlans, setCoveragePlans] = useState<any[]>([]);
-  const [compliance, setCompliance] = useState<any[]>([]);
-  const [fieldOrders, setFieldOrders] = useState<any[]>([]);
-  const [quotations, setQuotations] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>(MOCK_SFA_TEAMS);
+  const [territories, setTerritories] = useState<any[]>(MOCK_SFA_TERRITORIES);
+  const [visits, setVisits] = useState<any[]>(MOCK_SFA_VISITS);
+  const [coveragePlans, setCoveragePlans] = useState<any[]>(MOCK_SFA_COVERAGE_PLANS);
+  const [compliance, setCompliance] = useState<any[]>(MOCK_SFA_COMPLIANCE);
+  /** Ringkasan integrasi kunjungan ↔ task (bulan berjalan) */
+  const [visitBridgeStat, setVisitBridgeStat] = useState<{
+    visits_in_period?: number;
+    visits_completed?: number;
+    visit_tasks_in_period?: number;
+    visit_tasks_completed?: number;
+  } | null>(null);
+  const [fieldOrders, setFieldOrders] = useState<any[]>(MOCK_SFA_FIELD_ORDERS);
+  const [quotations, setQuotations] = useState<any[]>(MOCK_SFA_QUOTATIONS);
   // Targets & Performance
-  const [targetGroups, setTargetGroups] = useState<any[]>([]);
-  const [incentiveSchemes, setIncentiveSchemes] = useState<any[]>([]);
-  const [commissions, setCommissions] = useState<any[]>([]);
-  const [inventoryProducts, setInventoryProducts] = useState<any[]>([]);
-  const [commissionGroups, setCommissionGroups] = useState<any[]>([]);
-  const [outletTargets, setOutletTargets] = useState<any[]>([]);
-  const [salesStrategies, setSalesStrategies] = useState<any[]>([]);
+  const [targetGroups, setTargetGroups] = useState<any[]>(MOCK_SFA_TARGET_GROUPS);
+  const [incentiveSchemes, setIncentiveSchemes] = useState<any[]>(MOCK_SFA_INCENTIVE_SCHEMES);
+  const [commissions, setCommissions] = useState<any[]>(MOCK_SFA_COMMISSIONS);
+  const [inventoryProducts, setInventoryProducts] = useState<any[]>(MOCK_SFA_INV_PRODUCTS);
+  const [commissionGroups, setCommissionGroups] = useState<any[]>(MOCK_SFA_COMM_GROUPS);
+  const [outletTargets, setOutletTargets] = useState<any[]>(MOCK_SFA_OUTLET_TARGETS);
+  const [salesStrategies, setSalesStrategies] = useState<any[]>(MOCK_SFA_SALES_STRATEGIES);
   const [commSummary, setCommSummary] = useState<any>(null);
   const [incSubTab, setIncSubTab] = useState<'overview'|'product'|'group'|'outlet'|'strategy'>('overview');
   // Intelligence
-  const [displayAudits, setDisplayAudits] = useState<any[]>([]);
-  const [competitors, setCompetitors] = useState<any[]>([]);
-  const [competitorSummary, setCompetitorSummary] = useState<any[]>([]);
-  const [surveyTemplates, setSurveyTemplates] = useState<any[]>([]);
-  const [surveyResponses, setSurveyResponses] = useState<any[]>([]);
+  const [displayAudits, setDisplayAudits] = useState<any[]>(MOCK_SFA_DISPLAY_AUDITS);
+  const [competitors, setCompetitors] = useState<any[]>(MOCK_SFA_COMPETITORS);
+  const [competitorSummary, setCompetitorSummary] = useState<any[]>(MOCK_SFA_COMPETITOR_SUMMARY);
+  const [surveyTemplates, setSurveyTemplates] = useState<any[]>(MOCK_SFA_SURVEY_TEMPLATES);
+  const [surveyResponses, setSurveyResponses] = useState<any[]>(MOCK_SFA_SURVEY_RESPONSES);
   // Admin
-  const [approvalWorkflows, setApprovalWorkflows] = useState<any[]>([]);
-  const [approvalRequests, setApprovalRequests] = useState<any[]>([]);
-  const [geofences, setGeofences] = useState<any[]>([]);
-  const [parameters, setParameters] = useState<any[]>([]);
-  const [plafon, setPlafon] = useState<any[]>([]);
-  const [currencies, setCurrencies] = useState<any[]>([]);
-  const [exchangeRates, setExchangeRates] = useState<any[]>([]);
-  const [taxSettings, setTaxSettings] = useState<any[]>([]);
-  const [numberingFormats, setNumberingFormats] = useState<any[]>([]);
-  const [paymentTerms, setPaymentTerms] = useState<any[]>([]);
-  const [bizSettings, setBizSettings] = useState<any[]>([]);
+  const [approvalWorkflows, setApprovalWorkflows] = useState<any[]>(MOCK_SFA_APPROVAL_WORKFLOWS);
+  const [approvalRequests, setApprovalRequests] = useState<any[]>(MOCK_SFA_APPROVAL_REQUESTS);
+  const [geofences, setGeofences] = useState<any[]>(MOCK_SFA_GEOFENCES);
+  const [parameters, setParameters] = useState<any[]>(MOCK_SFA_PARAMETERS);
+  const [plafon, setPlafon] = useState<any[]>(MOCK_SFA_PLAFON);
+  const [currencies, setCurrencies] = useState<any[]>(MOCK_SFA_CURRENCIES);
+  const [exchangeRates, setExchangeRates] = useState<any[]>(MOCK_SFA_EXCHANGE_RATES);
+  const [taxSettings, setTaxSettings] = useState<any[]>(MOCK_SFA_TAX_SETTINGS);
+  const [numberingFormats, setNumberingFormats] = useState<any[]>(MOCK_SFA_NUMBERING);
+  const [paymentTerms, setPaymentTerms] = useState<any[]>(MOCK_SFA_PAYMENT_TERMS);
+  const [bizSettings, setBizSettings] = useState<any[]>(MOCK_SFA_BIZ_SETTINGS);
   const [settingsOverview, setSettingsOverview] = useState<any>(null);
   const [settSubTab, setSettSubTab] = useState<'master'|'currency'|'tax'|'numbering'|'payment'|'business'>('master');
   // CRM
-  const [crmCustomers, setCrmCustomers] = useState<any[]>([]);
+  const [crmCustomers, setCrmCustomers] = useState<any[]>(MOCK_SFA_CRM_CUSTOMERS);
   const [crmAnalytics, setCrmAnalytics] = useState<any>(null);
-  const [crmComms, setCrmComms] = useState<any[]>([]);
-  const [crmFollowUps, setCrmFollowUps] = useState<any[]>([]);
-  const [crmTasks, setCrmTasks] = useState<any[]>([]);
+  const [crmComms, setCrmComms] = useState<any[]>(MOCK_SFA_CRM_COMMS);
+  const [crmFollowUps, setCrmFollowUps] = useState<any[]>(MOCK_SFA_CRM_FOLLOWUPS);
+  const [crmTasks, setCrmTasks] = useState<any[]>(MOCK_SFA_CRM_TASKS);
   const [crmTaskSummary, setCrmTaskSummary] = useState<any>(null);
-  const [crmCalendar, setCrmCalendar] = useState<any[]>([]);
-  const [crmForecasts, setCrmForecasts] = useState<any[]>([]);
-  const [crmForecastAnalytics, setCrmForecastAnalytics] = useState<any>(null);
-  const [crmTickets, setCrmTickets] = useState<any[]>([]);
-  const [crmServiceAnalytics, setCrmServiceAnalytics] = useState<any>(null);
-  const [crmSatisfaction, setCrmSatisfaction] = useState<any>(null);
-  const [crmAutomationRules, setCrmAutomationRules] = useState<any[]>([]);
-  const [crmAutomationLogs, setCrmAutomationLogs] = useState<any[]>([]);
+  const [crmCalendar, setCrmCalendar] = useState<any[]>(MOCK_SFA_CRM_CALENDAR);
+  const [crmForecasts, setCrmForecasts] = useState<any[]>(MOCK_SFA_CRM_FORECASTS);
+  const [crmForecastAnalytics, setCrmForecastAnalytics] = useState<any>(MOCK_SFA_CRM_FORECAST_ANALYTICS);
+  const [crmAutomationRules, setCrmAutomationRules] = useState<any[]>(MOCK_SFA_CRM_AUTOMATION_RULES);
+  const [crmAutomationLogs, setCrmAutomationLogs] = useState<any[]>(MOCK_SFA_CRM_AUTOMATION_LOGS);
   // Import/Export
   const [ieEntities, setIeEntities] = useState<any>(null);
   const [ieSelectedEntity, setIeSelectedEntity] = useState<string>('');
@@ -360,22 +439,22 @@ export default function SFAUnifiedPage() {
   const [ieFileInfo, setIeFileInfo] = useState<{ name: string; size: number; rows: number } | null>(null);
   // Integration
   const [intHealth, setIntHealth] = useState<any>(null);
-  const [intConvertibleLeads, setIntConvertibleLeads] = useState<any[]>([]);
-  const [intUnlinkedVisits, setIntUnlinkedVisits] = useState<any[]>([]);
-  const [intSyncablePipeline, setIntSyncablePipeline] = useState<any[]>([]);
+  const [intConvertibleLeads, setIntConvertibleLeads] = useState<any[]>(MOCK_SFA_INT_LEADS);
+  const [intUnlinkedVisits, setIntUnlinkedVisits] = useState<any[]>(MOCK_SFA_INT_VISITS);
+  const [intSyncablePipeline, setIntSyncablePipeline] = useState<any[]>(MOCK_SFA_INT_PIPELINE);
   const [intLoading, setIntLoading] = useState(false);
   // Audit Trail
-  const [auditTimeline, setAuditTimeline] = useState<any[]>([]);
+  const [auditTimeline, setAuditTimeline] = useState<any[]>(MOCK_SFA_AUDIT_TIMELINE);
   const [auditSummary, setAuditSummary] = useState<any>(null);
   const [auditFilters, setAuditFilters] = useState<any>(null);
   const [auditFilterEntity, setAuditFilterEntity] = useState('');
   const [auditFilterAction, setAuditFilterAction] = useState('');
   const [auditFilterPeriod, setAuditFilterPeriod] = useState('7d');
   // HRIS Sync (for Teams tab)
-  const [hrisDepartments, setHrisDepartments] = useState<any[]>([]);
+  const [hrisDepartments, setHrisDepartments] = useState<any[]>(MOCK_SFA_HRIS_DEPTS);
   const [hrisSyncStatus, setHrisSyncStatus] = useState<any>(null);
   const [hrisSyncing, setHrisSyncing] = useState(false);
-  const [hrisAvailableUsers, setHrisAvailableUsers] = useState<any[]>([]);
+  const [hrisAvailableUsers, setHrisAvailableUsers] = useState<any[]>(MOCK_SFA_HRIS_USERS);
   // AI Workflow
   // Lookup Options (Settings)
   const [lookupCategories, setLookupCategories] = useState<Record<string, { label: string; description: string; options: any[] }>>({});
@@ -383,11 +462,11 @@ export default function SFAUnifiedPage() {
   const [lookupEditing, setLookupEditing] = useState<any>(null);
   const [lookupSaving, setLookupSaving] = useState(false);
   const [lookupSearch, setLookupSearch] = useState('');
-  const [aiModels, setAiModels] = useState<any[]>([]);
-  const [aiModelCatalog, setAiModelCatalog] = useState<any[]>([]);
-  const [aiWorkflows, setAiWorkflows] = useState<any[]>([]);
-  const [aiWorkflowTemplates, setAiWorkflowTemplates] = useState<any[]>([]);
-  const [aiExecutions, setAiExecutions] = useState<any[]>([]);
+  const [aiModels, setAiModels] = useState<any[]>(MOCK_SFA_AI_MODELS);
+  const [aiModelCatalog, setAiModelCatalog] = useState<any[]>(MOCK_SFA_AI_CATALOG);
+  const [aiWorkflows, setAiWorkflows] = useState<any[]>(MOCK_SFA_AI_WORKFLOWS);
+  const [aiWorkflowTemplates, setAiWorkflowTemplates] = useState<any[]>(MOCK_SFA_AI_WF_TEMPLATES);
+  const [aiExecutions, setAiExecutions] = useState<any[]>(MOCK_SFA_AI_EXECUTIONS);
   const [aiUsageStats, setAiUsageStats] = useState<any>(null);
   const [aiSelectedWorkflow, setAiSelectedWorkflow] = useState<any>(null);
   const [aiExecResult, setAiExecResult] = useState<any>(null);
@@ -406,23 +485,24 @@ export default function SFAUnifiedPage() {
             apiCore('pipeline'),
           ]);
           if (r.success) setDashboard({
+            ...MOCK_SFA_DASHBOARD,
             ...r.data,
-            leadsByStatus: r2.success ? (r2.data?.leadsByStatus || []) : [],
-            pipelineStages: r2.success ? (r2.data?.pipeline || []) : [],
-            visitStats: r2.success ? (r2.data?.visitStats || []) : [],
-            topLeads: r2.success ? (r2.data?.topLeads || []) : [],
-            pipelineBreakdown: r3.success ? r3.data : null,
+            leadsByStatus: rowsOr(r2.success ? (r2.data?.leadsByStatus || []) : [], MOCK_SFA_DASHBOARD.leadsByStatus),
+            pipelineStages: rowsOr(r2.success ? (r2.data?.pipeline || []) : [], MOCK_SFA_DASHBOARD.pipelineStages),
+            visitStats: rowsOr(r2.success ? (r2.data?.visitStats || []) : [], MOCK_SFA_DASHBOARD.visitStats),
+            topLeads: rowsOr(r2.success ? (r2.data?.topLeads || []) : [], MOCK_SFA_DASHBOARD.topLeads),
+            pipelineBreakdown: (r3.success && r3.data) ? r3.data : MOCK_SFA_DASHBOARD.pipelineBreakdown,
           });
           break;
         }
         case 'leads': {
           const r = await apiCore('leads');
-          if (r.success) setLeads(r.data || []);
+          if (r.success) setLeads(rowsOr(r.data, MOCK_SFA_LEADS));
           break;
         }
         case 'pipeline': {
           const [r1, r2] = await Promise.all([apiCore('opportunities'), apiCore('pipeline')]);
-          if (r1.success) setOpportunities(r1.data || []);
+          if (r1.success) setOpportunities(rowsOr(r1.data, MOCK_SFA_OPPORTUNITIES));
           if (r2.success) setPipelineData(r2.data);
           break;
         }
@@ -432,63 +512,70 @@ export default function SFAUnifiedPage() {
             apiEnh('teams'), apiCore('territories'),
             apiHris('sync-status'), apiHris('departments'), apiHris('available-users'),
           ]);
-          if (r1.success) setTeams(r1.data || []);
-          if (r2.success) setTerritories(r2.data || []);
+          if (r1.success) setTeams(rowsOr(r1.data, MOCK_SFA_TEAMS));
+          if (r2.success) setTerritories(rowsOr(r2.data, MOCK_SFA_TERRITORIES));
           if (r3.success) setHrisSyncStatus(r3.data);
-          if (r4.success) setHrisDepartments(r4.data || []);
-          if (r5.success) setHrisAvailableUsers(r5.data || []);
+          if (r4.success) setHrisDepartments(rowsOr(r4.data, MOCK_SFA_HRIS_DEPTS));
+          if (r5.success) setHrisAvailableUsers(rowsOr(r5.data, MOCK_SFA_HRIS_USERS));
           break;
         }
         case 'visits': {
-          const [r1, r2, r3] = await Promise.all([apiCore('visits'), apiAdv('coverage-plans'), apiAdv('coverage-compliance')]);
-          if (r1.success) setVisits(r1.data || []);
-          if (r2.success) setCoveragePlans(r2.data || []);
-          if (r3.success) setCompliance(r3.data || []);
+          const period = new Date().toISOString().slice(0, 7);
+          const [r1, r2, r3, r4] = await Promise.all([
+            apiCore('visits'),
+            apiAdv('coverage-plans'),
+            apiAdv('coverage-compliance'),
+            fetch(`/api/hq/sfa/task-calendar?action=visit-bridge&period=${period}`).then(r => r.json()),
+          ]);
+          if (r1.success) setVisits(rowsOr(r1.data, MOCK_SFA_VISITS));
+          if (r2.success) setCoveragePlans(rowsOr(r2.data, MOCK_SFA_COVERAGE_PLANS));
+          if (r3.success) setCompliance(rowsOr(r3.data, MOCK_SFA_COMPLIANCE));
+          if (r4.success) setVisitBridgeStat(r4.data || null);
           break;
         }
         case 'orders': {
           const [r1, r2] = await Promise.all([apiAdv('field-orders'), apiCore('quotations')]);
-          if (r1.success) setFieldOrders(r1.data || []);
-          if (r2.success) setQuotations(r2.data || []);
+          if (r1.success) setFieldOrders(rowsOr(r1.data, MOCK_SFA_FIELD_ORDERS));
+          if (r2.success) setQuotations(rowsOr(r2.data, MOCK_SFA_QUOTATIONS));
           break;
         }
         case 'targets': {
           const r = await apiEnh('target-groups');
-          if (r.success) setTargetGroups(r.data || []);
+          if (r.success) setTargetGroups(rowsOr(r.data, MOCK_SFA_TARGET_GROUPS));
           break;
         }
         case 'incentives': {
           const [r1, r2, r3, r4, r5, r6, r7] = await Promise.all([apiEnh('incentive-schemes'), apiAdv('product-commissions'), apiAdv('inventory-products'), apiAdv('commission-groups'), apiAdv('outlet-targets'), apiAdv('sales-strategies'), apiAdv('commission-summary')]);
-          if (r1.success) setIncentiveSchemes(r1.data || []);
-          if (r2.success) setCommissions(r2.data || []);
-          if (r3.success) setInventoryProducts(r3.data || []);
-          if (r4.success) setCommissionGroups(r4.data || []);
-          if (r5.success) setOutletTargets(r5.data || []);
-          if (r6.success) setSalesStrategies(r6.data || []);
+          if (r1.success) setIncentiveSchemes(rowsOr(r1.data, MOCK_SFA_INCENTIVE_SCHEMES));
+          if (r2.success) setCommissions(rowsOr(r2.data, MOCK_SFA_COMMISSIONS));
+          if (r3.success) setInventoryProducts(rowsOr(r3.data, MOCK_SFA_INV_PRODUCTS));
+          if (r4.success) setCommissionGroups(rowsOr(r4.data, MOCK_SFA_COMM_GROUPS));
+          if (r5.success) setOutletTargets(rowsOr(r5.data, MOCK_SFA_OUTLET_TARGETS));
+          if (r6.success) setSalesStrategies(rowsOr(r6.data, MOCK_SFA_SALES_STRATEGIES));
           if (r7.success) setCommSummary(r7.data || null);
           break;
         }
         case 'merchandising': {
           const r = await apiAdv('display-audits');
-          if (r.success) setDisplayAudits(r.data || []);
+          if (r.success) setDisplayAudits(rowsOr(r.data, MOCK_SFA_DISPLAY_AUDITS));
           break;
         }
         case 'competitor': {
           const [r1, r2] = await Promise.all([apiAdv('competitor-activities'), apiAdv('competitor-summary')]);
-          if (r1.success) setCompetitors(r1.data || []);
-          if (r2.success) setCompetitorSummary(r2.data || []);
+          if (r1.success) setCompetitors(rowsOr(r1.data, MOCK_SFA_COMPETITORS));
+          if (r2.success) setCompetitorSummary(rowsOr(r2.data, MOCK_SFA_COMPETITOR_SUMMARY));
           break;
         }
         case 'survey': {
           const [r1, r2] = await Promise.all([apiAdv('survey-templates'), apiAdv('survey-responses')]);
-          if (r1.success) setSurveyTemplates(r1.data || []);
-          if (r2.success) setSurveyResponses(r2.data || []);
+          if (r1.success) setSurveyTemplates(rowsOr(r1.data, MOCK_SFA_SURVEY_TEMPLATES));
+          if (r2.success) setSurveyResponses(rowsOr(r2.data, MOCK_SFA_SURVEY_RESPONSES));
           break;
         }
         case 'approval': {
           const [r1, r2] = await Promise.all([apiAdv('approval-workflows'), apiAdv('approval-requests')]);
-          if (r1.success) setApprovalWorkflows(r1.data || []);
-          if (r2.success) setApprovalRequests(r2.data || []);
+          if (r1.success) setApprovalWorkflows(rowsOr(r1.data, MOCK_SFA_APPROVAL_WORKFLOWS));
+          if (r2.success) setApprovalRequests(rowsOr(r2.data, MOCK_SFA_APPROVAL_REQUESTS));
           break;
         }
         case 'settings': {
@@ -499,55 +586,62 @@ export default function SFAUnifiedPage() {
             apiEnh('numbering-formats'), apiEnh('payment-terms'), apiEnh('business-settings'),
             apiEnh('settings-overview'),
           ]);
-          if (r1.success) setParameters(r1.data || []);
-          if (r2.success) setGeofences(r2.data || []);
-          if (r3.success) setPlafon(r3.data || []);
+          if (r1.success) setParameters(rowsOr(r1.data, MOCK_SFA_PARAMETERS));
+          if (r2.success) setGeofences(rowsOr(r2.data, MOCK_SFA_GEOFENCES));
+          if (r3.success) setPlafon(rowsOr(r3.data, MOCK_SFA_PLAFON));
           if (r4.success) setLookupCategories(r4.data || {});
-          if (r5.success) setCurrencies(r5.data || []);
-          if (r6.success) setExchangeRates(r6.data || []);
-          if (r7.success) setTaxSettings(r7.data || []);
-          if (r8.success) setNumberingFormats(r8.data || []);
-          if (r9.success) setPaymentTerms(r9.data || []);
-          if (r10.success) setBizSettings(r10.data || []);
+          if (r5.success) setCurrencies(rowsOr(r5.data, MOCK_SFA_CURRENCIES));
+          if (r6.success) setExchangeRates(rowsOr(r6.data, MOCK_SFA_EXCHANGE_RATES));
+          if (r7.success) setTaxSettings(rowsOr(r7.data, MOCK_SFA_TAX_SETTINGS));
+          if (r8.success) setNumberingFormats(rowsOr(r8.data, MOCK_SFA_NUMBERING));
+          if (r9.success) setPaymentTerms(rowsOr(r9.data, MOCK_SFA_PAYMENT_TERMS));
+          if (r10.success) setBizSettings(rowsOr(r10.data, MOCK_SFA_BIZ_SETTINGS));
           if (r11.success) setSettingsOverview(r11.data || null);
           break;
         }
         case 'customers': {
           const [r1, r2] = await Promise.all([apiCrm('customers'), apiCrm('customer-analytics')]);
-          if (r1.success) setCrmCustomers(r1.data || []);
+          if (r1.success) setCrmCustomers(rowsOr(r1.data, MOCK_SFA_CRM_CUSTOMERS));
           if (r2.success) setCrmAnalytics(r2.data);
           break;
         }
         case 'communications': {
           const [r1, r2] = await Promise.all([apiCrm('communications'), apiCrm('follow-ups')]);
-          if (r1.success) setCrmComms(r1.data || []);
-          if (r2.success) setCrmFollowUps(r2.data || []);
+          if (r1.success) setCrmComms(rowsOr(r1.data, MOCK_SFA_CRM_COMMS));
+          if (r2.success) setCrmFollowUps(rowsOr(r2.data, MOCK_SFA_CRM_FOLLOWUPS));
           break;
         }
         case 'tasks': {
           const [r1, r2, r3] = await Promise.all([apiCrm('tasks'), apiCrm('task-summary'), apiCrm('calendar-events')]);
-          if (r1.success) setCrmTasks(r1.data || []);
+          if (r1.success) setCrmTasks(rowsOr(r1.data, MOCK_SFA_CRM_TASKS));
           if (r2.success) setCrmTaskSummary(r2.data);
-          if (r3.success) setCrmCalendar(r3.data || []);
+          if (r3.success) setCrmCalendar(rowsOr(r3.data, MOCK_SFA_CRM_CALENDAR));
+          break;
+        }
+        case 'field-tasks': {
           break;
         }
         case 'forecasting': {
           const [r1, r2] = await Promise.all([apiCrm('forecasts'), apiCrm('forecast-analytics')]);
-          if (r1.success) setCrmForecasts(r1.data || []);
-          if (r2.success) setCrmForecastAnalytics(r2.data);
-          break;
-        }
-        case 'tickets': {
-          const [r1, r2, r3] = await Promise.all([apiCrm('tickets'), apiCrm('service-analytics'), apiCrm('satisfaction')]);
-          if (r1.success) setCrmTickets(r1.data || []);
-          if (r2.success) setCrmServiceAnalytics(r2.data);
-          if (r3.success) setCrmSatisfaction(r3.data);
+          if (r1.success) setCrmForecasts(rowsOr(r1.data, MOCK_SFA_CRM_FORECASTS));
+          if (r2.success && r2.data) {
+            const d = r2.data;
+            setCrmForecastAnalytics({
+              ...MOCK_SFA_CRM_FORECAST_ANALYTICS,
+              ...d,
+              forecasts: rowsOr(d.forecasts, MOCK_SFA_CRM_FORECAST_ANALYTICS.forecasts),
+              accuracy: rowsOr(d.accuracy, MOCK_SFA_CRM_FORECAST_ANALYTICS.accuracy || []),
+              dealScoreDist: rowsOr(d.dealScoreDist, MOCK_SFA_CRM_FORECAST_ANALYTICS.dealScoreDist),
+            });
+          } else {
+            setCrmForecastAnalytics(MOCK_SFA_CRM_FORECAST_ANALYTICS);
+          }
           break;
         }
         case 'automation': {
           const [r1, r2] = await Promise.all([apiCrm('automation-rules'), apiCrm('automation-logs')]);
-          if (r1.success) setCrmAutomationRules(r1.data || []);
-          if (r2.success) setCrmAutomationLogs(r2.data || []);
+          if (r1.success) setCrmAutomationRules(rowsOr(r1.data, MOCK_SFA_CRM_AUTOMATION_RULES));
+          if (r2.success) setCrmAutomationLogs(rowsOr(r2.data, MOCK_SFA_CRM_AUTOMATION_LOGS));
           break;
         }
         case 'import-export': {
@@ -561,9 +655,9 @@ export default function SFAUnifiedPage() {
             apiInt('health'), apiInt('convertible-leads'), apiInt('unlinkable-visits'), apiInt('syncable-pipeline')
           ]);
           if (h.success) setIntHealth(h.data);
-          if (cl.success) setIntConvertibleLeads(cl.data || []);
-          if (uv.success) setIntUnlinkedVisits(uv.data || []);
-          if (sp.success) setIntSyncablePipeline(sp.data || []);
+          if (cl.success) setIntConvertibleLeads(rowsOr(cl.data, MOCK_SFA_INT_LEADS));
+          if (uv.success) setIntUnlinkedVisits(rowsOr(uv.data, MOCK_SFA_INT_VISITS));
+          if (sp.success) setIntSyncablePipeline(rowsOr(sp.data, MOCK_SFA_INT_PIPELINE));
           break;
         }
         case 'audit-trail': {
@@ -575,7 +669,7 @@ export default function SFAUnifiedPage() {
             apiAudit('summary', `&period=${auditFilterPeriod}`),
             apiAudit('filters'),
           ]);
-          if (tl.success) setAuditTimeline(tl.data || []);
+          if (tl.success) setAuditTimeline(rowsOr(tl.data, MOCK_SFA_AUDIT_TIMELINE));
           if (sm.success) setAuditSummary(sm.data);
           if (fl.success) setAuditFilters(fl.data);
           break;
@@ -585,14 +679,20 @@ export default function SFAUnifiedPage() {
           const [m, w, e2, u] = await Promise.all([
             apiAi('models'), apiAi('workflows'), apiAi('executions'), apiAi('usage-stats'),
           ]);
-          if (m.success) { setAiModels(m.data || []); setAiModelCatalog(m.catalog || []); }
-          if (w.success) { setAiWorkflows(w.data || []); if (w.templates) setAiWorkflowTemplates(w.templates); }
-          if (e2.success) setAiExecutions(e2.data || []);
+          if (m.success) { setAiModels(rowsOr(m.data, MOCK_SFA_AI_MODELS)); setAiModelCatalog(rowsOr(m.catalog, MOCK_SFA_AI_CATALOG)); }
+          if (w.success) { setAiWorkflows(rowsOr(w.data, MOCK_SFA_AI_WORKFLOWS)); setAiWorkflowTemplates(rowsOr(w.templates, MOCK_SFA_AI_WF_TEMPLATES)); }
+          if (e2.success) setAiExecutions(rowsOr(e2.data, MOCK_SFA_AI_EXECUTIONS));
           if (u.success) setAiUsageStats(u.data);
           break;
         }
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      // Fallback for most common tabs
+      if (tab === 'dashboard' && !dashboard) setDashboard(MOCK_SFA_DASHBOARD);
+      if (tab === 'leads' && leads.length === 0) setLeads(MOCK_SFA_LEADS);
+      if (tab === 'pipeline' && opportunities.length === 0) setOpportunities(MOCK_SFA_OPPORTUNITIES);
+    }
     setLoading(false);
   }, [tab, auditFilterEntity, auditFilterAction, auditFilterPeriod]);
 
@@ -620,53 +720,53 @@ export default function SFAUnifiedPage() {
   const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     const r = await apiCore('create-lead', 'POST', form);
-    if (r.success) { showToast('Lead berhasil dibuat'); setModal(null); setForm({}); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    if (r.success) { showToast(t('sfa.leadCreated')); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || t('sfa.failedLabel'));
     setSaving(false);
   };
   const handleCreateOpportunity = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     const r = await apiCore('create-opportunity', 'POST', form);
-    if (r.success) { showToast('Opportunity berhasil dibuat'); setModal(null); setForm({}); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    if (r.success) { showToast(t('sfa.opportunityCreated')); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || t('sfa.failedLabel'));
     setSaving(false);
   };
   const handleUpdateOppStage = async (opp: any, stage: string) => {
     const prob = OPP_STAGES[stage]?.prob || 10;
     const status = stage === 'closed_won' ? 'won' : stage === 'closed_lost' ? 'lost' : 'open';
     const r = await apiCore('update-opportunity', 'PUT', { id: opp.id, stage, probability: prob, status });
-    if (r.success) { showToast(`Stage: ${OPP_STAGES[stage]?.label}`); fetchData(); }
+    if (r.success) { showToast(`Stage: ${t(`sfa.${OPP_STAGES[stage]?.tKey}`)}`); fetchData(); }
   };
   const handleConvertLead = async (lead: any) => {
     const r = await apiCore('convert-lead', 'POST', { lead_id: lead.id, opportunity_title: `Opportunity - ${lead.company_name || lead.contact_name}`, expected_value: lead.estimated_value });
-    if (r.success) { showToast('Lead berhasil dikonversi!'); setSelectedItem(null); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    if (r.success) { showToast(t('sfa.leadConvertedSuccess')); setSelectedItem(null); fetchData(); }
+    else showToast(r.error || t('sfa.failedLabel'));
   };
   const handleUpdateLeadStatus = async (lead: any, status: string) => {
     const r = await apiCore('update-lead', 'PUT', { id: lead.id, status });
-    if (r.success) { showToast(`Status: ${LEAD_STATUS[status]?.label}`); setSelectedItem({ ...lead, status }); fetchData(); }
+    if (r.success) { showToast(`Status: ${t(`sfa.${LEAD_STATUS[status]?.tKey}`)}`); setSelectedItem({ ...lead, status }); fetchData(); }
   };
   const handleDeleteLead = async (id: string) => {
-    if (!confirm('Hapus lead ini?')) return;
+    if (!confirm(t('sfa.deleteLeadConfirm'))) return;
     const r = await apiCore(`delete-lead&id=${id}`, 'DELETE');
-    if (r.success) { showToast('Lead dihapus'); setSelectedItem(null); fetchData(); }
+    if (r.success) { showToast(t('sfa.leadDeleted')); setSelectedItem(null); fetchData(); }
   };
   const handleCreateVisit = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     const r = await apiCore('create-visit', 'POST', form);
-    if (r.success) { showToast('Kunjungan dijadwalkan'); setModal(null); setForm({}); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    if (r.success) { showToast(t('sfa.visitScheduled')); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || t('sfa.failedLabel'));
     setSaving(false);
   };
   const handleCreateFieldOrder = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     const r = await apiAdv('create-field-order', 'POST', form);
     if (r.success) { showToast(`Field order: ${r.data?.order_number}`); setModal(null); setForm({}); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    else showToast(r.error || t('sfa.failedLabel'));
     setSaving(false);
   };
   const handleUpdateFoStatus = async (id: string, status: string) => {
-    const rejected_reason = status === 'rejected' ? prompt('Alasan penolakan:') : undefined;
+    const rejected_reason = status === 'rejected' ? prompt(t('sfa.rejectionReason')) : undefined;
     if (status === 'rejected' && !rejected_reason) return;
     const r = await apiAdv('update-field-order-status', 'PUT', { id, status, rejected_reason });
     if (r.success) { showToast(`Order ${status}`); fetchData(); }
@@ -674,12 +774,12 @@ export default function SFAUnifiedPage() {
   const handleCreateCompetitor = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     const r = await apiAdv('create-competitor-activity', 'POST', form);
-    if (r.success) { showToast('Aktivitas kompetitor dilaporkan'); setModal(null); setForm({}); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    if (r.success) { showToast(t('sfa.competitorReported')); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || t('sfa.failedLabel'));
     setSaving(false);
   };
   const handleApproval = async (id: string, decision: string) => {
-    const reason = decision === 'rejected' ? prompt('Alasan penolakan:') : '';
+    const reason = decision === 'rejected' ? prompt(t('sfa.rejectionReason')) : '';
     if (decision === 'rejected' && !reason) return;
     const r = await apiAdv('process-approval', 'PUT', { id, decision, reason });
     if (r.success) { showToast(`Approval ${decision}`); fetchData(); }
@@ -687,36 +787,36 @@ export default function SFAUnifiedPage() {
   const handleCreateGeofence = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     const r = await apiAdv('create-geofence', 'POST', form);
-    if (r.success) { showToast('Geofence dibuat'); setModal(null); setForm({}); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    if (r.success) { showToast(t('sfa.geofenceCreated')); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || t('sfa.failedLabel'));
     setSaving(false);
   };
   const handleCreateCommission = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     const r = await apiAdv('create-product-commission', 'POST', form);
-    if (r.success) { showToast('Komisi produk dibuat'); setModal(null); setForm({}); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    if (r.success) { showToast(t('sfa.productCommCreated')); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || t('sfa.failedLabel'));
     setSaving(false);
   };
   const handleCreateCommissionGroup = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     const r = await apiAdv('create-commission-group', 'POST', form);
-    if (r.success) { showToast('Commission group dibuat'); setModal(null); setForm({}); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    if (r.success) { showToast(t('sfa.groupCommCreated')); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || t('sfa.failedLabel'));
     setSaving(false);
   };
   const handleCreateOutletTarget = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     const r = await apiAdv('create-outlet-target', 'POST', form);
-    if (r.success) { showToast('Outlet target dibuat'); setModal(null); setForm({}); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    if (r.success) { showToast(t('sfa.outletTargetCreated')); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || t('sfa.failedLabel'));
     setSaving(false);
   };
   const handleCreateSalesStrategy = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
     const r = await apiAdv('create-sales-strategy', 'POST', form);
-    if (r.success) { showToast('Sales strategy dibuat'); setModal(null); setForm({}); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    if (r.success) { showToast(t('sfa.salesStrategyCreated')); setModal(null); setForm({}); fetchData(); }
+    else showToast(r.error || t('sfa.failedLabel'));
     setSaving(false);
   };
 
@@ -725,19 +825,19 @@ export default function SFAUnifiedPage() {
     e.preventDefault(); setSaving(true);
     const r = await apiCrm(action, 'POST', form);
     if (r.success) { showToast(msg); setModal(null); setForm({}); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    else showToast(r.error || t('sfa.failedLabel'));
     setSaving(false);
   };
   const handleCrmUpdate = async (action: string, data: any, msg: string) => {
     const r = await apiCrm(action, 'PUT', data);
     if (r.success) { showToast(msg); fetchData(); }
-    else showToast(r.error || 'Gagal');
+    else showToast(r.error || t('sfa.failedLabel'));
   };
   const handleCrmDelete = async (action: string, id: string, label: string) => {
-    if (!confirm(`Hapus ${label} ini?`)) return;
+    if (!confirm(t('sfa.deleteConfirm', { label }))) return;
     const r = await apiCrm(`${action}&id=${id}`, 'DELETE');
-    if (r.success) { showToast(`${label} berhasil dihapus`); setSelectedItem(null); fetchData(); }
-    else showToast(r.error || 'Gagal menghapus');
+    if (r.success) { showToast(t('sfa.deletedSuccess', { label })); setSelectedItem(null); fetchData(); }
+    else showToast(r.error || t('sfa.failedLabel'));
   };
 
   // ── Import/Export Handlers ──
@@ -807,8 +907,8 @@ export default function SFAUnifiedPage() {
 
         setIeUploadedData(cleanedRows);
         setIeFileInfo(prev => prev ? { ...prev, rows: cleanedRows.length } : null);
-        if (cleanedRows.length === 0) showToast('File tidak berisi data. Isi data mulai baris ke-5 di sheet "Data Import"');
-      } catch (err) { showToast('Gagal membaca file Excel'); }
+        if (cleanedRows.length === 0) showToast(t('sfa.ieFileEmpty'));
+      } catch (err) { showToast(t('sfa.ieReadError')); }
     } else if (ext === 'csv') {
       const text = await file.text();
       const allLines = text.split(/\r?\n/).filter(l => l.trim());
@@ -830,7 +930,7 @@ export default function SFAUnifiedPage() {
         result.push(cell.trim()); return result;
       };
       const lines = allLines.slice(headerIdx);
-      if (lines.length < 2) { showToast('File CSV kosong atau hanya header'); return; }
+      if (lines.length < 2) { showToast(t('sfa.ieCsvEmpty')); return; }
       const headers = parseCSVLine(lines[0]).map(h => h.replace(/\s*\*\s*$/, '').trim());
       const rows = lines.slice(1).map(line => {
         const vals = parseCSVLine(line);
@@ -841,7 +941,7 @@ export default function SFAUnifiedPage() {
       setIeUploadedData(rows);
       setIeFileInfo(prev => prev ? { ...prev, rows: rows.length } : null);
     } else {
-      showToast('Format file tidak didukung. Gunakan Excel (.xlsx)');
+      showToast(t('sfa.ieUnsupportedFormat'));
     }
     e.target.value = '';
   };
@@ -850,7 +950,7 @@ export default function SFAUnifiedPage() {
     setIeImporting(true);
     const r = await apiIE('validate', 'POST', { entity: ieSelectedEntity, rows: ieUploadedData });
     if (r.success) setIeValidation(r.data);
-    else showToast(r.error || 'Validasi gagal');
+    else showToast(r.error || t('sfa.ieValidationFailed'));
     setIeImporting(false);
   };
   const ieDoImport = async () => {
@@ -860,8 +960,8 @@ export default function SFAUnifiedPage() {
     const r = await apiIE('import', 'POST', { entity: ieSelectedEntity, rows: validRows });
     if (r.success) {
       setIeImportResult(r.data);
-      showToast(`${r.data.inserted} data berhasil diimport`);
-    } else showToast(r.error || 'Import gagal');
+      showToast(t('sfa.ieImportSuccess', { count: r.data.inserted }));
+    } else showToast(r.error || t('sfa.ieImportFailed'));
     setIeImporting(false);
   };
   const ieDoExport = async () => {
@@ -914,26 +1014,26 @@ export default function SFAUnifiedPage() {
               </div>
             </div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-tight" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
-              CRM & Sales Force
+              {t('sfa.heroTitle')}
             </h1>
             <p className="mt-1.5 text-xs sm:text-sm text-white/90 max-w-xl leading-relaxed">
-              Kelola <span className="text-white font-bold">customer</span>, <span className="text-white font-bold">sales pipeline</span>, <span className="text-white font-bold">field force</span> & <span className="text-white font-bold">automasi</span> dalam satu platform terintegrasi
+              {t('sfa.heroDesc')}
             </p>
           </div>
 
           {/* Right: Quick stats */}
           <div className="flex items-center gap-2 shrink-0">
             {[
-              { label: 'Leads', value: dashboard?.totalLeads || leads?.length || 0, icon: UserPlus, iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
-              { label: 'Pipeline', value: dashboard?.openDeals || opportunities?.length || 0, icon: TrendingUp, iconColor: 'text-violet-500', iconBg: 'bg-violet-50' },
-              { label: 'Tim', value: teams?.length || 0, icon: Users, iconColor: 'text-teal-500', iconBg: 'bg-teal-50' },
-              { label: 'Revenue', value: fmtCur(dashboard?.totalRevenue || 0).replace('Rp ', ''), icon: DollarSign, iconColor: 'text-emerald-500', iconBg: 'bg-emerald-50' },
+              { label: t('sfa.statLeads'), value: dashboard?.totalLeads || leads?.length || 0, icon: UserPlus, iconColor: 'text-blue-500', iconBg: 'bg-blue-50' },
+              { label: t('sfa.statPipeline'), value: dashboard?.openDeals || opportunities?.length || 0, icon: TrendingUp, iconColor: 'text-violet-500', iconBg: 'bg-violet-50' },
+              { label: t('sfa.statTeams'), value: teams?.length || 0, icon: Users, iconColor: 'text-teal-500', iconBg: 'bg-teal-50' },
+              { label: t('sfa.statRevenue'), value: fmtCur(dashboard?.totalRevenue || 0), icon: DollarSign, iconColor: 'text-emerald-500', iconBg: 'bg-emerald-50' },
             ].map((s, i) => (
               <div key={i} className="group flex flex-col items-center p-2 sm:p-2.5 rounded-lg bg-white/90 backdrop-blur-sm shadow-md shadow-blue-700/10 hover:bg-white hover:shadow-lg hover:scale-[1.03] transition-all duration-300 min-w-[64px]">
                 <div className={`flex items-center justify-center w-7 h-7 rounded-md ${s.iconBg} mb-1.5`}>
                   <s.icon className={`w-3.5 h-3.5 ${s.iconColor}`} />
                 </div>
-                <span className="text-sm sm:text-base font-bold text-gray-800 tabular-nums">{typeof s.value === 'number' ? s.value.toLocaleString('id-ID') : s.value}</span>
+                <span className="text-sm sm:text-base font-bold text-gray-800 tabular-nums">{typeof s.value === 'number' ? fmt(s.value) : s.value}</span>
                 <span className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mt-0.5">{s.label}</span>
               </div>
             ))}
@@ -943,12 +1043,23 @@ export default function SFAUnifiedPage() {
         {/* Bottom bar with date & actions */}
         <div className="relative flex items-center justify-between px-4 sm:px-5 py-2 border-t border-white/20 bg-white/10 backdrop-blur-sm">
           <div className="flex items-center gap-3 text-[11px] text-white/90">
-            <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-white" /> {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+            <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 text-white" /> {localeDateLong}</span>
             <span className="hidden sm:flex items-center gap-1.5"><Activity className="w-3.5 h-3.5 text-emerald-300" /> <span className="text-emerald-200 font-bold">Live</span></span>
           </div>
-          <button onClick={fetchData} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white text-blue-600 text-[11px] font-bold shadow-sm hover:shadow-md active:scale-95 transition-all">
-            <RefreshCw className="w-3 h-3" /> Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            {canExport && (
+              <button
+                type="button"
+                onClick={() => setExportModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white/95 text-amber-700 text-[11px] font-bold shadow-sm hover:shadow-md active:scale-95 transition-all border border-amber-200/60"
+              >
+                <Download className="w-3 h-3" /> {t('sfa.openExportCenter')}
+              </button>
+            )}
+            <button onClick={fetchData} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-white text-blue-600 text-[11px] font-bold shadow-sm hover:shadow-md active:scale-95 transition-all">
+              <RefreshCw className="w-3 h-3" /> {t('sfa.refresh')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -961,11 +1072,13 @@ export default function SFAUnifiedPage() {
         </div>
       )}
 
+      <SfaExportModal open={exportModalOpen} onClose={() => setExportModalOpen(false)} t={t} hasCrm={hasCrm} hasSfa={hasSfa} />
+
       {/* ── Tab Navigation (Two-Level: Group → Sub-tabs) ── */}
       {(() => {
         const activeGroupIdx = visibleTabGroups.findIndex(g => g.tabs.some(t => t.id === tab));
         const activeGroup = visibleTabGroups[activeGroupIdx] || visibleTabGroups[0];
-        const groupIcons = [BarChart3, Heart, LayoutList, Headphones, Users, Target, Eye, Settings];
+        const groupIcons = [BarChart3, Heart, LayoutList, Users, Target, Eye, Settings];
         return (
           <div className="mb-6 space-y-3">
             {/* Row 1: Group selector — scrollable on mobile, centered on desktop */}
@@ -983,7 +1096,7 @@ export default function SFAUnifiedPage() {
                           : 'bg-white text-gray-500 border border-gray-200 hover:border-amber-200 hover:text-amber-600 hover:bg-amber-50/50'
                       }`}>
                       <GIcon className="w-4 h-4 shrink-0" />
-                      <span>{group.label}</span>
+                      <span>{t(`sfa.${group.tKey}`)}</span>
                     </button>
                   );
                 })}
@@ -992,16 +1105,16 @@ export default function SFAUnifiedPage() {
             {/* Row 2: Sub-tabs for active group */}
             <div className="bg-white border border-gray-100 rounded-2xl p-1.5 shadow-sm">
               <div className="flex items-center gap-1">
-                {activeGroup.tabs.map(t => (
-                  <button key={t.id}
-                    onClick={() => { setTab(t.id); setSearch(''); setSelectedItem(null); }}
+                {activeGroup.tabs.map(tabItem => (
+                  <button key={tabItem.id}
+                    onClick={() => { setTab(tabItem.id); setSearch(''); setSelectedItem(null); }}
                     className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      tab === t.id
+                      tab === tabItem.id
                         ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/20'
                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
                     }`}>
-                    <t.icon className="w-4 h-4 shrink-0" />
-                    <span className="truncate">{t.label}</span>
+                    <tabItem.icon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">{t(`sfa.${tabItem.tKey}`)}</span>
                   </button>
                 ))}
               </div>
@@ -1013,7 +1126,7 @@ export default function SFAUnifiedPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24">
           <div className="relative"><div className="w-12 h-12 rounded-full border-[3px] border-gray-100" /><div className="absolute inset-0 w-12 h-12 rounded-full border-[3px] border-amber-500 border-t-transparent animate-spin" /></div>
-          <p className="mt-4 text-sm text-gray-400 font-medium">Memuat data...</p>
+          <p className="mt-4 text-sm text-gray-400 font-medium">{t('sfa.loadingData')}</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -1021,16 +1134,16 @@ export default function SFAUnifiedPage() {
           {/* DASHBOARD - Unified from Core+Enhanced+Advanced */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'dashboard' && dashboard && (<>
-            <SectionHeader title="Dashboard Overview" subtitle="Ringkasan performa seluruh modul SFA"
-              action={<button onClick={fetchData} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-xl px-3.5 py-2 shadow-sm hover:shadow transition-all"><RefreshCw className="w-3.5 h-3.5" /> Refresh</button>} />
+            <SectionHeader title={t('sfa.dashboardOverview')} subtitle={t('sfa.dashboardSubtitle')}
+              action={<button onClick={fetchData} className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-xl px-3.5 py-2 shadow-sm hover:shadow transition-all"><RefreshCw className="w-3.5 h-3.5" /> {t('sfa.refresh')}</button>} />
 
             {/* ── KPI Cards ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {[
-                { label: 'Total Leads', value: fmt(dashboard.totalLeads), sub: `${fmt(dashboard.newLeads)} baru bulan ini`, icon: UserPlus, gradient: 'from-blue-500 to-blue-600', light: 'bg-blue-50', trend: dashboard.newLeads > 0 },
-                { label: 'Pipeline Value', value: fmtCur(dashboard.pipelineValue), sub: `${fmt(dashboard.pipelineCount)} deals aktif`, icon: DollarSign, gradient: 'from-emerald-500 to-emerald-600', light: 'bg-emerald-50', trend: dashboard.pipelineCount > 0 },
-                { label: 'Conversion Rate', value: `${dashboard.conversionRate}%`, sub: `${fmt(dashboard.convertedLeads)} converted`, icon: Percent, gradient: 'from-amber-500 to-amber-600', light: 'bg-amber-50', trend: parseFloat(dashboard.conversionRate) > 0 },
-                { label: 'Kunjungan', value: `${fmt(dashboard.visitsCompleted)}/${fmt(dashboard.visitsThisMonth)}`, sub: `${dashboard.overdueVisits} overdue`, icon: Navigation, gradient: 'from-violet-500 to-violet-600', light: 'bg-violet-50', trend: dashboard.overdueVisits === 0 },
+                { label: t('sfa.totalLeads'), value: fmt(dashboard.totalLeads), sub: `${fmt(dashboard.newLeads)} ${t('sfa.newThisMonth')}`, icon: UserPlus, gradient: 'from-blue-500 to-blue-600', light: 'bg-blue-50', trend: dashboard.newLeads > 0 },
+                { label: t('sfa.pipelineValue'), value: fmtCur(dashboard.pipelineValue), sub: `${fmt(dashboard.pipelineCount)} ${t('sfa.activeDeals')}`, icon: DollarSign, gradient: 'from-emerald-500 to-emerald-600', light: 'bg-emerald-50', trend: dashboard.pipelineCount > 0 },
+                { label: t('sfa.conversionRate'), value: `${dashboard.conversionRate}%`, sub: `${fmt(dashboard.convertedLeads)} ${t('sfa.converted')}`, icon: Percent, gradient: 'from-amber-500 to-amber-600', light: 'bg-amber-50', trend: parseFloat(dashboard.conversionRate) > 0 },
+                { label: t('sfa.visits'), value: `${fmt(dashboard.visitsCompleted)}/${fmt(dashboard.visitsThisMonth)}`, sub: `${dashboard.overdueVisits} ${t('sfa.overdue')}`, icon: Navigation, gradient: 'from-violet-500 to-violet-600', light: 'bg-violet-50', trend: dashboard.overdueVisits === 0 },
               ].map((c, i) => (
                 <Card key={i} className="p-4 sm:p-5 relative overflow-hidden group">
                   <div className={`absolute top-0 right-0 w-20 h-20 rounded-full ${c.light} -mr-6 -mt-6 opacity-50 group-hover:opacity-80 transition-opacity`} />
@@ -1055,8 +1168,8 @@ export default function SFAUnifiedPage() {
                     {isManager ? <Shield className="w-5 h-5 text-indigo-600" /> : <Activity className="w-5 h-5 text-amber-600" />}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900">{isManager ? 'Manager / Leader View' : 'Staff / Field Force View'}</p>
-                    <p className="text-xs text-gray-500">{isManager ? 'Akses penuh — monitoring tim, approval, kelola & organisasi semua data CRM & SFA' : 'Akses operasional — input data, CRUD, import file CSV/Excel'}</p>
+                    <p className="text-sm font-bold text-gray-900">{isManager ? t('sfa.managerView') : t('sfa.staffView')}</p>
+                    <p className="text-xs text-gray-500">{isManager ? t('sfa.managerAccessDesc') : t('sfa.staffAccessDesc')}</p>
                   </div>
                 </div>
                 <Badge color={isManager ? 'purple' : 'orange'}>{userRole.replace('_', ' ').toUpperCase()}</Badge>
@@ -1070,15 +1183,15 @@ export default function SFAUnifiedPage() {
                 <Card className="p-5 lg:col-span-2">
                   <div className="flex items-center gap-2 mb-4">
                     <Users className="w-5 h-5 text-indigo-500" />
-                    <h3 className="text-sm font-semibold text-gray-900">Monitoring Tim & Staff</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">{t('sfa.teamMonitoring')}</h3>
                     <Badge color="purple">Manager</Badge>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
-                      { label: 'Total Tim', value: fmt(dashboard.activeTeams || 0), icon: Users, color: 'text-blue-600 bg-blue-50' },
-                      { label: 'Staff Aktif', value: fmt(dashboard.teamMembers || 0), icon: UserPlus, color: 'text-emerald-600 bg-emerald-50' },
-                      { label: 'Approval Pending', value: fmt(dashboard.pendingApprovals || 0), icon: CheckCircle, color: 'text-amber-600 bg-amber-50' },
-                      { label: 'Tiket Terbuka', value: fmt(dashboard.openTickets || 0), icon: Headphones, color: 'text-red-600 bg-red-50' },
+                      { label: t('sfa.totalTeams'), value: fmt(dashboard.activeTeams || 0), icon: Users, color: 'text-blue-600 bg-blue-50' },
+                      { label: t('sfa.activeStaff'), value: fmt(dashboard.teamMembers || 0), icon: UserPlus, color: 'text-emerald-600 bg-emerald-50' },
+                      { label: t('sfa.approvalPending'), value: fmt(dashboard.pendingApprovals || 0), icon: CheckCircle, color: 'text-amber-600 bg-amber-50' },
+                      { label: t('sfa.openTickets'), value: fmt(dashboard.openTickets || 0), icon: Headphones, color: 'text-red-600 bg-red-50' },
                     ].map((m, i) => (
                       <div key={i} className="bg-gray-50 rounded-xl p-3 text-center">
                         <div className={`w-8 h-8 rounded-lg ${m.color} flex items-center justify-center mx-auto mb-2`}><m.icon className="w-4 h-4" /></div>
@@ -1088,9 +1201,9 @@ export default function SFAUnifiedPage() {
                     ))}
                   </div>
                   <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-xs text-gray-400 mb-2">Kapabilitas Manager:</p>
+                    <p className="text-xs text-gray-400 mb-2">{t('sfa.managerCapabilities')}</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {['Monitor Semua Data', 'Kelola Tim', 'Approval / Reject', 'Hapus Data', 'Atur Target', 'Kelola Automasi', 'Pengaturan Sistem', 'Export Laporan'].map(c => (
+                      {[t('sfa.capMonitorAll'), t('sfa.capManageTeam'), t('sfa.capApproveReject'), t('sfa.capDeleteData'), t('sfa.capSetTargets'), t('sfa.capManageAutomation'), t('sfa.capSystemSettings'), t('sfa.capExportReports')].map(c => (
                         <span key={c} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-medium"><CheckCircle className="w-3 h-3" />{c}</span>
                       ))}
                     </div>
@@ -1101,19 +1214,22 @@ export default function SFAUnifiedPage() {
                 <Card className="p-5">
                   <div className="flex items-center gap-2 mb-4">
                     <Zap className="w-5 h-5 text-amber-500" />
-                    <h3 className="text-sm font-semibold text-gray-900">Aksi Cepat</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">{t('sfa.quickActions')}</h3>
                   </div>
                   <div className="space-y-2">
                     {[
-                      { label: 'Lihat Approval Request', tab: 'approval' as Tab, icon: CheckCircle, color: 'bg-amber-50 text-amber-700 hover:bg-amber-100' },
-                      { label: 'Monitor Kunjungan Tim', tab: 'visits' as Tab, icon: Navigation, color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
-                      { label: 'Cek Target & Achievement', tab: 'targets' as Tab, icon: Target, color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' },
-                      { label: 'Kelola Tiket & SLA', tab: 'tickets' as Tab, icon: Headphones, color: 'bg-red-50 text-red-700 hover:bg-red-100' },
-                      { label: 'Lihat Forecasting', tab: 'forecasting' as Tab, icon: TrendingUp, color: 'bg-violet-50 text-violet-700 hover:bg-violet-100' },
-                      { label: 'Kelola Automasi', tab: 'automation' as Tab, icon: Bot, color: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' },
-                      { label: 'Import / Export Data', tab: 'import-export' as Tab, icon: ArrowDownToLine, color: 'bg-gray-50 text-gray-700 hover:bg-gray-100' },
+                      { label: t('sfa.actionViewApproval'), tab: 'approval' as Tab, icon: CheckCircle, color: 'bg-amber-50 text-amber-700 hover:bg-amber-100' },
+                      { label: t('sfa.actionMonitorVisits'), tab: 'visits' as Tab, icon: Navigation, color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
+                      { label: t('sfa.actionCheckTargets'), tab: 'targets' as Tab, icon: Target, color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' },
+                      { label: t('sfa.actionManageTickets'), action: () => router.push('/hq/helpdesk'), icon: Headphones, color: 'bg-red-50 text-red-700 hover:bg-red-100' },
+                      { label: t('sfa.actionViewForecast'), tab: 'forecasting' as Tab, icon: TrendingUp, color: 'bg-violet-50 text-violet-700 hover:bg-violet-100' },
+                      { label: t('sfa.actionManageAutomation'), tab: 'automation' as Tab, icon: Bot, color: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' },
+                      { label: t('sfa.actionImportExport'), tab: 'import-export' as Tab, icon: ArrowDownToLine, color: 'bg-gray-50 text-gray-700 hover:bg-gray-100' },
                     ].map(a => (
-                      <button key={a.label} onClick={() => { setTab(a.tab); setSearch(''); setSelectedItem(null); }}
+                      <button key={a.label} onClick={() => {
+                        if ('action' in a && a.action) { a.action(); return; }
+                        setTab((a as { tab: Tab }).tab); setSearch(''); setSelectedItem(null);
+                      }}
                         className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${a.color}`}>
                         <a.icon className="w-4 h-4 shrink-0" />{a.label}<ArrowRight className="w-3 h-3 ml-auto opacity-40" />
                       </button>
@@ -1128,19 +1244,19 @@ export default function SFAUnifiedPage() {
               <Card className="p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <Activity className="w-5 h-5 text-amber-500" />
-                  <h3 className="text-sm font-semibold text-gray-900">Aksi Cepat Staff</h3>
+                  <h3 className="text-sm font-semibold text-gray-900">{t('sfa.quickActionsStaff')}</h3>
                   <Badge color="orange">Field Force</Badge>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
-                    { label: 'Tambah Lead', action: () => { setForm({}); setModal('lead'); }, icon: UserPlus, color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
-                    { label: 'Input Kunjungan', action: () => { setForm({}); setModal('visit'); }, icon: Navigation, color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' },
-                    { label: 'Buat Order', action: () => { setForm({}); setModal('field-order'); }, icon: ShoppingCart, color: 'bg-amber-50 text-amber-700 hover:bg-amber-100' },
-                    { label: 'Tambah Customer', action: () => { setForm({}); setModal('customer'); }, icon: Heart, color: 'bg-violet-50 text-violet-700 hover:bg-violet-100' },
-                    { label: 'Catat Komunikasi', action: () => { setForm({}); setModal('communication'); }, icon: MessageCircle, color: 'bg-sky-50 text-sky-700 hover:bg-sky-100' },
-                    { label: 'Buat Task', action: () => { setForm({}); setModal('task'); }, icon: LayoutList, color: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' },
-                    { label: 'Buat Tiket', action: () => { setForm({}); setModal('ticket'); }, icon: Headphones, color: 'bg-red-50 text-red-700 hover:bg-red-100' },
-                    { label: 'Import Data', action: () => { setTab('import-export' as Tab); }, icon: Upload, color: 'bg-gray-50 text-gray-700 hover:bg-gray-100' },
+                    { label: t('sfa.actionAddLead'), action: () => { setForm({}); setModal('lead'); }, icon: UserPlus, color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
+                    { label: t('sfa.actionInputVisit'), action: () => { setForm({}); setModal('visit'); }, icon: Navigation, color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' },
+                    { label: t('sfa.actionCreateOrder'), action: () => { setForm({}); setModal('field-order'); }, icon: ShoppingCart, color: 'bg-amber-50 text-amber-700 hover:bg-amber-100' },
+                    { label: t('sfa.actionAddCustomer'), action: () => { setForm({}); setModal('customer'); }, icon: Heart, color: 'bg-violet-50 text-violet-700 hover:bg-violet-100' },
+                    { label: t('sfa.actionLogComm'), action: () => { setForm({}); setModal('communication'); }, icon: MessageCircle, color: 'bg-sky-50 text-sky-700 hover:bg-sky-100' },
+                    { label: t('sfa.actionCreateTask'), action: () => { setForm({}); setModal('task'); }, icon: LayoutList, color: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' },
+                    { label: t('sfa.actionCreateTicket'), action: () => router.push('/hq/helpdesk?open=ticket'), icon: Headphones, color: 'bg-red-50 text-red-700 hover:bg-red-100' },
+                    { label: t('sfa.actionImportData'), action: () => { setTab('import-export' as Tab); }, icon: Upload, color: 'bg-gray-50 text-gray-700 hover:bg-gray-100' },
                   ].map(a => (
                     <button key={a.label} onClick={a.action}
                       className={`flex flex-col items-center gap-2 px-3 py-4 rounded-xl text-xs font-medium transition-colors ${a.color}`}>
@@ -1149,14 +1265,14 @@ export default function SFAUnifiedPage() {
                   ))}
                 </div>
                 <div className="mt-3 pt-3 border-t border-gray-100">
-                  <p className="text-xs text-gray-400">Kapabilitas Staff: <span className="text-gray-600">Input Data • CRUD • Import CSV/Excel • Lihat Data Sendiri • Catat Aktivitas</span></p>
+                  <p className="text-xs text-gray-400">{t('sfa.staffCapabilities')} <span className="text-gray-600">{t('sfa.staffCapDesc')}</span></p>
                 </div>
               </Card>
             )}
 
             {/* ── Charts Row: Lead Status Doughnut + Pipeline Bar ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <ChartCard title="Distribusi Lead" subtitle="Berdasarkan status saat ini">
+              <ChartCard title={t('sfa.leadDistribution')} subtitle={t('sfa.leadDistSub')}>
                 {(dashboard.leadsByStatus || []).length > 0 ? (() => {
                   const totalLeads = (dashboard.leadsByStatus || []).reduce((s: number, d: any) => s + parseInt(d.count), 0);
                   return (
@@ -1164,7 +1280,7 @@ export default function SFAUnifiedPage() {
                       <div className="w-44 h-44 shrink-0 relative">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                            <Pie data={(dashboard.leadsByStatus || []).map((s: any) => ({ name: LEAD_STATUS[s.status]?.label || s.status, value: parseInt(s.count), fill: LEAD_COLORS[s.status] || '#94a3b8' }))}
+                            <Pie data={(dashboard.leadsByStatus || []).map((s: any) => ({ name: t(`sfa.${LEAD_STATUS[s.status]?.tKey}`) || s.status, value: parseInt(s.count), fill: LEAD_COLORS[s.status] || '#94a3b8' }))}
                               cx="50%" cy="50%" innerRadius={52} outerRadius={78} paddingAngle={2} dataKey="value" stroke="white" strokeWidth={2}>
                               {(dashboard.leadsByStatus || []).map((s: any, i: number) => <Cell key={i} fill={LEAD_COLORS[s.status] || '#94a3b8'} />)}
                             </Pie>
@@ -1178,18 +1294,18 @@ export default function SFAUnifiedPage() {
                       </div>
                       <div className="flex-1 w-full divide-y divide-gray-50">
                         {(dashboard.leadsByStatus || []).map((s: any, i: number) => (
-                          <ChartLegendItem key={i} color={LEAD_COLORS[s.status] || '#94a3b8'} label={LEAD_STATUS[s.status]?.label || s.status} value={parseInt(s.count)} total={totalLeads} />
+                          <ChartLegendItem key={i} color={LEAD_COLORS[s.status] || '#94a3b8'} label={t(`sfa.${LEAD_STATUS[s.status]?.tKey}`) || s.status} value={parseInt(s.count)} total={totalLeads} />
                         ))}
                       </div>
                     </div>
                   );
-                })() : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><BarChart3 className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">Belum ada data lead</span></div>}
+                })() : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><BarChart3 className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">{t('sfa.noLeadData')}</span></div>}
               </ChartCard>
 
-              <ChartCard title="Pipeline per Stage" subtitle="Jumlah deals dan nilai per tahap">
+              <ChartCard title={t('sfa.pipelinePerStage')} subtitle={t('sfa.pipelineStageSub')}>
                 {(dashboard.pipelineStages || []).length > 0 ? (
                   <ResponsiveContainer width="100%" height={220}>
-                    <BarChart data={(dashboard.pipelineStages || []).map((s: any) => ({ name: OPP_STAGES[s.stage]?.label || s.stage, deals: parseInt(s.count), value: parseFloat(s.value) }))}
+                    <BarChart data={(dashboard.pipelineStages || []).map((s: any) => ({ name: t(`sfa.${OPP_STAGES[s.stage]?.tKey}`) || s.stage, deals: parseInt(s.count), value: parseFloat(s.value) }))}
                       margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                       <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
@@ -1200,17 +1316,17 @@ export default function SFAUnifiedPage() {
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
-                ) : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><TrendingUp className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">Belum ada data pipeline</span></div>}
+                ) : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><TrendingUp className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">{t('sfa.noPipelineData')}</span></div>}
               </ChartCard>
             </div>
 
             {/* ── Operational KPIs ── */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { label: 'Field Orders', value: fmt(dashboard.fieldOrdersThisMonth), sub: fmtCur(dashboard.fieldOrderRevenue), icon: ShoppingCart, color: 'text-amber-500', bg: 'bg-amber-50' },
-                { label: 'Audit Compliance', value: `${parseFloat(dashboard.avgCompliance || 0).toFixed(0)}%`, sub: `${fmt(dashboard.auditsThisMonth)} audit`, icon: Eye, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                { label: 'Kompetitor', value: fmt(dashboard.competitorReports), sub: `${dashboard.unresolvedCompetitor} unresolved`, icon: Swords, color: dashboard.unresolvedCompetitor > 0 ? 'text-red-500' : 'text-blue-500', bg: dashboard.unresolvedCompetitor > 0 ? 'bg-red-50' : 'bg-blue-50' },
-                { label: 'Pending Approval', value: fmt(dashboard.pendingApprovals), sub: `${fmt(dashboard.surveysCompleted)} survey`, icon: Shield, color: dashboard.pendingApprovals > 0 ? 'text-amber-500' : 'text-gray-400', bg: dashboard.pendingApprovals > 0 ? 'bg-amber-50' : 'bg-gray-50' },
+                { label: t('sfa.fieldOrders'), value: fmt(dashboard.fieldOrdersThisMonth), sub: fmtCur(dashboard.fieldOrderRevenue), icon: ShoppingCart, color: 'text-amber-500', bg: 'bg-amber-50' },
+                { label: t('sfa.auditCompliance'), value: `${parseFloat(dashboard.avgCompliance || 0).toFixed(0)}%`, sub: `${fmt(dashboard.auditsThisMonth)} audit`, icon: Eye, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                { label: t('sfa.competitorLabel'), value: fmt(dashboard.competitorReports), sub: `${dashboard.unresolvedCompetitor} unresolved`, icon: Swords, color: dashboard.unresolvedCompetitor > 0 ? 'text-red-500' : 'text-blue-500', bg: dashboard.unresolvedCompetitor > 0 ? 'bg-red-50' : 'bg-blue-50' },
+                { label: t('sfa.pendingApprovalLabel'), value: fmt(dashboard.pendingApprovals), sub: `${fmt(dashboard.surveysCompleted)} ${t('sfa.surveyLabel')}`, icon: Shield, color: dashboard.pendingApprovals > 0 ? 'text-amber-500' : 'text-gray-400', bg: dashboard.pendingApprovals > 0 ? 'bg-amber-50' : 'bg-gray-50' },
               ].map((m, i) => (
                 <Card key={i} className="p-4">
                   <div className={`w-8 h-8 rounded-lg ${m.bg} ${m.color} flex items-center justify-center mb-2.5`}><m.icon className="w-4 h-4" /></div>
@@ -1223,7 +1339,7 @@ export default function SFAUnifiedPage() {
 
             {/* ── Visit Stats Doughnut + Top Leads ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <ChartCard title="Status Kunjungan" subtitle="30 hari terakhir">
+              <ChartCard title={t('sfa.visitStatus')} subtitle={t('sfa.last30Days')}>
                 {(dashboard.visitStats || []).length > 0 ? (() => {
                   const visitColors: Record<string,string> = { completed: '#10b981', in_progress: '#3b82f6', planned: '#f59e0b', cancelled: '#ef4444', missed: '#6b7280' };
                   const totalVisits = (dashboard.visitStats || []).reduce((s: number, v: any) => s + parseInt(v.count), 0);
@@ -1246,18 +1362,18 @@ export default function SFAUnifiedPage() {
                       </div>
                       <div className="flex-1 w-full divide-y divide-gray-50">
                         {(dashboard.visitStats || []).map((v: any, i: number) => (
-                          <ChartLegendItem key={i} color={visitColors[v.status] || CHART_COLORS[i]} label={v.status.replace('_', ' ')} value={parseInt(v.count)} total={totalVisits} />
+                          <ChartLegendItem key={i} color={visitColors[v.status] || CHART_COLORS[i]} label={v.status ? v.status.replace('_', ' ') : 'Unknown'} value={parseInt(v.count)} total={totalVisits} />
                         ))}
                       </div>
                     </div>
                   );
-                })() : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><Navigation className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">Belum ada data kunjungan</span></div>}
+                })() : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><Navigation className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">{t('sfa.noVisitData')}</span></div>}
               </ChartCard>
 
               {/* Top Leads */}
               <Card className="p-5">
-                <h3 className="text-sm font-semibold text-gray-900 mb-1">Top Leads</h3>
-                <p className="text-xs text-gray-400 mb-4">Berdasarkan estimasi nilai tertinggi</p>
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">{t('sfa.topLeads')}</h3>
+                <p className="text-xs text-gray-400 mb-4">{t('sfa.topLeadsSub')}</p>
                 {(dashboard.topLeads || []).length > 0 ? (
                   <div className="space-y-3">
                     {(dashboard.topLeads || []).slice(0, 5).map((l: any, i: number) => (
@@ -1269,24 +1385,24 @@ export default function SFAUnifiedPage() {
                         </div>
                         <div className="text-right shrink-0">
                           <p className="text-sm font-bold text-gray-900">{fmtCur(parseFloat(l.estimated_value || 0))}</p>
-                          <Badge color={l.status === 'converted' ? 'green' : l.status === 'lost' ? 'red' : l.priority === 'high' ? 'yellow' : 'blue'}>{LEAD_STATUS[l.status]?.label || l.status}</Badge>
+                          <Badge color={l.status === 'converted' ? 'green' : l.status === 'lost' ? 'red' : l.priority === 'high' ? 'yellow' : 'blue'}>{t(`sfa.${LEAD_STATUS[l.status]?.tKey}`) || l.status}</Badge>
                         </div>
                       </div>
                     ))}
                   </div>
-                ) : <div className="text-center py-8 text-gray-300 text-sm">Belum ada data lead</div>}
+                ) : <div className="text-center py-8 text-gray-300 text-sm">{t('sfa.noLeadData')}</div>}
               </Card>
             </div>
 
             {/* ── Teams & Targets Summary ── */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {[
-                { label: 'Tim Aktif', value: fmt(dashboard.activeTeams), icon: Users, color: 'text-violet-500', bg: 'bg-violet-50' },
-                { label: 'Target Groups', value: fmt(dashboard.targetGroups), icon: Target, color: 'text-amber-500', bg: 'bg-amber-50' },
-                { label: 'Assignments', value: fmt(dashboard.targetAssignments), icon: ClipboardList, color: 'text-blue-500', bg: 'bg-blue-50' },
-                { label: 'Insentif Aktif', value: fmt(dashboard.incentiveSchemes), icon: Award, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-                { label: 'Coverage', value: fmt(dashboard.totalCoverage), icon: MapPin, color: 'text-cyan-500', bg: 'bg-cyan-50' },
-                { label: 'Survey', value: fmt(dashboard.surveysCompleted), icon: ClipboardList, color: 'text-pink-500', bg: 'bg-pink-50' },
+                { label: t('sfa.activeTeams'), value: fmt(dashboard.activeTeams), icon: Users, color: 'text-violet-500', bg: 'bg-violet-50' },
+                { label: t('sfa.targetGroupsLabel'), value: fmt(dashboard.targetGroups), icon: Target, color: 'text-amber-500', bg: 'bg-amber-50' },
+                { label: t('sfa.assignmentsLabel'), value: fmt(dashboard.targetAssignments), icon: ClipboardList, color: 'text-blue-500', bg: 'bg-blue-50' },
+                { label: t('sfa.activeIncentives'), value: fmt(dashboard.incentiveSchemes), icon: Award, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                { label: t('sfa.coverageLabel'), value: fmt(dashboard.totalCoverage), icon: MapPin, color: 'text-cyan-500', bg: 'bg-cyan-50' },
+                { label: t('sfa.surveyLabel'), value: fmt(dashboard.surveysCompleted), icon: ClipboardList, color: 'text-pink-500', bg: 'bg-pink-50' },
               ].map((m, i) => (
                 <Card key={i} className="p-3 text-center">
                   <div className={`w-8 h-8 rounded-lg ${m.bg} ${m.color} flex items-center justify-center mx-auto mb-2`}><m.icon className="w-4 h-4" /></div>
@@ -1301,10 +1417,10 @@ export default function SFAUnifiedPage() {
           {/* LEADS */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'leads' && (<>
-            <SectionHeader title="Lead Management" subtitle={`${filteredLeads.length} leads`}
+            <SectionHeader title={t('sfa.leadManagement')} subtitle={`${filteredLeads.length} leads`}
               action={<div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" /><input className={`${inputCls} pl-10 !py-2`} placeholder="Cari lead..." value={search} onChange={e => setSearch(e.target.value)} /></div>
-                <PrimaryBtn onClick={() => { setModal('lead'); setForm({}); }} icon={Plus}>Tambah Lead</PrimaryBtn>
+                <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" /><input className={`${inputCls} pl-10 !py-2`} placeholder={t('sfa.searchLead')} value={search} onChange={e => setSearch(e.target.value)} /></div>
+                <PrimaryBtn onClick={() => { setModal('lead'); setForm({}); }} icon={Plus}>{t('sfa.addLead')}</PrimaryBtn>
               </div>} />
 
             {/* Lead Stats Bar */}
@@ -1314,10 +1430,10 @@ export default function SFAUnifiedPage() {
               return (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <Card className="p-4 lg:col-span-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Distribusi Status</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{t('sfa.statusDistribution')}</p>
                     <div className="flex rounded-xl overflow-hidden h-4 bg-gray-100">
                       {Object.entries(statusCounts).map(([status, count]: any, i: number) => (
-                        <div key={i} title={`${LEAD_STATUS[status]?.label || status}: ${count}`}
+                        <div key={i} title={`${t(`sfa.${LEAD_STATUS[status]?.tKey}`) || status}: ${count}`}
                           className="h-full transition-all" style={{ width: `${(count / total) * 100}%`, background: LEAD_COLORS[status] || '#94a3b8' }} />
                       ))}
                     </div>
@@ -1325,18 +1441,18 @@ export default function SFAUnifiedPage() {
                       {Object.entries(statusCounts).map(([status, count]: any, i: number) => (
                         <div key={i} className="flex items-center gap-1.5 text-xs">
                           <span className="w-2 h-2 rounded-full" style={{ background: LEAD_COLORS[status] || '#94a3b8' }} />
-                          <span className="text-gray-500">{LEAD_STATUS[status]?.label || status}</span>
+                          <span className="text-gray-500">{t(`sfa.${LEAD_STATUS[status]?.tKey}`) || status}</span>
                           <span className="font-bold text-gray-700">{count}</span>
                         </div>
                       ))}
                     </div>
                   </Card>
                   <Card className="p-4">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Ringkasan</p>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">{t('sfa.summaryLabel')}</p>
                     <div className="space-y-2">
-                      <div className="flex justify-between"><span className="text-xs text-gray-500">Total Lead</span><span className="text-sm font-bold text-gray-900">{total}</span></div>
-                      <div className="flex justify-between"><span className="text-xs text-gray-500">Total Estimasi</span><span className="text-sm font-bold text-emerald-600">{fmtCur(leads.reduce((s: number, l: any) => s + parseFloat(l.estimated_value || 0), 0))}</span></div>
-                      <div className="flex justify-between"><span className="text-xs text-gray-500">Avg Score</span><span className="text-sm font-bold text-amber-600">{(leads.reduce((s: number, l: any) => s + (l.score || 0), 0) / total).toFixed(0)}</span></div>
+                      <div className="flex justify-between"><span className="text-xs text-gray-500">{t('sfa.totalLead')}</span><span className="text-sm font-bold text-gray-900">{total}</span></div>
+                      <div className="flex justify-between"><span className="text-xs text-gray-500">{t('sfa.totalEstimate')}</span><span className="text-sm font-bold text-emerald-600">{fmtCur(leads.reduce((s: number, l: any) => s + parseFloat(l.estimated_value || 0), 0))}</span></div>
+                      <div className="flex justify-between"><span className="text-xs text-gray-500">{t('sfa.avgScore')}</span><span className="text-sm font-bold text-amber-600">{(leads.reduce((s: number, l: any) => s + (l.score || 0), 0) / total).toFixed(0)}</span></div>
                     </div>
                   </Card>
                 </div>
@@ -1368,17 +1484,17 @@ export default function SFAUnifiedPage() {
                     ))}
                   </div>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/50"><span className="text-xs text-gray-500">Estimasi Nilai</span><span className="text-sm font-bold text-emerald-600">{fmtCur(parseFloat(selectedItem.estimated_value))}</span></div>
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-amber-50/50"><span className="text-xs text-gray-500">Lead Score</span><div className="flex items-center gap-2"><div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full" style={{ width: `${selectedItem.score}%` }} /></div><span className="text-sm font-bold text-gray-700">{selectedItem.score}</span></div></div>
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50"><span className="text-xs text-gray-500">Territory</span><span className="text-sm font-medium text-gray-700">{selectedItem.territory_name || '-'}</span></div>
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/50"><span className="text-xs text-gray-500">{t('sfa.estimatedValue')}</span><span className="text-sm font-bold text-emerald-600">{fmtCur(parseFloat(selectedItem.estimated_value))}</span></div>
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-amber-50/50"><span className="text-xs text-gray-500">{t('sfa.leadScore')}</span><div className="flex items-center gap-2"><div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full" style={{ width: `${selectedItem.score}%` }} /></div><span className="text-sm font-bold text-gray-700">{selectedItem.score}</span></div></div>
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50"><span className="text-xs text-gray-500">{t('sfa.territory')}</span><span className="text-sm font-medium text-gray-700">{selectedItem.territory_name || '-'}</span></div>
                   </div>
                 </div>
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Ubah Status</p>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">{t('sfa.changeStatus')}</p>
                   <div className="flex gap-2 flex-wrap">
                     {Object.entries(LEAD_STATUS).map(([k, v]) => (
                       <button key={k} disabled={selectedItem.status === k} onClick={() => handleUpdateLeadStatus(selectedItem, k)}
-                        className={`text-xs px-3.5 py-1.5 rounded-lg font-medium transition-all ${selectedItem.status === k ? `${v.color} ring-2 ${v.ring} shadow-sm` : `${v.color} opacity-60 hover:opacity-100`}`}>{v.label}</button>
+                        className={`text-xs px-3.5 py-1.5 rounded-lg font-medium transition-all ${selectedItem.status === k ? `${v.color} ring-2 ${v.ring} shadow-sm` : `${v.color} opacity-60 hover:opacity-100`}`}>{t(`sfa.${v.tKey}`)}</button>
                     ))}
                   </div>
                 </div>
@@ -1394,12 +1510,12 @@ export default function SFAUnifiedPage() {
                     <th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Score</th>
                   </tr></thead>
                   <tbody className="divide-y divide-gray-50">
-                    {filteredLeads.length === 0 ? <tr><td colSpan={5}><EmptyState icon={UserPlus} title="Belum ada lead" subtitle="Klik Tambah Lead untuk memulai" /></td></tr> :
+                    {filteredLeads.length === 0 ? <tr><td colSpan={5}><EmptyState icon={UserPlus} title={t('sfa.noLeads')} subtitle={t('sfa.noLeadsSub')} /></td></tr> :
                       filteredLeads.map(l => (
                         <tr key={l.id} className="hover:bg-amber-50/30 cursor-pointer group transition-colors" onClick={() => setSelectedItem(l)}>
                           <td className="px-5 py-4"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">{(l.company_name || l.contact_name || '?')[0].toUpperCase()}</div><div><div className="font-semibold text-gray-900 group-hover:text-amber-700 transition-colors">{l.company_name || l.contact_name}</div><div className="text-xs text-gray-400 mt-0.5">{l.lead_number}</div></div></div></td>
                           <td className="px-5 py-4 hidden sm:table-cell"><div className="text-gray-700">{l.contact_name}</div><div className="text-xs text-gray-400">{l.contact_email}</div></td>
-                          <td className="px-5 py-4"><span className={`inline-flex items-center text-xs px-2.5 py-1 rounded-lg font-medium ${LEAD_STATUS[l.status]?.color || ''}`}>{LEAD_STATUS[l.status]?.label || l.status}</span></td>
+                          <td className="px-5 py-4"><span className={`inline-flex items-center text-xs px-2.5 py-1 rounded-lg font-medium ${LEAD_STATUS[l.status]?.color || ''}`}>{t(`sfa.${LEAD_STATUS[l.status]?.tKey}`) || l.status}</span></td>
                           <td className="px-5 py-4 text-right hidden md:table-cell"><span className="font-semibold text-gray-900">{fmtCur(parseFloat(l.estimated_value))}</span></td>
                           <td className="px-5 py-4 hidden lg:table-cell"><div className="flex items-center gap-2 justify-end"><div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full" style={{ width: `${l.score}%` }} /></div><span className="text-xs font-medium text-gray-500 w-6 text-right">{l.score}</span></div></td>
                         </tr>
@@ -1415,15 +1531,15 @@ export default function SFAUnifiedPage() {
           {/* PIPELINE */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'pipeline' && (<>
-            <SectionHeader title="Sales Pipeline" subtitle={`Total: ${fmtCur(pipelineData?.totalValue || 0)} (${pipelineData?.totalCount || 0} deals) | Weighted: ${fmtCur(pipelineData?.weightedValue || 0)}`}
-              action={<PrimaryBtn onClick={() => { setModal('opportunity'); setForm({}); }} icon={Plus}>Tambah</PrimaryBtn>} />
+            <SectionHeader title={t('sfa.salesPipeline')} subtitle={`Total: ${fmtCur(pipelineData?.totalValue || 0)} (${pipelineData?.totalCount || 0} deals) | Weighted: ${fmtCur(pipelineData?.weightedValue || 0)}`}
+              action={<PrimaryBtn onClick={() => { setModal('opportunity'); setForm({}); }} icon={Plus}>{t('sfa.addBtn')}</PrimaryBtn>} />
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {Object.entries(OPP_STAGES).map(([stage, info]) => {
                 const d = (pipelineData?.stages || []).find((s: any) => s.stage === stage);
                 return (
                   <Card key={stage} className="p-4 text-center group hover:shadow-md transition-all">
                     <div className={`w-full h-1 rounded-full bg-gradient-to-r ${info.gradient} mb-4 group-hover:h-1.5 transition-all`} />
-                    <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">{info.label}</p>
+                    <p className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">{t(`sfa.${info.tKey}`)}</p>
                     <p className="text-3xl font-extrabold text-gray-900 mt-1">{d?.count || 0}</p>
                     <p className="text-xs text-gray-400 mt-1">{fmtCur(parseFloat(d?.value || 0))}</p>
                   </Card>
@@ -1433,10 +1549,10 @@ export default function SFAUnifiedPage() {
 
             {/* Pipeline Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <ChartCard title="Pipeline Value per Stage" subtitle="Nilai deals aktif per tahap">
+              <ChartCard title={t('sfa.pipelineValueStage')} subtitle={t('sfa.pipelineValueSub')}>
                 {(pipelineData?.stages || []).length > 0 ? (
                   <ResponsiveContainer width="100%" height={230}>
-                    <BarChart data={(pipelineData?.stages || []).filter((s: any) => s.stage !== 'closed_lost').map((s: any) => ({ name: OPP_STAGES[s.stage]?.label || s.stage, value: parseFloat(s.value), count: parseInt(s.count) }))}
+                    <BarChart data={(pipelineData?.stages || []).filter((s: any) => s.stage !== 'closed_lost').map((s: any) => ({ name: t(`sfa.${OPP_STAGES[s.stage]?.tKey}`) || s.stage, value: parseFloat(s.value), count: parseInt(s.count) }))}
                       margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                       <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
@@ -1447,9 +1563,9 @@ export default function SFAUnifiedPage() {
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
-                ) : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><TrendingUp className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">Belum ada data</span></div>}
+                ) : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><TrendingUp className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">{t('sfa.noData')}</span></div>}
               </ChartCard>
-              <ChartCard title="Distribusi Deals" subtitle="Proporsi jumlah deals per stage">
+              <ChartCard title={t('sfa.dealsDistribution')} subtitle={t('sfa.dealsProportion')}>
                 {(pipelineData?.stages || []).length > 0 ? (() => {
                   const totalDeals = (pipelineData?.stages || []).reduce((s: number, d: any) => s + parseInt(d.count), 0);
                   return (
@@ -1457,7 +1573,7 @@ export default function SFAUnifiedPage() {
                       <div className="w-44 h-44 shrink-0 relative">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
-                            <Pie data={(pipelineData?.stages || []).map((s: any) => ({ name: OPP_STAGES[s.stage]?.label || s.stage, value: parseInt(s.count), fill: STAGE_COLORS[s.stage] || '#94a3b8' }))}
+                            <Pie data={(pipelineData?.stages || []).map((s: any) => ({ name: t(`sfa.${OPP_STAGES[s.stage]?.tKey}`) || s.stage, value: parseInt(s.count), fill: STAGE_COLORS[s.stage] || '#94a3b8' }))}
                               cx="50%" cy="50%" innerRadius={48} outerRadius={74} paddingAngle={2} dataKey="value" stroke="white" strokeWidth={2}>
                               {(pipelineData?.stages || []).map((s: any, i: number) => <Cell key={i} fill={STAGE_COLORS[s.stage] || '#94a3b8'} />)}
                             </Pie>
@@ -1471,12 +1587,12 @@ export default function SFAUnifiedPage() {
                       </div>
                       <div className="flex-1 w-full divide-y divide-gray-50">
                         {(pipelineData?.stages || []).map((s: any, i: number) => (
-                          <ChartLegendItem key={i} color={STAGE_COLORS[s.stage] || '#94a3b8'} label={OPP_STAGES[s.stage]?.label || s.stage} value={parseInt(s.count)} total={totalDeals} />
+                          <ChartLegendItem key={i} color={STAGE_COLORS[s.stage] || '#94a3b8'} label={t(`sfa.${OPP_STAGES[s.stage]?.tKey}`) || s.stage} value={parseInt(s.count)} total={totalDeals} />
                         ))}
                       </div>
                     </div>
                   );
-                })() : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><TrendingUp className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">Belum ada data</span></div>}
+                })() : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><TrendingUp className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">{t('sfa.noData')}</span></div>}
               </ChartCard>
             </div>
 
@@ -1490,12 +1606,12 @@ export default function SFAUnifiedPage() {
                   <th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Close Date</th>
                 </tr></thead>
                 <tbody className="divide-y divide-gray-50">
-                  {opportunities.length === 0 ? <tr><td colSpan={5}><EmptyState icon={TrendingUp} title="Belum ada opportunity" /></td></tr> :
+                  {opportunities.length === 0 ? <tr><td colSpan={5}><EmptyState icon={TrendingUp} title={t('sfa.noOpportunity')} /></td></tr> :
                     opportunities.map(o => (
                       <tr key={o.id} className="hover:bg-amber-50/30 transition-colors">
                         <td className="px-5 py-4"><div className="font-semibold text-gray-900">{o.title}</div><div className="text-xs text-gray-400 mt-0.5">{o.opportunity_number}</div></td>
                         <td className="px-5 py-4 text-gray-600 hidden sm:table-cell">{o.customer_name || '-'}</td>
-                        <td className="px-5 py-4"><select className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" value={o.stage} onChange={e => handleUpdateOppStage(o, e.target.value)}>{Object.entries(OPP_STAGES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></td>
+                        <td className="px-5 py-4"><select className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all" value={o.stage} onChange={e => handleUpdateOppStage(o, e.target.value)}>{Object.entries(OPP_STAGES).map(([k, v]) => <option key={k} value={k}>{t(`sfa.${v.tKey}`)}</option>)}</select></td>
                         <td className="px-5 py-4 text-right font-bold text-emerald-600">{fmtCur(parseFloat(o.expected_value))}</td>
                         <td className="px-5 py-4 text-right text-gray-500 hidden md:table-cell">{fmtDate(o.expected_close_date)}</td>
                       </tr>
@@ -1510,9 +1626,9 @@ export default function SFAUnifiedPage() {
           {/* TEAMS & TERRITORY (merged from Enhanced) */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'teams' && (<>
-            <SectionHeader title="Tim Field Force & Territory" subtitle={`${teams.length} tim | ${territories.length} territory`}
+            <SectionHeader title={t('sfa.teamFieldForce')} subtitle={`${teams.length} ${t('sfa.statTeams').toLowerCase()} | ${territories.length} territory`}
               action={<div className="flex gap-2">
-                <PrimaryBtn onClick={() => { setModal('create-team'); setForm({ team_type: 'field_force' }); }} icon={Plus}>Buat Tim</PrimaryBtn>
+                <PrimaryBtn onClick={() => { setModal('create-team'); setForm({ team_type: 'field_force' }); }} icon={Plus}>{t('sfa.createTeam')}</PrimaryBtn>
               </div>} />
 
             {/* HRIS Sync Status Banner */}
@@ -1522,7 +1638,7 @@ export default function SFAUnifiedPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-violet-100 flex items-center justify-center"><Building2 className="w-5 h-5 text-violet-600" /></div>
                     <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">HRIS Integration</h3>
+                      <h3 className="font-semibold text-gray-900 text-sm">{t('sfa.hrisIntegration')}</h3>
                       <p className="text-xs text-gray-500">{hrisSyncStatus.activeHrisEmployees} karyawan aktif | {hrisSyncStatus.syncedToSfa} sudah di SFA | {hrisSyncStatus.unsyncedCount} belum assign</p>
                     </div>
                   </div>
@@ -1540,8 +1656,8 @@ export default function SFAUnifiedPage() {
             {/* HRIS Department Quick-Sync */}
             {isManager && hrisDepartments.length > 0 && (
               <Card className="mb-4">
-                <h4 className="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2"><Building2 className="w-4 h-4 text-violet-500" /> Sync dari HRIS Department</h4>
-                <p className="text-xs text-gray-500 mb-3">Buat tim otomatis dari department HRIS dan assign semua karyawan aktif</p>
+                <h4 className="font-semibold text-gray-900 text-sm mb-3 flex items-center gap-2"><Building2 className="w-4 h-4 text-violet-500" /> {t('sfa.syncFromHris')}</h4>
+                <p className="text-xs text-gray-500 mb-3">{t('sfa.syncFromHrisDesc')}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                   {hrisDepartments.map((d: any) => (
                     <button key={d.department} disabled={hrisSyncing}
@@ -1570,25 +1686,25 @@ export default function SFAUnifiedPage() {
 
             {/* Teams Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {teams.length === 0 ? <div className="col-span-3"><EmptyState icon={Users} title="Belum ada tim" /></div> :
-                teams.map((t: any) => (
-                  <Card key={t.id} className="p-5" hover>
+              {teams.length === 0 ? <div className="col-span-3"><EmptyState icon={Users} title={t('sfa.noTeams')} /></div> :
+                teams.map((team: any) => (
+                  <Card key={team.id} className="p-5" hover>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm shrink-0">{(t.name || '?')[0]}</div>
-                        <div><h3 className="font-semibold text-gray-900 text-sm">{t.name}</h3><p className="text-[11px] text-gray-400 mt-0.5">{t.code} | {t.team_type}</p></div>
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm shrink-0">{(team.name || '?')[0]}</div>
+                        <div><h3 className="font-semibold text-gray-900 text-sm">{team.name}</h3><p className="text-[11px] text-gray-400 mt-0.5">{team.code} | {team.team_type}</p></div>
                       </div>
-                      <Badge color={t.is_active ? 'green' : 'gray'}>{t.is_active ? 'Active' : 'Off'}</Badge>
+                      <Badge color={team.is_active ? 'green' : 'gray'}>{team.is_active ? 'Active' : 'Off'}</Badge>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-500 pt-3 border-t border-gray-50">
-                      <div className="flex items-center gap-1"><Users className="w-3 h-3" /> {t.member_count || 0} anggota</div>
-                      {t.leader_name && <div className="text-gray-400">| Leader: <span className="text-gray-600 font-medium">{t.leader_name}</span></div>}
+                      <div className="flex items-center gap-1"><Users className="w-3 h-3" /> {team.member_count || 0} anggota</div>
+                      {team.leader_name && <div className="text-gray-400">| Leader: <span className="text-gray-600 font-medium">{team.leader_name}</span></div>}
                     </div>
                     {/* Add Member Button */}
                     {isManager && (
-                      <button onClick={() => { setModal('add-member'); setForm({ team_id: t.id, team_name: t.name, role: 'member' }); }}
+                      <button onClick={() => { setModal('add-member'); setForm({ team_id: team.id, team_name: team.name, role: 'member' }); }}
                         className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 border border-dashed border-gray-200 rounded-lg text-xs text-gray-500 hover:border-violet-300 hover:text-violet-600 hover:bg-violet-50 transition-all">
-                        <Plus className="w-3 h-3" /> Tambah Anggota
+                        <Plus className="w-3 h-3" /> {t('sfa.addMember')}
                       </button>
                     )}
                   </Card>
@@ -1599,7 +1715,7 @@ export default function SFAUnifiedPage() {
             {/* Available Users from HRIS */}
             {isManager && hrisAvailableUsers.length > 0 && (
               <>
-                <SectionHeader title="Karyawan Tersedia" subtitle={`${hrisAvailableUsers.filter((u: any) => !u.current_team).length} belum punya tim`} />
+                <SectionHeader title={t('sfa.availableEmployees')} subtitle={`${hrisAvailableUsers.filter((u: any) => !u.current_team).length} ${t('sfa.notAssignedYet')}`} />
                 <TableWrap>
                   <table className="w-full text-sm">
                     <thead><tr className="border-b border-gray-100">
@@ -1621,7 +1737,7 @@ export default function SFAUnifiedPage() {
                           <td className="px-4 py-3 text-center"><span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${u.role === 'manager' || u.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>{u.role}</span></td>
                           <td className="px-4 py-3">
                             {u.current_team ? <span className="text-xs text-green-600 font-medium">{u.current_team}</span> :
-                              <span className="text-xs text-gray-400">Belum assign</span>}
+                              <span className="text-xs text-gray-400">{t('sfa.notAssignedYet')}</span>}
                           </td>
                         </tr>
                       ))}
@@ -1656,16 +1772,52 @@ export default function SFAUnifiedPage() {
           {/* VISITS & COVERAGE (merged Core visits + Advanced coverage) */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'visits' && (<>
-            <SectionHeader title="Kunjungan & Coverage" subtitle={`${visits.length} kunjungan | ${coveragePlans.length} coverage plans`}
-              action={<PrimaryBtn onClick={() => { setModal('visit'); setForm({ visit_date: new Date().toISOString().split('T')[0] }); }} icon={Plus}>Jadwalkan</PrimaryBtn>} />
+            <SectionHeader title={t('sfa.visitsCoverage')} subtitle={`${visits.length} ${t('sfa.visits').toLowerCase()} | ${coveragePlans.length} coverage plans`}
+              action={<PrimaryBtn onClick={() => { setModal('visit'); setForm({ visit_date: new Date().toISOString().split('T')[0] }); }} icon={Plus}>{t('sfa.scheduleBtn')}</PrimaryBtn>} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <Card className="p-4 lg:col-span-2 border border-violet-100 bg-gradient-to-r from-violet-50/80 to-indigo-50/80">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0">
+                      <Link2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">{t('sfa.visitTaskBridgeTitle')}</h3>
+                      <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{t('sfa.visitTaskBridgeSub')}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setTab('field-tasks'); setSearch(''); setSelectedItem(null); }}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 shadow-sm shrink-0"
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                    {t('sfa.openVisitPlanTasks')}
+                  </button>
+                </div>
+              </Card>
+              {visitBridgeStat && (
+                <Card className="p-4 border border-gray-100">
+                  <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wide mb-2">{t('sfa.visitBridgePeriod')}</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div><span className="text-gray-500">{t('sfa.visitsScheduled')}</span><div className="font-bold text-gray-900">{visitBridgeStat.visits_in_period ?? '—'}</div></div>
+                    <div><span className="text-gray-500">{t('sfa.visitsDone')}</span><div className="font-bold text-emerald-700">{visitBridgeStat.visits_completed ?? '—'}</div></div>
+                    <div><span className="text-gray-500">{t('sfa.visitTasksLinked')}</span><div className="font-bold text-violet-700">{visitBridgeStat.visit_tasks_in_period ?? '—'}</div></div>
+                    <div><span className="text-gray-500">{t('sfa.visitTasksDone')}</span><div className="font-bold text-indigo-700">{visitBridgeStat.visit_tasks_completed ?? '—'}</div></div>
+                  </div>
+                </Card>
+              )}
+            </div>
+
             {/* Visit Analytics */}
             {visits.length > 0 && (() => {
               const vStatusCounts = visits.reduce((a: any, v: any) => { a[v.status] = (a[v.status] || 0) + 1; return a; }, {});
-              const vColors: Record<string, string> = { completed: '#10b981', in_progress: '#3b82f6', planned: '#f59e0b', cancelled: '#ef4444', missed: '#6b7280' };
+              const vColors: Record<string, string> = { completed: '#10b981', in_progress: '#3b82f6', checked_in: '#3b82f6', planned: '#f59e0b', cancelled: '#ef4444', missed: '#6b7280' };
               const pieData = Object.entries(vStatusCounts).map(([s, c]) => ({ name: s, value: c as number, fill: vColors[s] || '#94a3b8' }));
               return (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <ChartCard title="Status Kunjungan" subtitle="Distribusi status semua kunjungan">
+                  <ChartCard title={t('sfa.visitStatus')} subtitle={t('sfa.visitStatusSub')}>
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                       <div className="w-40 h-40 shrink-0 relative">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1689,7 +1841,7 @@ export default function SFAUnifiedPage() {
                     </div>
                   </ChartCard>
                   {compliance.length > 0 && (
-                    <ChartCard title="Compliance per FF" subtitle="Persentase realisasi kunjungan">
+                    <ChartCard title={t('sfa.compliancePerFf')} subtitle={t('sfa.complianceSub')}>
                       <ResponsiveContainer width="100%" height={200}>
                         <BarChart data={compliance.slice(0, 8).map((c: any) => ({ name: (c.name || '').split(' ')[0], compliance: parseFloat(c.compliance_pct), planned: parseInt(c.total_planned), actual: parseInt(c.total_actual) }))} margin={{ top: 8, right: 8, bottom: 0, left: -10 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -1722,7 +1874,7 @@ export default function SFAUnifiedPage() {
               </div>
             )}
             {compliance.length > 0 && (<>
-              <SectionHeader title="Visit Compliance per FF" />
+              <SectionHeader title={t('sfa.visitComplianceTitle')} />
               <TableWrap>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nama</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Customer</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Planned</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actual</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Compliance</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Overdue</th></tr></thead>
@@ -1741,30 +1893,79 @@ export default function SFAUnifiedPage() {
                 </table>
               </TableWrap>
             </>)}
-            <SectionHeader title="Kunjungan Terbaru" />
+            <SectionHeader title={t('sfa.recentVisits')} />
             <div className="grid gap-3">
-              {visits.length === 0 ? <Card><EmptyState icon={Navigation} title="Belum ada kunjungan" subtitle="Jadwalkan kunjungan pertama" /></Card> :
+              {visits.length === 0 ? <Card><EmptyState icon={Navigation} title={t('sfa.noVisits')} subtitle={t('sfa.noVisitsSub')} /></Card> :
                 visits.slice(0, 20).map(v => (
                   <Card key={v.id} className="p-4 sm:px-5" hover>
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${v.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : v.status === 'in_progress' ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-400'}`}><Navigation className="w-5 h-5" /></div>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${v.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : v.status === 'in_progress' || v.status === 'checked_in' ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-400'}`}><Navigation className="w-5 h-5" /></div>
                         <div className="min-w-0">
                           <div className="font-semibold text-gray-900 truncate">{v.customer_name || 'Customer'}</div>
-                          <div className="text-xs text-gray-400 mt-0.5 truncate">{v.purpose || v.visit_type} | {fmtDate(v.visit_date)}</div>
+                          <div className="text-xs text-gray-400 mt-0.5 truncate">
+                            {v.salesperson_name ? <span className="text-gray-500">{v.salesperson_name} · </span> : null}
+                            {v.purpose || v.visit_type} | {fmtDate(v.visit_date)}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {v.order_taken && <Badge color="green">Order: {fmtCur(parseFloat(v.order_value))}</Badge>}
                         <button onClick={() => {
-                          const next: Record<string,string> = { planned: 'in_progress', in_progress: 'completed', completed: 'planned', cancelled: 'planned', missed: 'planned' };
+                          const next: Record<string,string> = { planned: 'in_progress', in_progress: 'completed', completed: 'planned', cancelled: 'planned', missed: 'planned', checked_in: 'completed' };
                           const ns = next[v.status] || 'in_progress';
-                          apiCore('update-visit', 'PUT', { id: v.id, status: ns }).then(r => { if (r.success) { showToast(`Visit → ${ns.replace('_',' ')}`); fetchData(); } else showToast(r.error || 'Gagal'); });
-                        }} title="Klik untuk ubah status">
-                          <Badge color={v.status === 'completed' ? 'green' : v.status === 'in_progress' ? 'blue' : 'gray'}>{v.status}</Badge>
+                          apiCore('update-visit', 'PUT', { id: v.id, status: ns }).then(r => { if (r.success) { showToast(`Visit → ${ns.replace('_',' ')}`); fetchData(); } else showToast(r.error || t('sfa.failedLabel')); });
+                        }} title={t('sfa.changeStatus')}>
+                          <Badge color={v.status === 'completed' ? 'green' : v.status === 'in_progress' || v.status === 'checked_in' ? 'blue' : 'gray'}>{v.status}</Badge>
                         </button>
                       </div>
                     </div>
+                    {(v.check_in_time || v.check_out_time || v.duration_minutes != null) && (
+                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-600 border-t border-gray-50 pt-3">
+                        <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />{t('sfa.visitCheckIn')}: <span className="font-medium text-gray-800">{fmtDateTime(v.check_in_time)}</span></span>
+                        <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />{t('sfa.visitCheckOut')}: <span className="font-medium text-gray-800">{fmtDateTime(v.check_out_time)}</span></span>
+                        {v.duration_minutes != null && Number(v.duration_minutes) > 0 && (
+                          <span>{t('sfa.visitDuration')}: <span className="font-medium text-gray-800">{v.duration_minutes} min</span></span>
+                        )}
+                      </div>
+                    )}
+                    {(v.check_in_photo_url || v.check_out_photo_url) && (
+                      <div className="mt-3 flex flex-wrap gap-3 border-t border-gray-50 pt-3">
+                        {v.check_in_photo_url && (
+                          <a href={v.check_in_photo_url} target="_blank" rel="noopener noreferrer" className="group flex flex-col gap-1">
+                            <div className="relative h-20 w-20 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 ring-1 ring-gray-100">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={v.check_in_photo_url} alt="" className="h-full w-full object-cover" />
+                              <span className="absolute bottom-0 inset-x-0 bg-black/50 text-[9px] text-white text-center py-0.5">{t('sfa.visitOpenPhoto')}</span>
+                            </div>
+                            <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Camera className="w-3 h-3" />{t('sfa.visitPhotoIn')}</span>
+                          </a>
+                        )}
+                        {v.check_out_photo_url && (
+                          <a href={v.check_out_photo_url} target="_blank" rel="noopener noreferrer" className="group flex flex-col gap-1">
+                            <div className="relative h-20 w-20 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 ring-1 ring-gray-100">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={v.check_out_photo_url} alt="" className="h-full w-full object-cover" />
+                              <span className="absolute bottom-0 inset-x-0 bg-black/50 text-[9px] text-white text-center py-0.5">{t('sfa.visitOpenPhoto')}</span>
+                            </div>
+                            <span className="text-[10px] text-gray-500 flex items-center gap-0.5"><Camera className="w-3 h-3" />{t('sfa.visitPhotoOut')}</span>
+                          </a>
+                        )}
+                      </div>
+                    )}
+                    {(v.outcome || v.outcome_notes || v.feedback) && (
+                      <div className="mt-3 space-y-2 text-xs border-t border-gray-50 pt-3">
+                        {v.outcome && (
+                          <p className="text-gray-700"><span className="text-gray-500 font-medium">{t('sfa.visitOutcome')}: </span>{v.outcome}</p>
+                        )}
+                        {v.outcome_notes && (
+                          <p className="text-gray-700 whitespace-pre-wrap"><span className="text-gray-500 font-medium">{t('sfa.visitNotes')}: </span>{v.outcome_notes}</p>
+                        )}
+                        {v.feedback && (
+                          <p className="text-gray-700 whitespace-pre-wrap"><span className="text-gray-500 font-medium">{t('sfa.visitFeedback')}: </span>{v.feedback}</p>
+                        )}
+                      </div>
+                    )}
                   </Card>
                 ))
               }
@@ -1775,8 +1976,8 @@ export default function SFAUnifiedPage() {
           {/* ORDERS & QUOTATIONS (merged Advanced field orders + Core quotations) */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'orders' && (<>
-            <SectionHeader title="Field Order & Quotation" subtitle={`${fieldOrders.length} orders | ${quotations.length} quotations`}
-              action={<PrimaryBtn onClick={() => { setModal('field-order'); setForm({}); }} icon={Plus}>Buat Field Order</PrimaryBtn>} />
+            <SectionHeader title={t('sfa.fieldOrderQuotation')} subtitle={`${fieldOrders.length} orders | ${quotations.length} quotations`}
+              action={<PrimaryBtn onClick={() => { setModal('field-order'); setForm({}); }} icon={Plus}>{t('sfa.createFieldOrder')}</PrimaryBtn>} />
 
             {/* Order Analytics */}
             {fieldOrders.length > 0 && (() => {
@@ -1786,7 +1987,7 @@ export default function SFAUnifiedPage() {
               const approvedRev = fieldOrders.filter((fo: any) => fo.status === 'approved').reduce((s: number, fo: any) => s + (parseFloat(fo.total) || 0), 0);
               return (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                  <ChartCard title="Status Order" subtitle="Distribusi status">
+                  <ChartCard title={t('sfa.orderStatus')} subtitle={t('sfa.orderDistSub')}>
                     <div className="flex flex-col items-center gap-4">
                       <div className="w-40 h-40 relative">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1810,12 +2011,12 @@ export default function SFAUnifiedPage() {
                       </div>
                     </div>
                   </ChartCard>
-                  <ChartCard title="Ringkasan Order" subtitle="Performa order bulan ini" className="lg:col-span-2">
+                  <ChartCard title={t('sfa.orderSummary')} subtitle={t('sfa.orderPerfSub')} className="lg:col-span-2">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <div className="bg-gray-50 rounded-xl p-4 text-center"><p className="text-2xl font-extrabold text-gray-900">{fieldOrders.length}</p><p className="text-[10px] text-gray-500 font-medium mt-1">Total Order</p></div>
-                      <div className="bg-emerald-50 rounded-xl p-4 text-center"><p className="text-2xl font-extrabold text-emerald-600">{oStatusCounts['approved'] || 0}</p><p className="text-[10px] text-gray-500 font-medium mt-1">Approved</p></div>
-                      <div className="bg-blue-50 rounded-xl p-4 text-center"><p className="text-lg font-bold text-blue-600">{fmtCur(totalRev)}</p><p className="text-[10px] text-gray-500 font-medium mt-1">Total Value</p></div>
-                      <div className="bg-amber-50 rounded-xl p-4 text-center"><p className="text-lg font-bold text-amber-600">{fmtCur(approvedRev)}</p><p className="text-[10px] text-gray-500 font-medium mt-1">Approved Value</p></div>
+                      <div className="bg-gray-50 rounded-xl p-4 text-center"><p className="text-2xl font-extrabold text-gray-900">{fieldOrders.length}</p><p className="text-[10px] text-gray-500 font-medium mt-1">{t('sfa.totalOrder')}</p></div>
+                      <div className="bg-emerald-50 rounded-xl p-4 text-center"><p className="text-2xl font-extrabold text-emerald-600">{oStatusCounts['approved'] || 0}</p><p className="text-[10px] text-gray-500 font-medium mt-1">{t('sfa.approvedLabel')}</p></div>
+                      <div className="bg-blue-50 rounded-xl p-4 text-center"><p className="text-lg font-bold text-blue-600">{fmtCur(totalRev)}</p><p className="text-[10px] text-gray-500 font-medium mt-1">{t('sfa.totalValueLabel')}</p></div>
+                      <div className="bg-amber-50 rounded-xl p-4 text-center"><p className="text-lg font-bold text-amber-600">{fmtCur(approvedRev)}</p><p className="text-[10px] text-gray-500 font-medium mt-1">{t('sfa.approvedValueLabel')}</p></div>
                     </div>
                   </ChartCard>
                 </div>
@@ -1826,7 +2027,7 @@ export default function SFAUnifiedPage() {
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">No. Order</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Items</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th><th className="px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Tanggal</th><th className="px-5 py-3.5"></th></tr></thead>
                 <tbody className="divide-y divide-gray-50">
-                  {fieldOrders.length === 0 ? <tr><td colSpan={7}><EmptyState icon={ShoppingCart} title="Belum ada field order" /></td></tr> :
+                  {fieldOrders.length === 0 ? <tr><td colSpan={7}><EmptyState icon={ShoppingCart} title={t('sfa.noFieldOrder')} /></td></tr> :
                     fieldOrders.map((fo: any) => (
                       <tr key={fo.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-3.5 font-mono text-xs text-amber-600 font-medium">{fo.order_number}</td>
@@ -1835,7 +2036,7 @@ export default function SFAUnifiedPage() {
                         <td className="px-5 py-3.5 text-right font-bold text-gray-900">{fmtCur(fo.total || 0)}</td>
                         <td className="px-5 py-3.5 text-center"><Badge color={fo.status === 'approved' ? 'green' : fo.status === 'rejected' ? 'red' : fo.status === 'submitted' ? 'blue' : 'gray'}>{fo.status}</Badge></td>
                         <td className="px-5 py-3.5 text-gray-500 hidden md:table-cell">{fo.order_date}</td>
-                        <td className="px-5 py-3.5">{canApprove && (fo.status === 'draft' || fo.status === 'submitted') && (<div className="flex gap-1.5"><button onClick={() => handleUpdateFoStatus(fo.id, 'approved')} className="px-2.5 py-1.5 text-xs bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 font-medium transition-colors">Approve</button><button onClick={() => handleUpdateFoStatus(fo.id, 'rejected')} className="px-2.5 py-1.5 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 font-medium transition-colors">Reject</button></div>)}</td>
+                        <td className="px-5 py-3.5">{canApprove && (fo.status === 'draft' || fo.status === 'submitted') && (<div className="flex gap-1.5"><button onClick={() => handleUpdateFoStatus(fo.id, 'approved')} className="px-2.5 py-1.5 text-xs bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 font-medium transition-colors">{t('sfa.approveBtn')}</button><button onClick={() => handleUpdateFoStatus(fo.id, 'rejected')} className="px-2.5 py-1.5 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 font-medium transition-colors">{t('sfa.rejectBtn')}</button></div>)}</td>
                       </tr>
                     ))
                   }
@@ -1843,7 +2044,7 @@ export default function SFAUnifiedPage() {
               </table>
             </TableWrap>
             {quotations.length > 0 && (<>
-              <SectionHeader title="Quotation / Penawaran" />
+              <SectionHeader title={t('sfa.quotationTitle')} />
               <TableWrap>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">No. Quotation</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Valid Until</th></tr></thead>
@@ -1864,26 +2065,39 @@ export default function SFAUnifiedPage() {
           </>)}
 
           {/* ═══════════════════════════════════════════ */}
+          {/* SALES MANAGEMENT (Retail · FMCG · Direct Sales) */}
+          {/* ═══════════════════════════════════════════ */}
+          {tab === 'sales-mgmt' && (
+            <SalesManagementModule
+              fmtCur={fmtCur}
+              fmtDate={fmtDate}
+              fmtNum={fmt}
+              t={t}
+              canManage={isManager}
+            />
+          )}
+
+          {/* ═══════════════════════════════════════════ */}
           {/* TARGET & ACHIEVEMENT (from Enhanced - replaces basic Core targets) */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'targets' && (<>
-            <SectionHeader title="Target Groups & Achievement" subtitle="Sistem target komprehensif per grup, tim, dan produk" />
+            <SectionHeader title={t('sfa.targetGroupsTitle')} subtitle={t('sfa.targetGroupsSub')} />
             <div className="grid sm:grid-cols-2 gap-4">
-              {targetGroups.length === 0 ? <div className="col-span-2"><EmptyState icon={Target} title="Belum ada target group" /></div> :
+                {targetGroups.length === 0 ? <div className="col-span-2"><EmptyState icon={Target} title={t('sfa.noTargetGroup')} /></div> :
                 targetGroups.map((tg: any) => (
                   <Card key={tg.id} className="p-5" hover>
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shrink-0"><Target className="w-5 h-5" /></div>
-                        <div><h4 className="font-semibold text-gray-900">{tg.name}</h4><p className="text-xs text-gray-400 mt-0.5">{tg.code} | {tg.period_type}</p></div>
+                        <div><h4 className="font-semibold text-sm text-gray-900">{tg.name}</h4><p className="text-xs text-gray-400">{tg.code} | {tg.period_type}</p></div>
                       </div>
                       <Badge color={tg.status === 'active' ? 'green' : 'gray'}>{tg.status}</Badge>
                     </div>
                     <div className="text-xs text-gray-400 mb-3">{tg.period_start} → {tg.period_end}</div>
                     <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-50">
-                      <div><p className="text-[10px] text-gray-400 uppercase">Metrik</p><p className="text-xs font-semibold text-gray-700 mt-0.5">{tg.target_metric}</p></div>
-                      <div><p className="text-[10px] text-gray-400 uppercase">Tipe</p><p className="text-xs font-semibold text-gray-700 mt-0.5">{tg.target_type}</p></div>
-                      <div><p className="text-[10px] text-gray-400 uppercase">Assign</p><p className="text-xs font-semibold text-gray-700 mt-0.5">{tg.assignment_count || 0}</p></div>
+                      <div><p className="text-[10px] text-gray-400 uppercase">{t('sfa.metricLabel')}</p><p className="text-xs font-semibold text-gray-700 mt-0.5">{tg.target_metric}</p></div>
+                      <div><p className="text-[10px] text-gray-400 uppercase">{t('sfa.typeLabel')}</p><p className="text-xs font-semibold text-gray-700 mt-0.5">{tg.target_type}</p></div>
+                      <div><p className="text-[10px] text-gray-400 uppercase">{t('sfa.assignLabel')}</p><p className="text-xs font-semibold text-gray-700 mt-0.5">{tg.assignment_count || 0}</p></div>
                     </div>
                   </Card>
                 ))
@@ -1897,7 +2111,7 @@ export default function SFAUnifiedPage() {
           {tab === 'incentives' && (<>
             {/* Sub-tab navigation */}
             <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6">
-              {([['overview','📊 Overview'],['product','🏷️ Komisi Produk'],['group','📦 Komisi Group'],['outlet','🏪 Target Outlet'],['strategy','🎯 Sales Strategy']] as const).map(([k, label]) => (
+              {([['overview',`📊 ${t('sfa.incOverview')}`],['product',`🏷️ ${t('sfa.incProductComm')}`],['group',`📦 ${t('sfa.incGroupComm')}`],['outlet',`🏪 ${t('sfa.incOutletTarget')}`],['strategy',`🎯 ${t('sfa.incSalesStrategy')}`]] as const).map(([k, label]) => (
                 <button key={k} onClick={() => setIncSubTab(k as any)} className={`flex-1 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${incSubTab === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{label}</button>
               ))}
             </div>
@@ -1907,24 +2121,24 @@ export default function SFAUnifiedPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                 <Card className="p-4 text-center cursor-pointer hover:ring-2 ring-blue-200" onClick={() => setIncSubTab('product')} hover>
                   <div className="text-2xl font-bold text-blue-600">{commSummary?.product_commissions?.active || 0}</div>
-                  <div className="text-xs text-gray-500 mt-1">Komisi Produk Aktif</div>
+                  <div className="text-xs text-gray-500 mt-1">{t('sfa.activeProductComm')}</div>
                 </Card>
                 <Card className="p-4 text-center cursor-pointer hover:ring-2 ring-purple-200" onClick={() => setIncSubTab('group')} hover>
                   <div className="text-2xl font-bold text-purple-600">{commSummary?.commission_groups?.active || 0}</div>
-                  <div className="text-xs text-gray-500 mt-1">Komisi Group Aktif</div>
+                  <div className="text-xs text-gray-500 mt-1">{t('sfa.activeGroupComm')}</div>
                 </Card>
                 <Card className="p-4 text-center cursor-pointer hover:ring-2 ring-amber-200" onClick={() => setIncSubTab('outlet')} hover>
                   <div className="text-2xl font-bold text-amber-600">{commSummary?.outlet_targets?.total || 0}</div>
-                  <div className="text-xs text-gray-500 mt-1">Target Outlet</div>
+                  <div className="text-xs text-gray-500 mt-1">{t('sfa.incOutletTarget')}</div>
                 </Card>
                 <Card className="p-4 text-center cursor-pointer hover:ring-2 ring-emerald-200" onClick={() => setIncSubTab('strategy')} hover>
                   <div className="text-2xl font-bold text-emerald-600">{commSummary?.strategies?.active || 0}</div>
-                  <div className="text-xs text-gray-500 mt-1">Sales Strategy Aktif</div>
+                  <div className="text-xs text-gray-500 mt-1">{t('sfa.activeSalesStrategy')}</div>
                 </Card>
               </div>
-              <SectionHeader title="Skema Insentif" />
+              <SectionHeader title={t('sfa.incentiveSchemes')} />
               <div className="grid sm:grid-cols-2 gap-4">
-                {incentiveSchemes.length === 0 ? <div className="col-span-2"><EmptyState icon={Award} title="Belum ada skema insentif" /></div> :
+                {incentiveSchemes.length === 0 ? <div className="col-span-2"><EmptyState icon={Award} title={t('sfa.noIncentiveScheme')} /></div> :
                   incentiveSchemes.map((s: any) => (
                     <Card key={s.id} className="p-5" hover>
                       <div className="flex justify-between items-start mb-2">
@@ -1945,12 +2159,12 @@ export default function SFAUnifiedPage() {
 
             {/* ── KOMISI PRODUK ── */}
             {incSubTab === 'product' && (<>
-              <SectionHeader title="Komisi per Produk" action={<PrimaryBtn onClick={() => { setModal('commission'); setForm({ commission_type: 'percentage', commission_rate: 0 }); }} icon={Plus}>Tambah Komisi</PrimaryBtn>} />
+              <SectionHeader title={t('sfa.productCommission')} action={<PrimaryBtn onClick={() => { setModal('commission'); setForm({ commission_type: 'percentage', commission_rate: 0 }); }} icon={Plus}>{t('sfa.addCommission')}</PrimaryBtn>} />
               <TableWrap>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Produk</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">SKU</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipe</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Rate</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th></tr></thead>
                   <tbody className="divide-y divide-gray-50">
-                    {commissions.length === 0 ? <tr><td colSpan={5}><EmptyState icon={Award} title="Belum ada komisi produk" /></td></tr> :
+                    {commissions.length === 0 ? <tr><td colSpan={5}><EmptyState icon={Award} title={t('sfa.noProductComm')} /></td></tr> :
                       commissions.map((pc: any) => (
                         <tr key={pc.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-5 py-3.5 font-semibold text-gray-900">{pc.product_name}</td>
@@ -1968,8 +2182,8 @@ export default function SFAUnifiedPage() {
 
             {/* ── KOMISI GROUP (Bundle/Cross-sell) ── */}
             {incSubTab === 'group' && (<>
-              <SectionHeader title="Komisi Group Produk (Bundle)" subtitle="Bonus tambahan jika menjual kombinasi produk tertentu" action={<PrimaryBtn onClick={() => { setModal('commission-group'); setForm({ group_type: 'bundle', calculation_method: 'flat', bonus_amount: 0, products: [] }); }} icon={Plus}>Tambah Group</PrimaryBtn>} />
-              {commissionGroups.length === 0 ? <EmptyState icon={Award} title="Belum ada komisi group" subtitle="Buat group produk untuk memberikan bonus bundle" /> :
+              <SectionHeader title={t('sfa.groupCommTitle')} subtitle={t('sfa.groupCommSub')} action={<PrimaryBtn onClick={() => { setModal('commission-group'); setForm({ group_type: 'bundle', calculation_method: 'flat', bonus_amount: 0, products: [] }); }} icon={Plus}>{t('sfa.addGroup')}</PrimaryBtn>} />
+              {commissionGroups.length === 0 ? <EmptyState icon={Award} title={t('sfa.noGroupComm')} subtitle={t('sfa.noGroupCommSub')} /> :
                 <div className="grid sm:grid-cols-2 gap-4">
                   {commissionGroups.map((g: any) => (
                     <Card key={g.id} className="p-5" hover>
@@ -1984,7 +2198,7 @@ export default function SFAUnifiedPage() {
                         <Badge color={g.is_active ? 'green' : 'gray'}>{g.is_active ? 'Active' : 'Off'}</Badge>
                       </div>
                       <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                        <div className="text-xs font-medium text-gray-500 mb-2">Produk dalam Group:</div>
+                        <div className="text-xs font-medium text-gray-500 mb-2">{t('sfa.productsInGroup')}</div>
                         <div className="space-y-1">
                           {(g.products || []).map((p: any, pi: number) => (
                             <div key={pi} className="flex justify-between text-xs">
@@ -1995,15 +2209,15 @@ export default function SFAUnifiedPage() {
                         </div>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500">Bonus:</span>
+                        <span className="text-gray-500">{t('sfa.bonusLabel')}</span>
                         <span className="font-bold text-emerald-600">
-                          {g.calculation_method === 'flat' ? `Rp ${Number(g.bonus_amount).toLocaleString('id-ID')}` : `${g.bonus_percentage}%`}
+                          {g.calculation_method === 'flat' ? fmtCur(Number(g.bonus_amount)) : `${g.bonus_percentage}%`}
                         </span>
                       </div>
                       {(Number(g.min_total_quantity) > 0 || Number(g.min_total_value) > 0) && (
                         <div className="flex gap-3 text-xs text-gray-400 mt-2 pt-2 border-t border-gray-100">
                           {Number(g.min_total_quantity) > 0 && <span>Min Qty: {g.min_total_quantity}</span>}
-                          {Number(g.min_total_value) > 0 && <span>Min Value: Rp {Number(g.min_total_value).toLocaleString('id-ID')}</span>}
+                          {Number(g.min_total_value) > 0 && <span>Min Value: {fmtCur(Number(g.min_total_value))}</span>}
                         </div>
                       )}
                     </Card>
@@ -2014,8 +2228,8 @@ export default function SFAUnifiedPage() {
 
             {/* ── TARGET OUTLET per Produk ── */}
             {incSubTab === 'outlet' && (<>
-              <SectionHeader title="Target Outlet/Customer per Produk" subtitle="Target jumlah outlet/customer yang harus membeli setiap produk" action={<PrimaryBtn onClick={() => { setModal('outlet-target'); setForm({ target_type: 'outlet_count', period_type: 'monthly', bronze_threshold_pct: 60, silver_threshold_pct: 80, gold_threshold_pct: 100, platinum_threshold_pct: 120 }); }} icon={Plus}>Tambah Target</PrimaryBtn>} />
-              {outletTargets.length === 0 ? <EmptyState icon={Target} title="Belum ada target outlet" subtitle="Buat target per produk untuk mengukur penetrasi pasar" /> :
+              <SectionHeader title={t('sfa.outletTargetTitle')} subtitle={t('sfa.outletTargetSub')} action={<PrimaryBtn onClick={() => { setModal('outlet-target'); setForm({ target_type: 'outlet_count', period_type: 'monthly', bronze_threshold_pct: 60, silver_threshold_pct: 80, gold_threshold_pct: 100, platinum_threshold_pct: 120 }); }} icon={Plus}>{t('sfa.addTarget')}</PrimaryBtn>} />
+              {outletTargets.length === 0 ? <EmptyState icon={Target} title={t('sfa.noOutletTarget')} subtitle={t('sfa.noOutletTargetSub')} /> :
                 <div className="space-y-4">
                   {outletTargets.map((ot: any) => {
                     const pct = Number(ot.achievement_pct) || 0;
@@ -2050,7 +2264,7 @@ export default function SFAUnifiedPage() {
                             <div key={t} className={`rounded-lg p-2 ${tier === t ? 'ring-2 ring-offset-1 ring-blue-400' : 'bg-gray-50'}`}>
                               <div className="text-[10px] text-gray-400 uppercase">{t}</div>
                               <div className="text-xs font-bold text-gray-700">≥{ot[`${t}_threshold_pct`]}%</div>
-                              <div className="text-[10px] text-emerald-600 font-medium">Rp {Number(ot[`${t}_bonus`]).toLocaleString('id-ID')}</div>
+                              <div className="text-[10px] text-emerald-600 font-medium">{fmtCur(Number(ot[`${t}_bonus`]))}</div>
                             </div>
                           ))}
                         </div>
@@ -2063,8 +2277,8 @@ export default function SFAUnifiedPage() {
 
             {/* ── SALES STRATEGY ── */}
             {incSubTab === 'strategy' && (<>
-              <SectionHeader title="Sales Strategy & KPI Management" subtitle="Strategi penjualan dengan KPI terukur dan scoring multi-level" action={<PrimaryBtn onClick={() => { setModal('sales-strategy'); setForm({ strategy_type: 'balanced', period_type: 'monthly', kpis: [{ kpi_name: '', kpi_type: 'revenue', target_value: 0, weight: 0, unit: '' }] }); }} icon={Plus}>Buat Strategy</PrimaryBtn>} />
-              {salesStrategies.length === 0 ? <EmptyState icon={Target} title="Belum ada sales strategy" subtitle="Buat strategi penjualan dengan KPI yang terukur" /> :
+              <SectionHeader title={t('sfa.salesStrategyTitle')} subtitle={t('sfa.salesStrategySub')} action={<PrimaryBtn onClick={() => { setModal('sales-strategy'); setForm({ strategy_type: 'balanced', period_type: 'monthly', kpis: [{ kpi_name: '', kpi_type: 'revenue', target_value: 0, weight: 0, unit: '' }] }); }} icon={Plus}>{t('sfa.createStrategy')}</PrimaryBtn>} />
+              {salesStrategies.length === 0 ? <EmptyState icon={Target} title={t('sfa.noSalesStrategy')} subtitle={t('sfa.noSalesStrategySub')} /> :
                 <div className="space-y-4">
                   {salesStrategies.map((st: any) => (
                     <Card key={st.id} className="p-5" hover>
@@ -2079,7 +2293,7 @@ export default function SFAUnifiedPage() {
                         <div className="flex items-center gap-2">
                           <Badge color={st.status === 'active' ? 'green' : st.status === 'draft' ? 'amber' : 'gray'}>{st.status}</Badge>
                           {st.status === 'draft' && (
-                            <button onClick={async () => { const r = await apiAdv('activate-strategy', 'PUT', { id: st.id }); if (r.success) { showToast('Strategy diaktifkan'); fetchData(); } }} className="text-xs text-blue-600 hover:underline">Aktifkan</button>
+                            <button onClick={async () => { const r = await apiAdv('activate-strategy', 'PUT', { id: st.id }); if (r.success) { showToast(t('sfa.strategyActivated')); fetchData(); } }} className="text-xs text-blue-600 hover:underline">{t('sfa.activateStrategy')}</button>
                           )}
                         </div>
                       </div>
@@ -2087,7 +2301,7 @@ export default function SFAUnifiedPage() {
                       <div className="flex items-center gap-4 text-xs text-gray-400">
                         <span>{st.kpi_count || 0} KPIs</span>
                         <span>|</span>
-                        <span>Total Bobot: {st.total_weight}%</span>
+                        <span>{t('sfa.totalWeight')}: {st.total_weight}%</span>
                         <span>|</span>
                         <span>Score: <strong className="text-gray-700">{Number(st.overall_score).toFixed(1)}%</strong></span>
                       </div>
@@ -2102,7 +2316,7 @@ export default function SFAUnifiedPage() {
           {/* MERCHANDISING (from Advanced) */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'merchandising' && (<>
-            <SectionHeader title="Display Audit / Merchandising" subtitle={`${displayAudits.length} audit records`} />
+            <SectionHeader title={t('sfa.displayAudit')} subtitle={`${displayAudits.length} audit records`} />
 
             {/* Merchandising Analytics */}
             {displayAudits.length > 0 && (() => {
@@ -2112,8 +2326,8 @@ export default function SFAUnifiedPage() {
               return (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   <Card className="p-5 lg:col-span-2">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-1">Compliance Score</h3>
-                    <p className="text-xs text-gray-400 mb-4">Skor compliance per audit toko</p>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">{t('sfa.complianceScoreTitle')}</h3>
+                    <p className="text-xs text-gray-400 mb-4">{t('sfa.complianceScoreSub')}</p>
                     <ResponsiveContainer width="100%" height={180}>
                       <BarChart data={displayAudits.slice(0, 12).map((d: any) => ({ name: (d.customer_name || 'N/A').substring(0, 10), score: parseFloat(d.overall_score || 0), compliance: parseFloat(d.compliance_pct || 0) }))} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -2127,7 +2341,7 @@ export default function SFAUnifiedPage() {
                     </ResponsiveContainer>
                   </Card>
                   <Card className="p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Ringkasan</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-4">{t('sfa.summaryTitle')}</h3>
                     <div className="space-y-4">
                       <div className="text-center p-3 bg-gray-50 rounded-xl"><p className="text-2xl font-bold text-gray-900">{avgScore.toFixed(1)}%</p><p className="text-[10px] text-gray-500 mt-1">Avg Score</p></div>
                       <div className="text-center p-3 bg-emerald-50 rounded-xl"><p className="text-2xl font-bold text-emerald-600">{avgComp.toFixed(1)}%</p><p className="text-[10px] text-gray-500 mt-1">Avg Compliance</p></div>
@@ -2142,7 +2356,7 @@ export default function SFAUnifiedPage() {
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Tipe Toko</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Score</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Compliance</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Tanggal</th></tr></thead>
                 <tbody className="divide-y divide-gray-50">
-                  {displayAudits.length === 0 ? <tr><td colSpan={5}><EmptyState icon={Eye} title="Belum ada audit" /></td></tr> :
+                  {displayAudits.length === 0 ? <tr><td colSpan={5}><EmptyState icon={Eye} title={t('sfa.noAudit')} /></td></tr> :
                     displayAudits.map((da: any) => (
                       <tr key={da.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-3.5"><div className="font-semibold text-gray-900">{da.customer_name || '-'}</div><div className="text-xs text-gray-400 sm:hidden">{da.store_type || '-'}</div></td>
@@ -2162,8 +2376,8 @@ export default function SFAUnifiedPage() {
           {/* COMPETITOR (from Advanced) */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'competitor' && (<>
-            <SectionHeader title="Aktivitas Kompetitor" subtitle={`${competitors.length} laporan`}
-              action={<PrimaryBtn onClick={() => { setModal('competitor'); setForm({ activity_type: 'promotion', impact_level: 'medium' }); }} icon={Plus}>Laporkan</PrimaryBtn>} />
+            <SectionHeader title={t('sfa.competitorActivity')} subtitle={`${competitors.length} ${t('sfa.noReport').includes('laporan') ? 'laporan' : 'reports'}`}
+              action={<PrimaryBtn onClick={() => { setModal('competitor'); setForm({ activity_type: 'promotion', impact_level: 'medium' }); }} icon={Plus}>{t('sfa.reportBtn')}</PrimaryBtn>} />
             {/* Competitor Analytics */}
             {competitors.length > 0 && (() => {
               const typeCounts = competitors.reduce((a: any, c: any) => { a[c.activity_type] = (a[c.activity_type] || 0) + 1; return a; }, {});
@@ -2172,8 +2386,8 @@ export default function SFAUnifiedPage() {
               return (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <Card className="p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-1">Aktivitas per Tipe</h3>
-                    <p className="text-xs text-gray-400 mb-4">Jenis aktivitas kompetitor</p>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">{t('sfa.activityPerType')}</h3>
+                    <p className="text-xs text-gray-400 mb-4">{t('sfa.activityPerTypeSub')}</p>
                     <ResponsiveContainer width="100%" height={180}>
                       <BarChart data={Object.entries(typeCounts).map(([t, c]) => ({ name: t.replace('_', ' '), count: c as number }))} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -2187,8 +2401,8 @@ export default function SFAUnifiedPage() {
                     </ResponsiveContainer>
                   </Card>
                   <Card className="p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-1">Impact Level</h3>
-                    <p className="text-xs text-gray-400 mb-4">Tingkat dampak aktivitas kompetitor</p>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1">{t('sfa.impactLevel')}</h3>
+                    <p className="text-xs text-gray-400 mb-4">{t('sfa.impactLevelSub')}</p>
                     <div className="flex flex-col sm:flex-row items-center gap-4">
                       <div className="w-36 h-36 shrink-0">
                         <ResponsiveContainer width="100%" height="100%">
@@ -2209,7 +2423,7 @@ export default function SFAUnifiedPage() {
                           </div>
                         ))}
                         <div className="pt-2 border-t border-gray-100 flex justify-between text-xs">
-                          <span className="text-gray-400">Resolved</span>
+                          <span className="text-gray-400">{t('sfa.resolved')}</span>
                           <span className="font-bold text-emerald-600">{competitors.filter((c: any) => c.resolved).length}/{competitors.length}</span>
                         </div>
                       </div>
@@ -2239,7 +2453,7 @@ export default function SFAUnifiedPage() {
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kompetitor</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipe</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Deskripsi</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Impact</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th></tr></thead>
                 <tbody className="divide-y divide-gray-50">
-                  {competitors.length === 0 ? <tr><td colSpan={5}><EmptyState icon={Swords} title="Belum ada laporan" /></td></tr> :
+                  {competitors.length === 0 ? <tr><td colSpan={5}><EmptyState icon={Swords} title={t('sfa.noReport')} /></td></tr> :
                     competitors.map((c: any) => (
                       <tr key={c.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-3.5 font-semibold text-gray-900">{c.competitor_name}</td>
@@ -2247,7 +2461,7 @@ export default function SFAUnifiedPage() {
                         <td className="px-5 py-3.5 text-gray-500 max-w-[200px] truncate hidden sm:table-cell">{c.description || '-'}</td>
                         <td className="px-5 py-3.5 text-center"><Badge color={c.impact_level === 'high' ? 'red' : c.impact_level === 'medium' ? 'yellow' : 'green'}>{c.impact_level}</Badge></td>
                         <td className="px-5 py-3.5 text-center"><button onClick={() => {
-                          apiAdv('update-competitor-activity', 'PUT', { id: c.id, resolved: !c.resolved }).then(r => { if (r.success) { showToast(c.resolved ? 'Dibuka kembali' : 'Resolved'); fetchData(); } else showToast(r.error || 'Gagal'); });
+                          apiAdv('update-competitor-activity', 'PUT', { id: c.id, resolved: !c.resolved }).then(r => { if (r.success) { showToast(c.resolved ? t('sfa.reopened') : t('sfa.resolved')); fetchData(); } else showToast(r.error || t('sfa.failedLabel')); });
                         }} title="Klik untuk toggle status"><Badge color={c.resolved ? 'green' : 'yellow'}>{c.resolved ? 'Resolved' : 'Open'}</Badge></button></td>
                       </tr>
                     ))
@@ -2261,9 +2475,9 @@ export default function SFAUnifiedPage() {
           {/* SURVEY (from Advanced) */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'survey' && (<>
-            <SectionHeader title="Survey" subtitle={`${surveyTemplates.length} template | ${surveyResponses.length} responses`} />
+            <SectionHeader title={t('sfa.surveyTitle')} subtitle={`${surveyTemplates.length} template | ${surveyResponses.length} responses`} />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {surveyTemplates.length === 0 ? <div className="col-span-3"><EmptyState icon={ClipboardList} title="Belum ada survey" /></div> :
+              {surveyTemplates.length === 0 ? <div className="col-span-3"><EmptyState icon={ClipboardList} title={t('sfa.noSurvey')} /></div> :
                 surveyTemplates.map((st: any) => (
                   <Card key={st.id} className="p-5" hover>
                     <div className="flex items-center justify-between mb-3">
@@ -2280,7 +2494,7 @@ export default function SFAUnifiedPage() {
               }
             </div>
             {surveyResponses.length > 0 && (<>
-              <SectionHeader title="Responses Terbaru" />
+              <SectionHeader title={t('sfa.recentResponses')} />
               <TableWrap>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Survey</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Respondent</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Customer</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Score</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal</th></tr></thead>
@@ -2304,9 +2518,9 @@ export default function SFAUnifiedPage() {
           {/* APPROVAL (from Advanced) */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'approval' && (<>
-            <SectionHeader title="Approval Workflow" subtitle={`${approvalWorkflows.length} workflow | ${approvalRequests.length} requests`} />
+            <SectionHeader title={t('sfa.approvalWorkflow')} subtitle={`${approvalWorkflows.length} workflow | ${approvalRequests.length} requests`} />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {approvalWorkflows.length === 0 ? <div className="col-span-4"><EmptyState icon={CheckCircle} title="Belum ada workflow" /></div> :
+              {approvalWorkflows.length === 0 ? <div className="col-span-4"><EmptyState icon={CheckCircle} title={t('sfa.noWorkflow')} /></div> :
                 approvalWorkflows.map((aw: any) => (
                   <Card key={aw.id} className="p-4" hover>
                     <h3 className="font-semibold text-sm text-gray-900">{aw.name}</h3>
@@ -2320,19 +2534,19 @@ export default function SFAUnifiedPage() {
                 ))
               }
             </div>
-            <SectionHeader title="Approval Requests" />
+            <SectionHeader title={t('sfa.approvalRequests')} />
             <TableWrap>
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Entity</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Nominal</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Step</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th><th className="px-5 py-3.5"></th></tr></thead>
                 <tbody className="divide-y divide-gray-50">
-                  {approvalRequests.length === 0 ? <tr><td colSpan={5}><EmptyState icon={CheckCircle} title="Belum ada request" /></td></tr> :
+                  {approvalRequests.length === 0 ? <tr><td colSpan={5}><EmptyState icon={CheckCircle} title={t('sfa.noRequest')} /></td></tr> :
                     approvalRequests.map((ar: any) => (
                       <tr key={ar.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-3.5"><Badge>{ar.entity_type}</Badge><span className="text-xs text-gray-400 ml-2">{ar.entity_number || ''}</span></td>
                         <td className="px-5 py-3.5 text-right font-bold text-gray-900 hidden sm:table-cell">{ar.amount ? fmtCur(ar.amount) : '-'}</td>
                         <td className="px-5 py-3.5 text-center text-sm font-medium text-gray-600">{ar.current_step}/{ar.total_steps}</td>
                         <td className="px-5 py-3.5 text-center"><Badge color={ar.status === 'approved' ? 'green' : ar.status === 'rejected' ? 'red' : 'yellow'}>{ar.status}</Badge></td>
-                        <td className="px-5 py-3.5">{canApprove && ar.status === 'pending' && (<div className="flex gap-1.5"><button onClick={() => handleApproval(ar.id, 'approved')} className="px-2.5 py-1.5 text-xs bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 font-medium transition-colors">Approve</button><button onClick={() => handleApproval(ar.id, 'rejected')} className="px-2.5 py-1.5 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 font-medium transition-colors">Reject</button></div>)}</td>
+                        <td className="px-5 py-3.5">{canApprove && ar.status === 'pending' && (<div className="flex gap-1.5"><button onClick={() => handleApproval(ar.id, 'approved')} className="px-2.5 py-1.5 text-xs bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 font-medium transition-colors">{t('sfa.approveBtn')}</button><button onClick={() => handleApproval(ar.id, 'rejected')} className="px-2.5 py-1.5 text-xs bg-red-50 text-red-700 rounded-lg hover:bg-red-100 font-medium transition-colors">{t('sfa.rejectBtn')}</button></div>)}</td>
                       </tr>
                     ))
                   }
@@ -2345,11 +2559,11 @@ export default function SFAUnifiedPage() {
           {/* SETTINGS (merged Plafon + Geofence + Parameters) */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'settings' && (<>
-            <SectionHeader title="Pengaturan CRM & SFA" subtitle="Kelola multi-kurensi, pajak, format nomor, syarat pembayaran, dan data master" />
+            <SectionHeader title={t('sfa.settingsTitle')} subtitle={t('sfa.settingsSub')} />
 
             {/* Settings sub-tab navigation */}
             <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 overflow-x-auto">
-              {([['master','Master Data'],['currency','Multi-Kurensi'],['tax','Pajak'],['numbering','Format Nomor'],['payment','Syarat Bayar'],['business','Pengaturan Bisnis']] as const).map(([k, label]) => (
+              {([['master',t('sfa.settMasterData')],['currency',t('sfa.settMultiCurrency')],['tax',t('sfa.settTax')],['numbering',t('sfa.settNumbering')],['payment',t('sfa.settPayment')],['business',t('sfa.settBusiness')]] as const).map(([k, label]) => (
                 <button key={k} onClick={() => setSettSubTab(k as any)} className={`whitespace-nowrap px-3 py-2 text-xs font-semibold rounded-lg transition-all ${settSubTab === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{label}</button>
               ))}
             </div>
@@ -2357,13 +2571,13 @@ export default function SFAUnifiedPage() {
             {/* ── MULTI-CURRENCY ── */}
             {settSubTab === 'currency' && (<>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                <Card className="p-4 text-center" hover><div className="text-2xl font-bold text-blue-600">{settingsOverview?.currencies?.active || 0}</div><div className="text-xs text-gray-500 mt-1">Mata Uang Aktif</div></Card>
-                <Card className="p-4 text-center" hover><div className="text-2xl font-bold text-purple-600">{settingsOverview?.rates?.total || 0}</div><div className="text-xs text-gray-500 mt-1">Kurs Aktif</div></Card>
+                <Card className="p-4 text-center" hover><div className="text-2xl font-bold text-blue-600">{settingsOverview?.currencies?.active || 0}</div><div className="text-xs text-gray-500 mt-1">{t('sfa.activeCurrencies')}</div></Card>
+                <Card className="p-4 text-center" hover><div className="text-2xl font-bold text-purple-600">{settingsOverview?.rates?.total || 0}</div><div className="text-xs text-gray-500 mt-1">{t('sfa.activeRates')}</div></Card>
                 <Card className="p-4 text-center" hover><div className="text-lg font-bold text-emerald-600">{settingsOverview?.defaultCurrency?.code || 'IDR'}</div><div className="text-xs text-gray-500 mt-1">Default: {settingsOverview?.defaultCurrency?.symbol || 'Rp'}</div></Card>
-                <Card className="p-4 text-center" hover><div className="text-lg font-bold text-amber-600">{currencies.filter((c: any) => c.is_active).length}/{currencies.length}</div><div className="text-xs text-gray-500 mt-1">Aktif / Total</div></Card>
+                <Card className="p-4 text-center" hover><div className="text-lg font-bold text-amber-600">{currencies.filter((c: any) => c.is_active).length}/{currencies.length}</div><div className="text-xs text-gray-500 mt-1">{t('sfa.activeSlashTotal')}</div></Card>
               </div>
 
-              <SectionHeader title="Daftar Mata Uang" action={<PrimaryBtn onClick={() => { setModal('add-currency'); setForm({ decimal_places: 2, symbol_position: 'before', thousand_separator: '.', decimal_separator: ',' }); }} icon={Plus}>Tambah Currency</PrimaryBtn>} />
+              <SectionHeader title={t('sfa.currencyList')} action={<PrimaryBtn onClick={() => { setModal('add-currency'); setForm({ decimal_places: 2, symbol_position: 'before', thousand_separator: '.', decimal_separator: ',' }); }} icon={Plus}>{t('sfa.addCurrency')}</PrimaryBtn>} />
               <TableWrap>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Kode</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Nama</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Simbol</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Desimal</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Default</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Status</th></tr></thead>
@@ -2374,15 +2588,15 @@ export default function SFAUnifiedPage() {
                         <td className="px-5 py-3.5 text-gray-900">{c.name}</td>
                         <td className="px-5 py-3.5 text-center text-lg">{c.symbol}</td>
                         <td className="px-5 py-3.5 text-center text-gray-500 hidden sm:table-cell">{c.decimal_places}</td>
-                        <td className="px-5 py-3.5 text-center">{c.is_default ? <Badge color="blue">Default</Badge> : <button onClick={async () => { await apiEnh('update-currency', 'PUT', { id: c.id, is_default: true }); fetchData(); }} className="text-xs text-gray-400 hover:text-blue-600">Set Default</button>}</td>
-                        <td className="px-5 py-3.5 text-center"><Badge color={c.is_active ? 'green' : 'gray'}>{c.is_active ? 'Aktif' : 'Off'}</Badge></td>
+                        <td className="px-5 py-3.5 text-center">{c.is_default ? <Badge color="blue">Default</Badge> : <button onClick={async () => { await apiEnh('update-currency', 'PUT', { id: c.id, is_default: true }); fetchData(); }} className="text-xs text-gray-400 hover:text-blue-600">{t('sfa.setDefaultBtn')}</button>}</td>
+                        <td className="px-5 py-3.5 text-center"><Badge color={c.is_active ? 'green' : 'gray'}>{c.is_active ? t('sfa.active') : t('sfa.offLabel')}</Badge></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </TableWrap>
 
-              <SectionHeader title="Kurs / Exchange Rate" subtitle="Rate konversi antar mata uang" action={<PrimaryBtn onClick={() => { setModal('add-rate'); setForm({ from_currency: 'USD', to_currency: 'IDR', source: 'manual' }); }} icon={Plus}>Tambah Kurs</PrimaryBtn>} />
+              <SectionHeader title={t('sfa.exchangeRate')} subtitle={t('sfa.exchangeRateSub')} action={<PrimaryBtn onClick={() => { setModal('add-rate'); setForm({ from_currency: 'USD', to_currency: 'IDR', source: 'manual' }); }} icon={Plus}>{t('sfa.addRate')}</PrimaryBtn>} />
               <TableWrap>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Dari</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">→</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Ke</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase">Rate</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Berlaku</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Sumber</th></tr></thead>
@@ -2404,7 +2618,7 @@ export default function SFAUnifiedPage() {
 
             {/* ── TAX SETTINGS ── */}
             {settSubTab === 'tax' && (<>
-              <SectionHeader title="Pengaturan Pajak" subtitle="Kelola tarif pajak yang digunakan dalam transaksi" action={<PrimaryBtn onClick={() => { setModal('add-tax'); setForm({ tax_type: 'vat', rate: 0, applies_to: 'all' }); }} icon={Plus}>Tambah Pajak</PrimaryBtn>} />
+              <SectionHeader title={t('sfa.taxSettings')} subtitle={t('sfa.taxSettingsSub')} action={<PrimaryBtn onClick={() => { setModal('add-tax'); setForm({ tax_type: 'vat', rate: 0, applies_to: 'all' }); }} icon={Plus}>{t('sfa.addTax')}</PrimaryBtn>} />
               <TableWrap>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Kode</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase">Nama</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Tipe</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase">Rate</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Inklusif</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Default</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase">Status</th></tr></thead>
@@ -2415,9 +2629,9 @@ export default function SFAUnifiedPage() {
                         <td className="px-5 py-3.5 text-gray-900">{t.name}</td>
                         <td className="px-5 py-3.5 text-center"><Badge color={t.tax_type === 'vat' ? 'blue' : t.tax_type === 'income' ? 'purple' : t.tax_type === 'withholding' ? 'amber' : 'gray'}>{t.tax_type}</Badge></td>
                         <td className="px-5 py-3.5 text-right font-bold text-gray-900">{Number(t.rate)}%</td>
-                        <td className="px-5 py-3.5 text-center hidden sm:table-cell">{t.is_inclusive ? <span className="text-emerald-600 font-medium">Ya</span> : <span className="text-gray-400">Tidak</span>}</td>
+                        <td className="px-5 py-3.5 text-center hidden sm:table-cell">{t.is_inclusive ? <span className="text-emerald-600 font-medium">{t('sfa.yesLabel')}</span> : <span className="text-gray-400">{t('sfa.noLabel')}</span>}</td>
                         <td className="px-5 py-3.5 text-center">{t.is_default && <Badge color="blue">Default</Badge>}</td>
-                        <td className="px-5 py-3.5 text-center"><Badge color={t.is_active ? 'green' : 'gray'}>{t.is_active ? 'Aktif' : 'Off'}</Badge></td>
+                        <td className="px-5 py-3.5 text-center"><Badge color={t.is_active ? 'green' : 'gray'}>{t.is_active ? t('sfa.active') : t('sfa.offLabel')}</Badge></td>
                       </tr>
                     ))}
                   </tbody>
@@ -2427,7 +2641,7 @@ export default function SFAUnifiedPage() {
 
             {/* ── NUMBERING FORMATS ── */}
             {settSubTab === 'numbering' && (<>
-              <SectionHeader title="Format Penomoran Dokumen" subtitle="Atur format nomor otomatis untuk setiap tipe dokumen" />
+              <SectionHeader title={t('sfa.numberingFormats')} subtitle={t('sfa.numberingFormatsSub')} />
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {numberingFormats.map((nf: any) => (
                   <Card key={nf.id} className="p-5" hover>
@@ -2436,15 +2650,15 @@ export default function SFAUnifiedPage() {
                         <Badge color="blue">{nf.entity_type.replace('_', ' ')}</Badge>
                         <div className="mt-2 font-mono text-lg font-bold text-gray-900 tracking-wide">{nf.sample_output || '-'}</div>
                       </div>
-                      <Badge color={nf.is_active ? 'green' : 'gray'}>{nf.is_active ? 'Aktif' : 'Off'}</Badge>
+                      <Badge color={nf.is_active ? 'green' : 'gray'}>{nf.is_active ? t('sfa.active') : t('sfa.offLabel')}</Badge>
                     </div>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mt-3 pt-3 border-t border-gray-100">
                       <div className="text-gray-400">Prefix</div><div className="font-mono font-medium text-gray-700">{nf.prefix || '-'}</div>
                       <div className="text-gray-400">Separator</div><div className="font-mono font-medium text-gray-700">{nf.separator || '-'}</div>
-                      <div className="text-gray-400">Format Tanggal</div><div className="font-mono font-medium text-gray-700">{nf.date_format || '-'}</div>
+                      <div className="text-gray-400">{t('sfa.dateFormatLabel')}</div><div className="font-mono font-medium text-gray-700">{nf.date_format || '-'}</div>
                       <div className="text-gray-400">Digit Counter</div><div className="font-mono font-medium text-gray-700">{nf.counter_length}</div>
                       <div className="text-gray-400">Reset</div><div className="font-medium text-gray-700">{nf.reset_period}</div>
-                      <div className="text-gray-400">Counter Saat Ini</div><div className="font-mono font-medium text-gray-700">{nf.current_counter}</div>
+                      <div className="text-gray-400">{t('sfa.currentCounter')}</div><div className="font-mono font-medium text-gray-700">{nf.current_counter}</div>
                     </div>
                   </Card>
                 ))}
@@ -2453,7 +2667,7 @@ export default function SFAUnifiedPage() {
 
             {/* ── PAYMENT TERMS ── */}
             {settSubTab === 'payment' && (<>
-              <SectionHeader title="Syarat Pembayaran" subtitle="Kelola syarat pembayaran untuk transaksi penjualan" action={<PrimaryBtn onClick={() => { setModal('add-payment-term'); setForm({ late_fee_type: 'none' }); }} icon={Plus}>Tambah Syarat</PrimaryBtn>} />
+              <SectionHeader title={t('sfa.paymentTerms')} subtitle={t('sfa.paymentTermsSub')} action={<PrimaryBtn onClick={() => { setModal('add-payment-term'); setForm({ late_fee_type: 'none' }); }} icon={Plus}>{t('sfa.addPaymentTerm')}</PrimaryBtn>} />
               <div className="space-y-3">
                 {paymentTerms.map((pt: any) => (
                   <Card key={pt.id} className="p-5" hover>
@@ -2467,14 +2681,14 @@ export default function SFAUnifiedPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {pt.is_default && <Badge color="blue">Default</Badge>}
-                        <Badge color={pt.is_active ? 'green' : 'gray'}>{pt.is_active ? 'Aktif' : 'Off'}</Badge>
+                        <Badge color={pt.is_active ? 'green' : 'gray'}>{pt.is_active ? t('sfa.active') : t('sfa.offLabel')}</Badge>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3 pt-3 border-t border-gray-100">
-                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">Jatuh Tempo</div><div className="text-sm font-bold text-gray-900">{pt.days_due === 0 ? 'Langsung' : `${pt.days_due} hari`}</div></div>
-                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">Early Payment</div><div className="text-sm font-medium text-gray-700">{Number(pt.discount_percentage) > 0 ? `${pt.discount_percentage}% jika ${pt.discount_days} hari` : '-'}</div></div>
-                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">Denda Keterlambatan</div><div className="text-sm font-medium text-gray-700">{pt.late_fee_type === 'none' ? 'Tidak ada' : pt.late_fee_type === 'percentage' ? `${pt.late_fee_value}%` : `Rp ${Number(pt.late_fee_value).toLocaleString('id-ID')}`}</div></div>
-                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">Status</div><div className="text-sm"><Badge color={pt.is_active ? 'green' : 'gray'}>{pt.is_active ? 'Aktif' : 'Nonaktif'}</Badge></div></div>
+                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">{t('sfa.dueDate')}</div><div className="text-sm font-bold text-gray-900">{pt.days_due === 0 ? t('sfa.immediate') : `${pt.days_due} ${t('sfa.daysLabel')}`}</div></div>
+                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">{t('sfa.earlyPayment')}</div><div className="text-sm font-medium text-gray-700">{Number(pt.discount_percentage) > 0 ? `${pt.discount_percentage}% jika ${pt.discount_days} hari` : '-'}</div></div>
+                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">{t('sfa.lateFee')}</div><div className="text-sm font-medium text-gray-700">{pt.late_fee_type === 'none' ? t('sfa.noneLabel') : pt.late_fee_type === 'percentage' ? `${pt.late_fee_value}%` : fmtCur(Number(pt.late_fee_value))}</div></div>
+                      <div><div className="text-[10px] text-gray-400 uppercase mb-0.5">Status</div><div className="text-sm"><Badge color={pt.is_active ? 'green' : 'gray'}>{pt.is_active ? t('sfa.active') : t('sfa.offLabel')}</Badge></div></div>
                     </div>
                   </Card>
                 ))}
@@ -2483,17 +2697,17 @@ export default function SFAUnifiedPage() {
 
             {/* ── BUSINESS SETTINGS ── */}
             {settSubTab === 'business' && (<>
-              <SectionHeader title="Pengaturan Bisnis" subtitle="Konfigurasi umum sistem CRM & SFA" />
+              <SectionHeader title={t('sfa.businessSettings')} subtitle={t('sfa.businessSettingsSub')} />
               {(() => {
                 const grouped: Record<string, any[]> = {};
                 bizSettings.forEach((s: any) => { if (!grouped[s.category]) grouped[s.category] = []; grouped[s.category].push(s); });
-                const catLabels: Record<string, string> = { general: 'Umum', sales: 'Penjualan', commission: 'Komisi', notification: 'Notifikasi', approval: 'Approval' };
+                const catLabels: Record<string, string> = { general: t('sfa.catGeneral'), sales: t('sfa.catSales'), commission: t('sfa.catCommission'), notification: t('sfa.catNotification'), approval: t('sfa.catApproval') };
                 const catIcons: Record<string, string> = { general: 'from-blue-500 to-blue-600', sales: 'from-emerald-500 to-emerald-600', commission: 'from-amber-500 to-orange-500', notification: 'from-purple-500 to-purple-600', approval: 'from-red-500 to-red-600' };
                 return Object.entries(grouped).map(([cat, items]) => (
                   <Card key={cat} className="p-0 overflow-hidden mb-4">
                     <div className={`px-5 py-3.5 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50`}>
                       <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${catIcons[cat] || 'from-gray-400 to-gray-500'} flex items-center justify-center`}><Settings className="w-4 h-4 text-white" /></div>
-                      <div><h4 className="text-sm font-bold text-gray-900">{catLabels[cat] || cat}</h4><p className="text-[10px] text-gray-400">{items.length} pengaturan</p></div>
+                      <div><h4 className="text-sm font-bold text-gray-900">{catLabels[cat] || cat}</h4><p className="text-[11px] text-gray-400 mt-0.5">{items.length} {t('sfa.settingsCount')}</p></div>
                     </div>
                     <div className="divide-y divide-gray-50">
                       {items.map((s: any) => (
@@ -2529,12 +2743,12 @@ export default function SFAUnifiedPage() {
               })()}
 
               {/* Plafon */}
-              <SectionHeader title="Plafon / Credit Limit" />
+              <SectionHeader title={t('sfa.plafonTitle')} />
               <TableWrap>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Tipe</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Limit</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Used</th><th className="px-5 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Available</th><th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th></tr></thead>
                   <tbody className="divide-y divide-gray-50">
-                    {plafon.length === 0 ? <tr><td colSpan={6}><EmptyState icon={DollarSign} title="Belum ada plafon" /></td></tr> :
+                    {plafon.length === 0 ? <tr><td colSpan={6}><EmptyState icon={DollarSign} title={t('sfa.noPlafon')} /></td></tr> :
                       plafon.map((p: any) => {
                         const avail = parseFloat(p.plafon_amount || 0) - parseFloat(p.used_amount || 0);
                         return (
@@ -2554,9 +2768,9 @@ export default function SFAUnifiedPage() {
               </TableWrap>
 
               {/* Geofence */}
-              <SectionHeader title="Geofence Zones" action={<PrimaryBtn onClick={() => { setModal('geofence'); setForm({ fence_type: 'circle', radius_meters: 200 }); }} icon={Plus}>Tambah</PrimaryBtn>} />
+              <SectionHeader title={t('sfa.geofenceZones')} action={<PrimaryBtn onClick={() => { setModal('geofence'); setForm({ fence_type: 'circle', radius_meters: 200 }); }} icon={Plus}>{t('sfa.addBtn')}</PrimaryBtn>} />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {geofences.length === 0 ? <div className="col-span-3"><EmptyState icon={Globe} title="Belum ada geofence" /></div> :
+                {geofences.length === 0 ? <div className="col-span-3"><EmptyState icon={Globe} title={t('sfa.noGeofence')} /></div> :
                   geofences.map((gf: any) => (
                     <Card key={gf.id} className="p-4" hover>
                       <div className="flex justify-between items-center mb-2">
@@ -2571,7 +2785,7 @@ export default function SFAUnifiedPage() {
 
               {/* Parameter Sistem */}
               {parameters.length > 0 && (<>
-                <SectionHeader title="Parameter Sistem SFA" />
+                <SectionHeader title={t('sfa.systemParams')} />
                 <TableWrap>
                   <table className="w-full text-sm">
                     <thead><tr className="border-b border-gray-100"><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Kode</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nama</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Nilai</th><th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Kategori</th></tr></thead>
@@ -2599,19 +2813,19 @@ export default function SFAUnifiedPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-sm"><Settings className="w-4.5 h-4.5 text-white" /></div>
                   <div>
-                    <h3 className="text-sm font-bold text-gray-900">Master Data & Opsi Dropdown</h3>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{Object.keys(lookupCategories).length} kategori · Kelola semua pilihan form CRM & SFA</p>
+                    <h3 className="text-sm font-bold text-gray-900">{t('sfa.masterDataTitle')}</h3>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{Object.keys(lookupCategories).length} {t('sfa.categoriesLabel')} · {t('sfa.masterDataDesc')}</p>
                   </div>
                 </div>
                 {isManager && Object.values(lookupCategories).every(c => c.options.length === 0) && (
                   <button onClick={async () => {
                     setLookupSaving(true);
                     const r = await (await fetch('/api/hq/sfa/lookup?action=seed-defaults', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).json();
-                    if (r.success) { showToast(`${r.data?.created} opsi default berhasil di-seed`); fetchData(); }
-                    else showToast(r.error || 'Gagal');
+                    if (r.success) { showToast(t('sfa.seedSuccess', { count: r.data?.created })); fetchData(); }
+                    else showToast(r.error || t('sfa.failedLabel'));
                     setLookupSaving(false);
                   }} disabled={lookupSaving} className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow-md disabled:opacity-50 transition-all">
-                    {lookupSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />} Seed Semua Default
+                    {lookupSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />} {t('sfa.seedDefaults')}
                   </button>
                 )}
               </div>
@@ -2622,7 +2836,7 @@ export default function SFAUnifiedPage() {
                   <div className="p-3">
                     <div className="relative mb-2">
                       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                      <input className={`${inputCls} !pl-8 !py-2 !text-xs`} placeholder="Cari kategori..." value={lookupSearch} onChange={e => setLookupSearch(e.target.value)} />
+                      <input className={`${inputCls} !pl-8 !py-2 !text-xs`} placeholder={t('sfa.searchCategory')} value={lookupSearch} onChange={e => setLookupSearch(e.target.value)} />
                     </div>
                   </div>
                   <div className="space-y-0.5 px-2 pb-3">
@@ -2643,8 +2857,8 @@ export default function SFAUnifiedPage() {
                   {!lookupSelectedCat ? (
                     <div className="flex flex-col items-center justify-center h-full text-center px-8 py-16">
                       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center mb-4"><Settings className="w-8 h-8 text-gray-300" /></div>
-                      <p className="text-sm font-medium text-gray-500">Pilih kategori di samping</p>
-                      <p className="text-xs text-gray-400 mt-1">untuk mengelola opsi dropdown</p>
+                      <p className="text-sm font-medium text-gray-500">{t('sfa.selectCategory')}</p>
+                      <p className="text-xs text-gray-400 mt-1">{t('sfa.selectCategorySub')}</p>
                     </div>
                   ) : (() => {
                     const catData = lookupCategories[lookupSelectedCat];
@@ -2665,17 +2879,17 @@ export default function SFAUnifiedPage() {
                               <button onClick={async () => {
                                 setLookupSaving(true);
                                 const r = await (await fetch('/api/hq/sfa/lookup?action=seed-category', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ category: lookupSelectedCat }) })).json();
-                                if (r.success) { showToast(`${r.data?.created} opsi di-seed`); fetchData(); }
-                                else showToast(r.error || 'Gagal');
+                                if (r.success) { showToast(t('sfa.seedSuccess', { count: r.data?.created })); fetchData(); }
+                                else showToast(r.error || t('sfa.failedLabel'));
                                 setLookupSaving(false);
                               }} disabled={lookupSaving} className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-[11px] font-semibold hover:bg-amber-100 disabled:opacity-50 transition-all">
-                                <Zap className="w-3 h-3" /> Seed Default
+                                <Zap className="w-3 h-3" /> {t('sfa.seedDefaults')}
                               </button>
                             )}
                             {isManager && (
                               <button onClick={() => setLookupEditing({ category: lookupSelectedCat, value: '', label: '', color: '', is_default: false, _isNew: true })}
                                 className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-[11px] font-bold shadow-sm hover:shadow-md transition-all">
-                                <Plus className="w-3 h-3" /> Tambah Opsi
+                                <Plus className="w-3 h-3" /> {t('sfa.addOption')}
                               </button>
                             )}
                           </div>
@@ -2686,24 +2900,24 @@ export default function SFAUnifiedPage() {
                           <div className="mb-4 p-4 rounded-xl border-2 border-amber-200 bg-amber-50/50">
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                               <div>
-                                <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Value (kode)</label>
+                                <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">{t('sfa.valueCode')}</label>
                                 <input className={`${inputCls} !py-2 !text-xs`} placeholder="cold_call" value={lookupEditing.value || ''} onChange={e => setLookupEditing({ ...lookupEditing, value: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })} disabled={!lookupEditing._isNew} />
                               </div>
                               <div>
-                                <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Label (tampilan)</label>
+                                <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">{t('sfa.labelDisplay')}</label>
                                 <input className={`${inputCls} !py-2 !text-xs`} placeholder="Cold Call" value={lookupEditing.label || ''} onChange={e => setLookupEditing({ ...lookupEditing, label: e.target.value })} />
                               </div>
                               <div>
-                                <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Warna</label>
+                                <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">{t('sfa.colorLabel')}</label>
                                 <select className={`${inputCls} !py-2 !text-xs`} value={lookupEditing.color || ''} onChange={e => setLookupEditing({ ...lookupEditing, color: e.target.value })}>
-                                  <option value="">Tanpa warna</option>
-                                  <option value="red">🔴 Merah</option>
-                                  <option value="orange">🟠 Orange</option>
-                                  <option value="yellow">🟡 Kuning</option>
-                                  <option value="green">🟢 Hijau</option>
-                                  <option value="blue">🔵 Biru</option>
-                                  <option value="purple">🟣 Ungu</option>
-                                  <option value="gray">⚪ Abu-abu</option>
+                                  <option value="">{t('sfa.noColor')}</option>
+                                  <option value="red">🔴 {t('sfa.colorRed')}</option>
+                                  <option value="orange">🟠 {t('sfa.colorOrange')}</option>
+                                  <option value="yellow">🟡 {t('sfa.colorYellow')}</option>
+                                  <option value="green">🟢 {t('sfa.colorGreen')}</option>
+                                  <option value="blue">🔵 {t('sfa.colorBlue')}</option>
+                                  <option value="purple">🟣 {t('sfa.colorPurple')}</option>
+                                  <option value="gray">⚪ {t('sfa.colorGray')}</option>
                                 </select>
                               </div>
                               <div className="flex items-end gap-2">
@@ -2713,17 +2927,17 @@ export default function SFAUnifiedPage() {
                                 </label>
                                 <div className="flex gap-1 ml-auto">
                                   <button onClick={async () => {
-                                    if (!lookupEditing.value || !lookupEditing.label) { showToast('Value dan Label wajib diisi'); return; }
+                                    if (!lookupEditing.value || !lookupEditing.label) { showToast(t('sfa.valueLabelRequired')); return; }
                                     setLookupSaving(true);
                                     const action2 = lookupEditing._isNew ? 'add-option' : 'update-option';
                                     const r = await (await fetch(`/api/hq/sfa/lookup?action=${action2}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lookupEditing) })).json();
-                                    if (r.success) { showToast(lookupEditing._isNew ? 'Opsi ditambahkan' : 'Opsi diperbarui'); setLookupEditing(null); fetchData(); }
-                                    else showToast(r.error || 'Gagal');
+                                    if (r.success) { showToast(lookupEditing._isNew ? t('sfa.optionAdded') : t('sfa.optionUpdated')); setLookupEditing(null); fetchData(); }
+                                    else showToast(r.error || t('sfa.failedLabel'));
                                     setLookupSaving(false);
                                   }} disabled={lookupSaving} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-[11px] font-bold hover:bg-amber-600 disabled:opacity-50 transition-all">
-                                    {lookupSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Simpan'}
+                                    {lookupSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : t('sfa.saveBtn')}
                                   </button>
-                                  <button onClick={() => setLookupEditing(null)} className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px] font-medium hover:bg-gray-300 transition-all">Batal</button>
+                                  <button onClick={() => setLookupEditing(null)} className="px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[11px] font-medium hover:bg-gray-300 transition-all">{t('sfa.cancelBtn')}</button>
                                 </div>
                               </div>
                             </div>
@@ -2732,7 +2946,7 @@ export default function SFAUnifiedPage() {
 
                         {/* Options list */}
                         {options.length === 0 ? (
-                          <EmptyState icon={Settings} title="Belum ada opsi" subtitle="Seed default atau tambah opsi baru" />
+                          <EmptyState icon={Settings} title={t('sfa.noOptions')} subtitle={t('sfa.noOptionsSub')} />
                         ) : (
                           <div className="space-y-1">
                             {options.map((opt: any, idx: number) => (
@@ -2755,10 +2969,10 @@ export default function SFAUnifiedPage() {
                                       <Eye className="w-3.5 h-3.5" />
                                     </button>
                                     <button onClick={async () => {
-                                      if (!confirm(`Hapus opsi "${opt.label}"?`)) return;
+                                      if (!confirm(t('sfa.deleteOptionConfirm', { label: opt.label }))) return;
                                       const r = await (await fetch('/api/hq/sfa/lookup?action=delete-option', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: opt.id }) })).json();
-                                      if (r.success) { showToast('Opsi dihapus'); fetchData(); }
-                                      else showToast(r.error || 'Gagal');
+                                      if (r.success) { showToast(t('sfa.optionDeleted')); fetchData(); }
+                                      else showToast(r.error || t('sfa.failedLabel'));
                                     }} className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors" title="Hapus">
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>
@@ -2781,13 +2995,26 @@ export default function SFAUnifiedPage() {
           {/* CRM: CUSTOMER 360° */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'customers' && (<>
-            <SectionHeader title="Customer 360°" subtitle={`${crmCustomers.length} customer terdaftar`}
-              action={<PrimaryBtn onClick={() => { setModal('crm-customer'); setForm({ customer_type: 'company', lifecycle_stage: 'prospect', customer_status: 'active' }); }} icon={Plus}>Tambah Customer</PrimaryBtn>} />
+            <SectionHeader title={t('sfa.customer360')} subtitle={`${crmCustomers.length} ${t('sfa.registeredCustomers')}`}
+              action={
+                <div className="flex flex-wrap items-center gap-2">
+                  {isManager && (
+                    <button
+                      type="button"
+                      onClick={() => { setCustomerImportCsv(''); setCustomerImportOpen(true); }}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 shadow-sm"
+                    >
+                      <Upload className="w-4 h-4" /> Import CSV
+                    </button>
+                  )}
+                  <PrimaryBtn onClick={() => { setModal('crm-customer'); setForm({ customer_type: 'company', lifecycle_stage: 'prospect', customer_status: 'active' }); }} icon={Plus}>{t('sfa.addCustomer')}</PrimaryBtn>
+                </div>
+              } />
 
             {/* Customer Analytics Charts */}
             {crmAnalytics && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <ChartCard title="Lifecycle Stage" subtitle="Distribusi customer per tahap">
+                <ChartCard title={t('sfa.lifecycleStage')} subtitle={t('sfa.lifecycleStageSub')}>
                   {(crmAnalytics.byLifecycle || []).length > 0 ? (() => {
                     const lcColors: Record<string,string> = { prospect: '#94a3b8', lead: '#3b82f6', opportunity: '#8b5cf6', customer: '#10b981', evangelist: '#f59e0b', churned: '#ef4444' };
                     const data = (crmAnalytics.byLifecycle||[]).map((d:any) => ({ ...d, count: parseInt(d.count), fill: lcColors[d.lifecycle_stage]||'#94a3b8' }));
@@ -2810,9 +3037,9 @@ export default function SFAUnifiedPage() {
                         </div>
                       </div>
                     );
-                  })() : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><Heart className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">Belum ada data</span></div>}
+                  })() : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><Heart className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">{t('sfa.noData')}</span></div>}
                 </ChartCard>
-                <ChartCard title="Health Distribution" subtitle="Kesehatan customer">
+                <ChartCard title={t('sfa.healthDistribution')} subtitle={t('sfa.healthDistSub')}>
                   {(crmAnalytics.healthDist || []).length > 0 ? (() => {
                     const hColors: Record<string,string> = { healthy: '#10b981', at_risk: '#f59e0b', critical: '#ef4444' };
                     const data = (crmAnalytics.healthDist||[]).map((d:any) => ({ ...d, count: parseInt(d.count), fill: hColors[d.health_group]||'#94a3b8' }));
@@ -2835,9 +3062,9 @@ export default function SFAUnifiedPage() {
                         </div>
                       </div>
                     );
-                  })() : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><Activity className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">Belum ada data</span></div>}
+                  })() : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><Activity className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">{t('sfa.noData')}</span></div>}
                 </ChartCard>
-                <ChartCard title="Top Sources" subtitle="Sumber akuisisi">
+                <ChartCard title={t('sfa.topSources')} subtitle={t('sfa.topSourcesSub')}>
                   {(crmAnalytics.bySource || []).length > 0 ? (
                     <ResponsiveContainer width="100%" height={200}>
                       <BarChart data={(crmAnalytics.bySource||[]).map((d:any) => ({name: d.acquisition_source, count: parseInt(d.count)}))} margin={{top:8,right:8,bottom:0,left:-10}}>
@@ -2848,7 +3075,7 @@ export default function SFAUnifiedPage() {
                         <Bar dataKey="count" name="Customer" radius={[8,8,0,0]} maxBarSize={32}>{(crmAnalytics.bySource||[]).map((_:any,i:number) => <Cell key={i} fill={CHART_COLORS[i%CHART_COLORS.length]} />)}</Bar>
                       </BarChart>
                     </ResponsiveContainer>
-                  ) : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><Globe className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">Belum ada data</span></div>}
+                  ) : <div className="flex flex-col items-center justify-center py-12 text-gray-300"><Globe className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">{t('sfa.noData')}</span></div>}
                 </ChartCard>
               </div>
             )}
@@ -2866,7 +3093,7 @@ export default function SFAUnifiedPage() {
                   {canDelete && <th className="px-5 py-3.5 w-12"></th>}
                 </tr></thead>
                 <tbody className="divide-y divide-gray-50">
-                  {crmCustomers.length === 0 ? <tr><td colSpan={canDelete ? 7 : 6}><EmptyState icon={Heart} title="Belum ada customer" subtitle="Tambah customer pertama untuk memulai" /></td></tr> :
+                  {crmCustomers.length === 0 ? <tr><td colSpan={canDelete ? 7 : 6}><EmptyState icon={Heart} title={t('sfa.noCustomer')} subtitle={t('sfa.noCustomerSub')} /></td></tr> :
                     crmCustomers.map((c: any) => (
                       <tr key={c.id} className="hover:bg-amber-50/30 cursor-pointer transition-colors" onClick={() => setSelectedItem(c)}>
                         <td className="px-5 py-4"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-100 to-rose-50 flex items-center justify-center text-xs font-bold text-rose-500 shrink-0">{(c.display_name||'?')[0].toUpperCase()}</div><div><div className="font-semibold text-gray-900">{c.display_name}</div><div className="text-xs text-gray-400 mt-0.5">{c.customer_number} {c.company_name ? `· ${c.company_name}` : ''}</div></div></div></td>
@@ -2882,14 +3109,52 @@ export default function SFAUnifiedPage() {
                 </tbody>
               </table>
             </TableWrap>
+
+            {customerImportOpen && isManager && (
+              <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40" onClick={() => !customerImportBusy && setCustomerImportOpen(false)}>
+                <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
+                  <h3 className="text-lg font-bold text-gray-900">Import pelanggan (CSV)</h3>
+                  <p className="text-xs text-gray-500 mt-1 mb-4">
+                    Header wajib: <code className="bg-gray-100 px-1 rounded">display_name</code> atau <code className="bg-gray-100 px-1 rounded">company_name</code>.
+                    Opsional: address, city, province, segment, notes.
+                  </p>
+                  <textarea
+                    className="w-full min-h-[160px] text-xs font-mono border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-amber-300"
+                    placeholder={`display_name,company_name,city,segment\nToko Maju Jaya,PT Maju,Jakarta,platinum`}
+                    value={customerImportCsv}
+                    onChange={e => setCustomerImportCsv(e.target.value)}
+                  />
+                  <div className="flex justify-end gap-2 mt-4">
+                    <button type="button" disabled={customerImportBusy} onClick={() => setCustomerImportOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-xl">Batal</button>
+                    <button
+                      type="button"
+                      disabled={customerImportBusy || !customerImportCsv.trim()}
+                      onClick={async () => {
+                        setCustomerImportBusy(true);
+                        const r = await apiCrm('import-customers-csv', 'POST', { csv: customerImportCsv });
+                        setCustomerImportBusy(false);
+                        if (r.success) {
+                          showToast(r.message || `${r.inserted || 0} diimpor`);
+                          setCustomerImportOpen(false);
+                          fetchData();
+                        } else showToast(r.error || 'Gagal import');
+                      }}
+                      className="px-5 py-2 text-sm font-bold text-white bg-gradient-to-r from-amber-500 to-orange-500 rounded-xl disabled:opacity-50"
+                    >
+                      {customerImportBusy ? <Loader2 className="w-4 h-4 animate-spin inline" /> : null} Import
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>)}
 
           {/* ═══════════════════════════════════════════ */}
           {/* CRM: COMMUNICATION HUB */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'communications' && (<>
-            <SectionHeader title="Communication Hub" subtitle={`${crmComms.length} komunikasi | ${crmFollowUps.length} follow-up`}
-              action={<PrimaryBtn onClick={() => { setModal('crm-comm'); setForm({ comm_type: 'call', direction: 'outbound', status: 'completed' }); }} icon={Plus}>Log Komunikasi</PrimaryBtn>} />
+            <SectionHeader title={t('sfa.commHub')} subtitle={`${crmComms.length} ${t('sfa.communications')} | ${crmFollowUps.length} follow-up`}
+              action={<PrimaryBtn onClick={() => { setModal('crm-comm'); setForm({ comm_type: 'call', direction: 'outbound', status: 'completed' }); }} icon={Plus}>{t('sfa.logComm')}</PrimaryBtn>} />
 
             {/* Comm Summary */}
             {crmComms.length > 0 && (() => {
@@ -2897,7 +3162,7 @@ export default function SFAUnifiedPage() {
               const tColors: Record<string,string> = { call: '#3b82f6', email: '#10b981', meeting: '#8b5cf6', whatsapp: '#22c55e', sms: '#f59e0b' };
               return (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <ChartCard title="Komunikasi per Tipe" subtitle="Distribusi channel komunikasi">
+                  <ChartCard title={t('sfa.commPerType')} subtitle={t('sfa.commPerTypeSub')}>
                     <div className="flex flex-col sm:flex-row items-center gap-6">
                       <div className="w-40 h-40 shrink-0 relative">
                         <ResponsiveContainer width="100%" height="100%">
@@ -2915,8 +3180,8 @@ export default function SFAUnifiedPage() {
                       </div>
                     </div>
                   </ChartCard>
-                  <ChartCard title="Follow-Up Pending" subtitle="Tindak lanjut yang perlu dilakukan">
-                    {crmFollowUps.filter((f:any) => f.status === 'pending').length === 0 ? <div className="flex flex-col items-center justify-center py-10 text-gray-300"><CheckCircle className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">Semua follow-up selesai</span></div> :
+                  <ChartCard title={t('sfa.followUpPending')} subtitle={t('sfa.followUpPendingSub')}>
+                    {crmFollowUps.filter((f:any) => f.status === 'pending').length === 0 ? <div className="flex flex-col items-center justify-center py-10 text-gray-300"><CheckCircle className="w-10 h-10 mb-2 opacity-30" /><span className="text-sm">{t('sfa.allFollowUpDone')}</span></div> :
                       <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
                         {crmFollowUps.filter((f:any) => f.status === 'pending').slice(0,8).map((f:any) => (
                           <div key={f.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100/80 transition-colors">
@@ -2947,7 +3212,7 @@ export default function SFAUnifiedPage() {
                   {canDelete && <th className="px-5 py-3.5 w-12"></th>}
                 </tr></thead>
                 <tbody className="divide-y divide-gray-50">
-                  {crmComms.length === 0 ? <tr><td colSpan={6}><EmptyState icon={MessageCircle} title="Belum ada komunikasi" subtitle="Log komunikasi pertama Anda" /></td></tr> :
+                  {crmComms.length === 0 ? <tr><td colSpan={6}><EmptyState icon={MessageCircle} title={t('sfa.noComm')} subtitle={t('sfa.noCommSub')} /></td></tr> :
                     crmComms.map((cm: any) => (
                       <tr key={cm.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-5 py-3.5"><div className="flex items-center gap-2">{cm.comm_type==='call' ? <Phone className="w-4 h-4 text-blue-500" /> : cm.comm_type==='email' ? <Mail className="w-4 h-4 text-emerald-500" /> : cm.comm_type==='meeting' ? <Calendar className="w-4 h-4 text-violet-500" /> : <MessageCircle className="w-4 h-4 text-green-500" />}<span className="text-xs font-medium capitalize">{cm.comm_type}</span></div></td>
@@ -2957,8 +3222,8 @@ export default function SFAUnifiedPage() {
                         <td className="px-5 py-3.5 text-center"><button onClick={() => {
                           const next: Record<string,string> = { scheduled: 'completed', completed: 'missed', missed: 'scheduled' };
                           const ns = next[cm.status] || 'completed';
-                          handleCrmUpdate('update-communication', { id: cm.id, status: ns }, `Komunikasi → ${ns}`);
-                        }} title="Klik untuk ubah status"><Badge color={cm.status==='completed'?'green':cm.status==='scheduled'?'yellow':'gray'}>{cm.status}</Badge></button></td>
+                          handleCrmUpdate('update-communication', { id: cm.id, status: ns }, `${t('sfa.communications')} → ${ns}`);
+                        }} title={t('sfa.changeStatus')}><Badge color={cm.status==='completed'?'green':cm.status==='scheduled'?'yellow':'gray'}>{cm.status}</Badge></button></td>
                         <td className="px-5 py-3.5 text-gray-500 hidden md:table-cell">{fmtDate(cm.created_at)}</td>
                         {canDelete && <td className="px-5 py-3.5"><button onClick={() => handleCrmDelete('delete-communication', cm.id, 'Komunikasi')} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" /></button></td>}
                       </tr>
@@ -2976,19 +3241,23 @@ export default function SFAUnifiedPage() {
             <TaskCalendarModule showToast={showToast} />
           )}
 
+          {tab === 'field-tasks' && (
+            <TaskCalendarModule showToast={showToast} fieldForceBridge />
+          )}
+
           {/* ═══════════════════════════════════════════ */}
           {/* CRM: FORECASTING */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'forecasting' && (<>
-            <SectionHeader title="Sales Forecasting" subtitle="Prediksi dan perencanaan pendapatan"
-              action={<PrimaryBtn onClick={() => { setModal('crm-forecast'); setForm({ forecast_period: 'monthly', status: 'draft' }); }} icon={Plus}>Buat Forecast</PrimaryBtn>} />
+            <SectionHeader title={t('sfa.salesForecasting')} subtitle={t('sfa.salesForecastingSub')}
+              action={<PrimaryBtn onClick={() => { setModal('crm-forecast'); setForm({ forecast_period: 'monthly', status: 'draft' }); }} icon={Plus}>{t('sfa.createForecast')}</PrimaryBtn>} />
 
             {/* Forecast Analytics */}
             {crmForecastAnalytics && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Target vs Aktual</h3>
-                  <p className="text-xs text-gray-400 mb-4">Perbandingan target dan realisasi</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">{t('sfa.targetVsActual')}</h3>
+                  <p className="text-xs text-gray-400 mb-4">{t('sfa.targetVsActualSub')}</p>
                   {(crmForecastAnalytics.forecasts || []).length > 0 ? (
                     <ResponsiveContainer width="100%" height={220}>
                       <BarChart data={(crmForecastAnalytics.forecasts||[]).slice(0,6).reverse().map((f:any) => ({name: f.name?.substring(0,12), target: parseFloat(f.target_revenue), actual: parseFloat(f.actual_revenue)}))} margin={{top:5,right:5,bottom:5,left:5}}>
@@ -2996,15 +3265,15 @@ export default function SFAUnifiedPage() {
                         <XAxis dataKey="name" tick={{fontSize:9,fill:'#94a3b8'}} axisLine={false} tickLine={false} />
                         <YAxis tick={{fontSize:9,fill:'#94a3b8'}} axisLine={false} tickLine={false} tickFormatter={(v:number) => v>=1e6?`${(v/1e6).toFixed(0)}M`:v>=1e3?`${(v/1e3).toFixed(0)}K`:`${v}`} />
                         <Tooltip content={<ChartTooltip />} />
-                        <Bar dataKey="target" name="Target" fill="#e2e8f0" radius={[4,4,0,0]} maxBarSize={25} />
-                        <Bar dataKey="actual" name="Aktual" fill="#f59e0b" radius={[4,4,0,0]} maxBarSize={25} />
+                        <Bar dataKey="target" name={t('sfa.targetLabel')} fill="#e2e8f0" radius={[4,4,0,0]} maxBarSize={25} />
+                        <Bar dataKey="actual" name={t('sfa.actualLabel')} fill="#f59e0b" radius={[4,4,0,0]} maxBarSize={25} />
                       </BarChart>
                     </ResponsiveContainer>
-                  ) : <div className="text-center py-10 text-gray-300 text-sm">Belum ada data forecast</div>}
+                  ) : <div className="text-center py-10 text-gray-300 text-sm">{t('sfa.noForecastData')}</div>}
                 </Card>
                 <Card className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Deal Temperature</h3>
-                  <p className="text-xs text-gray-400 mb-4">Distribusi skor deals</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">{t('sfa.dealTemperature')}</h3>
+                  <p className="text-xs text-gray-400 mb-4">{t('sfa.dealTemperatureSub')}</p>
                   {(crmForecastAnalytics.dealScoreDist || []).length > 0 ? (() => {
                     const dtColors: Record<string,string> = { hot: '#ef4444', warm: '#f59e0b', cold: '#3b82f6' };
                     const data = (crmForecastAnalytics.dealScoreDist||[]).map((d:any) => ({...d, count: parseInt(d.count), fill: dtColors[d.temp]||'#94a3b8'}));
@@ -3014,14 +3283,14 @@ export default function SFAUnifiedPage() {
                         <div className="flex-1 space-y-3 w-full">{data.map((d:any,i:number) => (<div key={i} className="flex items-center justify-between text-xs"><div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full" style={{background:d.fill}} /><span className="text-gray-600 capitalize">{d.temp}</span></div><span className="font-bold text-gray-900">{d.count} deals</span></div>))}</div>
                       </div>
                     );
-                  })() : <div className="text-center py-10 text-gray-300 text-sm">Belum ada deal score</div>}
+                  })() : <div className="text-center py-10 text-gray-300 text-sm">{t('sfa.noDealScore')}</div>}
                 </Card>
               </div>
             )}
 
             {/* Forecast List */}
             <div className="grid sm:grid-cols-2 gap-4">
-              {crmForecasts.length === 0 ? <div className="col-span-2"><EmptyState icon={TrendingUp} title="Belum ada forecast" /></div> :
+              {crmForecasts.length === 0 ? <div className="col-span-2"><EmptyState icon={TrendingUp} title={t('sfa.noForecast')} /></div> :
                 crmForecasts.map((f: any) => {
                   const pct = f.target_revenue > 0 ? Math.round((parseFloat(f.actual_revenue) / parseFloat(f.target_revenue)) * 100) : 0;
                   return (
@@ -3032,7 +3301,7 @@ export default function SFAUnifiedPage() {
                           const next: Record<string,string> = { draft: 'submitted', submitted: 'approved', approved: 'draft' };
                           const ns = next[f.status] || 'submitted';
                           handleCrmUpdate('update-forecast', { id: f.id, status: ns }, `Forecast → ${ns}`);
-                        }} title="Klik untuk ubah status"><Badge color={f.status==='approved'?'green':f.status==='submitted'?'blue':'gray'}>{f.status}</Badge></button>
+                        }} title={t('sfa.changeStatus')}><Badge color={f.status==='approved'?'green':f.status==='submitted'?'blue':'gray'}>{f.status}</Badge></button>
                       </div>
                       <div className="mb-3"><div className="flex justify-between text-xs mb-1"><span className="text-gray-500">Progress</span><span className="font-bold text-gray-900">{pct}%</span></div><div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all" style={{width:`${Math.min(pct,100)}%`}} /></div></div>
                       <div className="grid grid-cols-3 gap-2 pt-3 border-t border-gray-50">
@@ -3048,110 +3317,20 @@ export default function SFAUnifiedPage() {
           </>)}
 
           {/* ═══════════════════════════════════════════ */}
-          {/* CRM: TICKETS & SLA */}
-          {/* ═══════════════════════════════════════════ */}
-          {tab === 'tickets' && (<>
-            <SectionHeader title="Tiket & SLA" subtitle={`${crmTickets.length} tiket`}
-              action={<PrimaryBtn onClick={() => { setModal('crm-ticket'); setForm({ priority: 'medium', severity: 'minor', category: 'request', source_channel: 'email' }); }} icon={Plus}>Buat Tiket</PrimaryBtn>} />
-
-            {/* Service Analytics */}
-            {crmServiceAnalytics && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Card className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Status Tiket</h3>
-                  {(crmServiceAnalytics.byStatus || []).length > 0 ? (() => {
-                    const tsColors: Record<string,string> = { open: '#ef4444', in_progress: '#3b82f6', waiting: '#f59e0b', resolved: '#10b981', closed: '#6b7280', reopened: '#dc2626' };
-                    const data = (crmServiceAnalytics.byStatus||[]).map((d:any) => ({...d, count: parseInt(d.count), fill: tsColors[d.status]||'#94a3b8'}));
-                    return (
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-32 h-32"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="count" nameKey="status" cx="50%" cy="50%" innerRadius={28} outerRadius={50} paddingAngle={3} strokeWidth={0}>{data.map((d:any,i:number) => <Cell key={i} fill={d.fill} />)}</Pie><Tooltip content={<ChartTooltip />} /></PieChart></ResponsiveContainer></div>
-                        <div className="space-y-1.5 w-full">{data.map((d:any,i:number) => (<div key={i} className="flex items-center justify-between text-xs"><div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full" style={{background:d.fill}} /><span className="text-gray-600 capitalize">{(d.status||'').replace('_',' ')}</span></div><span className="font-bold">{d.count}</span></div>))}</div>
-                      </div>
-                    );
-                  })() : <div className="text-center py-8 text-gray-300 text-sm">Belum ada tiket</div>}
-                </Card>
-                <Card className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Kategori</h3>
-                  {(crmServiceAnalytics.byCategory || []).length > 0 ? (
-                    <ResponsiveContainer width="100%" height={160}>
-                      <BarChart data={(crmServiceAnalytics.byCategory||[]).map((d:any) => ({name:d.category,count:parseInt(d.count)}))} layout="vertical" margin={{top:5,right:5,bottom:5,left:60}}>
-                        <XAxis type="number" tick={{fontSize:10,fill:'#94a3b8'}} axisLine={false} tickLine={false} allowDecimals={false} />
-                        <YAxis type="category" dataKey="name" tick={{fontSize:10,fill:'#94a3b8'}} axisLine={false} tickLine={false} />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Bar dataKey="count" name="Tiket" radius={[0,6,6,0]} maxBarSize={20} fill="#f59e0b" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : <div className="text-center py-8 text-gray-300 text-sm">Belum ada data</div>}
-                </Card>
-                <Card className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Performa SLA</h3>
-                  <div className="space-y-4">
-                    <div className="text-center p-3 bg-gray-50 rounded-xl"><p className="text-xl font-bold text-gray-900">{crmServiceAnalytics.avgResolutionHours?.toFixed(1) || '0'}h</p><p className="text-[10px] text-gray-500 mt-1">Avg Resolusi</p></div>
-                    {crmServiceAnalytics.sla && crmServiceAnalytics.sla.total > 0 && (
-                      <div>
-                        <div className="flex justify-between text-xs mb-1"><span className="text-gray-500">SLA Met</span><span className="font-bold text-emerald-600">{Math.round((crmServiceAnalytics.sla.met/crmServiceAnalytics.sla.total)*100)}%</span></div>
-                        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{width:`${(crmServiceAnalytics.sla.met/crmServiceAnalytics.sla.total)*100}%`}} /></div>
-                        <div className="flex justify-between text-[10px] text-gray-400 mt-1"><span>Met: {crmServiceAnalytics.sla.met}</span><span>Breached: {crmServiceAnalytics.sla.breached}</span></div>
-                      </div>
-                    )}
-                    {crmSatisfaction && crmSatisfaction.totalResponses > 0 && (
-                      <div className="pt-2 border-t border-gray-100"><div className="flex justify-between text-xs"><span className="text-gray-500">CSAT</span><span className="font-bold text-amber-600">{crmSatisfaction.avgCsat?.toFixed(1)}/5</span></div><div className="flex justify-between text-xs mt-1"><span className="text-gray-500">NPS</span><span className="font-bold text-blue-600">{crmSatisfaction.avgNps?.toFixed(0)}</span></div></div>
-                    )}
-                  </div>
-                </Card>
-              </div>
-            )}
-
-            {/* Ticket Table */}
-            <TableWrap>
-              <table className="w-full text-sm">
-                <thead><tr className="border-b border-gray-100">
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tiket</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">Customer</th>
-                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
-                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">SLA</th>
-                  <th className="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Tanggal</th>
-                  {canDelete && <th className="px-5 py-3.5 w-12"></th>}
-                </tr></thead>
-                <tbody className="divide-y divide-gray-50">
-                  {crmTickets.length === 0 ? <tr><td colSpan={6}><EmptyState icon={Headphones} title="Belum ada tiket" /></td></tr> :
-                    crmTickets.map((tk: any) => (
-                      <tr key={tk.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-5 py-4"><div className="font-semibold text-gray-900">{tk.subject}</div><div className="text-xs text-gray-400 mt-0.5">{tk.ticket_number} · {tk.category || '-'}</div></td>
-                        <td className="px-5 py-4 text-gray-600 hidden sm:table-cell">{tk.customer_name || '-'}</td>
-                        <td className="px-5 py-4 text-center"><Badge color={tk.priority==='critical'||tk.priority==='high'?'red':tk.priority==='medium'?'yellow':'green'}>{tk.priority}</Badge></td>
-                        <td className="px-5 py-4 text-center"><button onClick={() => {
-                          const next: Record<string,string> = { open: 'in_progress', in_progress: 'resolved', resolved: 'closed', closed: 'open', waiting: 'in_progress', reopened: 'in_progress' };
-                          const ns = next[tk.status] || 'in_progress';
-                          handleCrmUpdate('update-ticket', { id: tk.id, status: ns }, `Tiket → ${ns.replace('_',' ')}`);
-                        }} title="Klik untuk ubah status"><Badge color={tk.status==='open'?'red':tk.status==='in_progress'?'blue':tk.status==='resolved'||tk.status==='closed'?'green':'yellow'}>{(tk.status||'').replace('_',' ')}</Badge></button></td>
-                        <td className="px-5 py-4 text-center hidden md:table-cell">{tk.sla_breached ? <Badge color="red">Breached</Badge> : <Badge color="green">OK</Badge>}</td>
-                        <td className="px-5 py-4 text-gray-500 hidden lg:table-cell">{fmtDate(tk.created_at)}</td>
-                        {canDelete && <td className="px-5 py-4"><button onClick={() => handleCrmDelete('delete-ticket', tk.id, 'Tiket')} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 className="w-4 h-4" /></button></td>}
-                      </tr>
-                    ))
-                  }
-                </tbody>
-              </table>
-            </TableWrap>
-          </>)}
-
-          {/* ═══════════════════════════════════════════ */}
           {/* CRM: AUTOMATION */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'automation' && (<>
-            <SectionHeader title="Automasi CRM" subtitle={`${crmAutomationRules.length} rules · ${crmAutomationLogs.length} execution logs`}
-              action={<PrimaryBtn onClick={() => { setModal('crm-automation'); setForm({ rule_type: 'trigger', is_active: true, trigger_entity: 'lead', trigger_event: 'lead_created' }); }} icon={Plus}>Buat Rule</PrimaryBtn>} />
+            <SectionHeader title={t('sfa.crmAutomation')} subtitle={`${crmAutomationRules.length} rules · ${crmAutomationLogs.length} execution logs`}
+              action={<PrimaryBtn onClick={() => { setModal('crm-automation'); setForm({ rule_type: 'trigger', is_active: true, trigger_entity: 'lead', trigger_event: 'lead_created' }); }} icon={Plus}>{t('sfa.createRule')}</PrimaryBtn>} />
 
             {/* Rules */}
             <div className="grid sm:grid-cols-2 gap-4">
-              {crmAutomationRules.length === 0 ? <div className="col-span-2"><EmptyState icon={Zap} title="Belum ada automation rule" subtitle="Buat rule pertama untuk mengotomasi workflow" /></div> :
+              {crmAutomationRules.length === 0 ? <div className="col-span-2"><EmptyState icon={Zap} title={t('sfa.noAutomationRule')} subtitle={t('sfa.noAutomationRuleSub')} /></div> :
                 crmAutomationRules.map((r: any) => (
                   <Card key={r.id} className="p-5" hover>
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white shrink-0"><Zap className="w-5 h-5" /></div><div><h4 className="font-semibold text-sm text-gray-900">{r.name}</h4><p className="text-xs text-gray-400 mt-0.5">{r.rule_type} · {r.trigger_entity} · {r.trigger_event}</p></div></div>
-                      <button onClick={() => handleCrmUpdate('update-automation-rule', {id:r.id,is_active:!r.is_active}, r.is_active?'Rule dinonaktifkan':'Rule diaktifkan')}>
+                      <button onClick={() => handleCrmUpdate('update-automation-rule', {id:r.id,is_active:!r.is_active}, r.is_active?t('sfa.ruleDeactivated'):t('sfa.ruleActivated'))}>
                         <Badge color={r.is_active?'green':'gray'}>{r.is_active?'Active':'Off'}</Badge>
                       </button>
                     </div>
@@ -3171,7 +3350,7 @@ export default function SFAUnifiedPage() {
 
             {/* Recent Logs */}
             {crmAutomationLogs.length > 0 && (<>
-              <SectionHeader title="Execution Logs" subtitle="Riwayat eksekusi automasi terbaru" />
+              <SectionHeader title={t('sfa.executionLogs')} subtitle={t('sfa.executionLogsSub')} />
               <TableWrap>
                 <table className="w-full text-sm">
                   <thead><tr className="border-b border-gray-100">
@@ -3215,13 +3394,13 @@ export default function SFAUnifiedPage() {
                     <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider">AI Engine</span>
                   </div>
                   <h2 className="text-xl sm:text-2xl font-bold text-white">AI Workflow Engine</h2>
-                  <p className="text-purple-100 text-sm mt-1">Otomasi CRM & SFA dengan kecerdasan buatan — lead scoring, segmentation, forecasting & more</p>
+                  <p className="text-purple-100 text-sm mt-1">{t('sfa.aiWorkflowDesc')}</p>
                 </div>
                 <div className="flex gap-2 shrink-0">
                   {isManager && (
                     <button onClick={() => { setModal('setup-ai-model'); setForm({}); }}
                       className="px-4 py-2 bg-white text-purple-700 rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-1.5">
-                      <Plus className="w-3.5 h-3.5" /> Tambah Model
+                      <Plus className="w-3.5 h-3.5" /> {t('sfa.addModel')}
                     </button>
                   )}
                   <button onClick={fetchData} className="px-3 py-2 bg-white/15 border border-white/20 text-white rounded-xl text-xs font-medium hover:bg-white/25 transition-all">
@@ -3256,8 +3435,8 @@ export default function SFAUnifiedPage() {
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/50">
                 <div className="flex items-center gap-2">
                   <Cpu className="w-4.5 h-4.5 text-blue-500" />
-                  <h3 className="font-bold text-gray-900 text-sm">Model AI</h3>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">{aiModels.length} aktif</span>
+                  <h3 className="font-bold text-gray-900 text-sm">{t('sfa.aiModels')}</h3>
+                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">{aiModels.length} {t('sfa.active')}</span>
                 </div>
               </div>
               <div className="p-5">
@@ -3266,8 +3445,8 @@ export default function SFAUnifiedPage() {
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center mx-auto mb-4">
                       <Brain className="w-8 h-8 text-blue-300" />
                     </div>
-                    <p className="text-sm font-medium text-gray-600 mb-1">Belum ada model AI</p>
-                    <p className="text-xs text-gray-400 mb-5">Pilih dari {aiModelCatalog.length} model tersedia untuk memulai</p>
+                    <p className="text-sm font-medium text-gray-600 mb-1">{t('sfa.noAiModel')}</p>
+                    <p className="text-xs text-gray-400 mb-5">{t('sfa.noAiModelSub', { count: aiModelCatalog.length })}</p>
                     {isManager && (
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-w-3xl mx-auto">
                         {aiModelCatalog.slice(0, 8).map((m: any) => {
@@ -3280,15 +3459,15 @@ export default function SFAUnifiedPage() {
                                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ code: m.model_id, name: m.name, provider: m.provider, model_id: m.model_id, capabilities: m.capabilities, cost_per_1k_input: m.cost_input, cost_per_1k_output: m.cost_output, max_context_tokens: m.max_tokens, is_default: aiModels.length === 0 }),
                                 })).json();
-                                if (r.success) { showToast(`Model ${m.name} ditambahkan`); fetchData(); }
-                                else showToast(r.error || 'Gagal');
+                                if (r.success) { showToast(t('sfa.modelAdded', { name: m.name })); fetchData(); }
+                                else showToast(r.error || t('sfa.failedLabel'));
                               }}
                               className={`p-4 rounded-xl border-2 ${pc[m.provider] || 'border-gray-200'} transition-all text-left group hover:shadow-md`}
                             >
                               <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold ${pt[m.provider] || 'bg-gray-100'}`}>{m.provider}</span>
                               <div className="text-sm font-semibold text-gray-900 mt-2">{m.name}</div>
                               <div className="text-[10px] text-gray-400 mt-1">{m.max_tokens > 100000 ? `${(m.max_tokens/1000).toFixed(0)}K` : m.max_tokens} context tokens</div>
-                              <div className="mt-2 text-[10px] text-blue-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">+ Klik untuk setup</div>
+                              <div className="mt-2 text-[10px] text-blue-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">+ {t('sfa.clickToSetup')}</div>
                             </button>
                           );
                         })}
@@ -3338,8 +3517,8 @@ export default function SFAUnifiedPage() {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ ai_model_id: mid }),
                       })).json();
-                      if (r.success) { showToast(`${r.data?.created} workflow diinisialisasi`); fetchData(); }
-                      else showToast(r.error || 'Gagal');
+                      if (r.success) { showToast(t('sfa.workflowInitialized', { count: r.data?.created })); fetchData(); }
+                      else showToast(r.error || t('sfa.failedLabel'));
                     }}
                     className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-1.5"
                   >
@@ -3353,8 +3532,8 @@ export default function SFAUnifiedPage() {
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center mx-auto mb-4">
                       <Sparkles className="w-8 h-8 text-amber-300" />
                     </div>
-                    <p className="text-sm font-medium text-gray-600 mb-1">Belum ada workflow</p>
-                    <p className="text-xs text-gray-400">{aiWorkflowTemplates.length > 0 ? 'Klik tombol Init Template di atas untuk memulai dengan 8 workflow bawaan' : 'Setup model AI terlebih dahulu'}</p>
+                    <p className="text-sm font-medium text-gray-600 mb-1">{t('sfa.noWorkflow')}</p>
+                    <p className="text-xs text-gray-400">{aiWorkflowTemplates.length > 0 ? t('sfa.initTemplateHint') : t('sfa.setupAiFirst')}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3402,7 +3581,7 @@ export default function SFAUnifiedPage() {
                                 <span className="flex items-center gap-1 text-gray-400"><Cpu className="w-3 h-3" /> No model</span>
                               )}
                               <span className="text-gray-300">|</span>
-                              <span className="text-gray-400">{wf.execution_count || 0}x dijalankan</span>
+                              <span className="text-gray-400">{wf.execution_count || 0}x {t('sfa.executed')}</span>
                             </div>
 
                             {/* Action row */}
@@ -3415,8 +3594,8 @@ export default function SFAUnifiedPage() {
                                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ workflow_id: wf.id, input_data: {} }),
                                   })).json();
-                                  if (r.success) { setAiExecResult(r.data); showToast('Workflow berhasil dijalankan'); }
-                                  else showToast(r.error || 'Gagal eksekusi: ' + (r.error || ''));
+                                  if (r.success) { setAiExecResult(r.data); showToast(t('sfa.workflowExecuted')); }
+                                  else showToast(r.error || t('sfa.failedLabel'));
                                   setAiExecLoading(false); fetchData();
                                 }}
                                 className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 ${
@@ -3426,7 +3605,7 @@ export default function SFAUnifiedPage() {
                                 }`}
                               >
                                 {aiExecLoading && aiSelectedWorkflow?.id === wf.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                                {aiExecLoading && aiSelectedWorkflow?.id === wf.id ? 'Memproses...' : 'Jalankan AI'}
+                                {aiExecLoading && aiSelectedWorkflow?.id === wf.id ? t('sfa.processing') : t('sfa.runAi')}
                               </button>
                               {isManager && aiModels.length > 0 && (
                                 <select className="px-2.5 py-2 border border-gray-200 rounded-lg text-[11px] bg-white focus:ring-2 focus:ring-purple-200 focus:border-purple-300 transition-all"
@@ -3436,7 +3615,7 @@ export default function SFAUnifiedPage() {
                                       method: 'POST', headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({ workflow_id: wf.id, ai_model_id: e.target.value || null }),
                                     })).json();
-                                    showToast('Model diassign'); fetchData();
+                                    showToast(t('sfa.modelAssigned')); fetchData();
                                   }}>
                                   <option value="">Model</option>
                                   {aiModels.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -3457,7 +3636,7 @@ export default function SFAUnifiedPage() {
               <Card className="mb-6 !p-0 overflow-hidden ring-2 ring-emerald-200">
                 <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-emerald-50 to-green-50 border-b border-emerald-100">
                   <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-500" /> Hasil: {aiSelectedWorkflow?.name}
+                    <CheckCircle className="w-4 h-4 text-emerald-500" /> {t('sfa.resultLabel')}: {aiSelectedWorkflow?.name}
                     {aiExecResult.mock && <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px] font-bold">MOCK</span>}
                   </h4>
                   <div className="flex items-center gap-3 text-[10px]">
@@ -3475,10 +3654,10 @@ export default function SFAUnifiedPage() {
             {/* Execution History */}
             <Card className="!p-0 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
-                <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2"><Clock className="w-4 h-4 text-gray-500" /> Riwayat Eksekusi</h4>
+                <h4 className="font-bold text-gray-900 text-sm flex items-center gap-2"><Clock className="w-4 h-4 text-gray-500" /> {t('sfa.executionHistory')}</h4>
               </div>
               {aiExecutions.length === 0 ? (
-                <div className="text-center py-10 text-gray-400 text-sm">Belum ada riwayat eksekusi</div>
+                <div className="text-center py-10 text-gray-400 text-sm">{t('sfa.noExecutionHistory')}</div>
               ) : (
                 <div className="divide-y divide-gray-100">
                   {aiExecutions.slice(0, 10).map((ex: any) => (
@@ -3511,7 +3690,7 @@ export default function SFAUnifiedPage() {
           {/* INTEGRASI CRM ↔ SFA */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'integration' && (<>
-            <SectionHeader title="Integrasi CRM ↔ SFA" subtitle="Konversi lead ke customer, tautkan kunjungan, sinkronkan pipeline ke forecast" />
+            <SectionHeader title={t('sfa.integrationTitle')} subtitle={t('sfa.integrationSub')} />
 
             {/* Health Overview */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
@@ -3544,29 +3723,29 @@ export default function SFAUnifiedPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center"><UserPlus className="w-4.5 h-4.5 text-amber-600" /></div>
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-900">Lead → Customer</h3>
-                      <p className="text-[11px] text-gray-400 mt-0.5">{intConvertibleLeads.length} lead siap dikonversi</p>
+                      <h3 className="text-sm font-semibold text-gray-900">{t('sfa.leadToCustomer')}</h3>
+                      <p className="text-[11px] text-gray-400 mt-0.5">{intConvertibleLeads.length} {t('sfa.leadsReadyConvert')}</p>
                     </div>
                   </div>
                   {intConvertibleLeads.length > 0 && (
                     <button disabled={intLoading} onClick={async () => {
-                      if (!confirm(`Konversi ${intConvertibleLeads.length} lead ke CRM customer?`)) return;
+                      if (!confirm(t('sfa.confirmConvertLeads', { count: intConvertibleLeads.length }))) return;
                       setIntLoading(true);
                       const r = await (await fetch('/api/hq/integrations/crm-sfa?action=bulk-convert-leads', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ leadIds: intConvertibleLeads.map(l => l.id) })
                       })).json();
-                      if (r.success) showToast(`${r.data?.converted || 0} lead dikonversi`);
-                      else showToast(r.error || 'Gagal');
+                      if (r.success) showToast(t('sfa.leadsConverted', { count: r.data?.converted || 0 }));
+                      else showToast(r.error || t('sfa.failedLabel'));
                       setIntLoading(false); fetchData();
                     }} className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl text-xs font-semibold shadow-sm shadow-amber-500/20 hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 transition-all">
-                      {intLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRightLeft className="w-3.5 h-3.5" />} Konversi Semua
+                      {intLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRightLeft className="w-3.5 h-3.5" />} {t('sfa.convertAll')}
                     </button>
                   )}
                 </div>
                 <div className="flex-1 overflow-auto max-h-[340px]">
                   {intConvertibleLeads.length === 0 ? (
-                    <EmptyState icon={CheckCircle} title="Semua lead sudah dikonversi" subtitle="Tidak ada lead yang pending" />
+                    <EmptyState icon={CheckCircle} title={t('sfa.allLeadsConverted')} subtitle={t('sfa.noLeadsPending')} />
                   ) : (
                     <table className="w-full text-sm">
                       <thead className="sticky top-0"><tr className="bg-gray-50/80 backdrop-blur-sm">
@@ -3591,10 +3770,10 @@ export default function SFAUnifiedPage() {
                                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ leadId: l.id })
                                 })).json();
-                                if (r.success) showToast('Lead dikonversi ke customer');
-                                else showToast(r.error || 'Gagal');
+                                if (r.success) showToast(t('sfa.leadConvertedSuccess'));
+                                else showToast(r.error || t('sfa.failedLabel'));
                                 setIntLoading(false); fetchData();
-                              }} className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50">Konversi</button>
+                              }} className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 shrink-0 ml-3">{t('sfa.convertBtn')}</button>
                             </td>
                           </tr>
                         ))}
@@ -3610,29 +3789,29 @@ export default function SFAUnifiedPage() {
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center"><Navigation className="w-4.5 h-4.5 text-purple-600" /></div>
                     <div>
-                      <h3 className="text-sm font-semibold text-gray-900">Visit → CRM</h3>
-                      <p className="text-[11px] text-gray-400 mt-0.5">{intUnlinkedVisits.length} kunjungan belum ditautkan</p>
+                      <h3 className="text-sm font-semibold text-gray-900">{t('sfa.visitToCrm')}</h3>
+                      <p className="text-[11px] text-gray-400 mt-0.5">{intUnlinkedVisits.length} {t('sfa.visitsUnlinked')}</p>
                     </div>
                   </div>
                   {intUnlinkedVisits.length > 0 && (
                     <button disabled={intLoading} onClick={async () => {
-                      if (!confirm(`Tautkan ${intUnlinkedVisits.length} visit ke CRM?`)) return;
+                      if (!confirm(t('sfa.confirmLinkVisits', { count: intUnlinkedVisits.length }))) return;
                       setIntLoading(true);
                       const r = await (await fetch('/api/hq/integrations/crm-sfa?action=bulk-link-visits', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ visitIds: intUnlinkedVisits.map(v => v.id) })
                       })).json();
-                      if (r.success) showToast(`${r.data?.linked || 0} visit ditautkan`);
-                      else showToast(r.error || 'Gagal');
+                      if (r.success) showToast(t('sfa.visitsLinked', { count: r.data?.linked || 0 }));
+                      else showToast(r.error || t('sfa.failedLabel'));
                       setIntLoading(false); fetchData();
                     }} className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl text-xs font-semibold shadow-sm shadow-purple-500/20 hover:from-purple-600 hover:to-purple-700 disabled:opacity-50 transition-all">
-                      {intLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />} Tautkan Semua
+                      {intLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />} {t('sfa.linkAll')}
                     </button>
                   )}
                 </div>
                 <div className="flex-1 overflow-auto max-h-[340px]">
                   {intUnlinkedVisits.length === 0 ? (
-                    <EmptyState icon={CheckCircle} title="Semua visit sudah ditautkan" subtitle="Tidak ada kunjungan pending" />
+                    <EmptyState icon={CheckCircle} title={t('sfa.allVisitsLinked')} subtitle={t('sfa.noVisitsPending')} />
                   ) : (
                     <div className="divide-y divide-gray-50">
                       {intUnlinkedVisits.slice(0, 10).map((v: any) => (
@@ -3650,10 +3829,10 @@ export default function SFAUnifiedPage() {
                               method: 'POST', headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ visitId: v.id })
                             })).json();
-                            if (r.success) showToast('Visit ditautkan ke CRM');
-                            else showToast(r.error || 'Gagal');
+                            if (r.success) showToast(t('sfa.visitLinked'));
+                            else showToast(r.error || t('sfa.failedLabel'));
                             setIntLoading(false); fetchData();
-                          }} className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 shrink-0 ml-3">Tautkan</button>
+                          }} className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 shrink-0 ml-3">{t('sfa.linkBtn')}</button>
                         </div>
                       ))}
                     </div>
@@ -3668,28 +3847,28 @@ export default function SFAUnifiedPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center"><TrendingUp className="w-4.5 h-4.5 text-indigo-600" /></div>
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900">Pipeline → Forecast</h3>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{intSyncablePipeline.length} opportunity belum masuk forecast</p>
+                    <h3 className="text-sm font-semibold text-gray-900">{t('sfa.pipelineToForecast')}</h3>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{intSyncablePipeline.length} {t('sfa.oppNotInForecast')}</p>
                   </div>
                 </div>
                 {intSyncablePipeline.length > 0 && (
                   <button disabled={intLoading} onClick={async () => {
-                    if (!confirm('Sinkronkan semua pipeline ke CRM forecast?')) return;
+                    if (!confirm(t('sfa.confirmSyncPipeline'))) return;
                     setIntLoading(true);
                     const r = await (await fetch('/api/hq/integrations/crm-sfa?action=sync-pipeline-forecast', {
                       method: 'POST', headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({})
                     })).json();
-                    if (r.success) showToast(`${r.data?.synced || 0} opportunity disinkronkan`);
-                    else showToast(r.error || 'Gagal');
+                    if (r.success) showToast(t('sfa.oppSynced', { count: r.data?.synced || 0 }));
+                    else showToast(r.error || t('sfa.failedLabel'));
                     setIntLoading(false); fetchData();
                   }} className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-xl text-xs font-semibold shadow-sm shadow-indigo-500/20 hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50 transition-all">
-                    {intLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Sync Semua
+                    {intLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} {t('sfa.syncAll')}
                   </button>
                 )}
               </div>
               {intSyncablePipeline.length === 0 ? (
-                <EmptyState icon={CheckCircle} title="Semua pipeline sudah disinkronkan" subtitle="Tidak ada opportunity pending" />
+                <EmptyState icon={CheckCircle} title={t('sfa.allPipelineSynced')} subtitle={t('sfa.noOppPending')} />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -3719,7 +3898,7 @@ export default function SFAUnifiedPage() {
           {/* AUDIT TRAIL */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'audit-trail' && (<>
-            <SectionHeader title="Audit Trail" subtitle="Riwayat semua perubahan data CRM & SFA" />
+            <SectionHeader title={t('sfa.auditTrail')} subtitle={t('sfa.auditTrailSub')} />
 
             {/* Summary Cards */}
             {auditSummary && (
@@ -3727,7 +3906,7 @@ export default function SFAUnifiedPage() {
                 <Card className="p-5">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm"><Zap className="w-4.5 h-4.5 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-gray-900">Aktivitas per Aksi</h4>
+                    <h4 className="text-sm font-semibold text-gray-900">{t('sfa.activityPerAction')}</h4>
                   </div>
                   <div className="space-y-3">
                     {(auditSummary.byAction || []).slice(0, 5).map((a: any, i: number) => {
@@ -3745,13 +3924,13 @@ export default function SFAUnifiedPage() {
                         </div>
                       );
                     })}
-                    {(auditSummary.byAction || []).length === 0 && <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>}
+                    {(auditSummary.byAction || []).length === 0 && <p className="text-xs text-gray-400 text-center py-2">{t('sfa.noData')}</p>}
                   </div>
                 </Card>
                 <Card className="p-5">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-sm"><LayoutList className="w-4.5 h-4.5 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-gray-900">Aktivitas per Entitas</h4>
+                    <h4 className="text-sm font-semibold text-gray-900">{t('sfa.activityPerEntity')}</h4>
                   </div>
                   <div className="space-y-3">
                     {(auditSummary.byEntity || []).slice(0, 5).map((e: any, i: number) => {
@@ -3769,13 +3948,13 @@ export default function SFAUnifiedPage() {
                         </div>
                       );
                     })}
-                    {(auditSummary.byEntity || []).length === 0 && <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>}
+                    {(auditSummary.byEntity || []).length === 0 && <p className="text-xs text-gray-400 text-center py-2">{t('sfa.noData')}</p>}
                   </div>
                 </Card>
                 <Card className="p-5">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-sm"><Users className="w-4.5 h-4.5 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-gray-900">User Paling Aktif</h4>
+                    <h4 className="text-sm font-semibold text-gray-900">{t('sfa.mostActiveUsers')}</h4>
                   </div>
                   <div className="space-y-3">
                     {(auditSummary.byUser || []).slice(0, 5).map((u: any, i: number) => (
@@ -3789,7 +3968,7 @@ export default function SFAUnifiedPage() {
                         <span className="text-xs font-bold text-gray-900 bg-gray-100 px-2.5 py-1 rounded-full">{u.count}</span>
                       </div>
                     ))}
-                    {(auditSummary.byUser || []).length === 0 && <p className="text-xs text-gray-400 text-center py-2">Belum ada data</p>}
+                    {(auditSummary.byUser || []).length === 0 && <p className="text-xs text-gray-400 text-center py-2">{t('sfa.noData')}</p>}
                   </div>
                 </Card>
               </div>
@@ -3800,25 +3979,25 @@ export default function SFAUnifiedPage() {
               <div className="flex flex-wrap gap-3 items-center">
                 <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
                   <select className={`${inputCls} max-w-[180px] !py-2 !text-xs`} value={auditFilterEntity} onChange={e => setAuditFilterEntity(e.target.value)}>
-                    <option value="">Semua Entitas</option>
+                    <option value="">{t('sfa.allEntities')}</option>
                     {(auditFilters?.entityTypes || []).map((et: any) => (
                       <option key={et.value} value={et.value}>{et.label}</option>
                     ))}
                   </select>
                   <select className={`${inputCls} max-w-[160px] !py-2 !text-xs`} value={auditFilterAction} onChange={e => setAuditFilterAction(e.target.value)}>
-                    <option value="">Semua Aksi</option>
+                    <option value="">{t('sfa.allActions')}</option>
                     {(auditFilters?.actions || []).map((a: any) => (
                       <option key={a.value} value={a.value}>{a.label}</option>
                     ))}
                   </select>
                   <div className="flex items-center bg-gray-100 rounded-xl p-0.5">
-                    {[{ v: '7d', l: '7 Hari' }, { v: '30d', l: '30 Hari' }, { v: '90d', l: '90 Hari' }].map(p => (
+                    {[{ v: '7d', l: `7 ${t('sfa.daysLabel')}` }, { v: '30d', l: `30 ${t('sfa.daysLabel')}` }, { v: '90d', l: `90 ${t('sfa.daysLabel')}` }].map(p => (
                       <button key={p.v} onClick={() => setAuditFilterPeriod(p.v)} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${auditFilterPeriod === p.v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{p.l}</button>
                     ))}
                   </div>
                 </div>
                 <button onClick={fetchData} className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl text-xs font-semibold shadow-sm shadow-blue-500/20 hover:from-blue-600 hover:to-blue-700 transition-all">
-                  <Filter className="w-3.5 h-3.5" /> Terapkan
+                  <Filter className="w-3.5 h-3.5" /> {t('sfa.applyFilter')}
                 </button>
               </div>
             </Card>
@@ -3829,14 +4008,14 @@ export default function SFAUnifiedPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center"><History className="w-4.5 h-4.5 text-gray-600" /></div>
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900">Activity Timeline</h4>
-                    <p className="text-[11px] text-gray-400 mt-0.5">{auditTimeline.length} aktivitas tercatat</p>
+                    <h4 className="text-sm font-semibold text-gray-900">{t('sfa.activityTimeline')}</h4>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{auditTimeline.length} {t('sfa.activitiesRecorded')}</p>
                   </div>
                 </div>
               </div>
               <div className="p-5">
                 {auditTimeline.length === 0 ? (
-                  <EmptyState icon={History} title="Belum ada aktivitas tercatat" subtitle="Aktivitas akan muncul setelah ada perubahan data" />
+                  <EmptyState icon={History} title={t('sfa.noActivityRecorded')} subtitle={t('sfa.noActivityRecordedSub')} />
                 ) : (
                   <div className="relative">
                     <div className="absolute left-[15px] top-2 bottom-2 w-px bg-gradient-to-b from-gray-200 via-gray-200 to-transparent"></div>
@@ -3872,7 +4051,7 @@ export default function SFAUnifiedPage() {
                             </div>
                             {log.new_values && typeof log.new_values === 'object' && Object.keys(log.new_values).length > 0 && (
                               <details className="mt-2 ml-6">
-                                <summary className="text-[11px] text-blue-500 cursor-pointer font-medium hover:text-blue-600 transition-colors">Lihat detail perubahan</summary>
+                                <summary className="text-[11px] text-blue-500 cursor-pointer font-medium hover:text-blue-600 transition-colors">{t('sfa.viewChangeDetails')}</summary>
                                 <pre className="mt-2 text-[11px] text-gray-600 bg-gray-50 rounded-xl p-3 overflow-x-auto max-h-40 border border-gray-100 font-mono leading-relaxed">{JSON.stringify(log.new_values, null, 2)}</pre>
                               </details>
                             )}
@@ -3890,7 +4069,7 @@ export default function SFAUnifiedPage() {
           {/* IMPORT / EXPORT */}
           {/* ═══════════════════════════════════════════ */}
           {tab === 'import-export' && (<>
-            <SectionHeader title="Import & Export Data" subtitle="Bulk import dari CSV/Excel, export data, unduh template" />
+            <SectionHeader title={t('sfa.importExportTitle')} subtitle={t('sfa.importExportSub')} />
 
             {/* Mode Switcher */}
             <div className="flex items-center gap-2 mb-4">
@@ -3904,7 +4083,7 @@ export default function SFAUnifiedPage() {
                 {/* Entity List Panel */}
                 <div className="lg:col-span-1">
                   <Card className="p-4">
-                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Pilih Data</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{t('sfa.selectData')}</h4>
                     <div className="space-y-1 max-h-[400px] overflow-y-auto">
                       {Object.entries(ieEntities.grouped || {}).map(([cat, ents]: any) => (
                         <div key={cat}>
@@ -3929,16 +4108,16 @@ export default function SFAUnifiedPage() {
                   {!ieSelectedEntity ? (
                     <Card className="p-12 text-center">
                       <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4"><Table2 className="w-8 h-8 text-gray-300" /></div>
-                      <h3 className="text-lg font-semibold text-gray-400 mb-1">Pilih Tipe Data</h3>
-                      <p className="text-sm text-gray-300">Pilih entity dari panel kiri untuk memulai {ieMode === 'import' ? 'import' : 'export'}</p>
+                      <h3 className="text-lg font-semibold text-gray-400 mb-1">{t('sfa.selectDataType')}</h3>
+                      <p className="text-sm text-gray-300">{t('sfa.selectEntityHint')}</p>
                     </Card>
                   ) : ieMode === 'import' ? (<>
                     {/* ── IMPORT MODE ── */}
                     {/* Step 1: Template */}
                     <Card className="p-5">
                       <div className="flex items-center justify-between mb-4">
-                        <div><h3 className="text-sm font-semibold text-gray-900">1. Unduh Template</h3><p className="text-xs text-gray-400 mt-0.5">Download template {ieTemplate?.label} lalu isi data Anda</p></div>
-                        <button onClick={() => ieDownloadTemplate(ieSelectedEntity)} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-colors"><Download className="w-3.5 h-3.5" /> Download Template Excel</button>
+                        <div><h3 className="text-sm font-semibold text-gray-900">1. {t('sfa.downloadTemplate')}</h3><p className="text-xs text-gray-400 mt-0.5">{t('sfa.downloadTemplateDesc', { label: ieTemplate?.label })}</p></div>
+                        <button onClick={() => ieDownloadTemplate(ieSelectedEntity)} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-colors"><Download className="w-3.5 h-3.5" /> {t('sfa.downloadTemplateBtn')}</button>
                       </div>
                       {ieTemplate && (
                         <div className="overflow-x-auto rounded-xl border border-gray-100">
@@ -3963,11 +4142,11 @@ export default function SFAUnifiedPage() {
 
                     {/* Step 2: Upload */}
                     <Card className="p-5">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-1">2. Upload File</h3>
-                      <p className="text-xs text-gray-400 mb-4">Upload file CSV atau Excel (.xlsx) yang sudah diisi</p>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-1">2. {t('sfa.uploadFile')}</h3>
+                      <p className="text-xs text-gray-400 mb-4">{t('sfa.uploadFileDesc')}</p>
                       <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-2xl cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition-all group">
                         <FileUp className="w-8 h-8 text-gray-300 group-hover:text-amber-400 transition-colors mb-2" />
-                        <span className="text-sm text-gray-400 group-hover:text-amber-600 font-medium">Klik untuk upload atau drag & drop</span>
+                        <span className="text-sm text-gray-400 group-hover:text-amber-600 font-medium">{t('sfa.clickToUpload')}</span>
                         <span className="text-[10px] text-gray-300 mt-1">Excel (.xlsx) — Max 10MB</span>
                         <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={ieHandleFile} />
                       </label>
@@ -3977,7 +4156,7 @@ export default function SFAUnifiedPage() {
                           <div className="flex-1 min-w-0"><div className="text-sm font-semibold text-gray-900 truncate">{ieFileInfo.name}</div><div className="text-[10px] text-gray-400">{(ieFileInfo.size/1024).toFixed(1)} KB · {ieFileInfo.rows} baris data</div></div>
                           {ieUploadedData.length > 0 && !ieValidation && (
                             <button onClick={ieValidate} disabled={ieImporting} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50">
-                              {ieImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />} Validasi
+                              {ieImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />} {t('sfa.validateBtn')}
                             </button>
                           )}
                         </div>
@@ -3987,8 +4166,8 @@ export default function SFAUnifiedPage() {
                     {/* Step 3: Preview & Validation */}
                     {ieUploadedData.length > 0 && !ieValidation && (
                       <Card className="p-5">
-                        <h3 className="text-sm font-semibold text-gray-900 mb-1">3. Preview Data</h3>
-                        <p className="text-xs text-gray-400 mb-3">{ieUploadedData.length} baris terdeteksi — klik Validasi untuk cek data</p>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-1">3. {t('sfa.previewData')}</h3>
+                        <p className="text-xs text-gray-400 mb-3">{ieUploadedData.length} {t('sfa.rowsDetected')}</p>
                         <div className="overflow-x-auto rounded-xl border border-gray-100 max-h-64">
                           <table className="w-full text-xs">
                             <thead className="sticky top-0"><tr className="bg-gray-50">{Object.keys(ieUploadedData[0] || {}).slice(0, 10).map((k, i) => (
@@ -4001,7 +4180,7 @@ export default function SFAUnifiedPage() {
                             ))}</tbody>
                           </table>
                         </div>
-                        {ieUploadedData.length > 20 && <p className="text-[10px] text-gray-400 mt-2 text-center">Menampilkan 20 dari {ieUploadedData.length} baris</p>}
+                        {ieUploadedData.length > 20 && <p className="text-[10px] text-gray-400 mt-2 text-center">{t('sfa.showing20of', { total: ieUploadedData.length })}</p>}
                       </Card>
                     )}
 
@@ -4009,10 +4188,10 @@ export default function SFAUnifiedPage() {
                     {ieValidation && (
                       <Card className="p-5">
                         <div className="flex items-center justify-between mb-4">
-                          <div><h3 className="text-sm font-semibold text-gray-900">Hasil Validasi</h3><p className="text-xs text-gray-400 mt-0.5">{ieValidation.totalRows} baris diproses</p></div>
+                          <div><h3 className="text-sm font-semibold text-gray-900">{t('sfa.validationResult')}</h3><p className="text-xs text-gray-400 mt-0.5">{ieValidation.totalRows} {t('sfa.rowsProcessed')}</p></div>
                           <div className="flex items-center gap-3 text-xs">
                             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Valid: <b>{ieValidation.validCount}</b></span>
-                            {ieValidation.warningCount > 0 && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" /> Peringatan: <b>{ieValidation.warningCount}</b></span>}
+                            {ieValidation.warningCount > 0 && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500" /> {t('sfa.warnings')}: <b>{ieValidation.warningCount}</b></span>}
                             {ieValidation.errorCount > 0 && <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500" /> Error: <b>{ieValidation.errorCount}</b></span>}
                           </div>
                         </div>
@@ -4022,7 +4201,7 @@ export default function SFAUnifiedPage() {
                               <th className="px-3 py-2.5 text-left font-semibold text-gray-600 w-12">#</th>
                               <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-20">Status</th>
                               {ieTemplate?.columns?.slice(0, 6).map((c: any, i: number) => <th key={i} className="px-3 py-2.5 text-left font-semibold text-gray-600 whitespace-nowrap">{c.label}</th>)}
-                              <th className="px-3 py-2.5 text-left font-semibold text-gray-600">Pesan</th>
+                              <th className="px-3 py-2.5 text-left font-semibold text-gray-600">{t('sfa.messageLabel')}</th>
                             </tr></thead>
                             <tbody className="divide-y divide-gray-50">{ieValidation.results.slice(0, 50).map((r: any) => (
                               <tr key={r.row} className={r.status==='error'?'bg-red-50/50':r.status==='warning'?'bg-amber-50/30':''}>
@@ -4046,9 +4225,9 @@ export default function SFAUnifiedPage() {
                         </div>
                         {/* Import Button */}
                         <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                          <p className="text-xs text-gray-400">{ieValidation.canImport ? `${ieValidation.validCount + ieValidation.warningCount} baris siap diimport` : 'Perbaiki error sebelum import'}</p>
+                          <p className="text-xs text-gray-400">{ieValidation.canImport ? t('sfa.rowsReadyImport', { count: ieValidation.validCount + ieValidation.warningCount }) : t('sfa.fixErrorsFirst')}</p>
                           <button onClick={ieDoImport} disabled={!ieValidation.canImport || ieImporting} className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl text-sm font-semibold shadow-sm shadow-amber-500/20 hover:from-amber-600 hover:to-amber-700 disabled:opacity-40 transition-all">
-                            {ieImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Import {ieValidation.validCount + ieValidation.warningCount} Data
+                            {ieImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} Import {ieValidation.validCount + ieValidation.warningCount}
                           </button>
                         </div>
                       </Card>
@@ -4057,10 +4236,10 @@ export default function SFAUnifiedPage() {
                     {/* Import Result */}
                     {ieImportResult && (
                       <Card className="p-5">
-                        <div className="flex items-center gap-3 mb-3"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${ieImportResult.failed === 0 ? 'bg-emerald-100' : 'bg-amber-100'}`}>{ieImportResult.failed === 0 ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <AlertTriangle className="w-5 h-5 text-amber-600" />}</div><div><h3 className="text-sm font-semibold text-gray-900">Import Selesai</h3><p className="text-xs text-gray-400 mt-0.5">{ieImportResult.inserted} berhasil, {ieImportResult.failed} gagal</p></div></div>
+                        <div className="flex items-center gap-3 mb-3"><div className={`w-10 h-10 rounded-xl flex items-center justify-center ${ieImportResult.failed === 0 ? 'bg-emerald-100' : 'bg-amber-100'}`}>{ieImportResult.failed === 0 ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <AlertTriangle className="w-5 h-5 text-amber-600" />}</div><div><h3 className="text-sm font-semibold text-gray-900">{t('sfa.importComplete')}</h3><p className="text-xs text-gray-400 mt-0.5">{ieImportResult.inserted} {t('sfa.successLabel')}, {ieImportResult.failed} {t('sfa.failedLabel')}</p></div></div>
                         {ieImportResult.errors?.length > 0 && (
                           <div className="mt-3 space-y-1">{ieImportResult.errors.slice(0, 10).map((err: any, i: number) => (
-                            <div key={i} className="text-xs text-red-500 flex items-center gap-2"><span className="text-gray-400 font-mono">Baris {err.row}:</span> {err.error}</div>
+                            <div key={i} className="text-xs text-red-500 flex items-center gap-2"><span className="text-gray-400 font-mono">{t('sfa.rowLabel')} {err.row}:</span> {err.error}</div>
                           ))}</div>
                         )}
                       </Card>
@@ -4071,10 +4250,10 @@ export default function SFAUnifiedPage() {
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <h3 className="text-sm font-semibold text-gray-900">Export {ieTemplate?.label || ieSelectedEntity}</h3>
-                          <p className="text-xs text-gray-400 mt-0.5">Unduh semua data dalam format Excel (.xlsx)</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{t('sfa.exportDesc')}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => ieDoExport()} disabled={ieImporting} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"><Download className="w-3.5 h-3.5" /> Download Excel</button>
+                          <button onClick={() => ieDoExport()} disabled={ieImporting} className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"><Download className="w-3.5 h-3.5" /> {t('sfa.downloadExcel')}</button>
                         </div>
                       </div>
                     </Card>
@@ -4095,31 +4274,30 @@ export default function SFAUnifiedPage() {
             <div className="flex justify-between items-center px-6 py-5 border-b border-gray-100 shrink-0">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
-                  {modal === 'lead' && 'Tambah Lead Baru'}
-                  {modal === 'opportunity' && 'Tambah Opportunity'}
-                  {modal === 'visit' && 'Jadwalkan Kunjungan'}
-                  {modal === 'field-order' && 'Buat Field Order'}
-                  {modal === 'competitor' && 'Lapor Kompetitor'}
-                  {modal === 'geofence' && 'Tambah Geofence'}
-                  {modal === 'commission' && 'Tambah Komisi Produk'}
-                  {modal === 'commission-group' && 'Tambah Komisi Group (Bundle)'}
-                  {modal === 'outlet-target' && 'Tambah Target Outlet per Produk'}
-                  {modal === 'sales-strategy' && 'Buat Sales Strategy'}
-                  {modal === 'crm-customer' && 'Tambah Customer'}
-                  {modal === 'crm-comm' && 'Log Komunikasi'}
-                  {modal === 'crm-task' && 'Buat Task Baru'}
-                  {modal === 'crm-forecast' && 'Buat Forecast'}
-                  {modal === 'crm-ticket' && 'Buat Tiket Support'}
-                  {modal === 'crm-automation' && 'Buat Automation Rule'}
-                  {modal === 'create-team' && 'Buat Tim Baru'}
-                  {modal === 'add-member' && `Tambah Anggota ke ${form.team_name || 'Tim'}`}
-                  {modal === 'setup-ai-model' && 'Setup AI Model'}
-                  {modal === 'add-currency' && 'Tambah Mata Uang'}
-                  {modal === 'add-rate' && 'Tambah Kurs / Exchange Rate'}
-                  {modal === 'add-tax' && 'Tambah Pengaturan Pajak'}
-                  {modal === 'add-payment-term' && 'Tambah Syarat Pembayaran'}
+                  {modal === 'lead' && t('sfa.modalAddLead')}
+                  {modal === 'opportunity' && t('sfa.modalAddOpp')}
+                  {modal === 'visit' && t('sfa.modalScheduleVisit')}
+                  {modal === 'field-order' && t('sfa.modalCreateOrder')}
+                  {modal === 'competitor' && t('sfa.modalReportCompetitor')}
+                  {modal === 'geofence' && t('sfa.modalAddGeofence')}
+                  {modal === 'commission' && t('sfa.modalAddCommission')}
+                  {modal === 'commission-group' && t('sfa.modalAddCommGroup')}
+                  {modal === 'outlet-target' && t('sfa.modalAddOutletTarget')}
+                  {modal === 'sales-strategy' && t('sfa.modalCreateStrategy')}
+                  {modal === 'crm-customer' && t('sfa.addCustomer')}
+                  {modal === 'crm-comm' && t('sfa.logComm')}
+                  {modal === 'crm-task' && t('sfa.modalCreateTask')}
+                  {modal === 'crm-forecast' && t('sfa.createForecast')}
+                  {modal === 'crm-automation' && t('sfa.createRule')}
+                  {modal === 'create-team' && t('sfa.modalCreateTeam')}
+                  {modal === 'add-member' && t('sfa.modalAddMember', { name: form.team_name || 'Tim' })}
+                  {modal === 'setup-ai-model' && t('sfa.modalSetupAi')}
+                  {modal === 'add-currency' && t('sfa.addCurrency')}
+                  {modal === 'add-rate' && t('sfa.modalAddRate')}
+                  {modal === 'add-tax' && t('sfa.modalAddTax')}
+                  {modal === 'add-payment-term' && t('sfa.modalAddPaymentTerm')}
                 </h3>
-                <p className="text-xs text-gray-400 mt-0.5">Isi form di bawah ini</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t('sfa.fillFormBelow')}</p>
               </div>
               <button onClick={() => setModal(null)} className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"><X className="w-4 h-4 text-gray-500" /></button>
             </div>
@@ -4134,19 +4312,18 @@ export default function SFAUnifiedPage() {
               modal === 'commission-group' ? handleCreateCommissionGroup :
               modal === 'outlet-target' ? handleCreateOutletTarget :
               modal === 'sales-strategy' ? handleCreateSalesStrategy :
-              modal === 'crm-customer' ? (e: React.FormEvent) => handleCrmCreate('create-customer', e, 'Customer berhasil dibuat') :
-              modal === 'crm-comm' ? (e: React.FormEvent) => handleCrmCreate('create-communication', e, 'Komunikasi dicatat') :
-              modal === 'crm-task' ? (e: React.FormEvent) => handleCrmCreate('create-task', e, 'Task berhasil dibuat') :
-              modal === 'crm-forecast' ? (e: React.FormEvent) => handleCrmCreate('create-forecast', e, 'Forecast berhasil dibuat') :
-              modal === 'crm-ticket' ? (e: React.FormEvent) => handleCrmCreate('create-ticket', e, 'Tiket berhasil dibuat') :
-              modal === 'crm-automation' ? (e: React.FormEvent) => handleCrmCreate('create-automation-rule', e, 'Rule berhasil dibuat') :
+              modal === 'crm-customer' ? (e: React.FormEvent) => handleCrmCreate('create-customer', e, t('sfa.customerCreated')) :
+              modal === 'crm-comm' ? (e: React.FormEvent) => handleCrmCreate('create-communication', e, t('sfa.commRecorded')) :
+              modal === 'crm-task' ? (e: React.FormEvent) => handleCrmCreate('create-task', e, t('sfa.taskCreated')) :
+              modal === 'crm-forecast' ? (e: React.FormEvent) => handleCrmCreate('create-forecast', e, t('sfa.forecastCreated')) :
+              modal === 'crm-automation' ? (e: React.FormEvent) => handleCrmCreate('create-automation-rule', e, t('sfa.ruleCreated')) :
               modal === 'create-team' ? async (e: React.FormEvent) => {
                 e.preventDefault(); setSaving(true);
                 const r = await (await fetch('/api/hq/sfa/enhanced?action=create-team', {
                   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
                 })).json();
-                if (r.success) { showToast('Tim berhasil dibuat'); setModal(null); fetchData(); }
-                else showToast(r.error || 'Gagal');
+                if (r.success) { showToast(t('sfa.teamCreated')); setModal(null); fetchData(); }
+                else showToast(r.error || t('sfa.failedLabel'));
                 setSaving(false);
               } :
               modal === 'add-member' ? async (e: React.FormEvent) => {
@@ -4155,8 +4332,8 @@ export default function SFAUnifiedPage() {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ team_id: form.team_id, user_id: form.user_id, role: form.role, position: form.position, daily_visit_target: form.daily_visit_target, monthly_revenue_target: form.monthly_revenue_target }),
                 })).json();
-                if (r.success) { showToast('Anggota ditambahkan'); setModal(null); fetchData(); }
-                else showToast(r.error || 'Gagal');
+                if (r.success) { showToast(t('sfa.memberAdded')); setModal(null); fetchData(); }
+                else showToast(r.error || t('sfa.failedLabel'));
                 setSaving(false);
               } :
               modal === 'setup-ai-model' ? async (e: React.FormEvent) => {
@@ -4165,36 +4342,36 @@ export default function SFAUnifiedPage() {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ ...form, is_default: aiModels.length === 0 }),
                 })).json();
-                if (r.success) { showToast('Model dikonfigurasi'); setModal(null); fetchData(); }
-                else showToast(r.error || 'Gagal');
+                if (r.success) { showToast(t('sfa.modelConfigured')); setModal(null); fetchData(); }
+                else showToast(r.error || t('sfa.failedLabel'));
                 setSaving(false);
               } :
               modal === 'add-currency' ? async (e: React.FormEvent) => {
                 e.preventDefault(); setSaving(true);
                 const r = await apiEnh('create-currency', 'POST', form);
-                if (r.success) { showToast('Currency ditambahkan'); setModal(null); setForm({}); fetchData(); }
-                else showToast(r.error || 'Gagal');
+                if (r.success) { showToast(t('sfa.currencyAdded')); setModal(null); setForm({}); fetchData(); }
+                else showToast(r.error || t('sfa.failedLabel'));
                 setSaving(false);
               } :
               modal === 'add-rate' ? async (e: React.FormEvent) => {
                 e.preventDefault(); setSaving(true);
                 const r = await apiEnh('save-exchange-rate', 'POST', form);
-                if (r.success) { showToast('Kurs disimpan'); setModal(null); setForm({}); fetchData(); }
-                else showToast(r.error || 'Gagal');
+                if (r.success) { showToast(t('sfa.rateSaved')); setModal(null); setForm({}); fetchData(); }
+                else showToast(r.error || t('sfa.failedLabel'));
                 setSaving(false);
               } :
               modal === 'add-tax' ? async (e: React.FormEvent) => {
                 e.preventDefault(); setSaving(true);
                 const r = await apiEnh('save-tax', 'POST', form);
-                if (r.success) { showToast('Pajak disimpan'); setModal(null); setForm({}); fetchData(); }
-                else showToast(r.error || 'Gagal');
+                if (r.success) { showToast(t('sfa.taxSaved')); setModal(null); setForm({}); fetchData(); }
+                else showToast(r.error || t('sfa.failedLabel'));
                 setSaving(false);
               } :
               modal === 'add-payment-term' ? async (e: React.FormEvent) => {
                 e.preventDefault(); setSaving(true);
                 const r = await apiEnh('save-payment-term', 'POST', form);
-                if (r.success) { showToast('Syarat pembayaran disimpan'); setModal(null); setForm({}); fetchData(); }
-                else showToast(r.error || 'Gagal');
+                if (r.success) { showToast(t('sfa.paymentTermSaved')); setModal(null); setForm({}); fetchData(); }
+                else showToast(r.error || t('sfa.failedLabel'));
                 setSaving(false);
               } :
               (e: React.FormEvent) => e.preventDefault()
@@ -4433,15 +4610,6 @@ export default function SFAUnifiedPage() {
                 <FI label="Catatan" span={2}><textarea className={`${inputCls} resize-none`} rows={2} value={form.notes || ''} onChange={e => setForm({ ...form, notes: e.target.value })} /></FI>
               </div>}
 
-              {modal === 'crm-ticket' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FI label="Subject" required span={2}><input required className={inputCls} value={form.subject || ''} onChange={e => setForm({ ...form, subject: e.target.value })} placeholder="Masalah yang dialami" /></FI>
-                <FI label="Kategori"><select className={inputCls} value={form.category || 'request'} onChange={e => setForm({ ...form, category: e.target.value })}>{getLookupOpts('ticket_category', [{value:'billing',label:'Billing'},{value:'technical',label:'Teknis'},{value:'product',label:'Produk'},{value:'complaint',label:'Komplain'},{value:'request',label:'Permintaan'},{value:'feedback',label:'Feedback'}]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></FI>
-                <FI label="Prioritas"><select className={inputCls} value={form.priority || 'medium'} onChange={e => setForm({ ...form, priority: e.target.value })}>{getLookupOpts('ticket_priority', [{value:'critical',label:'Critical'},{value:'high',label:'High'},{value:'medium',label:'Medium'},{value:'low',label:'Low'}]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></FI>
-                <FI label="Severity"><select className={inputCls} value={form.severity || 'minor'} onChange={e => setForm({ ...form, severity: e.target.value })}>{getLookupOpts('ticket_severity', [{value:'critical',label:'Critical'},{value:'major',label:'Major'},{value:'minor',label:'Minor'},{value:'cosmetic',label:'Cosmetic'}]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></FI>
-                <FI label="Channel"><select className={inputCls} value={form.source_channel || 'email'} onChange={e => setForm({ ...form, source_channel: e.target.value })}>{getLookupOpts('ticket_channel', [{value:'email',label:'Email'},{value:'phone',label:'Telepon'},{value:'chat',label:'Chat'},{value:'whatsapp',label:'WhatsApp'},{value:'social',label:'Social Media'}]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></FI>
-                <FI label="Deskripsi" span={2}><textarea className={`${inputCls} resize-none`} rows={3} value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Detail masalah..." /></FI>
-              </div>}
-
               {modal === 'crm-automation' && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FI label="Nama Rule" required span={2}><input required className={inputCls} value={form.name || ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Auto-assign lead baru" /></FI>
                 <FI label="Tipe Rule"><select className={inputCls} value={form.rule_type || 'trigger'} onChange={e => setForm({ ...form, rule_type: e.target.value })}>{getLookupOpts('automation_rule_type', [{value:'trigger',label:'Trigger'},{value:'scheduled',label:'Scheduled'},{value:'manual',label:'Manual'}]).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></FI>
@@ -4558,9 +4726,9 @@ export default function SFAUnifiedPage() {
               </div>}
 
               <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
-                <button type="button" onClick={() => setModal(null)} className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Batal</button>
+                <button type="button" onClick={() => setModal(null)} className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">{t('sfa.cancelBtn')}</button>
                 <button type="submit" disabled={saving} className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-sm shadow-amber-500/20 hover:from-amber-600 hover:to-amber-700 disabled:opacity-50 flex items-center gap-2 transition-all">
-                  {saving && <Loader2 className="w-4 h-4 animate-spin" />} Simpan
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />} {t('sfa.saveBtn')}
                 </button>
               </div>
             </form>

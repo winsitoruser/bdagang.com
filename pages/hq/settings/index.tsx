@@ -204,6 +204,38 @@ export default function HQGlobalSettings() {
   return (
     <HQLayout>
       <div className="space-y-6">
+        {/* Quick-link Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <a href="/hq/settings/taxes" className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow flex items-center gap-3 group">
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-100"><Percent className="w-5 h-5" /></div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Pajak & Biaya</p>
+              <p className="text-xs text-gray-500">PPN, Service, PB1</p>
+            </div>
+          </a>
+          <a href="/hq/settings/notifications" className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow flex items-center gap-3 group">
+            <div className="p-2 rounded-lg bg-orange-50 text-orange-600 group-hover:bg-orange-100"><Bell className="w-5 h-5" /></div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Notifikasi</p>
+              <p className="text-xs text-gray-500">Alert, Email, WA</p>
+            </div>
+          </a>
+          <a href="/hq/settings/integrations" className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow flex items-center gap-3 group">
+            <div className="p-2 rounded-lg bg-purple-50 text-purple-600 group-hover:bg-purple-100"><Shield className="w-5 h-5" /></div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Integrasi</p>
+              <p className="text-xs text-gray-500">Payment GW, WA, Email</p>
+            </div>
+          </a>
+          <a href="/hq/billing-info" className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow flex items-center gap-3 group">
+            <div className="p-2 rounded-lg bg-green-50 text-green-600 group-hover:bg-green-100"><FileText className="w-5 h-5" /></div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Billing & Langganan</p>
+              <p className="text-xs text-gray-500">Invoice & Plan</p>
+            </div>
+          </a>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">

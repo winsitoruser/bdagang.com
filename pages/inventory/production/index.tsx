@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -109,6 +110,7 @@ interface WasteRecord {
 const ProductionPage: React.FC = () => {
   const router = useRouter();
   const { toast } = useToast();
+  const { t, formatCurrency, formatDate } = useTranslation();
   
   const [activeTab, setActiveTab] = useState<'production' | 'recipes'>('production');
   const [productions, setProductions] = useState<Production[]>([]);
@@ -140,8 +142,8 @@ const ProductionPage: React.FC = () => {
     } catch (error) {
       console.error('Error fetching productions:', error);
       toast({
-        title: '❌ Gagal Memuat Data',
-        description: 'Tidak dapat memuat data produksi',
+        title: t('inventory.production.loadFailed'),
+        description: t('inventory.production.cannotLoadProduction'),
         variant: 'destructive'
       });
     } finally {
@@ -192,15 +194,15 @@ const ProductionPage: React.FC = () => {
       
       if (data.success) {
         toast({
-          title: '✅ Limbah Tercatat!',
-          description: `${data.data.waste_number} - Kerugian bersih: Rp ${data.data.net_loss.toLocaleString('id-ID')}`,
+          title: t('inventory.production.wasteRecorded'),
+          description: `${data.data.waste_number} - ${t('inventory.production.netLoss')}: ${formatCurrency(data.data.net_loss)}`,
           className: 'bg-green-50 border-green-200'
         });
         setShowWasteModal(false);
         fetchWasteRecords();
       } else {
         toast({
-          title: '❌ Gagal Mencatat Limbah',
+          title: t('inventory.production.wasteRecordFailed'),
           description: data.message,
           variant: 'destructive'
         });
@@ -208,8 +210,8 @@ const ProductionPage: React.FC = () => {
     } catch (error) {
       console.error('Error recording waste:', error);
       toast({
-        title: '❌ Terjadi Kesalahan',
-        description: 'Gagal mencatat limbah',
+        title: t('inventory.production.errorOccurred'),
+        description: t('inventory.production.wasteRecordError'),
         variant: 'destructive'
       });
     }
@@ -240,14 +242,14 @@ const ProductionPage: React.FC = () => {
       
       if (data.success) {
         toast({
-          title: '✅ Produksi Dimulai!',
-          description: `Batch ${data.data.batch_number} berhasil dibuat`,
+          title: t('inventory.production.productionStarted'),
+          description: `Batch ${data.data.batch_number} ${t('inventory.production.successfullyCreated')}`,
           className: 'bg-green-50 border-green-200'
         });
         fetchProductions();
       } else {
         toast({
-          title: '❌ Gagal Memulai Produksi',
+          title: t('inventory.production.startFailed'),
           description: data.message,
           variant: 'destructive'
         });
@@ -255,8 +257,8 @@ const ProductionPage: React.FC = () => {
     } catch (error) {
       console.error('Error starting production:', error);
       toast({
-        title: '❌ Terjadi Kesalahan',
-        description: 'Gagal memulai produksi',
+        title: t('inventory.production.errorOccurred'),
+        description: t('inventory.production.startError'),
         variant: 'destructive'
       });
     }
@@ -288,53 +290,39 @@ const ProductionPage: React.FC = () => {
       const data = await response.json();
       
       if (data.success) {
-        const statusLabel = newStatus === 'in_progress' ? 'Sedang Proses' : 
-                           newStatus === 'completed' ? 'Selesai' : newStatus;
+        const statusLabel = newStatus === 'in_progress' ? t('inventory.production.inProgress') : 
+                           newStatus === 'completed' ? t('inventory.production.completed') : newStatus;
         toast({
-          title: '✅ Status Diperbarui!',
-          description: `Status produksi berhasil diubah ke ${statusLabel}`,
+          title: t('inventory.production.statusUpdated'),
+          description: `${t('inventory.production.statusChangedTo')} ${statusLabel}`,
           className: 'bg-green-50 border-green-200'
         });
         fetchProductions();
       } else {
         toast({
-          title: '❌ Gagal Memperbarui',
-          description: data.message || 'Terjadi kesalahan saat memperbarui status',
+          title: t('inventory.production.updateFailed'),
+          description: data.message || t('inventory.production.updateError'),
           variant: 'destructive'
         });
       }
     } catch (error) {
       console.error('Error updating status:', error);
       toast({
-        title: '❌ Gagal Memperbarui',
-        description: 'Terjadi kesalahan saat memperbarui status',
+        title: t('inventory.production.updateFailed'),
+        description: t('inventory.production.updateError'),
         variant: 'destructive'
       });
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
 
   const getStatusBadge = (status: string) => {
     const config = {
-      planned: { color: 'bg-blue-100 text-blue-700', icon: FaClock, label: 'Direncanakan' },
-      in_progress: { color: 'bg-yellow-100 text-yellow-700', icon: FaPlay, label: 'Sedang Proses' },
-      completed: { color: 'bg-green-100 text-green-700', icon: FaCheckCircle, label: 'Selesai' },
-      cancelled: { color: 'bg-red-100 text-red-700', icon: FaTimes, label: 'Dibatalkan' }
+      planned: { color: 'bg-blue-100 text-blue-700', icon: FaClock, label: t('inventory.production.planned') },
+      in_progress: { color: 'bg-yellow-100 text-yellow-700', icon: FaPlay, label: t('inventory.production.inProgress') },
+      completed: { color: 'bg-green-100 text-green-700', icon: FaCheckCircle, label: t('inventory.production.completed') },
+      cancelled: { color: 'bg-red-100 text-red-700', icon: FaTimes, label: t('inventory.production.cancelled') }
     };
     const statusConfig = config[status as keyof typeof config] || config.planned;
     const Icon = statusConfig.icon;
@@ -355,11 +343,11 @@ const ProductionPage: React.FC = () => {
       other: 'bg-gray-100 text-gray-700'
     };
     const labels = {
-      raw_material: 'Bahan Baku',
+      raw_material: t('inventory.production.rawMaterial'),
       work_in_progress: 'WIP',
-      finished_product: 'Produk Jadi',
-      packaging: 'Kemasan',
-      other: 'Lainnya'
+      finished_product: t('inventory.production.finishedProduct'),
+      packaging: t('inventory.production.packaging'),
+      other: t('inventory.production.otherType')
     };
     return (
       <Badge className={colors[type as keyof typeof colors] || 'bg-gray-100'}>
@@ -378,12 +366,12 @@ const ProductionPage: React.FC = () => {
       contamination: 'bg-pink-100 text-pink-700'
     };
     const labels = {
-      defect: 'Cacat',
-      expired: 'Kadaluarsa',
-      damaged: 'Rusak',
-      overproduction: 'Overproduksi',
-      spillage: 'Tumpah',
-      contamination: 'Kontaminasi'
+      defect: t('inventory.production.defect'),
+      expired: t('inventory.production.expired'),
+      damaged: t('inventory.production.damaged'),
+      overproduction: t('inventory.production.overproduction'),
+      spillage: t('inventory.production.spillage'),
+      contamination: t('inventory.production.contamination')
     };
     return (
       <Badge className={colors[category as keyof typeof colors] || 'bg-gray-100'}>
@@ -394,11 +382,11 @@ const ProductionPage: React.FC = () => {
 
   const getMethodLabel = (method: string) => {
     const labels = {
-      discard: 'Buang',
-      recycle: 'Daur Ulang',
-      rework: 'Rework',
-      clearance_sale: 'Clearance Sale',
-      donation: 'Donasi'
+      discard: t('inventory.production.discard'),
+      recycle: t('inventory.production.recycle'),
+      rework: t('inventory.production.rework'),
+      clearance_sale: t('inventory.production.clearanceSale'),
+      donation: t('inventory.production.donation')
     };
     return labels[method as keyof typeof labels] || method;
   };
@@ -428,7 +416,7 @@ const ProductionPage: React.FC = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <div className="animate-spin h-12 w-12 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Memuat data...</p>
+            <p className="text-gray-600">{t('common.loading')}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -449,7 +437,7 @@ const ProductionPage: React.FC = () => {
                   className="bg-white/20 hover:bg-white/30 text-white border-white/30"
                 >
                   <FaArrowLeft className="mr-2" />
-                  Kembali
+                  {t('common.back')}
                 </Button>
                 <div>
                   <div className="flex items-center space-x-3 mb-2">
@@ -457,8 +445,8 @@ const ProductionPage: React.FC = () => {
                       <FaIndustry className="w-7 h-7" />
                     </div>
                     <div>
-                      <h1 className="text-3xl font-bold">Manajemen Produksi</h1>
-                      <p className="text-indigo-100 text-sm">Kelola produksi & limbah dengan tracking real-time</p>
+                      <h1 className="text-3xl font-bold">{t('inventory.production.title')}</h1>
+                      <p className="text-indigo-100 text-sm">{t('inventory.production.subtitle')}</p>
                     </div>
                   </div>
                 </div>
@@ -468,30 +456,30 @@ const ProductionPage: React.FC = () => {
                 className="bg-white/20 hover:bg-white/30 backdrop-blur-sm"
               >
                 <FaHistory className="mr-2" />
-                Riwayat Produksi
+                {t('inventory.production.productionHistory')}
               </Button>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-                <p className="text-xs text-indigo-100">Total Batch</p>
+                <p className="text-xs text-indigo-100">{t('inventory.production.totalBatch')}</p>
                 <p className="text-2xl font-bold">{stats.total}</p>
               </div>
               <div className="bg-blue-500/30 backdrop-blur-sm rounded-lg p-3 border border-blue-400/30">
-                <p className="text-xs text-blue-100">Direncanakan</p>
+                <p className="text-xs text-blue-100">{t('inventory.production.planned')}</p>
                 <p className="text-2xl font-bold">{stats.planned}</p>
               </div>
               <div className="bg-yellow-500/30 backdrop-blur-sm rounded-lg p-3 border border-yellow-400/30">
-                <p className="text-xs text-yellow-100">Sedang Proses</p>
+                <p className="text-xs text-yellow-100">{t('inventory.production.inProgress')}</p>
                 <p className="text-2xl font-bold">{stats.inProgress}</p>
               </div>
               <div className="bg-green-500/30 backdrop-blur-sm rounded-lg p-3 border border-green-400/30">
-                <p className="text-xs text-green-100">Selesai</p>
+                <p className="text-xs text-green-100">{t('inventory.production.completed')}</p>
                 <p className="text-2xl font-bold">{stats.completed}</p>
               </div>
               <div className="bg-purple-500/30 backdrop-blur-sm rounded-lg p-3 border border-purple-400/30">
-                <p className="text-xs text-purple-100">Total Diproduksi</p>
+                <p className="text-xs text-purple-100">{t('inventory.production.totalProduced')}</p>
                 <p className="text-2xl font-bold">{stats.totalProduced}</p>
               </div>
             </div>
@@ -510,7 +498,7 @@ const ProductionPage: React.FC = () => {
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
                 >
                   <FaIndustry />
-                  <span>Produksi</span>
+                  <span>{t('inventory.production.productionTab')}</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('recipes')}
@@ -521,7 +509,7 @@ const ProductionPage: React.FC = () => {
                   } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
                 >
                   <FaFlask />
-                  <span>Resep & Formula</span>
+                  <span>{t('inventory.recipes.recipesFormula')}</span>
                 </button>
               </nav>
             </div>
@@ -537,7 +525,7 @@ const ProductionPage: React.FC = () => {
                     <div className="relative">
                       <Input
                         type="text"
-                        placeholder="Cari batch atau resep..."
+                        placeholder={t('inventory.production.searchBatch')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-10"
@@ -549,11 +537,11 @@ const ProductionPage: React.FC = () => {
                       onChange={(e) => setFilterStatus(e.target.value)}
                       className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                     >
-                      <option value="all">Semua Status</option>
-                      <option value="planned">Direncanakan</option>
-                      <option value="in_progress">Sedang Proses</option>
-                      <option value="completed">Selesai</option>
-                      <option value="cancelled">Dibatalkan</option>
+                      <option value="all">{t('inventory.production.allStatus')}</option>
+                      <option value="planned">{t('inventory.production.planned')}</option>
+                      <option value="in_progress">{t('inventory.production.inProgress')}</option>
+                      <option value="completed">{t('inventory.production.completed')}</option>
+                      <option value="cancelled">{t('inventory.production.cancelled')}</option>
                     </select>
                   </div>
                 </CardContent>
@@ -565,7 +553,7 @@ const ProductionPage: React.FC = () => {
                   <CardHeader>
                     <CardTitle className="flex items-center">
                       <FaFlask className="mr-2 text-indigo-600" />
-                      Resep Tersedia
+                      {t('inventory.production.availableRecipes')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -577,7 +565,7 @@ const ProductionPage: React.FC = () => {
                             Batch: {recipe.batch_size} {recipe.batch_unit}
                           </p>
                           <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs text-gray-500">Biaya</span>
+                            <span className="text-xs text-gray-500">{t('inventory.production.cost')}</span>
                             <span className="font-bold text-indigo-600">{formatCurrency(recipe.total_cost)}</span>
                           </div>
                           <Button
@@ -586,7 +574,7 @@ const ProductionPage: React.FC = () => {
                             size="sm"
                           >
                             <FaPlay className="mr-2" />
-                            Mulai Produksi
+                            {t('inventory.production.startProduction')}
                           </Button>
                         </div>
                       ))}
@@ -600,7 +588,7 @@ const ProductionPage: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <FaClipboardCheck className="mr-2 text-indigo-600" />
-                    Daftar Produksi ({filteredProductions.length})
+                    {t('inventory.production.productionList')} ({filteredProductions.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -608,10 +596,10 @@ const ProductionPage: React.FC = () => {
                     <div className="text-center py-12">
                       <FaIndustry className="text-6xl text-gray-300 mx-auto mb-4" />
                       <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        Belum Ada Produksi
+                        {t('inventory.production.noProduction')}
                       </h3>
                       <p className="text-gray-600 mb-6">
-                        Mulai produksi pertama Anda dengan memilih resep di atas
+                        {t('inventory.production.noProductionDesc')}
                       </p>
                     </div>
                   ) : (
@@ -648,19 +636,19 @@ const ProductionPage: React.FC = () => {
 
                           <div className="grid grid-cols-3 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
                             <div>
-                              <p className="text-xs text-gray-500">Rencana</p>
+                              <p className="text-xs text-gray-500">{t('inventory.production.planLabel')}</p>
                               <p className="text-lg font-bold text-gray-900">
                                 {production.planned_quantity} {production.unit}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Diproduksi</p>
+                              <p className="text-xs text-gray-500">{t('inventory.production.produced')}</p>
                               <p className="text-lg font-bold text-indigo-600">
                                 {production.produced_quantity} {production.unit}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Total Biaya</p>
+                              <p className="text-xs text-gray-500">{t('inventory.production.totalCostLabel')}</p>
                               <p className="text-lg font-bold text-green-600">
                                 {formatCurrency(production.total_cost)}
                               </p>
@@ -681,7 +669,7 @@ const ProductionPage: React.FC = () => {
                                 size="sm"
                               >
                                 <FaPlay className="mr-2" />
-                                Mulai Proses
+                                {t('inventory.production.startProcess')}
                               </Button>
                             )}
                             {production.status === 'in_progress' && (
@@ -691,13 +679,13 @@ const ProductionPage: React.FC = () => {
                                 size="sm"
                               >
                                 <FaCheck className="mr-2" />
-                                Selesaikan Produksi
+                                {t('inventory.production.completeProduction')}
                               </Button>
                             )}
                             <Button
                               onClick={() => {
                                 toast({
-                                  title: 'ℹ️ Detail Produksi',
+                                  title: t('inventory.production.productionDetail'),
                                   description: `Batch: ${production.batch_number} - ${production.recipe?.name}`,
                                   className: 'bg-blue-50 border-blue-200'
                                 });
@@ -707,7 +695,7 @@ const ProductionPage: React.FC = () => {
                               size="sm"
                             >
                               <FaEye className="mr-2" />
-                              Lihat Detail
+                              {t('inventory.production.viewDetail')}
                             </Button>
                           </div>
                         </div>
@@ -730,14 +718,14 @@ const ProductionPage: React.FC = () => {
                     className="bg-purple-600 hover:bg-purple-700"
                   >
                     <FaPlus className="mr-2" />
-                    Buat Resep Baru
+                    {t('inventory.recipes.createNew')}
                   </Button>
                   <Button
                     onClick={() => router.push('/inventory/recipes/history')}
                     variant="outline"
                   >
                     <FaHistory className="mr-2" />
-                    Riwayat
+                    {t('inventory.recipes.history')}
                   </Button>
                 </div>
               </div>
@@ -748,7 +736,7 @@ const ProductionPage: React.FC = () => {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-purple-600 mb-1">Total Resep</p>
+                        <p className="text-sm text-purple-600 mb-1">{t('inventory.recipes.totalRecipes')}</p>
                         <p className="text-3xl font-bold text-purple-700">{recipes.length}</p>
                       </div>
                       <FaFlask className="text-4xl text-purple-300" />
@@ -760,7 +748,7 @@ const ProductionPage: React.FC = () => {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-green-600 mb-1">Aktif</p>
+                        <p className="text-sm text-green-600 mb-1">{t('inventory.recipes.statusActive')}</p>
                         <p className="text-3xl font-bold text-green-700">
                           {recipes.filter(r => r.status === 'active').length}
                         </p>
@@ -774,7 +762,7 @@ const ProductionPage: React.FC = () => {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-yellow-600 mb-1">Draft</p>
+                        <p className="text-sm text-yellow-600 mb-1">{t('inventory.recipes.statusDraft')}</p>
                         <p className="text-3xl font-bold text-yellow-700">
                           {recipes.filter(r => r.status === 'draft').length}
                         </p>
@@ -788,7 +776,7 @@ const ProductionPage: React.FC = () => {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-blue-600 mb-1">Arsip</p>
+                        <p className="text-sm text-blue-600 mb-1">{t('inventory.recipes.statusArchived')}</p>
                         <p className="text-3xl font-bold text-blue-700">
                           {recipes.filter(r => r.status === 'archived').length}
                         </p>
@@ -805,7 +793,7 @@ const ProductionPage: React.FC = () => {
                   <div className="relative">
                     <Input
                       type="text"
-                      placeholder="Cari resep atau SKU..."
+                      placeholder={t('inventory.recipes.searchRecipe')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-10"
@@ -821,16 +809,16 @@ const ProductionPage: React.FC = () => {
                   <CardContent className="p-12">
                     <div className="text-center">
                       <FaFlask className="mx-auto h-16 w-16 text-gray-300 mb-4" />
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Belum Ada Resep</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('inventory.production.noRecipes')}</h3>
                       <p className="text-gray-600 mb-6">
-                        Mulai dengan membuat resep pertama Anda
+                        {t('inventory.production.noRecipesDesc')}
                       </p>
                       <Button
                         onClick={() => router.push('/inventory/recipes/new')}
                         className="bg-purple-600 hover:bg-purple-700"
                       >
                         <FaPlus className="mr-2" />
-                        Buat Resep Baru
+                        {t('inventory.recipes.createNew')}
                       </Button>
                     </div>
                   </CardContent>
@@ -854,8 +842,8 @@ const ProductionPage: React.FC = () => {
                                   recipe.status === 'draft' ? 'bg-yellow-100 text-yellow-700' :
                                   'bg-gray-100 text-gray-700'
                                 }>
-                                  {recipe.status === 'active' ? 'Aktif' :
-                                   recipe.status === 'draft' ? 'Draft' : 'Arsip'}
+                                  {recipe.status === 'active' ? t('inventory.recipes.statusActive') :
+                                   recipe.status === 'draft' ? t('inventory.recipes.statusDraft') : t('inventory.recipes.statusArchived')}
                                 </Badge>
                               </div>
                               <p className="text-sm text-gray-600">{recipe.description}</p>
@@ -868,25 +856,25 @@ const ProductionPage: React.FC = () => {
                         <CardContent className="p-6">
                           <div className="grid grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
                             <div>
-                              <p className="text-xs text-gray-500">Ukuran Batch</p>
+                              <p className="text-xs text-gray-500">{t('inventory.recipes.batchSize')}</p>
                               <p className="font-semibold text-gray-900">
                                 {recipe.batch_size} {recipe.batch_unit}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Waktu</p>
+                              <p className="text-xs text-gray-500">{t('inventory.production.time')}</p>
                               <p className="font-semibold text-gray-900">
                                 {recipe.total_time_minutes || 0} min
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Total Biaya</p>
+                              <p className="text-xs text-gray-500">{t('inventory.recipes.totalCost')}</p>
                               <p className="font-semibold text-green-600">
                                 {formatCurrency(recipe.total_cost)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Biaya/Unit</p>
+                              <p className="text-xs text-gray-500">{t('inventory.recipes.costPerUnit')}</p>
                               <p className="font-semibold text-blue-600">
                                 {formatCurrency(recipe.cost_per_unit)}
                               </p>
@@ -897,7 +885,7 @@ const ProductionPage: React.FC = () => {
                             <div className="mb-4">
                               <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
                                 <FaBoxOpen className="mr-2 text-purple-600" />
-                                Bahan ({recipe.ingredients.length})
+                                {t('inventory.recipes.ingredients')} ({recipe.ingredients.length})
                               </h4>
                               <div className="space-y-2 max-h-40 overflow-y-auto">
                                 {recipe.ingredients.slice(0, 3).map((ingredient, idx) => (
@@ -914,7 +902,7 @@ const ProductionPage: React.FC = () => {
                                 ))}
                                 {recipe.ingredients.length > 3 && (
                                   <p className="text-xs text-gray-500 text-center">
-                                    +{recipe.ingredients.length - 3} bahan lainnya
+                                    +{recipe.ingredients.length - 3} {t('inventory.production.moreIngredients')}
                                   </p>
                                 )}
                               </div>
@@ -928,7 +916,7 @@ const ProductionPage: React.FC = () => {
                               onClick={() => handleStartProduction(recipe.id)}
                             >
                               <FaPlay className="mr-2" />
-                              Produksi
+                              {t('inventory.production.productionTab')}
                             </Button>
                             <Button
                               size="sm"

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useTranslation } from '@/lib/i18n';
 import {
   FaTimes, FaPlus, FaMinus, FaSave, FaCalculator, FaTrash,
   FaBalanceScale, FaFlask, FaCheckCircle
@@ -42,6 +43,7 @@ const RecipeBuilderModal: React.FC<RecipeBuilderModalProps> = ({
   onSave,
   saving = false
 }) => {
+  const { formatCurrency } = useTranslation();
   const [recipeName, setRecipeName] = useState(recipe?.name || '');
   const [recipeSku, setRecipeSku] = useState(recipe?.sku || '');
   const [category, setCategory] = useState(recipe?.category || 'Bakery');
@@ -106,13 +108,6 @@ const RecipeBuilderModal: React.FC<RecipeBuilderModalProps> = ({
     return getTotalCost() / batchSize;
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
 
   const handleSave = () => {
     if (!recipeName || !recipeSku || ingredients.length === 0) {

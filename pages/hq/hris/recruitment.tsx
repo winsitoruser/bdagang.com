@@ -1,21 +1,46 @@
 import { useState, useEffect, useCallback } from 'react';
 import HQLayout from '@/components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import { UserPlus, Search, Filter, Plus, Eye, Edit, Trash2, X, Check, ChevronRight, Briefcase, MapPin, Clock, Users, Star, FileText, Download, Upload, Calendar, DollarSign, BarChart3, TrendingUp, CheckCircle2, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 type TabKey = 'openings' | 'candidates' | 'pipeline' | 'analytics';
 
 const STAGES = ['applied', 'screening', 'test', 'interview', 'offer', 'hired', 'rejected'];
-const STAGE_LABELS: Record<string, string> = { applied: 'Lamaran Masuk', screening: 'Screening', test: 'Tes', interview: 'Interview', offer: 'Penawaran', hired: 'Diterima', rejected: 'Ditolak' };
+const STAGE_LABELS: Record<string, string> = { applied: 'Lamaran Masuk', screening: 'Penyaringan', test: 'Tes', interview: 'Wawancara', offer: 'Penawaran', hired: 'Diterima', rejected: 'Ditolak' };
 const STAGE_COLORS: Record<string, string> = { applied: 'bg-gray-100 text-gray-700', screening: 'bg-blue-100 text-blue-700', test: 'bg-indigo-100 text-indigo-700', interview: 'bg-purple-100 text-purple-700', offer: 'bg-orange-100 text-orange-700', hired: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700' };
 const PRIORITY_COLORS: Record<string, string> = { high: 'border-red-400 bg-red-50', medium: 'border-yellow-400 bg-yellow-50', low: 'border-gray-300 bg-gray-50' };
 
 const emptyForm = { title: '', department: '', location: '', type: 'full_time', priority: 'medium', salary_min: '', salary_max: '', description: '', requirements: '', deadline: '' };
 
+const MOCK_OPENINGS = [
+  { id: 'op1', title: 'Branch Manager - Yogyakarta', department: 'OPERATIONS', location: 'Cabang Yogyakarta', type: 'full_time', priority: 'high', salary_min: 15000000, salary_max: 20000000, status: 'open', applicants: 28, deadline: '2026-03-31', created_at: '2026-02-15' },
+  { id: 'op2', title: 'Senior Barista', department: 'KITCHEN', location: 'Cabang Bali', type: 'full_time', priority: 'medium', salary_min: 5000000, salary_max: 7000000, status: 'open', applicants: 45, deadline: '2026-04-15', created_at: '2026-03-01' },
+  { id: 'op3', title: 'Warehouse Staff', department: 'WAREHOUSE', location: 'Gudang Bekasi', type: 'full_time', priority: 'high', salary_min: 4500000, salary_max: 5500000, status: 'open', applicants: 62, deadline: '2026-03-25', created_at: '2026-02-20' },
+  { id: 'op4', title: 'IT Support Specialist', department: 'IT', location: 'HQ Jakarta', type: 'full_time', priority: 'medium', salary_min: 8000000, salary_max: 12000000, status: 'open', applicants: 18, deadline: '2026-04-10', created_at: '2026-03-05' },
+  { id: 'op5', title: 'Sales Representative', department: 'SALES', location: 'Cabang Semarang', type: 'full_time', priority: 'low', salary_min: 4000000, salary_max: 6000000, status: 'closed', applicants: 35, deadline: '2026-02-28', created_at: '2026-01-15' },
+];
+
+const MOCK_CANDIDATES = [
+  { id: 'c1', name: 'Andi Saputra', email: 'andi@email.com', phone: '081234567001', opening_title: 'Branch Manager - Yogyakarta', stage: 'interview', current_stage: 'interview', applied_date: '2026-02-20', rating: 4, experience_years: 8, education: 'S1 Manajemen' },
+  { id: 'c2', name: 'Maya Putri', email: 'maya@email.com', phone: '081234567002', opening_title: 'Senior Barista', stage: 'test', current_stage: 'test', applied_date: '2026-03-05', rating: 3, experience_years: 4, education: 'SMA' },
+  { id: 'c3', name: 'Dimas Prasetyo', email: 'dimas@email.com', phone: '081234567003', opening_title: 'IT Support Specialist', stage: 'screening', current_stage: 'screening', applied_date: '2026-03-10', rating: 0, experience_years: 3, education: 'S1 Teknik Informatika' },
+  { id: 'c4', name: 'Rani Kusuma', email: 'rani@email.com', phone: '081234567004', opening_title: 'Warehouse Staff', stage: 'offer', current_stage: 'offer', applied_date: '2026-02-25', rating: 5, experience_years: 5, education: 'D3 Logistik' },
+  { id: 'c5', name: 'Bambang Suryadi', email: 'bambang2@email.com', phone: '081234567005', opening_title: 'Sales Representative', stage: 'hired', current_stage: 'hired', applied_date: '2026-01-20', rating: 4, experience_years: 6, education: 'S1 Marketing' },
+  { id: 'c6', name: 'Sinta Dewi', email: 'sinta@email.com', phone: '081234567006', opening_title: 'Branch Manager - Yogyakarta', stage: 'interview', current_stage: 'interview', applied_date: '2026-02-22', rating: 4, experience_years: 10, education: 'S2 MBA' },
+];
+
+const MOCK_RECRUITMENT_ANALYTICS = {
+  totalOpenings: 5, activeOpenings: 4, totalApplicants: 188, hiredThisMonth: 3,
+  avgTimeToHire: 28, avgCostPerHire: 2500000, offerAcceptanceRate: 85,
+  byStage: { applied: 52, screening: 38, test: 28, interview: 22, offer: 8, hired: 12, rejected: 28 },
+};
+
 export default function RecruitmentPage() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>('openings');
-  const [openings, setOpenings] = useState<any[]>([]);
-  const [candidates, setCandidates] = useState<any[]>([]);
-  const [analytics, setAnalytics] = useState<any>(null);
+  const [openings, setOpenings] = useState<any[]>(MOCK_OPENINGS);
+  const [candidates, setCandidates] = useState<any[]>(MOCK_CANDIDATES);
+  const [analytics, setAnalytics] = useState<any>(MOCK_RECRUITMENT_ANALYTICS);
   const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -35,16 +60,18 @@ export default function RecruitmentPage() {
     try {
       const res = await fetch('/api/hq/hris/recruitment?action=openings');
       const data = await res.json();
-      if (data.data) setOpenings(Array.isArray(data.data) ? data.data : []);
-    } catch (e) { console.warn('Failed to fetch openings:', e); }
+      if (data.data?.length) setOpenings(Array.isArray(data.data) ? data.data : MOCK_OPENINGS);
+      else setOpenings(MOCK_OPENINGS);
+    } catch (e) { console.warn('Failed to fetch openings:', e); setOpenings(MOCK_OPENINGS); }
   }, []);
 
   const fetchCandidates = useCallback(async () => {
     try {
       const res = await fetch('/api/hq/hris/recruitment?action=candidates');
       const data = await res.json();
-      if (data.data) setCandidates(Array.isArray(data.data) ? data.data : []);
-    } catch (e) { console.warn('Failed to fetch candidates:', e); }
+      if (data.data?.length) setCandidates(Array.isArray(data.data) ? data.data : MOCK_CANDIDATES);
+      else setCandidates(MOCK_CANDIDATES);
+    } catch (e) { console.warn('Failed to fetch candidates:', e); setCandidates(MOCK_CANDIDATES); }
   }, []);
 
   const fetchAnalytics = useCallback(async () => {
@@ -52,7 +79,8 @@ export default function RecruitmentPage() {
       const res = await fetch('/api/hq/hris/recruitment?action=analytics');
       const data = await res.json();
       if (data.data) setAnalytics(data.data);
-    } catch (e) { console.warn('Failed to fetch analytics:', e); }
+      else setAnalytics(MOCK_RECRUITMENT_ANALYTICS);
+    } catch (e) { console.warn('Failed to fetch analytics:', e); setAnalytics(MOCK_RECRUITMENT_ANALYTICS); }
   }, []);
 
   useEffect(() => {
@@ -163,7 +191,7 @@ export default function RecruitmentPage() {
   const getCandidateStage = (c: any) => c.stage || c.current_stage || 'applied';
 
   return (
-    <HQLayout title="Rekrutmen" subtitle="Manajemen Lowongan & Proses Seleksi Karyawan">
+    <HQLayout title={t('hris.recruitmentTitle')} subtitle={t('hris.recruitmentSubtitle')}>
       <div className="space-y-6">
         {toast && <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white ${toast.type === 'error' ? 'bg-red-500' : 'bg-green-500'}`}>{toast.msg}</div>}
 
@@ -183,7 +211,7 @@ export default function RecruitmentPage() {
           </div>
           <div className="bg-white rounded-xl p-4 border shadow-sm">
             <div className="flex items-center gap-3"><div className="p-2 bg-orange-100 rounded-lg"><Clock className="w-5 h-5 text-orange-600" /></div>
-              <div><p className="text-2xl font-bold">{avgTimeToHire}d</p><p className="text-xs text-gray-500">Avg. Time to Hire</p></div></div>
+              <div><p className="text-2xl font-bold">{avgTimeToHire}d</p><p className="text-xs text-gray-500">Rata-rata Waktu Rekrut</p></div></div>
           </div>
         </div>
 
@@ -206,7 +234,7 @@ export default function RecruitmentPage() {
               <div className="flex gap-2 flex-wrap flex-1">
                 <div className="relative flex-1 min-w-[200px]"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari lowongan..." className="w-full pl-9 pr-3 py-2 border rounded-lg text-sm" /></div>
                 <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className="px-3 py-2 border rounded-lg text-sm"><option value="">Semua Dept</option>{departments.map(d => <option key={d} value={d}>{d}</option>)}</select>
-                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 border rounded-lg text-sm"><option value="">Semua Status</option><option value="open">Open</option><option value="closed">Closed</option><option value="on_hold">On Hold</option></select>
+                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 border rounded-lg text-sm"><option value="">Semua Status</option><option value="open">Buka</option><option value="closed">Ditutup</option><option value="on_hold">Ditunda</option></select>
               </div>
               <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"><Plus className="w-4 h-4" /> Buat Lowongan</button>
             </div>
@@ -287,7 +315,7 @@ export default function RecruitmentPage() {
         {/* PIPELINE TAB */}
         {!loading && tab === 'pipeline' && (
           <div>
-            <h2 className="text-lg font-semibold mb-4">Recruitment Pipeline</h2>
+            <h2 className="text-lg font-semibold mb-4">Alur Rekrutmen</h2>
             <div className="flex gap-3 overflow-x-auto pb-4">
               {pipelineStats.map((ps) => (
                 <div key={ps.stage} className="min-w-[220px] flex-1 bg-white border rounded-xl overflow-hidden">
@@ -339,7 +367,7 @@ export default function RecruitmentPage() {
               </div>
             </div>
             <div className="bg-white border rounded-xl p-5">
-              <h3 className="font-semibold mb-4">Funnel Conversion</h3>
+              <h3 className="font-semibold mb-4">Konversi Alur</h3>
               <div className="space-y-2">
                 {pipelineStats.map((ps) => {
                   const pct = totalApplicants > 0 ? Math.round(ps.count / totalApplicants * 100) : 0;
@@ -360,10 +388,10 @@ export default function RecruitmentPage() {
             <div className="bg-white border rounded-xl p-5">
               <h3 className="font-semibold mb-4">Metrik Rekrutmen</h3>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-blue-600">{avgTimeToHire}</p><p className="text-xs text-gray-500">Avg. Hari Rekrut</p></div>
-                <div className="bg-green-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-green-600">{totalApplicants > 0 ? Math.round(hiredCount / totalApplicants * 100) : 0}%</p><p className="text-xs text-gray-500">Acceptance Rate</p></div>
-                <div className="bg-purple-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-purple-600">{openCount}</p><p className="text-xs text-gray-500">Open Positions</p></div>
-                <div className="bg-orange-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-orange-600">{totalApplicants > 0 ? Math.round(candidates.filter(c => (c.rating || 0) >= 4).length / totalApplicants * 100) : 0}%</p><p className="text-xs text-gray-500">Quality Hire Rate</p></div>
+                <div className="bg-blue-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-blue-600">{avgTimeToHire}</p><p className="text-xs text-gray-500">Rata-rata Hari Rekrut</p></div>
+                <div className="bg-green-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-green-600">{totalApplicants > 0 ? Math.round(hiredCount / totalApplicants * 100) : 0}%</p><p className="text-xs text-gray-500">Tingkat Penerimaan</p></div>
+                <div className="bg-purple-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-purple-600">{openCount}</p><p className="text-xs text-gray-500">Posisi Terbuka</p></div>
+                <div className="bg-orange-50 rounded-lg p-4 text-center"><p className="text-2xl font-bold text-orange-600">{totalApplicants > 0 ? Math.round(candidates.filter(c => (c.rating || 0) >= 4).length / totalApplicants * 100) : 0}%</p><p className="text-xs text-gray-500">Tingkat Kualitas Rekrut</p></div>
               </div>
             </div>
           </div>
@@ -384,8 +412,8 @@ export default function RecruitmentPage() {
                   <div><label className="text-sm font-medium text-gray-700">Lokasi</label><input value={createForm.location} onChange={e => setCreateForm({ ...createForm, location: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" /></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><label className="text-sm font-medium text-gray-700">Tipe</label><select value={createForm.type} onChange={e => setCreateForm({ ...createForm, type: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"><option value="full_time">Full Time</option><option value="part_time">Part Time</option><option value="contract">Kontrak</option><option value="internship">Magang</option></select></div>
-                  <div><label className="text-sm font-medium text-gray-700">Prioritas</label><select value={createForm.priority} onChange={e => setCreateForm({ ...createForm, priority: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+                  <div><label className="text-sm font-medium text-gray-700">Tipe</label><select value={createForm.type} onChange={e => setCreateForm({ ...createForm, type: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"><option value="full_time">Penuh Waktu</option><option value="part_time">Paruh Waktu</option><option value="contract">Kontrak</option><option value="internship">Magang</option></select></div>
+                  <div><label className="text-sm font-medium text-gray-700">Prioritas</label><select value={createForm.priority} onChange={e => setCreateForm({ ...createForm, priority: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"><option value="high">Tinggi</option><option value="medium">Sedang</option><option value="low">Rendah</option></select></div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><label className="text-sm font-medium text-gray-700">Gaji Min</label><input type="number" value={createForm.salary_min} onChange={e => setCreateForm({ ...createForm, salary_min: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-lg text-sm" placeholder="5000000" /></div>

@@ -13,6 +13,7 @@ import {
 import dynamic from 'next/dynamic';
 
 const Chart = dynamic(() => import('react-apexcharts'), { ssr: false });
+import { rowsOr, MOCK_HQ_PURCHASE_ORDERS, MOCK_HQ_SUPPLIER_SCORECARD } from '@/lib/hq/mock-data';
 
 interface PurchaseOrder {
   id: string;
@@ -55,7 +56,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.E
 
 export default function PurchaseOrders() {
   const [mounted, setMounted] = useState(false);
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(MOCK_HQ_PURCHASE_ORDERS as PurchaseOrder[]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -70,7 +71,7 @@ export default function PurchaseOrders() {
   // Enhanced state
   const [subTab, setSubTab] = useState<'orders' | 'analytics' | 'spend' | 'scorecard'>('orders');
   const [enhancedData, setEnhancedData] = useState<any>(null);
-  const [supplierScorecard, setSupplierScorecard] = useState<any[]>([]);
+  const [supplierScorecard, setSupplierScorecard] = useState<any[]>(MOCK_HQ_SUPPLIER_SCORECARD);
   const [poAnalytics, setPOAnalytics] = useState<any>(null);
 
   const fetchPurchaseOrders = async () => {
@@ -82,7 +83,7 @@ export default function PurchaseOrders() {
       ]);
       if (poRes.ok) {
         const data = await poRes.json();
-        setPurchaseOrders(data.purchaseOrders || []);
+        setPurchaseOrders(rowsOr(data.purchaseOrders, MOCK_HQ_PURCHASE_ORDERS as PurchaseOrder[]));
       }
       if (enhancedRes.ok) {
         const eData = await enhancedRes.json();
@@ -98,7 +99,7 @@ export default function PurchaseOrders() {
   const fetchScorecard = async () => {
     try {
       const res = await fetch('/api/hq/procurement/enhanced?action=supplier-scorecard');
-      if (res.ok) { const d = await res.json(); setSupplierScorecard(d.data?.scorecards || []); }
+      if (res.ok) { const d = await res.json(); setSupplierScorecard(rowsOr(d.data?.scorecards, MOCK_HQ_SUPPLIER_SCORECARD)); }
     } catch (e) { console.error('Error fetching scorecard:', e); }
   };
 

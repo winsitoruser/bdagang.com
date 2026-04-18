@@ -25,6 +25,7 @@ import {
   Building2,
   Copy
 } from 'lucide-react';
+import { rowsOr, MOCK_HQ_PRODUCTS } from '@/lib/hq/mock-data';
 
 interface Product {
   id: number;
@@ -56,11 +57,11 @@ interface Product {
 
 export default function ProductManagement() {
   const [mounted, setMounted] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(MOCK_HQ_PRODUCTS as Product[]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState((MOCK_HQ_PRODUCTS as Product[]).length);
   
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -90,11 +91,17 @@ export default function ProductManagement() {
       if (response.ok) {
         const json = await response.json();
         const payload = json.data || json;
-        if (payload.products) setProducts(payload.products);
-        if (payload.total) setTotal(payload.total);
+        if (payload.products) {
+          setProducts(rowsOr(payload.products, MOCK_HQ_PRODUCTS as Product[]));
+          setTotal(payload.total && payload.total > 0 ? payload.total : (MOCK_HQ_PRODUCTS as Product[]).length);
+        } else {
+          setProducts(MOCK_HQ_PRODUCTS as Product[]);
+          setTotal((MOCK_HQ_PRODUCTS as Product[]).length);
+        }
       }
     } catch (error) {
       console.error('Error fetching products:', error);
+      setProducts(MOCK_HQ_PRODUCTS as Product[]); setTotal((MOCK_HQ_PRODUCTS as Product[]).length);
     } finally {
       setLoading(false);
     }

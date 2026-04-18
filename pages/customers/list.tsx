@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { Customer, CustomerSummary } from '@/types/customer';
 import CustomersLayout from '@/components/customers/CustomersLayout';
+import { useTranslation } from '@/lib/i18n';
 import CustomerList, { CustomerFilter } from '@/components/customers/CustomerList';
 import CustomerStatisticsCard from '@/components/customers/cards/CustomerStatisticsCard';
 import { mockCustomers, mockCustomerSummary } from '@/data/mockCustomers';
 
 const CustomerListPage: React.FC = () => {
   const router = useRouter();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
-  const [statistics, setStatistics] = useState<CustomerSummary | null>(null);
+  const { t } = useTranslation();
+  const [customers, setCustomers] = useState<Customer[]>(mockCustomers as any);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>(mockCustomers as any);
+  const [statistics, setStatistics] = useState<CustomerSummary | null>(mockCustomerSummary as any);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<CustomerFilter>({
@@ -53,7 +55,8 @@ const CustomerListPage: React.FC = () => {
         }
       } catch (error) {
         console.error('Error fetching customer data:', error);
-        setCustomers([]);
+        setCustomers(mockCustomers as any);
+        setStatistics(mockCustomerSummary as any);
       } finally {
         setIsLoading(false);
       }

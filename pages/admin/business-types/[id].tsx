@@ -269,7 +269,7 @@ export default function BusinessTypeEditPage() {
               onClick={() => router.push('/admin/business-types')}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Back to Business Types
+              Kembali ke Jenis Bisnis
             </button>
           </div>
         </div>
@@ -291,11 +291,11 @@ export default function BusinessTypeEditPage() {
             className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Business Types
+            Kembali ke Jenis Bisnis
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">Edit Business Type</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Ubah Jenis Bisnis</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Update business type configuration and module associations
+            Perbarui konfigurasi jenis bisnis dan asosiasi modul
           </p>
         </div>
 
@@ -400,7 +400,7 @@ export default function BusinessTypeEditPage() {
                       className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Save className="h-4 w-4" />
-                      <span>{saving ? 'Saving...' : 'Save Information'}</span>
+                      <span>{saving ? 'Menyimpan...' : 'Simpan Informasi'}</span>
                     </button>
                   </div>
                 </div>
@@ -410,14 +410,14 @@ export default function BusinessTypeEditPage() {
             {/* Module Associations */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Module Associations</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Asosiasi Modul</h2>
                 <button
                   onClick={handleSaveModules}
                   disabled={saving}
                   className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
                 >
                   <Save className="h-4 w-4" />
-                  <span>{saving ? 'Saving...' : 'Save Modules'}</span>
+                  <span>{saving ? 'Menyimpan...' : 'Simpan Modul'}</span>
                 </button>
               </div>
               

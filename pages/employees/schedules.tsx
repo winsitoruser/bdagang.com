@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { NextPage } from 'next';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import {
@@ -8,7 +9,9 @@ import {
   FaUser, FaMapMarkerAlt, FaSpinner, FaChevronLeft, FaChevronRight,
   FaCalendarWeek, FaCalendarDay, FaCheck, FaTimes, FaExclamationCircle
 } from 'react-icons/fa';
+import { Smartphone, ExternalLink, Copy, CheckCheck } from 'lucide-react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import AddScheduleModal from '@/components/employees/AddScheduleModal';
@@ -40,7 +43,14 @@ interface Schedule {
 const EmployeeSchedules: NextPage = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const { t } = useTranslation();
+  const MOCK_SCHEDULES: Schedule[] = [
+    { id: 'sch1', employeeId: 'e1', scheduleDate: new Date().toISOString().split('T')[0], shiftType: 'morning', startTime: '08:00', endTime: '16:00', status: 'confirmed', employee: { id: 'e1', name: 'Budi Santoso', employeeNumber: 'EMP-001', position: 'Kasir' }, location: { id: 'l1', name: 'Outlet Utama' } },
+    { id: 'sch2', employeeId: 'e2', scheduleDate: new Date().toISOString().split('T')[0], shiftType: 'afternoon', startTime: '14:00', endTime: '22:00', status: 'confirmed', employee: { id: 'e2', name: 'Siti Rahayu', employeeNumber: 'EMP-002', position: 'Barista' }, location: { id: 'l1', name: 'Outlet Utama' } },
+    { id: 'sch3', employeeId: 'e3', scheduleDate: new Date().toISOString().split('T')[0], shiftType: 'morning', startTime: '08:00', endTime: '16:00', status: 'pending', employee: { id: 'e3', name: 'Ahmad Wijaya', employeeNumber: 'EMP-003', position: 'Chef' }, location: { id: 'l1', name: 'Outlet Utama' } },
+  ];
+  const MOCK_EMPLOYEES = [{ id: 'e1', name: 'Budi Santoso', employeeNumber: 'EMP-001', position: 'Kasir' }, { id: 'e2', name: 'Siti Rahayu', employeeNumber: 'EMP-002', position: 'Barista' }, { id: 'e3', name: 'Ahmad Wijaya', employeeNumber: 'EMP-003', position: 'Chef' }];
+  const [schedules, setSchedules] = useState<Schedule[]>(MOCK_SCHEDULES);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
@@ -52,6 +62,16 @@ const EmployeeSchedules: NextPage = () => {
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<Schedule[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  const employeeAppUrl = typeof window !== 'undefined' ? `${window.location.origin}/employee` : '/employee';
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(employeeAppUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -96,7 +116,7 @@ const EmployeeSchedules: NextPage = () => {
       }
     } catch (error) {
       console.error('Error fetching schedules:', error);
-      setSchedules([]);
+      setSchedules(MOCK_SCHEDULES);
     } finally {
       setLoading(false);
     }
@@ -277,7 +297,7 @@ const EmployeeSchedules: NextPage = () => {
         <div className="flex items-center justify-center h-screen">
           <div className="text-center">
             <FaSpinner className="animate-spin h-12 w-12 mx-auto text-blue-600" />
-            <p className="mt-4 text-gray-700">Memuat jadwal...</p>
+            <p className="mt-4 text-gray-700">{t('employees.loadingSchedule')}</p>
           </div>
         </div>
       </DashboardLayout>
@@ -287,23 +307,56 @@ const EmployeeSchedules: NextPage = () => {
   return (
     <DashboardLayout>
       <Head>
-        <title>Jadwal & Shift Karyawan | BEDAGANG</title>
+        <title>{t('employees.pageTitle')}</title>
       </Head>
 
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Jadwal & Shift Karyawan</h1>
-            <p className="text-gray-600 mt-1">Kelola jadwal dan shift karyawan</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('employees.scheduleTitle')}</h1>
+            <p className="text-gray-600 mt-1">{t('employees.scheduleSubtitle')}</p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <FaPlus />
-            <span>Tambah Jadwal</span>
+            <span>{t('employees.addSchedule')}</span>
           </button>
+        </div>
+
+        {/* Employee Mobile App Banner */}
+        <div className="flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl px-5 py-4 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Smartphone className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Aplikasi Mobile Karyawan</p>
+              <p className="text-xs text-blue-100 mt-0.5">Bagikan link ini kepada karyawan untuk akses absensi, cuti, dan KPI</p>
+              <div className="flex items-center gap-2 mt-1.5 bg-white/10 rounded-lg px-2.5 py-1 w-fit">
+                <span className="text-xs text-white font-mono">{employeeAppUrl}</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded-lg transition-colors"
+            >
+              {copied ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? 'Tersalin!' : 'Salin Link'}
+            </button>
+            <Link
+              href="/employee"
+              target="_blank"
+              className="flex items-center gap-1.5 px-3 py-2 bg-white text-blue-600 hover:bg-blue-50 text-xs font-semibold rounded-lg transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Buka
+            </Link>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -312,7 +365,7 @@ const EmployeeSchedules: NextPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Total Jadwal</p>
+                  <p className="text-sm text-gray-600">{t('employees.totalSchedules')}</p>
                   <p className="text-2xl font-bold text-gray-900">{schedules.length}</p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -326,7 +379,7 @@ const EmployeeSchedules: NextPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Terjadwal</p>
+                  <p className="text-sm text-gray-600">{t('employees.scheduled')}</p>
                   <p className="text-2xl font-bold text-blue-600">
                     {schedules.filter(s => s.status === 'scheduled').length}
                   </p>
@@ -342,7 +395,7 @@ const EmployeeSchedules: NextPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Terkonfirmasi</p>
+                  <p className="text-sm text-gray-600">{t('employees.confirmed')}</p>
                   <p className="text-2xl font-bold text-green-600">
                     {schedules.filter(s => s.status === 'confirmed').length}
                   </p>
@@ -358,7 +411,7 @@ const EmployeeSchedules: NextPage = () => {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Karyawan Aktif</p>
+                  <p className="text-sm text-gray-600">{t('employees.activeEmployees')}</p>
                   <p className="text-2xl font-bold text-purple-600">{employees.length}</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">

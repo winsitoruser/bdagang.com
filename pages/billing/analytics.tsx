@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -84,8 +85,10 @@ interface UsageAnalytics {
 const BillingAnalyticsPage = () => {
   const router = useRouter();
   const { data: session } = useSession();
+  const { t } = useTranslation();
+  const MOCK_ANALYTICS: UsageAnalytics = { period: { start: '2026-03-01', end: '2026-03-31' }, metrics: { users: { current: 45, limit: 200, percentage: 22.5, trend: 5.2 }, branches: { current: 6, limit: 50, percentage: 12, trend: 0 }, products: { current: 2450, limit: 10000, percentage: 24.5, trend: 3.1 }, transactions: { current: 18420, limit: 100000, percentage: 18.4, trend: 12.8 } }, dailyUsage: [{ date: '2026-03-13', users: 42, transactions: 620, products: 2440 }, { date: '2026-03-14', users: 44, transactions: 580, products: 2445 }, { date: '2026-03-15', users: 45, transactions: 650, products: 2450 }], topUsage: [{ metric: 'transactions', value: 18420, percentage: 18.4 }, { metric: 'products', value: 2450, percentage: 24.5 }], predictions: { nextMonth: { users: 48, transactions: 21000, products: 2600 }, recommendations: [{ type: 'optimize', message: 'Pertimbangkan arsip produk tidak aktif', metric: 'products' }] } };
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<UsageAnalytics | null>(null);
+  const [data, setData] = useState<UsageAnalytics | null>(MOCK_ANALYTICS);
   const [period, setPeriod] = useState('current_month');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -105,6 +108,7 @@ const BillingAnalyticsPage = () => {
       }
     } catch (error) {
       console.error('Error fetching analytics:', error);
+      setData(MOCK_ANALYTICS);
     } finally {
       setLoading(false);
     }

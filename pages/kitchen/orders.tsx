@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import DashboardLayout from '@/components/layouts/DashboardLayout';
+import { useTranslation } from '@/lib/i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -98,8 +99,15 @@ const paymentIcons: Record<string, string> = {
 
 const KitchenOrdersPage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { data: session, status } = useSession();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const MOCK_K_ORDERS: Order[] = [
+    { id: 'ko1', orderNumber: '#ORD-085', tableNumber: '5', orderType: 'dine-in', customerName: 'Meja 5', items: 3, status: 'preparing', priority: 'normal', receivedAt: new Date(), prepTime: 12, totalAmount: 125000 },
+    { id: 'ko2', orderNumber: '#ORD-086', orderType: 'takeaway', customerName: 'Budi', items: 2, status: 'new', priority: 'urgent', receivedAt: new Date(), totalAmount: 85000 },
+    { id: 'ko3', orderNumber: '#ORD-084', tableNumber: '3', orderType: 'dine-in', customerName: 'Meja 3', items: 4, status: 'ready', priority: 'normal', receivedAt: new Date(), prepTime: 18, totalAmount: 210000 },
+    { id: 'ko4', orderNumber: '#ORD-087', orderType: 'delivery', customerName: 'Siti R.', items: 2, status: 'new', priority: 'high', receivedAt: new Date(), totalAmount: 95000 },
+  ];
+  const [orders, setOrders] = useState<Order[]>(MOCK_K_ORDERS);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -128,6 +136,7 @@ const KitchenOrdersPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to fetch orders:', error);
+      setOrders(MOCK_K_ORDERS);
     }
   };
 

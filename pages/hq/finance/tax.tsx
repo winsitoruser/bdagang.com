@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import HQLayout from '../../../components/hq/HQLayout';
+import { useTranslation } from '@/lib/i18n';
 import Link from 'next/link';
 import DocumentExportButton from '@/components/documents/DocumentExportButton';
 import {
@@ -67,12 +68,34 @@ const formatCurrency = (value: number) => {
   return `Rp ${value.toLocaleString('id-ID')}`;
 };
 
+const MOCK_TAX_SUMMARY: TaxSummary = {
+  totalTaxLiability: 425000000, paidTaxes: 310000000, pendingTaxes: 115000000,
+  vatCollected: 467500000, vatPaid: 187000000, netVat: 280500000,
+  incomeTax: 87500000, withholdingTax: 57000000,
+  nextDueDate: '2026-04-15', nextDueAmount: 85000000,
+};
+
+const MOCK_TAX_OBLIGATIONS: TaxObligation[] = [
+  { id: 'to1', type: 'PPN (VAT)', period: 'Februari 2026', dueDate: '2026-03-15', amount: 280500000, status: 'paid', paidDate: '2026-03-12', reference: 'NTPN-2026-02-001' },
+  { id: 'to2', type: 'PPh 21 (Withholding)', period: 'Februari 2026', dueDate: '2026-03-10', amount: 57000000, status: 'paid', paidDate: '2026-03-08', reference: 'NTPN-2026-02-002' },
+  { id: 'to3', type: 'PPh 25 (Income Tax)', period: 'Februari 2026', dueDate: '2026-03-15', amount: 87500000, status: 'pending' },
+  { id: 'to4', type: 'PPN (VAT)', period: 'Maret 2026', dueDate: '2026-04-15', amount: 85000000, status: 'pending' },
+];
+
+const MOCK_TAX_REPORTS: TaxReport[] = [
+  { id: 'tr1', name: 'SPT Masa PPN Februari 2026', period: 'Februari 2026', type: 'PPN', status: 'filed', filedDate: '2026-03-12', amount: 280500000 },
+  { id: 'tr2', name: 'SPT Masa PPh 21 Februari 2026', period: 'Februari 2026', type: 'PPh 21', status: 'filed', filedDate: '2026-03-08', amount: 57000000 },
+  { id: 'tr3', name: 'SPT Masa PPh 25 Februari 2026', period: 'Februari 2026', type: 'PPh 25', status: 'draft', amount: 87500000 },
+  { id: 'tr4', name: 'SPT Masa PPN Maret 2026', period: 'Maret 2026', type: 'PPN', status: 'pending', amount: 0 },
+];
+
 export default function TaxManagement() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<TaxSummary>(defaultTaxSummary);
-  const [obligations, setObligations] = useState<TaxObligation[]>([]);
-  const [reports, setReports] = useState<TaxReport[]>([]);
+  const [summary, setSummary] = useState<TaxSummary>(MOCK_TAX_SUMMARY);
+  const [obligations, setObligations] = useState<TaxObligation[]>(MOCK_TAX_OBLIGATIONS);
+  const [reports, setReports] = useState<TaxReport[]>(MOCK_TAX_REPORTS);
   const [viewMode, setViewMode] = useState<'obligations' | 'reports' | 'summary'>('obligations');
   const [year, setYear] = useState('2026');
   const [showCalcModal, setShowCalcModal] = useState(false);
@@ -99,6 +122,9 @@ export default function TaxManagement() {
       }
     } catch (error) {
       console.error('Error fetching tax data:', error);
+      setSummary(MOCK_TAX_SUMMARY);
+      setObligations(MOCK_TAX_OBLIGATIONS);
+      setReports(MOCK_TAX_REPORTS);
     } finally {
       setLoading(false);
     }
@@ -168,8 +194,8 @@ export default function TaxManagement() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Tax Management</h1>
-              <p className="text-gray-500">Laporan dan pembayaran pajak</p>
+              <h1 className="text-2xl font-bold text-gray-900">{t('finance.taxTitle')}</h1>
+              <p className="text-gray-500">{t('finance.taxSubtitle')}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -187,7 +213,7 @@ export default function TaxManagement() {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Calculator className="w-4 h-4" />
-              Calculate Tax
+              {t('finance.calculateTax')}
             </button>
             <DocumentExportButton
               documentType="tax-report"
@@ -207,12 +233,12 @@ export default function TaxManagement() {
                 <AlertTriangle className="w-5 h-5 text-yellow-600" />
               </div>
               <div>
-                <p className="font-medium text-yellow-800">Upcoming Tax Payment</p>
+                <p className="font-medium text-yellow-800">{t('finance.upcomingTaxPayment')}</p>
                 <p className="text-sm text-yellow-600">Due: {summary.nextDueDate} - Amount: {formatCurrency(summary.nextDueAmount)}</p>
               </div>
             </div>
             <button className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
-              Pay Now
+              {t('finance.payNow')}
             </button>
           </div>
         )}
@@ -222,7 +248,7 @@ export default function TaxManagement() {
           <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white">
             <div className="flex items-center gap-2 mb-2">
               <Receipt className="w-5 h-5 opacity-80" />
-              <p className="text-purple-100 text-sm">Total Tax Liability</p>
+              <p className="text-purple-100 text-sm">{t('finance.totalTaxLiability')}</p>
             </div>
             <p className="text-2xl font-bold">{formatCurrency(summary.totalTaxLiability)}</p>
             <p className="text-purple-200 text-xs mt-1">YTD 2026</p>
@@ -231,7 +257,7 @@ export default function TaxManagement() {
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle className="w-5 h-5 text-green-500" />
-              <p className="text-gray-500 text-sm">Paid Taxes</p>
+              <p className="text-gray-500 text-sm">{t('finance.paidTaxes')}</p>
             </div>
             <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.paidTaxes)}</p>
           </div>
@@ -239,7 +265,7 @@ export default function TaxManagement() {
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="w-5 h-5 text-yellow-500" />
-              <p className="text-gray-500 text-sm">Pending Taxes</p>
+              <p className="text-gray-500 text-sm">{t('finance.pendingTaxes')}</p>
             </div>
             <p className="text-2xl font-bold text-yellow-600">{formatCurrency(summary.pendingTaxes)}</p>
           </div>
@@ -247,7 +273,7 @@ export default function TaxManagement() {
           <div className="bg-white rounded-xl p-5 border border-gray-200">
             <div className="flex items-center gap-2 mb-2">
               <Percent className="w-5 h-5 text-blue-500" />
-              <p className="text-gray-500 text-sm">Net VAT (PPN)</p>
+              <p className="text-gray-500 text-sm">{t('finance.netVat')}</p>
             </div>
             <p className="text-2xl font-bold text-blue-600">{formatCurrency(summary.netVat)}</p>
             <p className="text-xs text-gray-500 mt-1">Collected - Paid</p>
@@ -262,7 +288,7 @@ export default function TaxManagement() {
                 <TrendingUp className="w-5 h-5 text-green-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">VAT Collected (Output)</p>
+                <p className="text-xs text-gray-500">{t('finance.vatCollected')}</p>
                 <p className="text-lg font-bold text-green-600">{formatCurrency(summary.vatCollected)}</p>
               </div>
             </div>
@@ -274,7 +300,7 @@ export default function TaxManagement() {
                 <Receipt className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">VAT Paid (Input)</p>
+                <p className="text-xs text-gray-500">{t('finance.vatPaid')}</p>
                 <p className="text-lg font-bold text-red-600">{formatCurrency(summary.vatPaid)}</p>
               </div>
             </div>

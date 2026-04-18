@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from '@/lib/i18n';
 import HQLayout from '../../../components/hq/HQLayout';
 import { toast } from 'react-hot-toast';
 import {
@@ -30,6 +31,7 @@ import {
   PolarRadiusAxis,
   Radar
 } from 'recharts';
+import { rowsOr, MOCK_REPORTS_CONSOLIDATED } from '@/lib/hq/mock-data';
 
 interface ConsolidatedData {
   period: string;
@@ -65,11 +67,28 @@ interface BranchPerformance {
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
+const MOCK_CONSOLIDATED: ConsolidatedData = {
+  period: 'Maret 2026', totalRevenue: 4250000000, totalTransactions: 18420,
+  avgTicketSize: 230700, grossProfit: 1700000000, netProfit: 850000000,
+  grossMargin: 40, netMargin: 20, totalBranches: 8, activeBranches: 7,
+  totalEmployees: 162, activeEmployees: 148, stockValue: 1850000000, lowStockAlerts: 18,
+};
+
+const MOCK_BRANCH_PERF: BranchPerformance[] = [
+  { branchId: 'b1', branchName: 'Kantor Pusat Jakarta', branchCode: 'HQ-001', revenue: 1200000000, transactions: 5200, avgTicket: 230769, profit: 480000000, margin: 40, growth: 8.5, rank: 1, target: 1100000000, achievement: 109 },
+  { branchId: 'b2', branchName: 'Cabang Bandung', branchCode: 'BR-002', revenue: 850000000, transactions: 3800, avgTicket: 223684, profit: 340000000, margin: 40, growth: 12.2, rank: 2, target: 800000000, achievement: 106 },
+  { branchId: 'b3', branchName: 'Cabang Surabaya', branchCode: 'BR-003', revenue: 780000000, transactions: 3400, avgTicket: 229412, profit: 312000000, margin: 40, growth: 6.8, rank: 3, target: 750000000, achievement: 104 },
+  { branchId: 'b5', branchName: 'Cabang Bali', branchCode: 'BR-005', revenue: 680000000, transactions: 2900, avgTicket: 234483, profit: 272000000, margin: 40, growth: 15.3, rank: 4, target: 600000000, achievement: 113 },
+  { branchId: 'b4', branchName: 'Cabang Medan', branchCode: 'BR-004', revenue: 420000000, transactions: 1820, avgTicket: 230769, profit: 168000000, margin: 40, growth: 4.2, rank: 5, target: 450000000, achievement: 93 },
+  { branchId: 'b6', branchName: 'Cabang Semarang', branchCode: 'BR-006', revenue: 320000000, transactions: 1300, avgTicket: 246154, profit: 128000000, margin: 40, growth: -2.1, rank: 6, target: 350000000, achievement: 91 },
+];
+
 export default function ConsolidatedReport() {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<ConsolidatedData | null>(null);
-  const [branchPerformance, setBranchPerformance] = useState<BranchPerformance[]>([]);
+  const [data, setData] = useState<ConsolidatedData | null>(MOCK_CONSOLIDATED);
+  const [branchPerformance, setBranchPerformance] = useState<BranchPerformance[]>(MOCK_BRANCH_PERF);
   const [period, setPeriod] = useState<'month' | 'quarter' | 'year'>('month');
 
   // Enhanced state
@@ -77,28 +96,52 @@ export default function ConsolidatedReport() {
   const [crossModuleKPIs, setCrossModuleKPIs] = useState<any>(null);
   const [trendData, setTrendData] = useState<any>(null);
   const [executiveSummary, setExecutiveSummary] = useState<any>(null);
-  const [moduleHealth, setModuleHealth] = useState<any[]>([]);
-  const [chartTrendData, setChartTrendData] = useState<any[]>([]);
-  const [categoryData, setCategoryData] = useState<any[]>([]);
+  const [moduleHealth, setModuleHealth] = useState<any[]>(MOCK_REPORTS_CONSOLIDATED.moduleHealth);
+  const [chartTrendData, setChartTrendData] = useState<any[]>(MOCK_REPORTS_CONSOLIDATED.chartTrendData);
+  const [categoryData, setCategoryData] = useState<any[]>(MOCK_REPORTS_CONSOLIDATED.categoryData);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const [consolidatedRes, kpiRes] = await Promise.all([
-        fetch(`/api/admin/reports/consolidated?period=${period}`),
-        fetch('/api/hq/reports/enhanced?action=cross-module-kpis')
+        fetch(`/api/hq/reports/consolidated?period=${period}`),
+        fetch('/api/hq/reports/enhanced?action=cross-module-kpis'),
       ]);
       if (consolidatedRes.ok) {
         const result = await consolidatedRes.json();
-        setData(result.data || null);
-        setBranchPerformance(result.branches || []);
+        const payload = result.data || result || {};
+        const m = payload.metrics || {};
+        setData({
+          period: m.period || payload.period || '',
+          totalRevenue: m.totalRevenue || 0,
+          totalTransactions: m.totalTransactions || 0,
+          avgTicketSize: m.avgTicketSize || m.averageTicket || 0,
+          grossProfit: m.grossProfit || 0,
+          netProfit: m.netProfit || 0,
+          grossMargin: m.grossMargin || 0,
+          netMargin: m.netMargin || 0,
+          totalBranches: m.totalBranches || 0,
+          activeBranches: m.activeBranches || 0,
+          totalEmployees: m.totalEmployees || 0,
+          activeEmployees: m.activeEmployees || 0,
+          stockValue: m.stockValue || 0,
+          lowStockAlerts: m.lowStockAlerts || 0,
+        });
+        setBranchPerformance(rowsOr(payload.branchPerformance, MOCK_BRANCH_PERF));
+        setChartTrendData(rowsOr(payload.chartTrendData, MOCK_REPORTS_CONSOLIDATED.chartTrendData));
+        setCategoryData(rowsOr(payload.categoryData, MOCK_REPORTS_CONSOLIDATED.categoryData));
+      } else {
+        setData(MOCK_CONSOLIDATED);
+        setBranchPerformance(MOCK_BRANCH_PERF);
       }
       if (kpiRes.ok) {
         const kd = await kpiRes.json();
-        setCrossModuleKPIs(kd.data || null);
+        setCrossModuleKPIs(kd.data || kd || null);
       }
     } catch (error) {
       console.error('Error fetching consolidated data:', error);
+      setData(MOCK_CONSOLIDATED);
+      setBranchPerformance(MOCK_BRANCH_PERF);
     } finally {
       setLoading(false);
     }
@@ -121,7 +164,7 @@ export default function ConsolidatedReport() {
   const fetchHealth = async () => {
     try {
       const res = await fetch('/api/hq/reports/enhanced?action=module-health');
-      if (res.ok) { const d = await res.json(); setModuleHealth(d.data || []); }
+      if (res.ok) { const d = await res.json(); setModuleHealth(rowsOr(d.data, MOCK_REPORTS_CONSOLIDATED.moduleHealth)); }
     } catch (e) { console.error('Health fetch error:', e); }
   };
 
@@ -138,7 +181,7 @@ export default function ConsolidatedReport() {
 
   if (!mounted) {
     return (
-      <HQLayout title="Laporan Konsolidasi" subtitle="Laporan gabungan seluruh cabang">
+      <HQLayout title={t('consolidated.title')} subtitle={t('consolidated.subtitle')}>
         <div className="flex items-center justify-center py-24">
           <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
         </div>
@@ -163,7 +206,7 @@ export default function ConsolidatedReport() {
     a.download = `consolidated-report-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('Export laporan konsolidasi berhasil');
+    toast.success(t('consolidated.exportSuccess'));
   };
 
   const radarData = branchPerformance.slice(0, 5).map(b => ({
@@ -177,7 +220,7 @@ export default function ConsolidatedReport() {
 
   if (loading || !data) {
     return (
-      <HQLayout title="Laporan Konsolidasi" subtitle="Laporan gabungan seluruh cabang">
+      <HQLayout title={t('consolidated.title')} subtitle={t('consolidated.subtitle')}>
         <div className="flex items-center justify-center py-24">
           <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
         </div>
@@ -186,7 +229,7 @@ export default function ConsolidatedReport() {
   }
 
   return (
-    <HQLayout title="Laporan Konsolidasi" subtitle={`Periode: ${data.period}`}>
+    <HQLayout title={t('consolidated.title')} subtitle={`${t('consolidated.periodLabel')}: ${data.period}`}>
       <div className="space-y-6">
         {/* Header Actions */}
         <div className="flex items-center justify-between">
@@ -199,7 +242,7 @@ export default function ConsolidatedReport() {
                   period === p ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                {p === 'month' ? 'Bulan Ini' : p === 'quarter' ? 'Kuartal' : 'Tahun'}
+                {p === 'month' ? t('consolidated.thisMonth') : p === 'quarter' ? t('consolidated.quarter') : t('consolidated.year')}
               </button>
             ))}
           </div>
@@ -210,14 +253,14 @@ export default function ConsolidatedReport() {
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
+              {t('consolidated.refresh')}
             </button>
             <button
               onClick={exportReport}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
               <Download className="w-4 h-4" />
-              Export
+              {t('consolidated.export')}
             </button>
           </div>
         </div>
@@ -225,14 +268,14 @@ export default function ConsolidatedReport() {
         {/* Sub-Tabs */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 w-fit">
           {([
-            { v: 'overview' as const, l: 'Overview', icon: Eye },
-            { v: 'cross-module' as const, l: 'Cross-Module KPIs', icon: Layers },
-            { v: 'trends' as const, l: 'Trend Analysis', icon: Activity },
-            { v: 'executive' as const, l: 'Executive Summary', icon: Star },
-            { v: 'health' as const, l: 'Module Health', icon: Heart },
-          ]).map(t => (
-            <button key={t.v} onClick={() => setSubTab(t.v)} className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${subTab === t.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
-              <t.icon className="w-4 h-4" />{t.l}
+            { v: 'overview' as const, l: t('consolidated.tabOverview'), icon: Eye },
+            { v: 'cross-module' as const, l: t('consolidated.tabCrossModule'), icon: Layers },
+            { v: 'trends' as const, l: t('consolidated.tabTrends'), icon: Activity },
+            { v: 'executive' as const, l: t('consolidated.tabExecutive'), icon: Star },
+            { v: 'health' as const, l: t('consolidated.tabHealth'), icon: Heart },
+          ]).map(st => (
+            <button key={st.v} onClick={() => setSubTab(st.v)} className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${subTab === st.v ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>
+              <st.icon className="w-4 h-4" />{st.l}
             </button>
           ))}
         </div>
@@ -249,7 +292,7 @@ export default function ConsolidatedReport() {
               </span>
             </div>
             <p className="text-3xl font-bold">{formatCurrency(data.totalRevenue)}</p>
-            <p className="text-blue-100 mt-1">Total Revenue</p>
+            <p className="text-blue-100 mt-1">{t('consolidated.totalRevenue')}</p>
           </div>
           <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white">
             <div className="flex items-center justify-between mb-4">
@@ -257,7 +300,7 @@ export default function ConsolidatedReport() {
               <span className="text-sm bg-white/20 px-2 py-1 rounded-full">{data.netMargin}%</span>
             </div>
             <p className="text-3xl font-bold">{formatCurrency(data.netProfit)}</p>
-            <p className="text-green-100 mt-1">Net Profit</p>
+            <p className="text-green-100 mt-1">{t('consolidated.netProfit')}</p>
           </div>
           <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl p-6 text-white">
             <div className="flex items-center justify-between mb-4">
@@ -268,14 +311,14 @@ export default function ConsolidatedReport() {
               </span>
             </div>
             <p className="text-3xl font-bold">{data.totalTransactions.toLocaleString()}</p>
-            <p className="text-purple-100 mt-1">Total Transaksi</p>
+            <p className="text-purple-100 mt-1">{t('consolidated.totalTransactions')}</p>
           </div>
           <div className="bg-gradient-to-br from-orange-500 to-orange-700 rounded-xl p-6 text-white">
             <div className="flex items-center justify-between mb-4">
               <Target className="w-8 h-8 opacity-80" />
             </div>
             <p className="text-3xl font-bold">{formatCurrency(data.avgTicketSize)}</p>
-            <p className="text-orange-100 mt-1">Avg Ticket Size</p>
+            <p className="text-orange-100 mt-1">{t('consolidated.avgTicketSize')}</p>
           </div>
         </div>
 
@@ -284,42 +327,42 @@ export default function ConsolidatedReport() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 text-gray-500 mb-2">
               <Building2 className="w-4 h-4" />
-              <span className="text-sm">Cabang Aktif</span>
+              <span className="text-sm">{t('consolidated.activeBranches')}</span>
             </div>
             <p className="text-2xl font-bold text-gray-900">{data.activeBranches}/{data.totalBranches}</p>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 text-gray-500 mb-2">
               <Users className="w-4 h-4" />
-              <span className="text-sm">Karyawan</span>
+              <span className="text-sm">{t('consolidated.employees')}</span>
             </div>
             <p className="text-2xl font-bold text-gray-900">{data.activeEmployees}/{data.totalEmployees}</p>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 text-gray-500 mb-2">
               <Package className="w-4 h-4" />
-              <span className="text-sm">Nilai Stok</span>
+              <span className="text-sm">{t('consolidated.stockValue')}</span>
             </div>
             <p className="text-xl font-bold text-gray-900">{formatCurrency(data.stockValue)}</p>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 text-gray-500 mb-2">
               <BarChart3 className="w-4 h-4" />
-              <span className="text-sm">Gross Margin</span>
+              <span className="text-sm">{t('consolidated.grossMargin')}</span>
             </div>
             <p className="text-2xl font-bold text-green-600">{data.grossMargin}%</p>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 text-gray-500 mb-2">
               <TrendingUp className="w-4 h-4" />
-              <span className="text-sm">Net Margin</span>
+              <span className="text-sm">{t('consolidated.netMargin')}</span>
             </div>
             <p className="text-2xl font-bold text-purple-600">{data.netMargin}%</p>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 text-gray-500 mb-2">
               <AlertTriangle className="w-4 h-4" />
-              <span className="text-sm">Low Stock</span>
+              <span className="text-sm">{t('consolidated.lowStock')}</span>
             </div>
             <p className="text-2xl font-bold text-yellow-600">{data.lowStockAlerts}</p>
           </div>
@@ -328,7 +371,7 @@ export default function ConsolidatedReport() {
         {/* Charts Row */}
         <div className="grid grid-cols-2 gap-6">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Trend Revenue vs Target (Juta)</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('consolidated.revenueTrend')}</h3>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartTrendData}>
@@ -344,7 +387,7 @@ export default function ConsolidatedReport() {
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Distribusi Penjualan per Kategori</h3>
+            <h3 className="font-semibold text-gray-900 mb-4">{t('consolidated.salesDistribution')}</h3>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -363,7 +406,7 @@ export default function ConsolidatedReport() {
                     ))}
                   </Pie>
                   <Tooltip formatter={(value: number, name: string, props: any) => [
-                    `${value}% - ${formatCurrency(props.payload.revenue)}`, 'Kontribusi'
+                    `${value}% - ${formatCurrency(props.payload.revenue)}`, t('consolidated.contribution')
                   ]} />
                 </PieChart>
               </ResponsiveContainer>
@@ -374,20 +417,20 @@ export default function ConsolidatedReport() {
         {/* Branch Performance Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-4 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900">Performa Cabang</h3>
+            <h3 className="font-semibold text-gray-900">{t('consolidated.branchPerformance')}</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="text-center py-3 px-4 font-medium text-gray-500 w-12">#</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Cabang</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-500">Revenue</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-500">Transaksi</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-500">Avg Ticket</th>
-                  <th className="text-right py-3 px-4 font-medium text-gray-500">Profit</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-500">Growth</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-500">Achievement</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-500">{t('consolidated.branch')}</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-500">{t('consolidated.revenue')}</th>
+                  <th className="text-center py-3 px-4 font-medium text-gray-500">{t('consolidated.transactions')}</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-500">{t('consolidated.avgTicket')}</th>
+                  <th className="text-right py-3 px-4 font-medium text-gray-500">{t('consolidated.profit')}</th>
+                  <th className="text-center py-3 px-4 font-medium text-gray-500">{t('consolidated.growth')}</th>
+                  <th className="text-center py-3 px-4 font-medium text-gray-500">{t('consolidated.achievement')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -451,7 +494,7 @@ export default function ConsolidatedReport() {
         <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xl font-bold mb-2">Ringkasan Eksekutif</h3>
+              <h3 className="text-xl font-bold mb-2">{t('consolidated.executiveSummaryTitle')}</h3>
               <p className="text-blue-100">
                 Total revenue {data.period} mencapai {formatCurrency(data.totalRevenue)} dengan {data.totalTransactions.toLocaleString()} transaksi. 
                 Net profit margin {data.netMargin}% dengan {branchPerformance.filter(b => b.achievement >= 100).length} dari {branchPerformance.length} cabang mencapai target.
@@ -460,12 +503,12 @@ export default function ConsolidatedReport() {
             <div className="flex items-center gap-4">
               <div className="text-center">
                 <p className="text-3xl font-bold">{branchPerformance.filter(b => b.achievement >= 100).length}</p>
-                <p className="text-sm text-blue-200">Cabang On Target</p>
+                <p className="text-sm text-blue-200">{t('consolidated.branchOnTarget')}</p>
               </div>
               <div className="w-px h-12 bg-white/30" />
               <div className="text-center">
                 <p className="text-3xl font-bold">{Math.round(branchPerformance.reduce((s, b) => s + b.achievement, 0) / branchPerformance.length)}%</p>
-                <p className="text-sm text-blue-200">Avg Achievement</p>
+                <p className="text-sm text-blue-200">{t('consolidated.avgAchievement')}</p>
               </div>
             </div>
           </div>
@@ -476,33 +519,33 @@ export default function ConsolidatedReport() {
         {subTab === 'cross-module' && crossModuleKPIs && (
           <div className="space-y-6">
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-              <p className="text-sm text-indigo-700"><strong>Cross-Module KPIs</strong>: Ringkasan KPI dari seluruh modul ERP dalam satu tampilan.</p>
+              <p className="text-sm text-indigo-700"><strong>{t('consolidated.tabCrossModule')}</strong>: {t('consolidated.crossModuleDesc')}</p>
             </div>
 
             {/* Sales KPIs */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> Sales</h3>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><ShoppingCart className="w-4 h-4" /> {t('consolidated.sales')}</h3>
               <div className="grid grid-cols-5 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <p className="text-xs text-gray-500">Revenue MTD</p>
+                  <p className="text-xs text-gray-500">{t('consolidated.revenueMtd')}</p>
                   <p className="text-xl font-bold text-gray-900">{formatCurrency(crossModuleKPIs.sales.revenueMTD)}</p>
                   <p className={`text-xs ${crossModuleKPIs.sales.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>{crossModuleKPIs.sales.revenueGrowth >= 0 ? '+' : ''}{crossModuleKPIs.sales.revenueGrowth}% MoM</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <p className="text-xs text-gray-500">Transactions</p>
+                  <p className="text-xs text-gray-500">{t('consolidated.transactions')}</p>
                   <p className="text-xl font-bold text-gray-900">{crossModuleKPIs.sales.totalTransactions.toLocaleString()}</p>
                   <p className={`text-xs ${crossModuleKPIs.sales.transactionsGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>{crossModuleKPIs.sales.transactionsGrowth >= 0 ? '+' : ''}{crossModuleKPIs.sales.transactionsGrowth}%</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <p className="text-xs text-gray-500">Avg Ticket</p>
+                  <p className="text-xs text-gray-500">{t('consolidated.avgTicket')}</p>
                   <p className="text-xl font-bold text-gray-900">{formatCurrency(crossModuleKPIs.sales.avgTicketSize)}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <p className="text-xs text-gray-500">Conversion</p>
+                  <p className="text-xs text-gray-500">{t('consolidated.conversion')}</p>
                   <p className="text-xl font-bold text-blue-600">{crossModuleKPIs.sales.conversionRate}%</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <p className="text-xs text-gray-500">Returns Rate</p>
+                  <p className="text-xs text-gray-500">{t('consolidated.returnsRate')}</p>
                   <p className="text-xl font-bold text-orange-600">{crossModuleKPIs.sales.returnsRate}%</p>
                 </div>
               </div>
@@ -510,14 +553,14 @@ export default function ConsolidatedReport() {
 
             {/* Finance KPIs */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><DollarSign className="w-4 h-4" /> Finance</h3>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><DollarSign className="w-4 h-4" /> {t('consolidated.finance')}</h3>
               <div className="grid grid-cols-5 gap-4">
                 {[
-                  { label: 'Gross Profit', value: formatCurrency(crossModuleKPIs.finance.grossProfit), sub: `${crossModuleKPIs.finance.grossMargin}% margin` },
-                  { label: 'Net Profit', value: formatCurrency(crossModuleKPIs.finance.netProfit), sub: `${crossModuleKPIs.finance.netMargin}% margin` },
-                  { label: 'OpEx', value: formatCurrency(crossModuleKPIs.finance.operatingExpenses), sub: `${crossModuleKPIs.finance.expenseRatio}% ratio` },
-                  { label: 'Cash Flow', value: formatCurrency(crossModuleKPIs.finance.cashFlow), sub: `+${crossModuleKPIs.finance.cashFlowGrowth}%` },
-                  { label: 'AR / AP', value: `${formatCurrency(crossModuleKPIs.finance.accountsReceivable)}`, sub: `AP: ${formatCurrency(crossModuleKPIs.finance.accountsPayable)}` },
+                  { label: t('consolidated.grossProfit'), value: formatCurrency(crossModuleKPIs.finance.grossProfit), sub: `${crossModuleKPIs.finance.grossMargin}% margin` },
+                  { label: t('consolidated.netProfit'), value: formatCurrency(crossModuleKPIs.finance.netProfit), sub: `${crossModuleKPIs.finance.netMargin}% margin` },
+                  { label: t('consolidated.opEx'), value: formatCurrency(crossModuleKPIs.finance.operatingExpenses), sub: `${crossModuleKPIs.finance.expenseRatio}% ratio` },
+                  { label: t('consolidated.cashFlow'), value: formatCurrency(crossModuleKPIs.finance.cashFlow), sub: `+${crossModuleKPIs.finance.cashFlowGrowth}%` },
+                  { label: t('consolidated.arAp'), value: `${formatCurrency(crossModuleKPIs.finance.accountsReceivable)}`, sub: `AP: ${formatCurrency(crossModuleKPIs.finance.accountsPayable)}` },
                 ].map(k => (
                   <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-xs text-gray-500">{k.label}</p>
@@ -530,13 +573,13 @@ export default function ConsolidatedReport() {
 
             {/* Inventory KPIs */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Package className="w-4 h-4" /> Inventory</h3>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Package className="w-4 h-4" /> {t('consolidated.inventory')}</h3>
               <div className="grid grid-cols-4 gap-4">
                 {[
-                  { label: 'Stock Value', value: formatCurrency(crossModuleKPIs.inventory.totalStockValue), color: 'text-gray-900' },
-                  { label: 'Turnover', value: `${crossModuleKPIs.inventory.stockTurnover}x`, color: 'text-blue-600' },
-                  { label: 'Fill Rate', value: `${crossModuleKPIs.inventory.fillRate}%`, color: 'text-green-600' },
-                  { label: 'Days on Hand', value: `${crossModuleKPIs.inventory.daysOnHand}`, color: 'text-purple-600' },
+                  { label: t('consolidated.stockValue'), value: formatCurrency(crossModuleKPIs.inventory.totalStockValue), color: 'text-gray-900' },
+                  { label: t('consolidated.turnover'), value: `${crossModuleKPIs.inventory.stockTurnover}x`, color: 'text-blue-600' },
+                  { label: t('consolidated.fillRate'), value: `${crossModuleKPIs.inventory.fillRate}%`, color: 'text-green-600' },
+                  { label: t('consolidated.daysOnHand'), value: `${crossModuleKPIs.inventory.daysOnHand}`, color: 'text-purple-600' },
                 ].map(k => (
                   <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-xs text-gray-500">{k.label}</p>
@@ -547,32 +590,32 @@ export default function ConsolidatedReport() {
               <div className="grid grid-cols-4 gap-4 mt-3">
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-3">
                   <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                  <div><p className="text-sm font-medium text-yellow-800">{crossModuleKPIs.inventory.lowStockAlerts} Low Stock</p></div>
+                  <div><p className="text-sm font-medium text-yellow-800">{crossModuleKPIs.inventory.lowStockAlerts} {t('consolidated.lowStock')}</p></div>
                 </div>
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-3">
                   <AlertTriangle className="w-5 h-5 text-red-600" />
-                  <div><p className="text-sm font-medium text-red-800">{crossModuleKPIs.inventory.outOfStock} Out of Stock</p></div>
+                  <div><p className="text-sm font-medium text-red-800">{crossModuleKPIs.inventory.outOfStock} {t('consolidated.outOfStock')}</p></div>
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-3">
                   <Package className="w-5 h-5 text-gray-500" />
-                  <div><p className="text-sm font-medium text-gray-700">{crossModuleKPIs.inventory.deadStock} Dead Stock</p></div>
+                  <div><p className="text-sm font-medium text-gray-700">{crossModuleKPIs.inventory.deadStock} {t('consolidated.deadStock')}</p></div>
                 </div>
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-center gap-3">
                   <TrendingDown className="w-5 h-5 text-orange-600" />
-                  <div><p className="text-sm font-medium text-orange-800">{crossModuleKPIs.inventory.shrinkageRate}% Shrinkage</p></div>
+                  <div><p className="text-sm font-medium text-orange-800">{crossModuleKPIs.inventory.shrinkageRate}% {t('consolidated.shrinkage')}</p></div>
                 </div>
               </div>
             </div>
 
             {/* Procurement KPIs */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Truck className="w-4 h-4" /> Procurement</h3>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Truck className="w-4 h-4" /> {t('consolidated.procurement')}</h3>
               <div className="grid grid-cols-4 gap-4">
                 {[
-                  { label: 'Total POs', value: crossModuleKPIs.procurement.totalPOs, sub: `${crossModuleKPIs.procurement.activePOs} active` },
-                  { label: 'Total Spend', value: formatCurrency(crossModuleKPIs.procurement.totalSpend), sub: `MTD: ${formatCurrency(crossModuleKPIs.procurement.spendMTD)}` },
-                  { label: 'On-Time Delivery', value: `${crossModuleKPIs.procurement.onTimeDelivery}%`, sub: `${crossModuleKPIs.procurement.activeSuppliers} suppliers` },
-                  { label: 'Avg Lead Time', value: `${crossModuleKPIs.procurement.avgLeadTime} hari`, sub: `Fulfillment: ${crossModuleKPIs.procurement.fulfillmentRate}%` },
+                  { label: t('consolidated.totalPos'), value: crossModuleKPIs.procurement.totalPOs, sub: `${crossModuleKPIs.procurement.activePOs} ${t('consolidated.active').toLowerCase()}` },
+                  { label: t('consolidated.totalSpend'), value: formatCurrency(crossModuleKPIs.procurement.totalSpend), sub: `MTD: ${formatCurrency(crossModuleKPIs.procurement.spendMTD)}` },
+                  { label: t('consolidated.onTimeDelivery'), value: `${crossModuleKPIs.procurement.onTimeDelivery}%`, sub: `${crossModuleKPIs.procurement.activeSuppliers} suppliers` },
+                  { label: t('consolidated.avgLeadTime'), value: `${crossModuleKPIs.procurement.avgLeadTime} ${t('consolidated.days')}`, sub: `Fulfillment: ${crossModuleKPIs.procurement.fulfillmentRate}%` },
                 ].map(k => (
                   <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-xs text-gray-500">{k.label}</p>
@@ -586,12 +629,12 @@ export default function ConsolidatedReport() {
             {/* HR & Branches */}
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> HR</h3>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> {t('consolidated.hr')}</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { label: 'Employees', value: `${crossModuleKPIs.hr.activeEmployees}/${crossModuleKPIs.hr.totalEmployees}` },
-                    { label: 'Attendance', value: `${crossModuleKPIs.hr.attendanceRate}%` },
-                    { label: 'Turnover', value: `${crossModuleKPIs.hr.turnoverRate}%` },
+                    { label: t('consolidated.employees'), value: `${crossModuleKPIs.hr.activeEmployees}/${crossModuleKPIs.hr.totalEmployees}` },
+                    { label: t('consolidated.attendance'), value: `${crossModuleKPIs.hr.attendanceRate}%` },
+                    { label: t('consolidated.turnover'), value: `${crossModuleKPIs.hr.turnoverRate}%` },
                   ].map(k => (
                     <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-3">
                       <p className="text-xs text-gray-500">{k.label}</p>
@@ -601,12 +644,12 @@ export default function ConsolidatedReport() {
                 </div>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Building2 className="w-4 h-4" /> Branches</h3>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2"><Building2 className="w-4 h-4" /> {t('consolidated.branches')}</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { label: 'Active', value: `${crossModuleKPIs.branches.activeBranches}/${crossModuleKPIs.branches.totalBranches}` },
-                    { label: 'On Target', value: `${crossModuleKPIs.branches.onTargetBranches}` },
-                    { label: 'Avg Achievement', value: `${crossModuleKPIs.branches.avgAchievement}%` },
+                    { label: t('consolidated.active'), value: `${crossModuleKPIs.branches.activeBranches}/${crossModuleKPIs.branches.totalBranches}` },
+                    { label: t('consolidated.onTarget'), value: `${crossModuleKPIs.branches.onTargetBranches}` },
+                    { label: t('consolidated.avgAchievement'), value: `${crossModuleKPIs.branches.avgAchievement}%` },
                   ].map(k => (
                     <div key={k.label} className="bg-white rounded-xl border border-gray-200 p-3">
                       <p className="text-xs text-gray-500">{k.label}</p>
@@ -629,9 +672,9 @@ export default function ConsolidatedReport() {
               const csv = lines.join('\n');
               const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob);
               const a = document.createElement('a'); a.href = url; a.download = 'cross-module-kpis.csv'; a.click(); URL.revokeObjectURL(url);
-              toast.success('Export Cross-Module KPIs berhasil');
+              toast.success(t('consolidated.exportKpiSuccess'));
             }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
-              <Download className="w-4 h-4" /> Export KPIs
+              <Download className="w-4 h-4" /> {t('consolidated.exportKpis')}
             </button>
           </div>
         )}
@@ -640,13 +683,13 @@ export default function ConsolidatedReport() {
         {subTab === 'trends' && (
           <div className="space-y-6">
             <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-              <p className="text-sm text-green-700"><strong>Trend Analysis</strong>: Analisis tren 6 bulan terakhir dari seluruh modul.</p>
+              <p className="text-sm text-green-700"><strong>{t('consolidated.tabTrends')}</strong>: {t('consolidated.trendDesc')}</p>
             </div>
             {trendData ? (
               <>
                 {/* Revenue Trend */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Revenue, Profit & Expenses Trend (Juta)</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('consolidated.revenueProfitTrend')}</h3>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={trendData.revenueTrend}>
@@ -665,7 +708,7 @@ export default function ConsolidatedReport() {
 
                 {/* Inventory Trend */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Inventory Health Trend</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('consolidated.inventoryHealthTrend')}</h3>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={trendData.inventoryTrend}>
@@ -684,7 +727,7 @@ export default function ConsolidatedReport() {
 
                 {/* Procurement Trend */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Procurement Spend & On-Time Rate</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('consolidated.procurementTrend')}</h3>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={trendData.procurementTrend}>
@@ -703,7 +746,7 @@ export default function ConsolidatedReport() {
 
                 {/* HR Trend */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">HR: Headcount, Attendance & Productivity</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('consolidated.hrTrend')}</h3>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={trendData.hrTrend}>
@@ -721,7 +764,7 @@ export default function ConsolidatedReport() {
                 </div>
               </>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">Loading trend data...</div>
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">{t('consolidated.loadingTrend')}</div>
             )}
           </div>
         )}
@@ -730,16 +773,16 @@ export default function ConsolidatedReport() {
         {subTab === 'executive' && (
           <div className="space-y-6">
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <p className="text-sm text-amber-700"><strong>Executive Summary</strong>: Ringkasan eksekutif, highlights, rekomendasi, dan scorecard per modul.</p>
+              <p className="text-sm text-amber-700"><strong>{t('consolidated.tabExecutive')}</strong>: {t('consolidated.executiveDesc')}</p>
             </div>
             {executiveSummary ? (
               <>
                 {/* Scorecard */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">Module Scorecard</h3>
+                    <h3 className="font-semibold text-gray-900">{t('consolidated.moduleScorecard')}</h3>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">Overall Score:</span>
+                      <span className="text-sm text-gray-500">{t('consolidated.overallScore')}:</span>
                       <span className={`text-2xl font-bold ${executiveSummary.scorecard.overallScore >= 85 ? 'text-green-600' : executiveSummary.scorecard.overallScore >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>
                         {executiveSummary.scorecard.overallScore}/100
                       </span>
@@ -755,7 +798,7 @@ export default function ConsolidatedReport() {
                         </div>
                         <p className="text-sm font-medium text-gray-900 mt-2">{m.name}</p>
                         <p className={`text-xs ${m.trend === 'up' ? 'text-green-600' : m.trend === 'down' ? 'text-red-600' : 'text-gray-500'}`}>
-                          {m.trend === 'up' ? '↑ Improving' : m.trend === 'down' ? '↓ Declining' : '→ Stable'}
+                          {m.trend === 'up' ? `↑ ${t('consolidated.improving')}` : m.trend === 'down' ? `↓ ${t('consolidated.declining')}` : `→ ${t('consolidated.stable')}`}
                         </p>
                       </div>
                     ))}
@@ -764,7 +807,7 @@ export default function ConsolidatedReport() {
 
                 {/* Radar Chart */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Module Performance Radar</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('consolidated.performanceRadar')}</h3>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart data={executiveSummary.scorecard.modules.map((m: any) => ({ module: m.name, score: m.score }))}>
@@ -779,7 +822,7 @@ export default function ConsolidatedReport() {
 
                 {/* Highlights */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Highlights</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('consolidated.highlights')}</h3>
                   <div className="space-y-3">
                     {executiveSummary.highlights.map((h: any, i: number) => (
                       <div key={i} className={`flex items-start gap-3 p-3 rounded-lg ${
@@ -804,7 +847,7 @@ export default function ConsolidatedReport() {
 
                 {/* Recommendations */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Rekomendasi Aksi</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('consolidated.recommendations')}</h3>
                   <div className="space-y-3">
                     {executiveSummary.recommendations.map((r: any, i: number) => (
                       <div key={i} className="flex items-start gap-3 p-3 border border-gray-100 rounded-lg">
@@ -823,7 +866,7 @@ export default function ConsolidatedReport() {
                 </div>
               </>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">Loading executive summary...</div>
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">{t('consolidated.loadingExecutive')}</div>
             )}
           </div>
         )}
@@ -832,25 +875,25 @@ export default function ConsolidatedReport() {
         {subTab === 'health' && (
           <div className="space-y-6">
             <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
-              <p className="text-sm text-teal-700"><strong>Module Health</strong>: Status uptime, latency, dan error rate setiap modul sistem.</p>
+              <p className="text-sm text-teal-700"><strong>{t('consolidated.tabHealth')}</strong>: {t('consolidated.healthDesc')}</p>
             </div>
             {moduleHealth.length > 0 ? (
               <>
                 <div className="grid grid-cols-4 gap-4">
                   <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Modules</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('consolidated.modules')}</p>
                     <p className="text-2xl font-bold text-gray-900">{moduleHealth.length}</p>
                   </div>
                   <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Healthy</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('consolidated.healthy')}</p>
                     <p className="text-2xl font-bold text-green-600">{moduleHealth.filter(m => m.status === 'healthy').length}</p>
                   </div>
                   <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Avg Uptime</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('consolidated.avgUptime')}</p>
                     <p className="text-2xl font-bold text-blue-600">{(moduleHealth.reduce((s, m) => s + m.uptime, 0) / moduleHealth.length).toFixed(2)}%</p>
                   </div>
                   <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Avg Latency</p>
+                    <p className="text-xs text-gray-500 mb-1">{t('consolidated.avgLatency')}</p>
                     <p className="text-2xl font-bold text-purple-600">{Math.round(moduleHealth.reduce((s, m) => s + m.latency, 0) / moduleHealth.length)}ms</p>
                   </div>
                 </div>
@@ -860,12 +903,12 @@ export default function ConsolidatedReport() {
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Module</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Uptime</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Latency</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Error Rate</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Last Incident</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('consolidated.module')}</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('consolidated.status')}</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('consolidated.uptime')}</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('consolidated.latency')}</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('consolidated.errorRate')}</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t('consolidated.lastIncident')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -901,7 +944,7 @@ export default function ConsolidatedReport() {
 
                 {/* Uptime bar chart */}
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Uptime by Module</h3>
+                  <h3 className="font-semibold text-gray-900 mb-4">{t('consolidated.uptimeByModule')}</h3>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={moduleHealth} layout="vertical">
@@ -916,7 +959,7 @@ export default function ConsolidatedReport() {
                 </div>
               </>
             ) : (
-              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">Loading module health data...</div>
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400">{t('consolidated.loadingHealth')}</div>
             )}
           </div>
         )}

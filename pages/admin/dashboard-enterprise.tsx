@@ -120,7 +120,7 @@ export default function AdminDashboardEnterprise() {
               <Activity className="h-6 w-6 text-blue-400 animate-pulse" />
             </div>
           </div>
-          <p className="mt-6 text-lg text-blue-100 font-medium">Loading Enterprise Dashboard...</p>
+          <p className="mt-6 text-lg text-blue-100 font-medium">Memuat Dashboard Enterprise...</p>
         </div>
       </div>
     );
@@ -152,13 +152,13 @@ export default function AdminDashboardEnterprise() {
 
   const menuItems = [
     { icon: Activity, label: 'Dashboard', path: '/admin/dashboard', active: true },
-    { icon: Users, label: 'Partners', path: '/admin/partners', badge: stats.partners.total },
-    { icon: FileCheck, label: 'Activations', path: '/admin/activations', badge: stats.activations.pending, badgeColor: 'yellow' },
-    { icon: Store, label: 'Outlets', path: '/admin/outlets', badge: stats.outlets.total },
-    { icon: DollarSign, label: 'Transactions', path: '/admin/transactions' },
-    { icon: Package, label: 'Subscriptions', path: '/admin/subscriptions' },
-    { icon: BarChart3, label: 'Analytics', path: '/admin/analytics' },
-    { icon: Settings, label: 'Settings', path: '/admin/settings' },
+    { icon: Users, label: 'Mitra', path: '/admin/partners', badge: stats.partners.total },
+    { icon: FileCheck, label: 'Aktivasi', path: '/admin/activations', badge: stats.activations.pending, badgeColor: 'yellow' },
+    { icon: Store, label: 'Outlet', path: '/admin/outlets', badge: stats.outlets.total },
+    { icon: DollarSign, label: 'Transaksi', path: '/admin/transactions' },
+    { icon: Package, label: 'Langganan', path: '/admin/subscriptions' },
+    { icon: BarChart3, label: 'Analitik', path: '/admin/analytics' },
+    { icon: Settings, label: 'Pengaturan', path: '/admin/settings' },
   ];
 
   return (
@@ -200,7 +200,7 @@ export default function AdminDashboardEnterprise() {
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Search partners, outlets, transactions..."
+                    placeholder="Cari mitra, outlet, transaksi..."
                     className="w-full pl-12 pr-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   />
                 </div>
@@ -276,16 +276,16 @@ export default function AdminDashboardEnterprise() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-3xl font-bold text-white mb-2">Enterprise Dashboard</h2>
-                    <p className="text-slate-400">Monitor and manage your entire POS ecosystem</p>
+                    <p className="text-slate-400">Pantau dan kelola seluruh ekosistem POS Anda</p>
                   </div>
                   <div className="flex items-center space-x-3">
                     <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors flex items-center space-x-2">
                       <BarChart3 className="h-4 w-4" />
-                      <span>Export Report</span>
+                      <span>Ekspor Laporan</span>
                     </button>
                     <button className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all shadow-lg shadow-blue-500/30 flex items-center space-x-2">
                       <Zap className="h-4 w-4" />
-                      <span>Quick Actions</span>
+                      <span>Aksi Cepat</span>
                     </button>
                   </div>
                 </div>
@@ -307,12 +307,12 @@ export default function AdminDashboardEnterprise() {
                       </div>
                     </div>
                     <div>
-                      <p className="text-slate-400 text-sm font-medium mb-1">Total Partners</p>
+                      <p className="text-slate-400 text-sm font-medium mb-1">Total Mitra</p>
                       <p className="text-4xl font-bold text-white mb-3">{stats.partners.total}</p>
                       <div className="flex items-center space-x-4 text-xs">
                         <div className="flex items-center space-x-1">
                           <div className="h-2 w-2 bg-green-400 rounded-full"></div>
-                          <span className="text-slate-400">{stats.partners.active} Active</span>
+                          <span className="text-slate-400">{stats.partners.active} Aktif</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <div className="h-2 w-2 bg-yellow-400 rounded-full"></div>
@@ -337,9 +337,9 @@ export default function AdminDashboardEnterprise() {
                       </div>
                     </div>
                     <div>
-                      <p className="text-slate-400 text-sm font-medium mb-1">Active Outlets</p>
+                      <p className="text-slate-400 text-sm font-medium mb-1">Outlet Aktif</p>
                       <p className="text-4xl font-bold text-white mb-3">{stats.outlets.total}</p>
-                      <p className="text-xs text-slate-400">POS terminals operational</p>
+                      <p className="text-xs text-slate-400">Terminal POS beroperasi</p>
                     </div>
                   </div>
                 </div>
@@ -422,8 +422,8 @@ export default function AdminDashboardEnterprise() {
                 {/* Package Distribution */}
                 <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50">
                   <div className="mb-6">
-                    <h3 className="text-xl font-bold text-white mb-1">Package Distribution</h3>
-                    <p className="text-sm text-slate-400">Active subscriptions</p>
+                    <h3 className="text-xl font-bold text-white mb-1">Distribusi Paket</h3>
+                    <p className="text-sm text-slate-400">Langganan aktif</p>
                   </div>
                   <div className="space-y-6">
                     {stats.charts.packageDistribution.map((item, index) => {
@@ -469,8 +469,8 @@ export default function AdminDashboardEnterprise() {
                 <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50">
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <h3 className="text-xl font-bold text-white mb-1">Subscriptions Overview</h3>
-                      <p className="text-sm text-slate-400">Current status and alerts</p>
+                      <h3 className="text-xl font-bold text-white mb-1">Ringkasan Langganan</h3>
+                      <p className="text-sm text-slate-400">Status dan peringatan terkini</p>
                     </div>
                     <Globe className="h-6 w-6 text-slate-500" />
                   </div>
@@ -478,18 +478,18 @@ export default function AdminDashboardEnterprise() {
                     <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/20">
                       <div className="flex items-center space-x-2 mb-2">
                         <div className="h-2 w-2 bg-green-400 rounded-full animate-pulse"></div>
-                        <span className="text-xs font-medium text-green-400">Active</span>
+                        <span className="text-xs font-medium text-green-400">Aktif</span>
                       </div>
                       <p className="text-3xl font-bold text-white">{stats.subscriptions.active}</p>
-                      <p className="text-xs text-slate-400 mt-1">Subscriptions</p>
+                      <p className="text-xs text-slate-400 mt-1">Langganan</p>
                     </div>
                     <div className="bg-orange-500/10 rounded-xl p-4 border border-orange-500/20">
                       <div className="flex items-center space-x-2 mb-2">
                         <div className="h-2 w-2 bg-orange-400 rounded-full animate-pulse"></div>
-                        <span className="text-xs font-medium text-orange-400">Expiring</span>
+                        <span className="text-xs font-medium text-orange-400">Segera Berakhir</span>
                       </div>
                       <p className="text-3xl font-bold text-white">{stats.subscriptions.expiring}</p>
-                      <p className="text-xs text-slate-400 mt-1">Within 30 days</p>
+                      <p className="text-xs text-slate-400 mt-1">Dalam 30 hari</p>
                     </div>
                   </div>
                 </div>
@@ -497,8 +497,8 @@ export default function AdminDashboardEnterprise() {
                 {/* Quick Actions */}
                 <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700/50">
                   <div className="mb-6">
-                    <h3 className="text-xl font-bold text-white mb-1">Quick Actions</h3>
-                    <p className="text-sm text-slate-400">Frequently used operations</p>
+                    <h3 className="text-xl font-bold text-white mb-1">Aksi Cepat</h3>
+                    <p className="text-sm text-slate-400">Operasi yang sering digunakan</p>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -506,28 +506,28 @@ export default function AdminDashboardEnterprise() {
                       className="p-4 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/40 rounded-xl transition-all group"
                     >
                       <Users className="h-6 w-6 text-blue-400 mb-2 group-hover:scale-110 transition-transform" />
-                      <p className="text-sm font-medium text-white">Manage Partners</p>
+                      <p className="text-sm font-medium text-white">Kelola Mitra</p>
                     </button>
                     <button
                       onClick={() => router.push('/admin/activations')}
                       className="p-4 bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/20 hover:border-yellow-500/40 rounded-xl transition-all group"
                     >
                       <FileCheck className="h-6 w-6 text-yellow-400 mb-2 group-hover:scale-110 transition-transform" />
-                      <p className="text-sm font-medium text-white">Review Requests</p>
+                      <p className="text-sm font-medium text-white">Tinjau Permintaan</p>
                     </button>
                     <button
                       onClick={() => router.push('/admin/transactions')}
                       className="p-4 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 hover:border-green-500/40 rounded-xl transition-all group"
                     >
                       <Activity className="h-6 w-6 text-green-400 mb-2 group-hover:scale-110 transition-transform" />
-                      <p className="text-sm font-medium text-white">View Transactions</p>
+                      <p className="text-sm font-medium text-white">Lihat Transaksi</p>
                     </button>
                     <button
                       onClick={() => router.push('/admin/analytics')}
                       className="p-4 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 hover:border-purple-500/40 rounded-xl transition-all group"
                     >
                       <BarChart3 className="h-6 w-6 text-purple-400 mb-2 group-hover:scale-110 transition-transform" />
-                      <p className="text-sm font-medium text-white">Analytics</p>
+                      <p className="text-sm font-medium text-white">Analitik</p>
                     </button>
                   </div>
                 </div>

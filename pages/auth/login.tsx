@@ -6,9 +6,11 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useTranslation } from '@/lib/i18n';
 
 const Login: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -28,7 +30,7 @@ const Login: React.FC = () => {
     e.preventDefault();
     
     if (!formData.email || !formData.password) {
-      toast.error('Email dan password harus diisi');
+      toast.error(t('auth.emailRequired'));
       return;
     }
 
@@ -42,9 +44,9 @@ const Login: React.FC = () => {
       });
 
       if (result?.error) {
-        toast.error('Email atau password salah');
+        toast.error(t('auth.invalidCredentials'));
       } else if (result?.ok) {
-        toast.success('Login berhasil!');
+        toast.success(t('auth.loginSuccess'));
         const callbackUrl = router.query.callbackUrl as string;
         const target = (callbackUrl && !callbackUrl.includes('/auth/'))
           ? callbackUrl
@@ -53,7 +55,7 @@ const Login: React.FC = () => {
       }
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Terjadi kesalahan. Silakan coba lagi.');
+      toast.error(t('auth.loginError'));
     } finally {
       setIsLoading(false);
     }
@@ -62,8 +64,8 @@ const Login: React.FC = () => {
   return (
     <>
       <Head>
-        <title>Login - BEDAGANG Cloud POS</title>
-        <meta name="description" content="Login ke akun BEDAGANG Anda" />
+        <title>{t('auth.loginTitle')}</title>
+        <meta name="description" content={t('auth.loginDesc')} />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-sky-500 via-sky-400 to-blue-500 flex items-center justify-center p-4">
@@ -115,7 +117,7 @@ const Login: React.FC = () => {
                   BEDAGANG
                 </h1>
               </motion.div>
-              <p className="text-gray-600">Selamat datang kembali!</p>
+              <p className="text-gray-600">{t('auth.welcomeBack')}</p>
             </div>
 
             {/* Login Form */}
@@ -123,7 +125,7 @@ const Login: React.FC = () => {
               {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
+                  {t('auth.email')}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -142,7 +144,7 @@ const Login: React.FC = () => {
               {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
+                  {t('auth.password')}
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -152,7 +154,7 @@ const Login: React.FC = () => {
                     value={formData.password}
                     onChange={handleChange}
                     className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent outline-none transition"
-                    placeholder="Masukkan password"
+                    placeholder={t('auth.enterPassword')}
                     required
                   />
                   <button
@@ -168,7 +170,7 @@ const Login: React.FC = () => {
               {/* Forgot Password */}
               <div className="text-right">
                 <Link href="/auth/forgot-password" className="text-sm text-sky-600 hover:text-sky-700">
-                  Lupa password?
+                  {t('auth.forgotPassword')}
                 </Link>
               </div>
 
@@ -181,10 +183,10 @@ const Login: React.FC = () => {
                 className="w-full bg-gradient-to-r from-sky-500 to-blue-600 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 {isLoading ? (
-                  <span>Memproses...</span>
+                  <span>{t('auth.processing')}</span>
                 ) : (
                   <>
-                    <span>Login</span>
+                    <span>{t('auth.loginBtn')}</span>
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
@@ -194,9 +196,9 @@ const Login: React.FC = () => {
             {/* Divider */}
             <div className="mt-6 text-center">
               <p className="text-gray-600 text-sm">
-                Belum punya akun?{' '}
+                {t('auth.noAccount')}{' '}
                 <Link href="/auth/register" className="text-sky-600 font-semibold hover:text-sky-700">
-                  Daftar gratis
+                  {t('auth.registerFree')}
                 </Link>
               </p>
             </div>
@@ -204,7 +206,7 @@ const Login: React.FC = () => {
             {/* Back to Home */}
             <div className="mt-4 text-center">
               <Link href="/" className="text-gray-500 text-sm hover:text-gray-700">
-                ← Kembali ke Beranda
+                {t('auth.backToHome')}
               </Link>
             </div>
           </div>
@@ -216,7 +218,7 @@ const Login: React.FC = () => {
             transition={{ delay: 0.5 }}
             className="mt-6 bg-white/10 backdrop-blur-sm rounded-2xl p-4 text-white text-center"
           >
-            <p className="text-sm font-medium mb-2">Demo Account:</p>
+            <p className="text-sm font-medium mb-2">{t('auth.demoAccount')}</p>
             <p className="text-xs">Email: demo@bedagang.com</p>
             <p className="text-xs">Password: demo123</p>
           </motion.div>
