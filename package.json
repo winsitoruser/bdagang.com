@@ -4,10 +4,19 @@
   "description": "Modern Retail Management Platform - POS, Inventory, Finance & More",
   "author": "Winsitor Team",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "admin-panel"
+  ],
   "scripts": {
     "dev": "next dev --port=3001",
     "dev:admin": "next dev --port=3001",
     "dev:store": "next dev --port=3002",
+    "dev:store-web": "npm run dev -w bedagang.com",
+    "generate:store-pages": "node scripts/generate-store-web-reexports.mjs",
+    "generate:store-api": "node scripts/generate-store-api-reexports.mjs",
+    "generate:store-all": "node scripts/generate-store-web-reexports.mjs && node scripts/generate-store-api-reexports.mjs",
+    "sync:store-env": "node scripts/sync-store-web-env.mjs",
     "dev:both": "concurrently \"npm run dev:admin\" \"npm run dev:store\"",
     "build": "next build",
     "start": "next start --port=3001",
